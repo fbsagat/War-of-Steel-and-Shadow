@@ -1,9 +1,9 @@
-## CameraController.gd
-## Controlador de câmera em terceira pessoa com dois modos:
-## - FREE_LOOK: movimento livre com mouse
-## - BEHIND_PLAYER: câmera travada suavemente atrás do jogador
-##
-## Recomenda-se usar com um SpringArm3D filho para colisão com o ambiente.
+# CameraController.gd
+# Controlador de câmera em terceira pessoa com dois modos:
+# - FREE_LOOK: movimento livre com mouse
+# - BEHIND_PLAYER: câmera travada suavemente atrás do jogador
+#
+# Recomenda-se usar com um SpringArm3D filho para colisão com o ambiente.
 
 extends Node3D
 
@@ -16,12 +16,18 @@ enum CameraMode { FREE_LOOK, BEHIND_PLAYER }
 # ==============================
 # EXPORT — CONFIGURAÇÕES GERAIS
 # ==============================
+var _target: Node3D = null
+
 @export var debug: bool = false
+
+# Export com setter/getter seguro — aceita ser configurado no Inspector
 @export var target: Node3D:
 	set(value):
-		target = value
-		if is_node_ready():
+		_target = value
+		if _target and is_inside_tree():
 			_initialize_target_rotation()
+	get:
+		return _target
 
 @export_range(0.1, 20.0, 0.1) var base_distance: float = 8.0:
 	set(value):
@@ -65,27 +71,42 @@ var current_mode: CameraMode = CameraMode.FREE_LOOK
 # INICIALIZAÇÃO
 # ==============================
 func _ready():
-	add_to_group("camera_controller")
-	
-	if target == null:
-		push_error("[CameraController] Alvo (target) não definido no Inspector!")
-		return
+	# garante estar no grupo (útil para busca por grupo)
+	if not is_in_group("camera_controller"):
+		add_to_group("camera_controller")
+
+	# tenta resolver target se foi setado via Inspector como NodePath (ou path não resolvido antes)
+	if _target == null:
+		# tenta localizar um NodePath exportado (se o usuário preferir outra abordagem via inspector)
+		# (opcional) não aborta: apenas avisa e permite que set_target() seja chamada depois.
+		push_warning("[CameraController] Alvo (target) não definido no Inspector! Vou aguardar atribuição em runtime.")
 
 	spring_arm = get_node_or_null("SpringArm3D") as SpringArm3D
 	if spring_arm:
+		# mantém distância inicial e margem de colisão
 		spring_arm.spring_length = base_distance
-		spring_arm.margin = collision_margin
+		# Alguns projetos usam outra propriedade; mantenha a que sua cena usa.
+		# spring_arm.margin = collision_margin  # descomente se sua SpringArm3D tiver essa propriedade
 
-	_initialize_target_rotation()
-	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	# se o target já estiver definido, inicializa rotações
+	if _target:
+		_initialize_target_rotation()
+
+	# captura mouse por padrão (se desejar diferente, mude em runtime)
+	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
 	if debug:
-		print("[CameraController] Inicializado. Alvo:", target.name)
+		if _target:
+			print("[CameraController] Inicializado. Alvo:", _target.name)
+		else:
+			print("[CameraController] Inicializado. Alvo: null (aguardando)")
 
 
 func _initialize_target_rotation():
 	"""Inicializa a rotação alvo com base na rotação atual do alvo."""
-	target_rotation.y = target.rotation.y
+	# tenta pegar yaw do alvo se disponível
+	# target.rotation é um Vector3 (euler), assumimos que .y é o yaw
+	target_rotation.y = _target.rotation.y if _target else 0.0
 	target_rotation.x = 0.0
 
 
@@ -93,7 +114,7 @@ func _initialize_target_rotation():
 # ENTRADA DE USUÁRIO
 # ==============================
 func _input(event):
-	if target == null:
+	if _target == null:
 		return
 
 	# Ignora mouse no modo travado, se configurado
@@ -106,7 +127,7 @@ func _input(event):
 
 
 # ==============================
-# API PÚBLICA — CONTROLE DE MODO
+# API PÚBLICA — CONTROLE DE MODO / TARGET
 # ==============================
 
 ## Força a câmera a entrar no modo travado atrás do jogador.
@@ -119,25 +140,40 @@ func force_behind_player():
 ## Retorna a câmera ao modo livre com mouse.
 func release_to_free_look():
 	current_mode = CameraMode.FREE_LOOK
-	# Alinha suavemente ao jogador para evitar salto
-	target_rotation.y = target.rotation.y
+	# Alinha suavemente ao jogador para evitar salto, se target definido
+	if _target:
+		target_rotation.y = _target.rotation.y
 	if debug:
 		print("[CameraController] Modo livre reativado.")
+
+
+# Função pública para setar target em runtime (recomendada para usar no spawner)
+func set_target(node: Node) -> void:
+	if node == null:
+		_target = null
+		return
+	if node is Node3D:
+		_target = node
+		_initialize_target_rotation()
+		if debug:
+			print("[CameraController] Target setado via set_target():", _target.name)
+	else:
+		push_warning("[CameraController] set_target recebeu um nó que não é Node3D.")
 
 
 # ==============================
 # ATUALIZAÇÃO PRINCIPAL
 # ==============================
 func _process(delta):
-	if target == null:
+	if _target == null:
 		return
 
 	# Atualiza parâmetros com base no modo atual
-	var current_smoothness: float
-	var current_height_offset: float
-	var current_target_pitch_rad: float
-	var min_pitch_rad: float
-	var max_pitch_rad: float
+	var current_smoothness: float = 10.0
+	var current_height_offset: float = 1.6
+	var current_target_pitch_rad: float = 0.0
+	var min_pitch_rad: float = deg_to_rad(-70)
+	var max_pitch_rad: float = deg_to_rad(70)
 
 	match current_mode:
 		CameraMode.FREE_LOOK:
@@ -154,7 +190,7 @@ func _process(delta):
 			min_pitch_rad = current_target_pitch_rad
 			max_pitch_rad = current_target_pitch_rad
 			# Sincroniza yaw com o jogador
-			target_rotation.y = target.rotation.y
+			target_rotation.y = _target.rotation.y
 			# Suaviza pitch para o valor alvo
 			target_rotation.x = lerp(target_rotation.x, current_target_pitch_rad, current_smoothness * delta)
 
@@ -165,8 +201,8 @@ func _process(delta):
 	rotation.x = lerp_angle(rotation.x, target_rotation.x, current_smoothness * delta)
 	rotation.y = lerp_angle(rotation.y, target_rotation.y, current_smoothness * delta)
 
-	# Atualiza posição da câmera
-	global_position = target.global_position + Vector3.UP * current_height_offset
+	# Atualiza posição da câmera (mantém altura relativa ao alvo)
+	global_position = _target.global_position + Vector3.UP * current_height_offset
 
 	# Atualiza SpringArm (se existir)
 	if spring_arm:

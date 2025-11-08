@@ -29,7 +29,8 @@ func create_room(room_id: int, room_name: String, password: String, host_peer_id
 		"host_id": host_peer_id,
 		"players": [],
 		"max_players": max_players_per_room,
-		"created_at": Time.get_unix_time_from_system()
+		"created_at": Time.get_unix_time_from_system(),
+		"in_game": false,
 	}
 	
 	# Adiciona o host como primeiro jogador
@@ -45,6 +46,12 @@ func create_room(room_id: int, room_name: String, password: String, host_peer_id
 	_log_debug("Sala criada: %s (ID: %d, Host: %d)" % [room_name, room_id, host_peer_id])
 	
 	return room_data.duplicate(true)
+
+func set_room_in_game(room_id: int, in_game : bool):
+	if rooms.has(room_id):
+		var room = rooms[room_id]
+		_log_debug("Sala " + str(room_id) + " acaba de iniciar uma partida")
+		room.in_game = in_game
 
 ## Remove uma sala
 func remove_room(room_id: int):

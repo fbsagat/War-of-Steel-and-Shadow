@@ -52,7 +52,6 @@ func _client_name_accepted(accepted_name: String):
 	
 	GameManager._client_name_accepted(accepted_name)
 
-## [CLIENT] Recebe senha incorreta
 @rpc("authority", "call_remote", "reliable")
 func _client_wrong_password():
 	GameManager._client_wrong_password()
@@ -208,6 +207,8 @@ func _client_room_updated(room_data: Dictionary):
 	
 	GameManager._client_room_updated(room_data)
 
+# ===== INÍCIO E GERENCIAMENTO DE PARTIDAS =====
+
 func start_match(match_settings: Dictionary = {}):
 	if not is_connected:
 		_log_debug("Erro: Não conectado ao servidor")
@@ -230,6 +231,72 @@ func _client_match_started(match_data: Dictionary):
 		return
 	
 	GameManager._client_match_started(match_data)
+
+@rpc("authority", "call_remote", "reliable")
+func _client_round_ended(end_data: Dictionary):
+	if multiplayer.is_server():
+		return
+	
+	GameManager._client_round_ended(end_data)
+
+@rpc("authority", "call_remote", "reliable")
+func _client_party_ended():
+	if multiplayer.is_server():
+		return
+	
+	GameManager._client_party_ended()
+
+@rpc("authority", "call_remote", "reliable")
+func _client_next_round_starting(round_number: int):
+	if multiplayer.is_server():
+		return
+	
+	GameManager._client_next_round_starting(round_number)
+
+# ===== SPAWN DE OBJETOS (ObjectSpawner) =====
+
+@rpc("authority", "call_remote", "reliable")
+func _client_spawn_object(spawn_data: Dictionary):
+	if multiplayer.is_server():
+		return
+	
+	# Instancia o objeto no cliente
+	var scene = load(spawn_data["scene_path"])
+	if scene == null:
+		push_error("Falha ao carregar cena: %s" % spawn_data["scene_path"])
+		return
+	
+	var obj = scene.instantiate()
+	obj.name = "Object_%d" % spawn_data["object_id"]
+	
+	# Define posição
+	if obj is Node3D or obj is Node2D:
+		obj.global_position = spawn_data["position"]
+	
+	# Aplica configurações
+	if obj.has_method("configure"):
+		obj.configure(spawn_data["data"])
+	elif not spawn_data["data"].is_empty():
+		for key in spawn_data["data"]:
+			if key in obj:
+				obj.set(key, spawn_data["data"][key])
+	
+	# Adiciona à cena
+	get_tree().root.add_child(obj)
+	
+	# Registra no ObjectSpawner
+	ObjectSpawner.spawned_objects[spawn_data["object_id"]] = obj
+
+@rpc("authority", "call_remote", "reliable")
+func _client_despawn_object(object_id: int):
+	if multiplayer.is_server():
+		return
+	
+	if ObjectSpawner.spawned_objects.has(object_id):
+		var obj = ObjectSpawner.spawned_objects[object_id]
+		if obj and is_instance_valid(obj):
+			obj.queue_free()
+		ObjectSpawner.spawned_objects.erase(object_id)
 
 # ===== TRATAMENTO DE ERROS =====
 

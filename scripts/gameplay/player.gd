@@ -54,11 +54,26 @@ var is_block_attacking: bool = false
 var sword_areas: Array[Area3D] = []
 const MAX_DIRECTION_HISTORY = 2
 
+# ===== VARIÁVEIS DE IDENTIFICAÇÃO MP =====
+
+## ID do peer dono deste player
+var player_id: int = 0
+
+## Nome do jogador
+var player_name: String = ""
+
+## Se este é o jogador local (controlado por este cliente)
+var is_local_player: bool = false
+
+# ===== REFERÊNCIAS MP =====
+
+@onready var name_label: Label3D = $NameLabel
+
 # referências
 @onready var animation_player: AnimationPlayer = $AnimationPlayer
 @onready var animation_tree: AnimationTree = $AnimationTree
 @onready var attack_timer: Timer = $attack_timer
-@onready var CameraController: Node3D = $"../CameraController"
+var _camera_controller: Node3D = null
 
 # Dinâmicas
 var model: Node3D = null
@@ -92,6 +107,8 @@ func _ready():
 
 # Física geral
 func _physics_process(delta):
+		if not is_multiplayer_authority():
+			return
 		_handle_gravity(delta)
 		var move_dir = _handle_movement_input(delta)
 		handle_test_equip_inputs()
@@ -318,19 +335,9 @@ func _get_nearby_items(radius: float = pickup_radius, _collision_mask: int = pic
 	if debug: print(" -> items filtrados:", items.size())
 	return items
 
-# Pega o nó da câmera
-func _get_camera_controller() -> Node3D:
-	var camera_list = get_tree().get_nodes_in_group("camera_controller")
-	if not camera_list.is_empty():
-		return camera_list[0]
-	var root = get_tree().root
-	if root.has_node("CameraController"):
-		return root.get_node("CameraController")
-	return null
-
 # Funções da câmera livre
 func _get_movement_direction_free_cam() -> Vector3:
-	var camera := _get_camera_controller()
+	var camera := _camera_controller
 	if camera and camera.is_inside_tree():
 		var cam_basis := camera.global_transform.basis
 		var cam_forward := (-cam_basis.z).normalized()
@@ -579,7 +586,7 @@ func _strafe_mode(ativar : bool = true, com_camera_lock = true):
 	if ativar:
 		is_aiming = true
 		# ✅ SALVA A FRENTE DO JOGADOR NO MOMENTO DO TRAVAMENTO
-		var cam_forward := -CameraController.global_transform.basis.z
+		var cam_forward := -_camera_controller.global_transform.basis.z
 		cam_forward.y = 0.0
 		cam_forward = cam_forward.normalized()
 		defense_target_angle = atan2(-cam_forward.x, -cam_forward.z)
@@ -1037,3 +1044,59 @@ func _sort_by_distance(a, b) -> int:
 	if da < db: return -1
 	if da > db: return 1
 	return 0
+
+## Inicializa o player com seus dados
+func initialize(p_id: int, p_name: String, spawn_pos: Vector3):
+	player_id = p_id
+	player_name = p_name
+	
+	# Define o nome do nó como o peer_id (importante para sincronização)
+	name = str(player_id)
+	
+	# Posiciona no spawn
+	global_position = spawn_pos
+	
+	# Atualiza label de nome
+	if name_label:
+		name_label.text = player_name
+	
+	# Define autoridade multiplayer
+	set_multiplayer_authority(player_id)
+	
+	_log_debug("Player inicializado: %s (ID: %d) em %s" % [player_name, player_id, spawn_pos])
+	
+	# Registra no PartyRegistry
+	PartyRegistry.register_spawned_player(player_id, self)
+
+## Configura este player como o jogador local
+func set_as_local_player():
+	is_local_player = true
+	
+	# Esconde o mesh do próprio jogador (opcional)
+	# if mesh:
+	# 	mesh.visible = false
+	
+	# Captura o mouse
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	
+	_log_debug("Configurado como jogador local")
+
+# ===== UTILITÁRIOS =====
+
+func _log_debug(message: String):
+	if debug:
+		print("[Player:%d] %s" % [player_id, message])
+
+## Retorna se este player está vivo (para futuro sistema de vida)
+func is_alive() -> bool:
+	return true  # Implementar lógica de vida depois
+
+## Teleporta o player (apenas servidor pode chamar)
+func teleport_to(new_position: Vector3):
+	if multiplayer.is_server():
+		global_position = new_position
+		rpc("_sync_position", new_position)
+
+@rpc("authority", "call_remote", "reliable")
+func _sync_position(new_position: Vector3):
+	global_position = new_position

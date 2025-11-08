@@ -63,7 +63,6 @@ signal quit_game_requested()
 @onready var loading_icon: TextureRect
 
 # Menu de opções
-@onready var fullscreen_check: CheckBox
 @onready var vsync_check: CheckBox
 @onready var resolution_option: OptionButton
 @onready var window_mode_option: OptionButton
@@ -85,7 +84,6 @@ signal quit_game_requested()
 # Configurações atuais
 var current_settings = {
 	"video": {
-		"fullscreen": false,
 		"vsync": true,
 		"resolution": Vector2i(1920, 1080),
 		"window_mode": 0,  # 0: Janela, 1: Fullscreen, 2: Sem bordas
@@ -103,11 +101,16 @@ var current_settings = {
 }
 
 # Resoluções disponíveis
+# Resoluções disponíveis
 var resolutions = [
-	Vector2i(1920, 1080),
-	Vector2i(1600, 900),
-	Vector2i(1366, 768),
-	Vector2i(1280, 720)
+	Vector2i(3840, 2160),  # 4K
+	Vector2i(2560, 1440),  # 2K / QHD
+	Vector2i(1920, 1080),  # Full HD
+	Vector2i(1600, 900),   # HD+
+	Vector2i(1366, 768),   # HD
+	Vector2i(1280, 720),   # HD Ready
+	Vector2i(1024, 768),   # XGA
+	Vector2i(800, 600)     # SVGA
 ]
 
 var current_matches = []
@@ -142,6 +145,9 @@ func _ready():
 	# Carrega configurações salvas
 	load_options()
 	
+	# Força centralização inicial
+	_center_window()
+	
 	# Registra esta UI no GameManager e conecta sinais
 	if GameManager:
 		GameManager.set_main_menu(self)
@@ -175,7 +181,6 @@ func _setup_menu_references():
 	loading_menu = control_pai.get_node("LoadingMenu")
 	
 	# Obtém referências das opções de vídeo
-	fullscreen_check = options_menu.find_child("FullscreenCheck", true, false)
 	vsync_check = options_menu.find_child("VsyncCheck", true, false)
 	resolution_option = options_menu.find_child("ResolutionOption", true, false)
 	window_mode_option = options_menu.find_child("WindowModeOption", true, false)
@@ -233,7 +238,6 @@ func _setup_element_references():
 	room_status_label = room_menu.find_child("StatusLabel", true, false)
 	
 	# Opções
-	fullscreen_check = options_menu.find_child("FullscreenCheck", true, false)
 	vsync_check = options_menu.find_child("VsyncCheck", true, false)
 	volume_slider = options_menu.find_child("VolumeSlider", true, false)
 	quality_option = options_menu.find_child("QualityOption", true, false)
@@ -306,8 +310,6 @@ func _connect_game_manager_signals():
 	GameManager.error_occurred.connect(_on_game_manager_error)
 	
 	# Conecta sinais das opções de vídeo
-	if fullscreen_check:
-		fullscreen_check.toggled.connect(_on_fullscreen_toggled)
 	if vsync_check:
 		vsync_check.toggled.connect(_on_vsync_toggled)
 	if resolution_option:
@@ -400,6 +402,7 @@ func show_how_to_play_menu():
 func show_options_menu():
 	hide_all_menus()
 	options_menu.visible = true
+	_center_window()  # Força centralização ao abrir
 
 func show_room_menu(room_data: Dictionary):
 	hide_all_menus()
@@ -603,16 +606,13 @@ func _on_options_back_pressed():
 func save_options():
 	print("Salvando configurações...")
 	
-	# Aplica configurações de vídeo
-	_apply_video_settings()
-	
-	# Áudio já foi aplicado em tempo real
+	# Aplica configurações de vídeo (agora é async)
+	await _apply_video_settings()
 	
 	# Salva em arquivo
 	var config = ConfigFile.new()
 	
 	# Vídeo
-	config.set_value("video", "fullscreen", current_settings["video"]["fullscreen"])
 	config.set_value("video", "vsync", current_settings["video"]["vsync"])
 	config.set_value("video", "resolution", current_settings["video"]["resolution"])
 	config.set_value("video", "window_mode", current_settings["video"]["window_mode"])
@@ -644,7 +644,6 @@ func load_options():
 		_reset_to_default()
 	else:
 		# Carrega vídeo
-		current_settings["video"]["fullscreen"] = config.get_value("video", "fullscreen", false)
 		current_settings["video"]["vsync"] = config.get_value("video", "vsync", true)
 		current_settings["video"]["resolution"] = config.get_value("video", "resolution", Vector2i(1920, 1080))
 		current_settings["video"]["window_mode"] = config.get_value("video", "window_mode", 0)
@@ -669,7 +668,6 @@ func load_options():
 func _reset_to_default():
 	current_settings = {
 		"video": {
-			"fullscreen": false,
 			"vsync": true,
 			"resolution": Vector2i(1920, 1080),
 			"window_mode": 0,
@@ -689,8 +687,6 @@ func _reset_to_default():
 
 func _load_ui_from_settings():
 	# Atualiza UI de vídeo
-	if fullscreen_check:
-		fullscreen_check.button_pressed = current_settings["video"]["fullscreen"]
 	if vsync_check:
 		vsync_check.button_pressed = current_settings["video"]["vsync"]
 	if resolution_option:
@@ -721,19 +717,20 @@ func _apply_video_settings():
 	match current_settings["video"]["window_mode"]:
 		0:  # Janela
 			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+			DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_BORDERLESS, false)
 		1:  # Tela cheia
 			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 		2:  # Sem bordas
 			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 			DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_BORDERLESS, true)
 	
-	# Resolução (apenas em modo janela)
-	if current_settings["video"]["window_mode"] == 0:
+	# Aguarda modo de janela ser aplicado
+	await get_tree().process_frame
+	
+	# Resolução (apenas em modo janela ou sem bordas)
+	if current_settings["video"]["window_mode"] != 1:  # Se não for fullscreen
 		get_window().size = current_settings["video"]["resolution"]
-		# Centraliza janela
-		var screen_size = DisplayServer.screen_get_size()
-		var window_size = current_settings["video"]["resolution"]
-		get_window().position = (screen_size - window_size) / 2
+		_center_window()
 	
 	# VSync
 	if current_settings["video"]["vsync"]:
@@ -748,6 +745,13 @@ func _apply_video_settings():
 		2:  Engine.max_fps = 120
 		3:  Engine.max_fps = 144
 		4:  Engine.max_fps = 0  # Ilimitado
+
+func _center_window():
+	"""Centraliza a janela na tela"""
+	await get_tree().process_frame  # Aguarda 1 frame para aplicar
+	var screen_size = DisplayServer.screen_get_size()
+	var window_size = get_window().size
+	get_window().position = (screen_size - window_size) / 2
 
 func _apply_audio_settings():
 	_apply_volume_realtime("Master", current_settings["audio"]["master_volume"])
@@ -817,7 +821,6 @@ func update_room_info(room_data: Dictionary):
 		_update_room_display(room_data)
 
 func update_name_e_connected(player_name: String):
-	print("update_name_e_connected CHAMADO")
 	if main_menu:
 		var label = main_menu.get_node_or_null("VBoxContainer/ConnecteName")
 		if label:
@@ -940,17 +943,17 @@ func _on_game_manager_error(error_message: String):
 
 # ===== CALLBACKS DE VÍDEO =====
 
-func _on_fullscreen_toggled(enabled: bool):
-	current_settings["video"]["fullscreen"] = enabled
-
 func _on_vsync_toggled(enabled: bool):
 	current_settings["video"]["vsync"] = enabled
 
 func _on_resolution_selected(index: int):
-	current_settings["video"]["resolution"] = resolutions[index]
+	if index >= 0 and index < resolutions.size():
+		current_settings["video"]["resolution"] = resolutions[index]
+		print("Resolução selecionada: %s" % str(resolutions[index]))
 
 func _on_window_mode_selected(index: int):
 	current_settings["video"]["window_mode"] = index
+	print("Modo de janela selecionado: %d" % index)
 
 func _on_fps_limit_selected(index: int):
 	current_settings["video"]["fps_limit"] = index

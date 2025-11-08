@@ -43,3 +43,24 @@ func update_from_main_menu(settings: Dictionary):
 
 # No main_menu.gd, após salvar:
 Settings.update_from_main_menu(current_settings)
+
+
+Para spawnar objetos durante a partida (apenas no servidor):
+	
+# No ServerManager ou em qualquer script do servidor
+func spawn_health_pack(position: Vector3):
+	if not multiplayer.is_server():
+		return
+	
+	ObjectSpawner.spawn_object(
+		"res://scenes/items/HealthPack.tscn",
+		position,
+		{"health_amount": 50}
+	)
+
+# Para remover
+func remove_health_pack(object_id: int):
+	if not multiplayer.is_server():
+		return
+	
+	ObjectSpawner.despawn_object(object_id)

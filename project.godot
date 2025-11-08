@@ -17,17 +17,18 @@ config/icon="res://icon.svg"
 
 [autoload]
 
+GameManager="*res://scripts/autoload/GameManager.gd"
+ServerManager="*res://scripts/autoload/ServerManager.gd"
+NetworkManager="*res://scripts/autoload/NetworkManager.gd"
+PartyRegistry="*res://scripts/autoload/PartyRegistry.gd"
+ObjectSpawner="*res://scripts/autoload/ObjectSpawner.gd"
 PlayerRegistry="*res://scripts/autoload/PlayerRegistry.gd"
 RoomRegistry="*res://scripts/autoload/RoomRegistry.gd"
-NetworkManager="*res://scripts/autoload/NetworkManager.gd"
-ServerManager="*res://scripts/autoload/ServerManager.gd"
-GameManager="*res://scripts/autoload/GameManager.gd"
 
 [display]
 
 window/size/viewport_width=1280
 window/size/viewport_height=720
-window/size/initial_position_type=0
 
 [input]
 
