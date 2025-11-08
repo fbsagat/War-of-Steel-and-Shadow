@@ -49,8 +49,8 @@ metadata/_custom_type_script = "uid://dvc5j32rwdgv0"
 [node name="Sky3D" parent="." instance=ExtResource("1_pkd0b")]
 fog_enabled = true
 editor_time_enabled = false
-game_time_enabled = false
-current_time = 7.23
+current_time = 17.42
+minutes_per_day = 4.0
 
 [node name="Player" parent="." groups=["CameraController"] instance=ExtResource("2_sugp2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.027792692, 0)
