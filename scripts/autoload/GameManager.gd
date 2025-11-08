@@ -14,7 +14,7 @@ extends Node
 @export var connection_timeout: float = 10.0
 
 ## Ativar logs de debug detalhados
-@export var debug_mode: bool = true
+@export var debug_mode: bool = false
 
 # ===== VARIÁVEIS INTERNAS =====
 
@@ -392,6 +392,11 @@ func start_match(match_settings: Dictionary = {}):
 	
 	if current_room["host_id"] != local_peer_id:
 		_show_error("Apenas o host pode iniciar a partida")
+		return
+	
+	var min_p: int = RoomRegistry.min_players_to_start
+	if current_room.players.size() < min_p:
+		_show_error("Pelo menos %d jogadores são necessários para iniciar um partida" % min_p)
 		return
 	
 	_log_debug("Solicitando início da partida...")

@@ -4,7 +4,7 @@ extends Node
 
 # ===== CONFIGURAÇÕES =====
 
-@export var debug_mode: bool = true
+@export var debug_mode: bool = false
 
 # ===== VARIÁVEIS INTERNAS =====
 

@@ -1,10 +1,10 @@
 extends Control
 
 # Sinais
-signal join_match_requested()
-signal create_match_requested(room_name: String, password: String)
-signal match_selected(match_id: int, password: String)
-signal manual_join_requested(room_name: String, password: String)
+#signal join_match_requested()
+#signal create_match_requested(room_name: String, password: String)
+#signal match_selected(match_id: int, password: String)
+#signal manual_join_requested(room_name: String, password: String)
 signal quit_game_requested()
 
 # Referências dos nós
@@ -772,6 +772,8 @@ func _update_room_display(room_data: Dictionary):
 		push_warning("Dados da sala vazios")
 		return
 	
+	var _player_count = room_data.get("players", []).size()
+	
 	# Atualiza nome da sala
 	if room_name_label and room_data.has("name"):
 		room_name_label.text = room_data["name"]
@@ -787,19 +789,18 @@ func _update_room_display(room_data: Dictionary):
 
 	# Atualiza status
 	if room_status_label:
-		var player_count = room_data.get("players", []).size()
 		var max_players = room_data.get("max_players", 4)
-		room_status_label.text = "Jogadores: %d/%d" % [player_count, max_players]
+		room_status_label.text = "Jogadores: %d/%d" % [_player_count, max_players]
 	
 	# 🔑 Detecta se O JOGADOR LOCAL é o host
 	var meu_peer_id = multiplayer.get_unique_id()
 	var host_id = room_data.get("host_id", -1)
 	var is_host = (meu_peer_id == host_id)
-
+	
 	# Controla visibilidade dos botões baseado se é host
 	if room_start_button:
 		room_start_button.visible = is_host
-		room_start_button.disabled = player_count < 2
+		room_start_button.disabled = _player_count < 2
 	if room_close_button:
 		room_close_button.visible = is_host
 	if room_leave_button:

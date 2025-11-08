@@ -7,7 +7,7 @@ extends Node
 @export var debug_mode: bool = true
 
 ## Número máximo de jogadores por sala
-@export var max_players_per_room: int = 10
+@export var max_players_per_room: int = 12
 
 ## Número mínimo de jogadores para iniciar partida
 @export var min_players_to_start: int = 2
