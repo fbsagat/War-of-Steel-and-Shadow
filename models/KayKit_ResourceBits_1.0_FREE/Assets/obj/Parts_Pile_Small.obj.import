@@ -1,0 +1,25 @@
+[remap]
+
+importer="wavefront_obj"
+importer_version=1
+type="Mesh"
+uid="uid://ha7s236ktk78"
+path="res://.godot/imported/Parts_Pile_Small.obj-6bef7ab490673d6e3dd79ea844a162cf.mesh"
+
+[deps]
+
+files=["res://.godot/imported/Parts_Pile_Small.obj-6bef7ab490673d6e3dd79ea844a162cf.mesh"]
+
+source_file="res://models/KayKit_ResourceBits_1.0_FREE/Assets/obj/Parts_Pile_Small.obj"
+dest_files=["res://.godot/imported/Parts_Pile_Small.obj-6bef7ab490673d6e3dd79ea844a162cf.mesh", "res://.godot/imported/Parts_Pile_Small.obj-6bef7ab490673d6e3dd79ea844a162cf.mesh"]
+
+[params]
+
+generate_tangents=true
+generate_lods=true
+generate_shadow_mesh=true
+generate_lightmap_uv2=false
+generate_lightmap_uv2_texel_size=0.2
+scale_mesh=Vector3(1, 1, 1)
+offset_mesh=Vector3(0, 0, 0)
+force_disable_mesh_compression=false

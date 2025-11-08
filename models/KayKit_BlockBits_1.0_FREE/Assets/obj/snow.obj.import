@@ -1,0 +1,25 @@
+[remap]
+
+importer="wavefront_obj"
+importer_version=1
+type="Mesh"
+uid="uid://ihc6pjnmtlif"
+path="res://.godot/imported/snow.obj-e358ca9ee48b5b97ef59662e194aa915.mesh"
+
+[deps]
+
+files=["res://.godot/imported/snow.obj-e358ca9ee48b5b97ef59662e194aa915.mesh"]
+
+source_file="res://models/KayKit_BlockBits_1.0_FREE/Assets/obj/snow.obj"
+dest_files=["res://.godot/imported/snow.obj-e358ca9ee48b5b97ef59662e194aa915.mesh", "res://.godot/imported/snow.obj-e358ca9ee48b5b97ef59662e194aa915.mesh"]
+
+[params]
+
+generate_tangents=true
+generate_lods=true
+generate_shadow_mesh=true
+generate_lightmap_uv2=false
+generate_lightmap_uv2_texel_size=0.2
+scale_mesh=Vector3(1, 1, 1)
+offset_mesh=Vector3(0, 0, 0)
+force_disable_mesh_compression=false

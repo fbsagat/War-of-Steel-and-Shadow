@@ -1,0 +1,817 @@
+[gd_scene load_steps=2 format=3 uid="uid://dp2gq1l5kmxd6"]
+
+[sub_resource type="GDScript" id="GDScript_om72s"]
+script/source = "@tool
+extends Node3D
+
+## Gerador de Mapa Procedural para Godot 4.x+
+## Sistema completo com costuras perfeitas e etapas de relevo avançadas
+
+# =============================================================================
+# CATEGORIAS DO INSPETOR
+# =============================================================================
+
+# --- Configurações Básicas ---
+@export_category(\"Configurações Básicas\")
+@export var posicao_inicial := Vector3.ZERO ## Posição inicial do terreno (X, Y, Z)
+@export var tamanho_mapa := Vector2i(50, 50) ## Tamanho do mapa em chunks (0,0 = infinito)
+@export var tamanho_chunk := 16.0 ## Tamanho de cada chunk em metros
+@export var seed_geracao := 0 ## Seed para geração (0 = aleatório)
+
+# --- Recursos ---
+@export_category(\"Recursos\")
+@export var material_terreno: Material ## Material do terreno (StandardMaterial3D ou ShaderMaterial)
+
+# --- Player e Renderização ---
+@export_category(\"Player e Renderização\")
+@export var distancia_render := 150.0 ## Distância de renderização (0 = tudo)
+@export_node_path(\"Node3D\") var caminho_player: NodePath ## Caminho do nó do player
+@export_node_path(\"Node3D\") var no_pai_terreno: NodePath ## Nó sob o qual gerar terreno
+
+# --- Física ---
+@export_category(\"Física\")
+@export_range(1, 32) var layer_colisao: int = 1 ## Layer de colisão
+@export_range(1, 32) var mascara_colisao: int = 1 ## Máscara de colisão
+@export var otimizar_colisao_distante: bool = true ## Desabilitar colisão em chunks distantes
+
+# --- Geração de Relevo ---
+@export_category(\"Geração de Relevo\")
+@export_enum(\"Flat\", \"Semi-Flat\", \"Gentle Hills\", \"Rolling Hills\", \"Valleys\", \"Custom\") 
+var tipo_relevo_padrao: String = \"Gentle Hills\"
+
+@export_subgroup(\"Custom Relief Settings\")
+@export var custom_amplitude: float = 5.0 ## Amplitude das ondulações
+@export var custom_frequencia: float = 0.05 ## Frequência do ruído
+@export var custom_octaves: int = 4 ## Número de oitavas
+@export var custom_persistencia: float = 0.5 ## Persistência
+@export var custom_lacunaridade: float = 2.0 ## Lacunaridade
+
+# --- Sistema de Etapas de Relevo ---
+@export_category(\"Sistema de Etapas de Relevo\")
+@export var usar_etapas_relevo: bool = false ## Ativar sistema de etapas progressivas
+@export var etapas_relevo: Array[EtapaRelevo] = [] ## Define as etapas de progressão
+@export var suavizar_transicoes: bool = true ## Suavizar transições entre etapas
+@export var tamanho_zona_transicao: float = 0.2 ## Tamanho da zona de blend (0-1)
+
+# --- Otimização e Performance ---
+@export_category(\"Otimização e Performance\")
+@export_enum(\"Low\", \"Medium\", \"High\", \"Ultra\", \"Custom\") var quality_preset: String = \"Medium\"
+
+@export_subgroup(\"LOD (Level of Detail)\")
+@export var enable_lod: bool = true ## Ativar sistema de LOD
+@export var lod_distances: Array[float] = [50.0, 100.0, 200.0] ## Distâncias para cada nível LOD
+@export var lod_resolutions: Array[int] = [1, 2, 4, 8] ## Divisores de resolução por LOD
+
+@export_subgroup(\"Culling e Pooling\")
+@export var enable_frustum_culling: bool = true ## Ativar frustum culling
+@export var enable_chunk_pooling: bool = true ## Ativar pooling de chunks
+@export var max_chunks_per_frame: int = 2 ## Máximo de chunks processados por frame
+@export var update_interval: float = 0.1 ## Intervalo de atualização (segundos)
+
+# --- Configurações Gráficas ---
+@export_category(\"Configurações Gráficas\")
+@export var usar_sombras: bool = true ## Chunks projetam sombras
+@export var gi_mode: GeometryInstance3D.GIMode = GeometryInstance3D.GI_MODE_STATIC
+@export var cast_shadow: GeometryInstance3D.ShadowCastingSetting = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+@export var criar_luz_automatica: bool = true ## Criar DirectionalLight3D se não houver luz
+
+@export_subgroup(\"Qualidade Visual\")
+@export var subdivisions: int = 32 ## Subdivisões do mesh (qualidade)
+@export var altura_maxima: float = 20.0 ## Altura máxima do terreno
+@export var usar_normal_mapping: bool = true ## Calcular normais suaves
+
+# --- Cache e Memória ---
+@export_category(\"Cache e Memória\")
+@export var cache_meshes: bool = true ## Cachear meshes gerados
+@export var max_cached_chunks: int = 500 ## Máximo de chunks em cache
+@export var limpar_chunks_distantes: bool = true ## Liberar chunks muito distantes
+@export var distancia_liberacao: float = 300.0 ## Distância para liberar chunks
+
+# --- Debug ---
+@export_category(\"Debug\")
+@export var debug_mostrar_bordas: bool = false ## Mostrar wireframe nas bordas
+@export var debug_forcar_lod_unico: bool = false ## Forçar LOD único
+@export var debug_lod_forcado: int = 0 ## LOD forçado
+@export var debug_log_geracao: bool = false ## Logar processo de geração
+
+# =============================================================================
+# CLASSE DE ETAPA DE RELEVO
+# =============================================================================
+
+#class EtapaRelevo extends Resource:
+	#@export var nome: String = \"Etapa 1\"
+	#@export_enum(\"Flat\", \"Semi-Flat\", \"Gentle Hills\", \"Rolling Hills\", \"Valleys\", \"Custom\") 
+	#var tipo_relevo: String = \"Gentle Hills\"
+	#@export_range(0.0, 100.0) var percentual_distancia: float = 25.0 ## % da distância do centro à borda
+	#@export var cor_visual: Color = Color.WHITE ## Cor para visualização (opcional)
+
+# =============================================================================
+# VARIÁVEIS INTERNAS
+# =============================================================================
+
+var chunks_ativos: Dictionary = {} ## [Vector2i: ChunkData]
+var chunk_pool: Array = []
+var noise: FastNoiseLite
+var player_node: Node3D
+var terrain_parent: Node3D
+var mesh_cache: Dictionary = {}
+var altura_cache: Dictionary = {} ## [Vector3: float] - Cache de alturas para costuras perfeitas
+var timer: float = 0.0
+var camera: Camera3D
+var raio_mapa_metros: float = 0.0 ## Raio do mapa em metros
+
+class ChunkData:
+	var mesh_instance: MeshInstance3D
+	var static_body: StaticBody3D
+	var collision_shape: CollisionShape3D
+	var posicao_chunk: Vector2i
+	var lod_atual: int = 0
+	var visivel: bool = true
+
+# =============================================================================
+# INICIALIZAÇÃO
+# =============================================================================
+
+func _ready() -> void:
+	if Engine.is_editor_hint():
+		return
+	
+	print(\"[TerrainGen] Inicializando...\")
+	
+	_validar_configuracoes()
+	_aplicar_quality_preset()
+	_inicializar_seed()
+	_configurar_noise()
+	_obter_referencias()
+	_calcular_raio_mapa()
+	
+	_gerar_chunks_iniciais()
+
+func _validar_configuracoes() -> void:
+	if tamanho_chunk <= 0:
+		push_warning(\"[TerrainGen] Tamanho chunk inválido! Usando 16\")
+		tamanho_chunk = 16.0
+	
+	if subdivisions < 2:
+		push_warning(\"[TerrainGen] Subdivisions muito baixo! Usando 8\")
+		subdivisions = 8
+	
+	if altura_maxima < 0:
+		altura_maxima = 20.0
+
+func _inicializar_seed() -> void:
+	if seed_geracao == 0:
+		seed_geracao = randi()
+	seed(seed_geracao)
+	print(\"[TerrainGen] Seed: \", seed_geracao)
+
+func _configurar_noise() -> void:
+	noise = FastNoiseLite.new()
+	noise.seed = seed_geracao
+	noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
+	noise.frequency = custom_frequencia
+	noise.fractal_octaves = custom_octaves
+	noise.fractal_lacunarity = custom_lacunaridade
+	noise.fractal_gain = custom_persistencia
+
+func _obter_referencias() -> void:
+	if caminho_player != NodePath():
+		player_node = get_node_or_null(caminho_player)
+	
+	if no_pai_terreno != NodePath():
+		terrain_parent = get_node_or_null(no_pai_terreno)
+	else:
+		terrain_parent = self
+	
+	if player_node and player_node.has_node(\"Camera3D\"):
+		camera = player_node.get_node(\"Camera3D\")
+	else:
+		camera = get_viewport().get_camera_3d()
+	
+	if criar_luz_automatica:
+		_verificar_e_criar_luz()
+
+func _verificar_e_criar_luz() -> void:
+	var luz_encontrada: bool = false
+	var root: Window = get_tree().root
+	
+	for child in root.get_children():
+		if _tem_luz_direcional(child):
+			luz_encontrada = true
+			break
+	
+	if not luz_encontrada:
+		print(\"[TerrainGen] Criando luz automática\")
+		var luz: DirectionalLight3D = DirectionalLight3D.new()
+		luz.name = \"TerrainAutoLight\"
+		luz.light_energy = 1.0
+		luz.light_color = Color(1.0, 0.98, 0.95)
+		luz.shadow_enabled = usar_sombras
+		luz.rotation_degrees = Vector3(-45, 45, 0)
+		root.add_child(luz)
+
+func _tem_luz_direcional(node: Node) -> bool:
+	if node is DirectionalLight3D:
+		return true
+	for child in node.get_children():
+		if _tem_luz_direcional(child):
+			return true
+	return false
+
+func _calcular_raio_mapa() -> void:
+	if tamanho_mapa != Vector2i.ZERO:
+		raio_mapa_metros = max(tamanho_mapa.x, tamanho_mapa.y) * tamanho_chunk * 0.5
+		print(\"[TerrainGen] Raio do mapa: \", raio_mapa_metros, \"m\")
+
+func _aplicar_quality_preset() -> void:
+	match quality_preset:
+		\"Low\":
+			subdivisions = 8
+			lod_resolutions = [1, 2, 4, 8]
+			max_chunks_per_frame = 1
+		\"Medium\":
+			subdivisions = 16
+			lod_resolutions = [1, 2, 4, 8]
+			max_chunks_per_frame = 2
+		\"High\":
+			subdivisions = 32
+			lod_resolutions = [1, 2, 4, 6]
+			max_chunks_per_frame = 3
+		\"Ultra\":
+			subdivisions = 64
+			lod_resolutions = [1, 2, 3, 4]
+			max_chunks_per_frame = 5
+
+# =============================================================================
+# GERAÇÃO DE CHUNKS - SISTEMA DE COSTURA PERFEITA
+# =============================================================================
+
+func _gerar_chunks_iniciais() -> void:
+	print(\"[TerrainGen] Gerando chunks iniciais...\")
+	
+	var centro: Vector2i = Vector2i.ZERO
+	if distancia_render > 0 and player_node:
+		var pos: Vector3 = player_node.global_position
+		centro = Vector2i(
+			int(floor(pos.x / tamanho_chunk)),
+			int(floor(pos.z / tamanho_chunk))
+		)
+	
+	var raio_chunks: int = _calcular_raio_chunks()
+	var chunks_criados: int = 0
+	var tempo_inicio: int = Time.get_ticks_msec()
+	
+	for raio in range(raio_chunks + 1):
+		for x in range(-raio, raio + 1):
+			for z in range(-raio, raio + 1):
+				if abs(x) == raio or abs(z) == raio:
+					var chunk_pos: Vector2i = Vector2i(centro.x + x, centro.y + z)
+					if _chunk_dentro_limites(chunk_pos):
+						_criar_chunk(chunk_pos)
+						chunks_criados += 1
+						
+						if chunks_criados % 10 == 0:
+							await get_tree().process_frame
+	
+	var tempo_total: int = Time.get_ticks_msec() - tempo_inicio
+	print(\"[TerrainGen] Concluído! \", chunks_criados, \" chunks em \", tempo_total, \"ms\")
+
+func _calcular_raio_chunks() -> int:
+	var raio: int = 5
+	
+	if distancia_render > 0:
+		raio = int(distancia_render / tamanho_chunk) + 1
+	elif tamanho_mapa != Vector2i.ZERO:
+		raio = int(max(tamanho_mapa.x, tamanho_mapa.y) / 2)
+	
+	return min(raio, 20) # Limite de segurança
+
+func _criar_chunk(chunk_pos: Vector2i) -> ChunkData:
+	if chunks_ativos.has(chunk_pos):
+		return chunks_ativos[chunk_pos]
+	
+	var chunk_data: ChunkData
+	
+	if enable_chunk_pooling and chunk_pool.size() > 0:
+		chunk_data = chunk_pool.pop_back()
+		chunk_data.posicao_chunk = chunk_pos
+	else:
+		chunk_data = ChunkData.new()
+		chunk_data.posicao_chunk = chunk_pos
+		_criar_chunk_nodes(chunk_data)
+	
+	var lod_inicial: int = 1 if enable_lod and lod_resolutions.size() > 1 else 0
+	_gerar_mesh_chunk(chunk_data, lod_inicial)
+	
+	# Posicionar StaticBody3D (raiz do chunk)
+	var world_pos: Vector3 = Vector3(
+		chunk_pos.x * tamanho_chunk + posicao_inicial.x,
+		posicao_inicial.y,
+		chunk_pos.y * tamanho_chunk + posicao_inicial.z
+	)
+	chunk_data.static_body.global_position = world_pos
+	
+	chunks_ativos[chunk_pos] = chunk_data
+	return chunk_data
+
+func _criar_chunk_nodes(chunk_data: ChunkData) -> void:
+	# StaticBody3D como raiz
+	chunk_data.static_body = StaticBody3D.new()
+	chunk_data.static_body.collision_layer = 1 << (layer_colisao - 1)
+	chunk_data.static_body.collision_mask = 1 << (mascara_colisao - 1)
+	terrain_parent.add_child(chunk_data.static_body)
+	
+	# MeshInstance3D como filho
+	chunk_data.mesh_instance = MeshInstance3D.new()
+	chunk_data.mesh_instance.cast_shadow = cast_shadow if usar_sombras else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	chunk_data.mesh_instance.gi_mode = gi_mode
+	chunk_data.static_body.add_child(chunk_data.mesh_instance)
+	
+	# CollisionShape3D como filho
+	chunk_data.collision_shape = CollisionShape3D.new()
+	chunk_data.static_body.add_child(chunk_data.collision_shape)
+
+func _gerar_mesh_chunk(chunk_data: ChunkData, lod_level: int = 0) -> void:
+	var cache_key: String = str(chunk_data.posicao_chunk) + \"_\" + str(lod_level)
+	
+	if cache_meshes and mesh_cache.has(cache_key):
+		chunk_data.mesh_instance.mesh = mesh_cache[cache_key]
+		_aplicar_material_chunk(chunk_data)
+		_atualizar_collision_shape(chunk_data, lod_level)
+		return
+	
+	var lod_divisor: int = lod_resolutions[lod_level] if enable_lod and lod_level < lod_resolutions.size() else 1
+	var resolution: int = clamp(subdivisions / lod_divisor, 2, 128)
+	var step: float = tamanho_chunk / float(resolution)
+	
+	# Arrays do mesh
+	var vertices: PackedVector3Array = PackedVector3Array()
+	var normals: PackedVector3Array = PackedVector3Array()
+	var uvs: PackedVector2Array = PackedVector2Array()
+	var indices: PackedInt32Array = PackedInt32Array()
+	
+	var total_vertices: int = (resolution + 1) * (resolution + 1)
+	vertices.resize(total_vertices)
+	uvs.resize(total_vertices)
+	indices.resize(resolution * resolution * 6)
+	
+	# SISTEMA DE COSTURA: Gerar vértices usando grid global absoluto
+	var vertex_index: int = 0
+	
+	for z in range(resolution + 1):
+		for x in range(resolution + 1):
+			# Coordenadas locais no chunk (0 a tamanho_chunk)
+			var local_x: float = x * step
+			var local_z: float = z * step
+			
+			# CRÍTICO: Coordenadas globais usando grid de vértices absolutos
+			# Garante que bordas compartilhadas tenham coordenadas IDÊNTICAS
+			var global_vertex_x: float = (chunk_data.posicao_chunk.x * resolution + x) * step
+			var global_vertex_z: float = (chunk_data.posicao_chunk.y * resolution + z) * step
+			
+			# Calcular altura usando coordenadas globais (com cache automático)
+			var altura: float = _obter_altura_no_ponto(global_vertex_x, global_vertex_z)
+			
+			vertices[vertex_index] = Vector3(local_x, altura, local_z)
+			uvs[vertex_index] = Vector2(float(x) / float(resolution), float(z) / float(resolution))
+			vertex_index += 1
+	
+	# Gerar índices (ordem correta para normais para cima)
+	var index_pos: int = 0
+	for z in range(resolution):
+		for x in range(resolution):
+			var i: int = z * (resolution + 1) + x
+			
+			indices[index_pos] = i
+			indices[index_pos + 1] = i + 1
+			indices[index_pos + 2] = i + resolution + 1
+			
+			indices[index_pos + 3] = i + 1
+			indices[index_pos + 4] = i + resolution + 2
+			indices[index_pos + 5] = i + resolution + 1
+			
+			index_pos += 6
+	
+	# Calcular normais
+	if usar_normal_mapping:
+		normals = _calcular_normais(vertices, indices)
+	else:
+		normals.resize(vertices.size())
+		normals.fill(Vector3.UP)
+	
+	# Criar mesh
+	var surface_array: Array = []
+	surface_array.resize(Mesh.ARRAY_MAX)
+	surface_array[Mesh.ARRAY_VERTEX] = vertices
+	surface_array[Mesh.ARRAY_NORMAL] = normals
+	surface_array[Mesh.ARRAY_TEX_UV] = uvs
+	surface_array[Mesh.ARRAY_INDEX] = indices
+	
+	var array_mesh: ArrayMesh = ArrayMesh.new()
+	array_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, surface_array)
+	
+	if cache_meshes:
+		mesh_cache[cache_key] = array_mesh
+		_limpar_cache_se_necessario()
+	
+	chunk_data.mesh_instance.mesh = array_mesh
+	chunk_data.lod_atual = lod_level
+	
+	if debug_mostrar_bordas:
+		_debug_desenhar_bordas(chunk_data)
+	
+	_aplicar_material_chunk(chunk_data)
+	_atualizar_collision_shape(chunk_data, lod_level)
+
+# =============================================================================
+# SISTEMA DE ALTURA COM CACHE E ETAPAS
+# =============================================================================
+
+func _obter_altura_no_ponto(world_x: float, world_z: float) -> float:
+	# Criar chave única baseada em coordenadas arredondadas
+	var cache_key: Vector3 = Vector3(
+		round(world_x * 1000.0) / 1000.0,
+		0,
+		round(world_z * 1000.0) / 1000.0
+	)
+	
+	# Verificar cache
+	if altura_cache.has(cache_key):
+		return altura_cache[cache_key]
+	
+	# Calcular nova altura
+	var distancia_centro: float = Vector2(world_x, world_z).length()
+	var params: Dictionary = _obter_parametros_relevo_por_distancia(distancia_centro)
+	
+	var altura: float
+	
+	# Se é FLAT, garantir altura zero ou muito próxima
+	if params.tipo == \"Flat\":
+		altura = 0.0
+	else:
+		altura = _gerar_altura_com_noise(world_x, world_z, params)
+	
+	# Armazenar no cache
+	altura_cache[cache_key] = altura
+	
+	# Limitar tamanho do cache
+	if altura_cache.size() > 15000:
+		_limpar_altura_cache()
+	
+	return altura
+
+func _gerar_altura_com_noise(x: float, z: float, params: Dictionary) -> float:
+	var freq_original: float = noise.frequency
+	noise.frequency = params.frequencia
+	
+	# Arredondar para garantir consistência
+	var x_rounded: float = round(x * 1000.0) / 1000.0
+	var z_rounded: float = round(z * 1000.0) / 1000.0
+	
+	var altura: float = noise.get_noise_2d(x_rounded, z_rounded) * params.amplitude
+	
+	noise.frequency = freq_original
+	return clamp(altura, 0, altura_maxima)
+
+func _obter_parametros_relevo_por_distancia(distancia_metros: float) -> Dictionary:
+	# Se etapas desativadas, usar tipo padrão
+	if not usar_etapas_relevo or etapas_relevo.is_empty():
+		return _obter_parametros_base(tipo_relevo_padrao)
+	
+	# Se mapa infinito, usar tipo padrão
+	if raio_mapa_metros <= 0:
+		return _obter_parametros_base(tipo_relevo_padrao)
+	
+	# Calcular percentual da distância (0.0 no centro, 1.0 na borda)
+	var percentual: float = clamp(distancia_metros / raio_mapa_metros, 0.0, 1.0)
+	
+	# Determinar etapa atual baseada no percentual
+	var percentual_acumulado: float = 0.0
+	var etapa_anterior: EtapaRelevo = null
+	
+	for i in range(etapas_relevo.size()):
+		var etapa: EtapaRelevo = etapas_relevo[i]
+		var percentual_etapa: float = etapa.percentual_distancia / 100.0
+		
+		if percentual <= percentual_acumulado + percentual_etapa:
+			# Estamos nesta etapa
+			if suavizar_transicoes and etapa_anterior != null:
+				# Calcular blend com etapa anterior
+				var inicio_etapa: float = percentual_acumulado
+				var fim_etapa: float = percentual_acumulado + percentual_etapa
+				var zona_blend: float = percentual_etapa * tamanho_zona_transicao
+				
+				if percentual < inicio_etapa + zona_blend:
+					var blend: float = (percentual - inicio_etapa) / zona_blend
+					return _interpolar_parametros(
+						_obter_parametros_base(etapa_anterior.tipo_relevo),
+						_obter_parametros_base(etapa.tipo_relevo),
+						blend
+					)
+			
+			return _obter_parametros_base(etapa.tipo_relevo)
+		
+		etapa_anterior = etapa
+		percentual_acumulado += percentual_etapa
+	
+	# Se passou de todas etapas, usar última
+	if etapas_relevo.size() > 0:
+		return _obter_parametros_base(etapas_relevo[-1].tipo_relevo)
+	
+	return _obter_parametros_base(tipo_relevo_padrao)
+
+func _obter_parametros_base(tipo: String) -> Dictionary:
+	match tipo:
+		\"Flat\":
+			return {\"tipo\": \"Flat\", \"amplitude\": 0.0, \"frequencia\": 0.01}
+		\"Semi-Flat\":
+			return {\"tipo\": \"Semi-Flat\", \"amplitude\": 0.5, \"frequencia\": 0.02}
+		\"Gentle Hills\":
+			return {\"tipo\": \"Gentle Hills\", \"amplitude\": 3.0, \"frequencia\": 0.03}
+		\"Rolling Hills\":
+			return {\"tipo\": \"Rolling Hills\", \"amplitude\": 8.0, \"frequencia\": 0.05}
+		\"Valleys\":
+			return {\"tipo\": \"Valleys\", \"amplitude\": 15.0, \"frequencia\": 0.08}
+		\"Custom\":
+			return {\"tipo\": \"Custom\", \"amplitude\": custom_amplitude, \"frequencia\": custom_frequencia}
+		_:
+			return {\"tipo\": \"Gentle Hills\", \"amplitude\": 5.0, \"frequencia\": 0.05}
+
+func _interpolar_parametros(params_a: Dictionary, params_b: Dictionary, blend: float) -> Dictionary:
+	return {
+		\"tipo\": params_b.tipo,
+		\"amplitude\": lerp(params_a.amplitude, params_b.amplitude, blend),
+		\"frequencia\": lerp(params_a.frequencia, params_b.frequencia, blend)
+	}
+
+func _limpar_altura_cache() -> void:
+	var keys: Array = altura_cache.keys()
+	var remover: int = keys.size() - 7500
+	for i in range(remover):
+		altura_cache.erase(keys[i])
+
+# =============================================================================
+# NORMAIS E MATERIAL
+# =============================================================================
+
+func _calcular_normais(vertices: PackedVector3Array, indices: PackedInt32Array) -> PackedVector3Array:
+	var normals: PackedVector3Array = PackedVector3Array()
+	normals.resize(vertices.size())
+	normals.fill(Vector3.ZERO)
+	
+	for i in range(0, indices.size(), 3):
+		var i0: int = indices[i]
+		var i1: int = indices[i + 1]
+		var i2: int = indices[i + 2]
+		
+		var v0: Vector3 = vertices[i0]
+		var v1: Vector3 = vertices[i1]
+		var v2: Vector3 = vertices[i2]
+		
+		var edge1: Vector3 = v1 - v0
+		var edge2: Vector3 = v2 - v0
+		# CORRETO: edge2 x edge1 para normais apontando para cima
+		var normal: Vector3 = edge2.cross(edge1).normalized()
+		
+		normals[i0] += normal
+		normals[i1] += normal
+		normals[i2] += normal
+	
+	for i in range(normals.size()):
+		if normals[i].length() > 0:
+			normals[i] = normals[i].normalized()
+		else:
+			normals[i] = Vector3.UP
+	
+	return normals
+
+func _aplicar_material_chunk(chunk_data: ChunkData) -> void:
+	if material_terreno:
+		chunk_data.mesh_instance.set_surface_override_material(0, material_terreno)
+	else:
+		var mat: StandardMaterial3D = _criar_material_padrao()
+		chunk_data.mesh_instance.set_surface_override_material(0, mat)
+
+func _criar_material_padrao() -> StandardMaterial3D:
+	var mat: StandardMaterial3D = StandardMaterial3D.new()
+	mat.albedo_color = Color(0.4, 0.7, 0.4)
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
+	mat.roughness = 0.8
+	mat.metallic = 0.0
+	mat.specular_mode = BaseMaterial3D.SPECULAR_SCHLICK_GGX
+	return mat
+
+func _atualizar_collision_shape(chunk_data: ChunkData, lod_level: int) -> void:
+	if lod_level > 1 and otimizar_colisao_distante:
+		chunk_data.collision_shape.disabled = true
+		return
+	
+	chunk_data.collision_shape.disabled = false
+	var mesh: ArrayMesh = chunk_data.mesh_instance.mesh
+	if mesh:
+		var shape: ConcavePolygonShape3D = mesh.create_trimesh_shape()
+		if shape:
+			chunk_data.collision_shape.shape = shape
+
+# =============================================================================
+# AUXILIARES
+# =============================================================================
+
+func _chunk_dentro_limites(chunk_pos: Vector2i) -> bool:
+	if tamanho_mapa == Vector2i.ZERO:
+		return true
+	var half_size: Vector2i = tamanho_mapa / 2
+	return abs(chunk_pos.x) <= half_size.x and abs(chunk_pos.y) <= half_size.y
+
+func _limpar_cache_se_necessario() -> void:
+	if mesh_cache.size() > max_cached_chunks:
+		var keys: Array = mesh_cache.keys()
+		var remover: int = keys.size() / 2
+		for i in range(remover):
+			mesh_cache.erase(keys[i])
+
+func _debug_desenhar_bordas(chunk_data: ChunkData) -> void:
+	for child in chunk_data.mesh_instance.get_children():
+		if child.name == \"BorderDebug\":
+			child.queue_free()
+	
+	var immediate: ImmediateMesh = ImmediateMesh.new()
+	var mesh_inst: MeshInstance3D = MeshInstance3D.new()
+	mesh_inst.name = \"BorderDebug\"
+	mesh_inst.mesh = immediate
+	chunk_data.mesh_instance.add_child(mesh_inst)
+	
+	var mat: StandardMaterial3D = StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.albedo_color = Color.RED
+	
+	immediate.surface_begin(Mesh.PRIMITIVE_LINE_STRIP, mat)
+	immediate.surface_add_vertex(Vector3(0, 0.1, 0))
+	immediate.surface_add_vertex(Vector3(tamanho_chunk, 0.1, 0))
+	immediate.surface_add_vertex(Vector3(tamanho_chunk, 0.1, tamanho_chunk))
+	immediate.surface_add_vertex(Vector3(0, 0.1, tamanho_chunk))
+	immediate.surface_add_vertex(Vector3(0, 0.1, 0))
+	immediate.surface_end()
+
+# =============================================================================
+# UPDATE
+# =============================================================================
+
+func _process(delta: float) -> void:
+	if Engine.is_editor_hint():
+		return
+	
+	timer += delta
+	if timer < update_interval:
+		return
+	timer = 0.0
+	
+	if player_node and distancia_render > 0:
+		_atualizar_chunks_ao_redor_player()
+	
+	if enable_lod:
+		_atualizar_lod_chunks()
+	
+	if enable_frustum_culling and camera:
+		_aplicar_frustum_culling()
+	
+	if limpar_chunks_distantes:
+		_limpar_chunks_distantes()
+
+func _atualizar_chunks_ao_redor_player() -> void:
+	if not player_node:
+		return
+	
+	var pos: Vector3 = player_node.global_position
+	var chunk_player: Vector2i = Vector2i(
+		int(floor(pos.x / tamanho_chunk)),
+		int(floor(pos.z / tamanho_chunk))
+	)
+	
+	var raio: int = int(distancia_render / tamanho_chunk) + 1
+	var processados: int = 0
+	
+	for x in range(-raio, raio + 1):
+		for z in range(-raio, raio + 1):
+			if processados >= max_chunks_per_frame:
+				return
+			
+			var chunk_pos: Vector2i = Vector2i(chunk_player.x + x, chunk_player.y + z)
+			if _chunk_dentro_limites(chunk_pos) and not chunks_ativos.has(chunk_pos):
+				var dist: float = Vector2(x, z).length() * tamanho_chunk
+				if dist <= distancia_render:
+					_criar_chunk(chunk_pos)
+					processados += 1
+
+func _atualizar_lod_chunks() -> void:
+	if not player_node:
+		return
+	
+	if debug_forcar_lod_unico:
+		for chunk_pos in chunks_ativos.keys():
+			var chunk_data: ChunkData = chunks_ativos[chunk_pos]
+			if chunk_data.lod_atual != debug_lod_forcado:
+				_gerar_mesh_chunk(chunk_data, debug_lod_forcado)
+		return
+	
+	var pos: Vector3 = player_node.global_position
+	
+	for chunk_pos in chunks_ativos.keys():
+		var chunk_data: ChunkData = chunks_ativos[chunk_pos]
+		var dist: float = pos.distance_to(chunk_data.static_body.global_position)
+		
+		var novo_lod: int = 0
+		for i in range(lod_distances.size()):
+			if dist > lod_distances[i]:
+				novo_lod = i + 1
+		
+		novo_lod = min(novo_lod, lod_resolutions.size() - 1)
+		
+		if novo_lod != chunk_data.lod_atual:
+			_gerar_mesh_chunk(chunk_data, novo_lod)
+
+func _aplicar_frustum_culling() -> void:
+	if not camera:
+		return
+	
+	var frustum: Array[Plane] = camera.get_frustum()
+	
+	for chunk_pos in chunks_ativos.keys():
+		var chunk_data: ChunkData = chunks_ativos[chunk_pos]
+		var aabb: AABB = chunk_data.mesh_instance.get_aabb()
+		aabb.position += chunk_data.static_body.global_position
+		
+		var visivel: bool = true
+		for plane in frustum:
+			if plane.is_point_over(aabb.get_center()) and plane.distance_to(aabb.get_center()) > aabb.size.length():
+				visivel = false
+				break
+		
+		chunk_data.mesh_instance.visible = visivel
+
+func _limpar_chunks_distantes() -> void:
+	if not player_node or distancia_liberacao <= 0:
+		return
+	
+	var pos: Vector3 = player_node.global_position
+	var para_remover: Array[Vector2i] = []
+	
+	for chunk_pos in chunks_ativos.keys():
+		var chunk_data: ChunkData = chunks_ativos[chunk_pos]
+		var dist: float = pos.distance_to(chunk_data.static_body.global_position)
+		
+		if dist > distancia_liberacao:
+			para_remover.append(chunk_pos)
+	
+	for chunk_pos in para_remover:
+		_remover_chunk(chunk_pos)
+
+func _remover_chunk(chunk_pos: Vector2i) -> void:
+	if not chunks_ativos.has(chunk_pos):
+		return
+	
+	var chunk_data: ChunkData = chunks_ativos[chunk_pos]
+	chunks_ativos.erase(chunk_pos)
+	
+	if enable_chunk_pooling and chunk_pool.size() < max_cached_chunks:
+		chunk_data.mesh_instance.visible = false
+		chunk_pool.append(chunk_data)
+	else:
+		chunk_data.static_body.queue_free()
+
+# =============================================================================
+# FUNÇÕES PÚBLICAS
+# =============================================================================
+
+func regenerar_terreno(nova_seed: int = 0) -> void:
+	for chunk_pos in chunks_ativos.keys():
+		var chunk_data: ChunkData = chunks_ativos[chunk_pos]
+		chunk_data.static_body.queue_free()
+	
+	chunks_ativos.clear()
+	chunk_pool.clear()
+	mesh_cache.clear()
+	altura_cache.clear()
+	
+	if nova_seed != 0:
+		seed_geracao = nova_seed
+	
+	_configurar_noise()
+	_gerar_chunks_iniciais()
+
+func obter_altura_em_posicao(world_pos: Vector3) -> float:
+	return _obter_altura_no_ponto(world_pos.x, world_pos.z)
+
+func limpar_tudo() -> void:
+	for chunk_pos in chunks_ativos.keys():
+		var chunk_data: ChunkData = chunks_ativos[chunk_pos]
+		chunk_data.static_body.queue_free()
+	
+	chunks_ativos.clear()
+	chunk_pool.clear()
+	mesh_cache.clear()
+	altura_cache.clear()
+"
+
+[node name="WorldGenerator" type="Node3D"]
+script = SubResource("GDScript_om72s")
