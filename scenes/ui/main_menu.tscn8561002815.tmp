@@ -1,0 +1,785 @@
+[gd_scene load_steps=16 format=3 uid="uid://dwnsmgw3eenld"]
+
+[ext_resource type="Script" uid="uid://b3tbenlemms8m" path="res://scripts/ui/main_menu.gd" id="1_fe2o3"]
+[ext_resource type="FontFile" uid="uid://dd4sfrpxym83o" path="res://material/Medieval Scroll of Wisdom.ttf" id="2_1g8jr"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_fe2o3"]
+font_size = 32
+
+[sub_resource type="LabelSettings" id="LabelSettings_1g8jr"]
+font_size = 18
+
+[sub_resource type="LabelSettings" id="LabelSettings_m1kxf"]
+font_size = 12
+font_color = Color(0.75, 0.63750005, 0, 1)
+
+[sub_resource type="Theme" id="Theme_q0uhn"]
+default_font = ExtResource("2_1g8jr")
+
+[sub_resource type="LabelSettings" id="LabelSettings_6dd3c"]
+font_size = 45
+
+[sub_resource type="LabelSettings" id="LabelSettings_x2yvf"]
+font_size = 28
+
+[sub_resource type="LabelSettings" id="LabelSettings_uhagc"]
+font_size = 18
+
+[sub_resource type="LabelSettings" id="LabelSettings_btxxm"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_7suek"]
+font_size = 25
+
+[sub_resource type="LabelSettings" id="LabelSettings_8g5eo"]
+font_size = 20
+
+[sub_resource type="LabelSettings" id="LabelSettings_q85j6"]
+font_size = 20
+
+[sub_resource type="LabelSettings" id="LabelSettings_dhe1o"]
+font_size = 24
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_6dd3c"]
+bg_color = Color(0.13, 0.81149995, 1, 1)
+
+[node name="Control" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_fe2o3")
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+follow_viewport_enabled = true
+
+[node name="ColorRect" type="ColorRect" parent="CanvasLayer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.3157442, 0.18199122, 0.09572428, 1)
+
+[node name="CenterContainer" type="CenterContainer" parent="CanvasLayer"]
+custom_minimum_size = Vector2(800, 600)
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Control" type="Control" parent="CanvasLayer/CenterContainer"]
+custom_minimum_size = Vector2(1200, 800)
+layout_mode = 2
+
+[node name="NameInputMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/NameInputMenu"]
+layout_mode = 2
+alignment = 1
+
+[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/NameInputMenu/VBoxContainer"]
+layout_mode = 2
+text = "Bem vindo!"
+label_settings = SubResource("LabelSettings_fe2o3")
+horizontal_alignment = 1
+
+[node name="Label2" type="Label" parent="CanvasLayer/CenterContainer/Control/NameInputMenu/VBoxContainer"]
+layout_mode = 2
+text = "Escolha seu nome"
+label_settings = SubResource("LabelSettings_1g8jr")
+horizontal_alignment = 1
+
+[node name="PlayerNameInput" type="LineEdit" parent="CanvasLayer/CenterContainer/Control/NameInputMenu/VBoxContainer"]
+custom_minimum_size = Vector2(400, 50)
+layout_mode = 2
+placeholder_text = "Digite seu nome (3-20 caracteres)"
+alignment = 1
+max_length = 20
+
+[node name="Label3" type="Label" parent="CanvasLayer/CenterContainer/Control/NameInputMenu/VBoxContainer"]
+layout_mode = 2
+text = "• 3 a 20 caracteres\\n• Letras, números, espaços e _"
+label_settings = SubResource("LabelSettings_m1kxf")
+horizontal_alignment = 1
+
+[node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/NameInputMenu/VBoxContainer"]
+visible = false
+custom_minimum_size = Vector2(400, 0)
+layout_mode = 2
+horizontal_alignment = 1
+
+[node name="ConfirmButton" type="Button" parent="CanvasLayer/CenterContainer/Control/NameInputMenu/VBoxContainer"]
+custom_minimum_size = Vector2(200, 50)
+layout_mode = 2
+text = "Confirmar"
+
+[node name="MainMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/MainMenu"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/MainMenu/VBoxContainer"]
+layout_mode = 2
+theme = SubResource("Theme_q0uhn")
+text = "War of Steel and Shadow"
+label_settings = SubResource("LabelSettings_6dd3c")
+horizontal_alignment = 1
+
+[node name="JoinMatchButton" type="Button" parent="CanvasLayer/CenterContainer/Control/MainMenu/VBoxContainer"]
+custom_minimum_size = Vector2(200, 40)
+layout_mode = 2
+text = "Entrar em Partida"
+
+[node name="CreateMatchButton" type="Button" parent="CanvasLayer/CenterContainer/Control/MainMenu/VBoxContainer"]
+custom_minimum_size = Vector2(200, 40)
+layout_mode = 2
+text = "Criar Partida
+"
+
+[node name="HowToPlayButton" type="Button" parent="CanvasLayer/CenterContainer/Control/MainMenu/VBoxContainer"]
+custom_minimum_size = Vector2(200, 40)
+layout_mode = 2
+text = "Como Jogar"
+
+[node name="OptionsButton" type="Button" parent="CanvasLayer/CenterContainer/Control/MainMenu/VBoxContainer"]
+custom_minimum_size = Vector2(200, 40)
+layout_mode = 2
+text = "Opções"
+
+[node name="QuitButton" type="Button" parent="CanvasLayer/CenterContainer/Control/MainMenu/VBoxContainer"]
+custom_minimum_size = Vector2(200, 40)
+layout_mode = 2
+text = "Sair"
+
+[node name="ConnectingMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/ConnectingMenu"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="TextureRect" type="TextureRect" parent="CanvasLayer/CenterContainer/Control/ConnectingMenu/VBoxContainer"]
+custom_minimum_size = Vector2(128, 128)
+layout_mode = 2
+
+[node name="ConnectingLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/ConnectingMenu/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "Conectando ao servidor..."
+horizontal_alignment = 1
+
+[node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/ConnectingMenu/VBoxContainer"]
+visible = false
+modulate = Color(0.87, 0.56549996, 0, 1)
+custom_minimum_size = Vector2(500, 0)
+layout_mode = 2
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="MatchListMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/MatchListMenu"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/MatchListMenu/VBoxContainer"]
+layout_mode = 2
+text = "Lista de Partidas"
+horizontal_alignment = 1
+
+[node name="ScrollContainer" type="ScrollContainer" parent="CanvasLayer/CenterContainer/Control/MatchListMenu/VBoxContainer"]
+custom_minimum_size = Vector2(400, 300)
+layout_mode = 2
+
+[node name="MatchList" type="ItemList" parent="CanvasLayer/CenterContainer/Control/MatchListMenu/VBoxContainer/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+max_text_lines = 2
+item_count = 3
+same_column_width = true
+icon_mode = 0
+item_0/text = "Partida 1"
+item_1/text = "Partida 2"
+item_2/text = "Partida 3"
+
+[node name="PasswordContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/MatchListMenu/VBoxContainer"]
+visible = false
+layout_mode = 2
+
+[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/MatchListMenu/VBoxContainer/PasswordContainer"]
+layout_mode = 2
+text = "Senha"
+horizontal_alignment = 1
+
+[node name="PasswordInput" type="LineEdit" parent="CanvasLayer/CenterContainer/Control/MatchListMenu/VBoxContainer/PasswordContainer"]
+layout_mode = 2
+placeholder_text = "Digite a senha"
+secret = true
+
+[node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/MatchListMenu/VBoxContainer"]
+visible = false
+custom_minimum_size = Vector2(400, 0)
+layout_mode = 2
+text = "Senha"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="JoinButton" type="Button" parent="CanvasLayer/CenterContainer/Control/MatchListMenu/VBoxContainer"]
+custom_minimum_size = Vector2(200, 40)
+layout_mode = 2
+text = "Entrar"
+
+[node name="ButtonsContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/MatchListMenu/VBoxContainer"]
+layout_mode = 2
+alignment = 1
+
+[node name="BackButton" type="Button" parent="CanvasLayer/CenterContainer/Control/MatchListMenu/VBoxContainer/ButtonsContainer"]
+custom_minimum_size = Vector2(85, 50)
+layout_mode = 2
+text = "Voltar"
+
+[node name="ManualJoinButton" type="Button" parent="CanvasLayer/CenterContainer/Control/MatchListMenu/VBoxContainer/ButtonsContainer"]
+custom_minimum_size = Vector2(85, 50)
+layout_mode = 2
+text = "Entrada Manual"
+
+[node name="RoomMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control"]
+visible = false
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/RoomMenu"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="RoomNameLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer"]
+layout_mode = 2
+text = "Nome da Sala"
+label_settings = SubResource("LabelSettings_x2yvf")
+horizontal_alignment = 1
+
+[node name="StatusLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer"]
+layout_mode = 2
+text = "Jogadores: 0/8 (Mínimo: 2)"
+label_settings = SubResource("LabelSettings_uhagc")
+horizontal_alignment = 1
+
+[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer"]
+layout_mode = 2
+text = "Jogadores"
+label_settings = SubResource("LabelSettings_btxxm")
+horizontal_alignment = 1
+
+[node name="ScrollContainer" type="ScrollContainer" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer"]
+custom_minimum_size = Vector2(500, 300)
+layout_mode = 2
+
+[node name="PlayersList" type="ItemList" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer/ScrollContainer"]
+custom_minimum_size = Vector2(500, 300)
+layout_mode = 2
+
+[node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer"]
+visible = false
+custom_minimum_size = Vector2(500, 0)
+layout_mode = 2
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="ButtonsContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 20
+alignment = 1
+
+[node name="StartButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer/ButtonsContainer"]
+visible = false
+custom_minimum_size = Vector2(200, 50)
+layout_mode = 2
+text = "Iniciar Partida"
+
+[node name="CloseButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer/ButtonsContainer"]
+visible = false
+custom_minimum_size = Vector2(200, 50)
+layout_mode = 2
+text = "Fechar Sala"
+
+[node name="LeaveButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer/ButtonsContainer"]
+custom_minimum_size = Vector2(200, 50)
+layout_mode = 2
+text = "Sair da Sala"
+
+[node name="ManualJoinMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/ManualJoinMenu"]
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/ManualJoinMenu/VBoxContainer"]
+layout_mode = 2
+text = "Entrada Manual
+"
+horizontal_alignment = 1
+
+[node name="Label2" type="Label" parent="CanvasLayer/CenterContainer/Control/ManualJoinMenu/VBoxContainer"]
+layout_mode = 2
+text = "Nome da Sala:"
+
+[node name="ManualRoomNameInput" type="LineEdit" parent="CanvasLayer/CenterContainer/Control/ManualJoinMenu/VBoxContainer"]
+custom_minimum_size = Vector2(300, 40)
+layout_mode = 2
+placeholder_text = "Digite o nome da sala"
+
+[node name="Label3" type="Label" parent="CanvasLayer/CenterContainer/Control/ManualJoinMenu/VBoxContainer"]
+layout_mode = 2
+text = "Senha:"
+
+[node name="ManualRoomPasswordInput" type="LineEdit" parent="CanvasLayer/CenterContainer/Control/ManualJoinMenu/VBoxContainer"]
+custom_minimum_size = Vector2(300, 40)
+layout_mode = 2
+placeholder_text = "Deixe vazio se não tiver senha"
+secret = true
+
+[node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/ManualJoinMenu/VBoxContainer"]
+visible = false
+custom_minimum_size = Vector2(400, 0)
+layout_mode = 2
+text = "Senha"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="ButtonsContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/ManualJoinMenu/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 20
+alignment = 1
+
+[node name="BackButton" type="Button" parent="CanvasLayer/CenterContainer/Control/ManualJoinMenu/VBoxContainer/ButtonsContainer"]
+custom_minimum_size = Vector2(150, 50)
+layout_mode = 2
+text = "Voltar"
+
+[node name="ConfirmButton" type="Button" parent="CanvasLayer/CenterContainer/Control/ManualJoinMenu/VBoxContainer/ButtonsContainer"]
+custom_minimum_size = Vector2(150, 50)
+layout_mode = 2
+text = "Confirmar"
+
+[node name="CreateMatchMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/CreateMatchMenu"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/CreateMatchMenu/VBoxContainer"]
+layout_mode = 2
+text = "Criar Partia"
+horizontal_alignment = 1
+
+[node name="Label2" type="Label" parent="CanvasLayer/CenterContainer/Control/CreateMatchMenu/VBoxContainer"]
+layout_mode = 2
+text = "Nome da Sala"
+horizontal_alignment = 1
+
+[node name="RoomNameInput" type="LineEdit" parent="CanvasLayer/CenterContainer/Control/CreateMatchMenu/VBoxContainer"]
+layout_mode = 2
+placeholder_text = "Digite o nome da sala"
+alignment = 1
+
+[node name="Label3" type="Label" parent="CanvasLayer/CenterContainer/Control/CreateMatchMenu/VBoxContainer"]
+layout_mode = 2
+text = "Senha (opcional)"
+horizontal_alignment = 1
+
+[node name="RoomPasswordInput" type="LineEdit" parent="CanvasLayer/CenterContainer/Control/CreateMatchMenu/VBoxContainer"]
+layout_mode = 2
+placeholder_text = "Deixe vazio para sala pública"
+alignment = 1
+secret = true
+
+[node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/CreateMatchMenu/VBoxContainer"]
+visible = false
+custom_minimum_size = Vector2(400, 0)
+layout_mode = 2
+text = "Senha"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="ButtonsContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/CreateMatchMenu/VBoxContainer"]
+layout_mode = 2
+alignment = 1
+
+[node name="BackButton" type="Button" parent="CanvasLayer/CenterContainer/Control/CreateMatchMenu/VBoxContainer/ButtonsContainer"]
+layout_mode = 2
+text = "Voltar"
+
+[node name="ConfirmButton" type="Button" parent="CanvasLayer/CenterContainer/Control/CreateMatchMenu/VBoxContainer/ButtonsContainer"]
+custom_minimum_size = Vector2(200, 40)
+layout_mode = 2
+text = "Confirmar"
+
+[node name="MatchRoomMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control"]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/MatchRoomMenu"]
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="HowToPlayMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control"]
+custom_minimum_size = Vector2(1200, 800)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/HowToPlayMenu"]
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/HowToPlayMenu/VBoxContainer"]
+layout_mode = 2
+text = "Como Jogar"
+horizontal_alignment = 1
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/HowToPlayMenu/VBoxContainer"]
+custom_minimum_size = Vector2(800, 500)
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="RichTextLabel" type="RichTextLabel" parent="CanvasLayer/CenterContainer/Control/HowToPlayMenu/VBoxContainer/VBoxContainer"]
+custom_minimum_size = Vector2(800, 0)
+layout_mode = 2
+text = "Em um reino devastado pela escuridão, um grupo de guerreiros são enviados para purificar uma antiga cidade corrompida. No entanto, entre eles se esconde um impostor — um servo das sombras, disfarçado sob o mesmo juramento de luz. Cada jogador deve explorar as ruínas, coletar recursos, preparar alimentos e fortalecer o grupo contra as criaturas que assolam as ruas. Mas a confiança é uma arma de dois gumes: o verdadeiro inimigo pode estar ao seu lado.
+
+Durante a jornada, os jogadores precisarão cooperar para acender fogueiras, defender portões e preparar refeições que restauram suas forças. Contudo, o impostor pode sabotar o fogo, envenenar a comida ou invocar criaturas quando ninguém estiver por perto. É preciso observar comportamentos suspeitos, questionar decisões e vigiar os materiais amaldiçoados espalhados pelo mapa.
+
+A comunicação é feita por voz através das Runas de Comunicação — artefatos mágicos que conectam as mentes dos guerreiros. Fale com o grupo, forme alianças, mas cuidado com o que revela. O impostor ouve tudo e pode usar suas palavras contra você.
+
+Com o passar do tempo, a corrupção se intensifica, fortalecendo o impostor e tornando os inimigos mais ferozes. Se o grupo não descobrir o traidor a tempo, a cidade será consumida pelas trevas.
+
+Vença unindo coragem, desconfiança e astúcia. Confie, mas verifique. Lute, mas observe. E lembre-se: nas sombras, nem todo guerreiro luta pela luz.
+"
+fit_content = true
+
+[node name="BackButton" type="Button" parent="CanvasLayer/CenterContainer/Control/HowToPlayMenu/VBoxContainer"]
+custom_minimum_size = Vector2(200, 40)
+layout_mode = 2
+text = "Voltar"
+
+[node name="OptionsMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control"]
+layout_mode = 0
+offset_right = 1410.0
+offset_bottom = 900.0
+scale = Vector2(0.9, 0.9)
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu"]
+layout_mode = 2
+theme_override_constants/separation = 15
+alignment = 1
+
+[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer"]
+layout_mode = 2
+text = "Opções"
+label_settings = SubResource("LabelSettings_7suek")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="VÍDEO" type="Label" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer"]
+layout_mode = 2
+text = "Vídeo"
+horizontal_alignment = 1
+
+[node name="VideoVbox" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 4
+alignment = 1
+
+[node name="Checks" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/VideoVbox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="FullscreenCheck" type="CheckBox" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/VideoVbox/Checks"]
+layout_mode = 2
+text = "Tela Cheia"
+
+[node name="VsyncCheck" type="CheckBox" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/VideoVbox/Checks"]
+layout_mode = 2
+text = "Vsync"
+
+[node name="Resolution" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/VideoVbox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/VideoVbox/Resolution"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Resolução"
+
+[node name="ResolutionOption" type="OptionButton" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/VideoVbox/Resolution"]
+custom_minimum_size = Vector2(150, 40)
+layout_mode = 2
+item_count = 4
+popup/item_0/text = "1920x1080"
+popup/item_0/id = 0
+popup/item_1/text = "1600x900"
+popup/item_1/id = 1
+popup/item_2/text = "1366x768"
+popup/item_2/id = 2
+popup/item_3/text = "1280x720"
+popup/item_3/id = 3
+
+[node name="WindowMode" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/VideoVbox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Label2" type="Label" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/VideoVbox/WindowMode"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Modo de Janela:"
+
+[node name="WindowModeOption" type="OptionButton" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/VideoVbox/WindowMode"]
+custom_minimum_size = Vector2(250, 40)
+layout_mode = 2
+item_count = 3
+popup/item_0/text = "Janela"
+popup/item_0/id = 0
+popup/item_1/text = "Tela Cheia"
+popup/item_1/id = 1
+popup/item_2/text = "Sem Bordas"
+popup/item_2/id = 2
+
+[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/VideoVbox/WindowMode"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Limite de FPS:"
+
+[node name="FPSLimit" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/VideoVbox"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/VideoVbox/FPSLimit"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Limite de FPsdsdsd
+S:"
+
+[node name="FPSLimitOption" type="OptionButton" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/VideoVbox/FPSLimit"]
+custom_minimum_size = Vector2(250, 40)
+layout_mode = 2
+item_count = 5
+popup/item_0/text = "30 FPS"
+popup/item_0/id = 0
+popup/item_1/text = "60 FPS"
+popup/item_1/id = 1
+popup/item_2/text = "120 FPS"
+popup/item_2/id = 2
+popup/item_3/text = "144 FPS"
+popup/item_3/id = 3
+popup/item_4/text = "Ilimitado"
+popup/item_4/id = 4
+
+[node name="ÁUDIO" type="Label" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer"]
+layout_mode = 2
+text = "Áudio"
+label_settings = SubResource("LabelSettings_8g5eo")
+horizontal_alignment = 1
+
+[node name="Audio" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="MasterVolume" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/Audio"]
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/Audio/MasterVolume"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/Audio/MasterVolume/VBoxContainer"]
+layout_mode = 2
+text = "Volume Principal"
+
+[node name="MasterVolumeLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/Audio/MasterVolume/VBoxContainer"]
+layout_mode = 2
+text = "100%
+"
+
+[node name="MasterVolumeSlider" type="HSlider" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/Audio/MasterVolume"]
+custom_minimum_size = Vector2(250, 30)
+layout_mode = 2
+value = 100.0
+
+[node name="MusicVolume" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/Audio"]
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/Audio/MusicVolume"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/Audio/MusicVolume/VBoxContainer"]
+layout_mode = 2
+text = "Volume da Música"
+
+[node name="MusicVolumeLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/Audio/MusicVolume/VBoxContainer"]
+layout_mode = 2
+text = "100%
+"
+
+[node name="MasterVolumeSlider" type="HSlider" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/Audio/MusicVolume"]
+custom_minimum_size = Vector2(250, 30)
+layout_mode = 2
+value = 100.0
+
+[node name="SFXVolume" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/Audio"]
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/Audio/SFXVolume"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/Audio/SFXVolume/VBoxContainer"]
+layout_mode = 2
+text = "Volume de Efeitos"
+
+[node name="SFXVolumeLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/Audio/SFXVolume/VBoxContainer"]
+layout_mode = 2
+text = "100%
+"
+
+[node name="MasterVolumeSlider" type="HSlider" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/Audio/SFXVolume"]
+custom_minimum_size = Vector2(250, 30)
+layout_mode = 2
+value = 100.0
+
+[node name="CONTROLES" type="Label" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer"]
+layout_mode = 2
+text = "Controles"
+label_settings = SubResource("LabelSettings_q85j6")
+horizontal_alignment = 1
+
+[node name="MouseSensitivity" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer"]
+layout_mode = 2
+alignment = 1
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/MouseSensitivity"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/MouseSensitivity/VBoxContainer"]
+layout_mode = 2
+text = "Sensibilidade do Mouse"
+
+[node name="MouseSensitivityLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/MouseSensitivity/VBoxContainer"]
+layout_mode = 2
+text = "50%"
+
+[node name="MouseSensitivitySlider" type="HSlider" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/MouseSensitivity"]
+custom_minimum_size = Vector2(300, 30)
+layout_mode = 2
+min_value = 10.0
+value = 50.0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+alignment = 1
+
+[node name="InvertYCheck" type="CheckBox" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/VBoxContainer"]
+layout_mode = 2
+text = "Inverter Eixo Y"
+
+[node name="ButtonsContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 60
+alignment = 1
+
+[node name="ResetButton" type="Button" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/ButtonsContainer"]
+custom_minimum_size = Vector2(150, 50)
+layout_mode = 2
+text = "Resetar"
+
+[node name="BackButton" type="Button" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/ButtonsContainer"]
+custom_minimum_size = Vector2(150, 50)
+layout_mode = 2
+text = "Voltar"
+
+[node name="ConfirmButton" type="Button" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/ButtonsContainer"]
+custom_minimum_size = Vector2(150, 50)
+layout_mode = 2
+text = "Confirmar"
+
+[node name="LoadingMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/LoadingMenu"]
+layout_mode = 2
+theme_override_constants/separation = 30
+alignment = 1
+
+[node name="LoadingAnimation" type="TextureRect" parent="CanvasLayer/CenterContainer/Control/LoadingMenu/VBoxContainer"]
+custom_minimum_size = Vector2(128, 128)
+layout_mode = 2
+
+[node name="LoadingLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/LoadingMenu/VBoxContainer"]
+layout_mode = 2
+text = "Carregando..."
+label_settings = SubResource("LabelSettings_dhe1o")
+horizontal_alignment = 1
+
+[node name="LoadingProgress" type="ProgressBar" parent="CanvasLayer/CenterContainer/Control/LoadingMenu/VBoxContainer"]
+custom_minimum_size = Vector2(400, 30)
+layout_mode = 2
+theme_override_styles/fill = SubResource("StyleBoxFlat_6dd3c")
