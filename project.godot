@@ -20,10 +20,11 @@ config/icon="res://icon.svg"
 GameManager="*res://scripts/autoload/GameManager.gd"
 ServerManager="*res://scripts/autoload/ServerManager.gd"
 NetworkManager="*res://scripts/autoload/NetworkManager.gd"
-PartyRegistry="*res://scripts/autoload/PartyRegistry.gd"
 ObjectSpawner="*res://scripts/autoload/ObjectSpawner.gd"
 PlayerRegistry="*res://scripts/autoload/PlayerRegistry.gd"
 RoomRegistry="*res://scripts/autoload/RoomRegistry.gd"
+RoundRegistry="*res://scripts/autoload/RoundRegistry.gd"
+InputMapSetup="*res://scripts/autoload/input_map_setup.gd"
 
 [display]
 

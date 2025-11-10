@@ -1,7 +1,7 @@
 [gd_scene load_steps=25 format=3 uid="uid://br2rhd0vr366x"]
 
 [ext_resource type="PackedScene" uid="uid://cwu8t6cp4qo1c" path="res://sky/sky_3d.tscn" id="1_pkd0b"]
-[ext_resource type="PackedScene" uid="uid://cipt7fox4023t" path="res://scenes/system/player.tscn" id="2_sugp2"]
+[ext_resource type="PackedScene" uid="uid://cipt7fox4023t" path="res://scenes/system/player_warrior.tscn" id="2_sugp2"]
 [ext_resource type="PackedScene" uid="uid://d3sxgvl7reai3" path="res://scenes/system/camera_controller.tscn" id="3_sugp2"]
 [ext_resource type="PackedScene" uid="uid://n0a1enca2row" path="res://scenes/collectibles/sword_1.tscn" id="7_o6xl0"]
 [ext_resource type="PackedScene" uid="uid://bbmno4nmkh51v" path="res://scenes/collectibles/sword_2.tscn" id="8_tipki"]
@@ -56,6 +56,7 @@ minutes_per_day = 4.0
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.027792692, 0)
 collision_layer = 138
 collision_mask = 139
+script = null
 
 [node name="CameraController" parent="." node_paths=PackedStringArray("target") groups=["CameraController"] instance=ExtResource("3_sugp2")]
 target = NodePath("../Player")

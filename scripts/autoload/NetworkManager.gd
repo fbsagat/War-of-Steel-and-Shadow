@@ -1,10 +1,13 @@
 extends Node
 ## NetworkManager - Gerenciador de RPCs compartilhados entre cliente e servidor
 ## Todos os RPCs devem estar aqui para funcionarem corretamente no Godot 4.5+
+## Funções que começam com _server_ só rodam no servidor
+## Funções que começam com _client_ só rodam nos clientes
 
 # ===== CONFIGURAÇÕES =====
 
-@export var debug_mode: bool = false
+@export_category("Debug")
+@export var debug_mode: bool = true
 
 # ===== VARIÁVEIS INTERNAS =====
 
@@ -13,23 +16,34 @@ var is_connected: bool = false
 # ===== FUNÇÕES DE INICIALIZAÇÃO =====
 
 func _ready():
-	_log_debug("NetworkManager inicializado")
+	# Detecta se é servidor dedicado
+	var args = OS.get_cmdline_args()
+	var is_server = "--server" in args or "--dedicated" in args
 	
-	# Conecta aos sinais de rede
+	if is_server:
+		_log_debug("NetworkManager: Modo servidor dedicado - gerenciando apenas RPCs")
+		return
+	
+	_log_debug("NetworkManager inicializado (Cliente)")
+	
+	# Conecta aos sinais de rede (apenas no cliente)
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
 
 func _on_connected_to_server():
+	"""Callback quando conecta ao servidor"""
 	is_connected = true
 	_log_debug("Conexão de rede estabelecida")
 
 func _on_server_disconnected():
+	"""Callback quando desconecta do servidor"""
 	is_connected = false
 	_log_debug("Conexão de rede perdida")
 
 # ===== REGISTRO DE JOGADOR =====
 
 func register_player(player_name: String):
+	"""Envia requisição de registro de jogador ao servidor"""
 	if not is_connected:
 		_log_debug("Erro: Não conectado ao servidor")
 		return
@@ -39,6 +53,7 @@ func register_player(player_name: String):
 
 @rpc("any_peer", "call_remote", "reliable")
 func _server_register_player(player_name: String):
+	"""RPC: Servidor recebe pedido de registro"""
 	if not multiplayer.is_server():
 		return
 	
@@ -47,29 +62,24 @@ func _server_register_player(player_name: String):
 
 @rpc("authority", "call_remote", "reliable")
 func _client_name_accepted(accepted_name: String):
+	"""RPC: Cliente recebe confirmação de nome aceito"""
 	if multiplayer.is_server():
 		return
 	
 	GameManager._client_name_accepted(accepted_name)
 
 @rpc("authority", "call_remote", "reliable")
-func _client_wrong_password():
-	GameManager._client_wrong_password()
-
-@rpc("authority", "call_remote", "reliable")
-func _client_room_not_found():
-	GameManager._client_room_not_found()
-		
-@rpc("authority", "call_remote", "reliable")
 func _client_name_rejected(reason: String):
+	"""RPC: Cliente recebe rejeição de nome"""
 	if multiplayer.is_server():
 		return
 	
 	GameManager._client_name_rejected(reason)
-	
+
 # ===== GERENCIAMENTO DE SALAS =====
 
 func request_rooms_list():
+	"""Solicita lista de salas ao servidor"""
 	if not is_connected:
 		_log_debug("Erro: Não conectado ao servidor")
 		return
@@ -79,6 +89,7 @@ func request_rooms_list():
 
 @rpc("any_peer", "call_remote", "reliable")
 func _server_request_rooms_list():
+	"""RPC: Servidor recebe pedido de lista de salas"""
 	if not multiplayer.is_server():
 		return
 	
@@ -87,6 +98,7 @@ func _server_request_rooms_list():
 
 @rpc("authority", "call_remote", "reliable")
 func _client_receive_rooms_list(rooms: Array):
+	"""RPC: Cliente recebe lista de salas"""
 	if multiplayer.is_server():
 		return
 	
@@ -94,12 +106,14 @@ func _client_receive_rooms_list(rooms: Array):
 
 @rpc("authority", "call_remote", "reliable")
 func _client_receive_rooms_list_update(rooms: Array):
+	"""RPC: Cliente recebe atualização de lista de salas"""
 	if multiplayer.is_server():
 		return
 	
 	GameManager._client_receive_rooms_list_update(rooms)
 
 func create_room(room_name: String, password: String = ""):
+	"""Solicita criação de sala ao servidor"""
 	if not is_connected:
 		_log_debug("Erro: Não conectado ao servidor")
 		return
@@ -109,6 +123,7 @@ func create_room(room_name: String, password: String = ""):
 
 @rpc("any_peer", "call_remote", "reliable")
 func _server_create_room(room_name: String, password: String):
+	"""RPC: Servidor recebe pedido de criação de sala"""
 	if not multiplayer.is_server():
 		return
 	
@@ -117,12 +132,14 @@ func _server_create_room(room_name: String, password: String):
 
 @rpc("authority", "call_remote", "reliable")
 func _client_room_created(room_data: Dictionary):
+	"""RPC: Cliente recebe confirmação de sala criada"""
 	if multiplayer.is_server():
 		return
 	
 	GameManager._client_room_created(room_data)
 
 func join_room(room_id: int, password: String = ""):
+	"""Solicita entrada em sala por ID"""
 	if not is_connected:
 		_log_debug("Erro: Não conectado ao servidor")
 		return
@@ -132,6 +149,7 @@ func join_room(room_id: int, password: String = ""):
 
 @rpc("any_peer", "call_remote", "reliable")
 func _server_join_room(room_id: int, password: String):
+	"""RPC: Servidor recebe pedido de entrada em sala"""
 	if not multiplayer.is_server():
 		return
 	
@@ -139,6 +157,7 @@ func _server_join_room(room_id: int, password: String):
 	ServerManager._handle_join_room(peer_id, room_id, password)
 
 func join_room_by_name(room_name: String, password: String = ""):
+	"""Solicita entrada em sala por nome"""
 	if not is_connected:
 		_log_debug("Erro: Não conectado ao servidor")
 		return
@@ -148,6 +167,7 @@ func join_room_by_name(room_name: String, password: String = ""):
 
 @rpc("any_peer", "call_remote", "reliable")
 func _server_join_room_by_name(room_name: String, password: String):
+	"""RPC: Servidor recebe pedido de entrada em sala por nome"""
 	if not multiplayer.is_server():
 		return
 	
@@ -156,12 +176,30 @@ func _server_join_room_by_name(room_name: String, password: String):
 
 @rpc("authority", "call_remote", "reliable")
 func _client_joined_room(room_data: Dictionary):
+	"""RPC: Cliente recebe confirmação de entrada em sala"""
 	if multiplayer.is_server():
 		return
 	
 	GameManager._client_joined_room(room_data)
 
+@rpc("authority", "call_remote", "reliable")
+func _client_wrong_password():
+	"""RPC: Cliente recebe notificação de senha incorreta"""
+	if multiplayer.is_server():
+		return
+	
+	GameManager._client_wrong_password()
+
+@rpc("authority", "call_remote", "reliable")
+func _client_room_not_found():
+	"""RPC: Cliente recebe notificação de sala não encontrada"""
+	if multiplayer.is_server():
+		return
+	
+	GameManager._client_room_not_found()
+
 func leave_room():
+	"""Solicita saída da sala atual"""
 	if not is_connected:
 		_log_debug("Erro: Não conectado ao servidor")
 		return
@@ -171,6 +209,7 @@ func leave_room():
 
 @rpc("any_peer", "call_remote", "reliable")
 func _server_leave_room():
+	"""RPC: Servidor recebe pedido de saída de sala"""
 	if not multiplayer.is_server():
 		return
 	
@@ -178,6 +217,7 @@ func _server_leave_room():
 	ServerManager._handle_leave_room(peer_id)
 
 func close_room():
+	"""Solicita fechamento da sala (apenas host)"""
 	if not is_connected:
 		_log_debug("Erro: Não conectado ao servidor")
 		return
@@ -187,6 +227,7 @@ func close_room():
 
 @rpc("any_peer", "call_remote", "reliable")
 func _server_close_room():
+	"""RPC: Servidor recebe pedido de fechamento de sala"""
 	if not multiplayer.is_server():
 		return
 	
@@ -195,6 +236,7 @@ func _server_close_room():
 
 @rpc("authority", "call_remote", "reliable")
 func _client_room_closed(reason: String):
+	"""RPC: Cliente recebe notificação de sala fechada"""
 	if multiplayer.is_server():
 		return
 	
@@ -202,23 +244,40 @@ func _client_room_closed(reason: String):
 
 @rpc("authority", "call_remote", "reliable")
 func _client_room_updated(room_data: Dictionary):
+	"""RPC: Cliente recebe atualização de dados da sala"""
 	if multiplayer.is_server():
 		return
 	
 	GameManager._client_room_updated(room_data)
 
-# ===== INÍCIO E GERENCIAMENTO DE PARTIDAS =====
+# ===== GERENCIAMENTO DE RODADAS =====
 
-func start_match(match_settings: Dictionary = {}):
+func start_round(round_settings: Dictionary = {}):
+	"""Solicita início de rodada (apenas host)"""
 	if not is_connected:
 		_log_debug("Erro: Não conectado ao servidor")
 		return
 	
-	_log_debug("Iniciando partida")
-	rpc_id(1, "_server_start_match", match_settings)
+	_log_debug("Iniciando rodada")
+	rpc_id(1, "_server_start_round", round_settings)
+
+@rpc("any_peer", "call_remote", "reliable")
+func _server_start_round(round_settings: Dictionary):
+	"""RPC: Servidor recebe pedido de início de rodada"""
+	if not multiplayer.is_server():
+		return
+	
+	var peer_id = multiplayer.get_remote_sender_id()
+	ServerManager._handle_start_round(peer_id, round_settings)
+
+# Mantém compatibilidade com código antigo
+func start_match(match_settings: Dictionary = {}):
+	"""Alias para start_round (compatibilidade)"""
+	start_round(match_settings)
 
 @rpc("any_peer", "call_remote", "reliable")
 func _server_start_match(match_settings: Dictionary):
+	"""RPC: Alias para _server_start_round (compatibilidade)"""
 	if not multiplayer.is_server():
 		return
 	
@@ -226,37 +285,43 @@ func _server_start_match(match_settings: Dictionary):
 	ServerManager._handle_start_match(peer_id, match_settings)
 
 @rpc("authority", "call_remote", "reliable")
-func _client_match_started(match_data: Dictionary):
+func _client_round_started(match_data: Dictionary):
+	"""RPC: Cliente recebe notificação de rodada iniciada"""
 	if multiplayer.is_server():
 		return
 	
-	GameManager._client_match_started(match_data)
+	GameManager._client_round_started(match_data)
+
+# Mantém compatibilidade
+@rpc("authority", "call_remote", "reliable")
+func _client_match_started(match_data: Dictionary):
+	"""RPC: Alias para _client_round_started (compatibilidade)"""
+	if multiplayer.is_server():
+		return
+	
+	GameManager._client_round_started(match_data)
 
 @rpc("authority", "call_remote", "reliable")
 func _client_round_ended(end_data: Dictionary):
+	"""RPC: Cliente recebe notificação de rodada finalizada"""
 	if multiplayer.is_server():
 		return
 	
 	GameManager._client_round_ended(end_data)
 
 @rpc("authority", "call_remote", "reliable")
-func _client_party_ended():
+func _client_return_to_room(room_data: Dictionary):
+	"""RPC: Cliente recebe comando para voltar à sala"""
 	if multiplayer.is_server():
 		return
 	
-	GameManager._client_party_ended()
-
-@rpc("authority", "call_remote", "reliable")
-func _client_next_round_starting(round_number: int):
-	if multiplayer.is_server():
-		return
-	
-	GameManager._client_next_round_starting(round_number)
+	GameManager._client_return_to_room(room_data)
 
 # ===== SPAWN DE OBJETOS (ObjectSpawner) =====
 
 @rpc("authority", "call_remote", "reliable")
 func _client_spawn_object(spawn_data: Dictionary):
+	"""RPC: Cliente recebe comando para spawnar objeto"""
 	if multiplayer.is_server():
 		return
 	
@@ -289,6 +354,7 @@ func _client_spawn_object(spawn_data: Dictionary):
 
 @rpc("authority", "call_remote", "reliable")
 func _client_despawn_object(object_id: int):
+	"""RPC: Cliente recebe comando para despawnar objeto"""
 	if multiplayer.is_server():
 		return
 	
@@ -298,10 +364,64 @@ func _client_despawn_object(object_id: int):
 			obj.queue_free()
 		ObjectSpawner.spawned_objects.erase(object_id)
 
+# ===== SINCRONIZAÇÃO DE JOGADORES =====
+
+func send_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
+	"""Envia estado do jogador para o servidor"""
+	if not is_connected:
+		return
+	
+	# Usa unreliable para performance (estados são enviados frequentemente)
+	rpc_id(1, "_server_player_state", p_id, pos, rot, vel, running, jumping)
+
+@rpc("any_peer", "unreliable")
+func _server_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
+	"""RPC: Servidor recebe estado do jogador"""
+	if not multiplayer.is_server():
+		return
+	
+	var sender_id = multiplayer.get_remote_sender_id()
+	
+	# Valida que o sender é o dono do estado
+	if sender_id != p_id:
+		push_warning("[NetworkManager] Jogador %d tentou enviar estado do jogador %d" % [sender_id, p_id])
+		return
+	
+	# Delega processamento ao ServerManager
+	ServerManager._handle_player_state(p_id, pos, rot, vel, running, jumping)
+
+@rpc("authority", "unreliable")
+func _client_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
+	"""RPC: Cliente recebe estado de outro jogador"""
+	if multiplayer.is_server():
+		return
+	
+	# Encontra o player node na cena
+	var player = get_tree().root.get_node_or_null(str(p_id))
+	
+	if not player:
+		return
+	
+	# Aplica estado via NetworkSync
+	if player.has_node("NetworkSync"):
+		var network_sync = player.get_node("NetworkSync")
+		network_sync.receive_state(pos, rot, vel, running, jumping)
+
+# ===== UTILITÁRIOS DE SINCRONIZAÇÃO =====
+
+func get_network_latency() -> float:
+	"""Retorna latência estimada da rede em ms"""
+	if not multiplayer.multiplayer_peer:
+		return 0.0
+	
+	# Godot não expõe ping diretamente, estimativa baseada em RTT
+	return 50.0  # Placeholder - ajustar com sistema de ping real se necessário
+
 # ===== TRATAMENTO DE ERROS =====
 
 @rpc("authority", "call_remote", "reliable")
 func _client_error(error_message: String):
+	"""RPC: Cliente recebe mensagem de erro"""
 	if multiplayer.is_server():
 		return
 	
@@ -310,5 +430,6 @@ func _client_error(error_message: String):
 # ===== UTILITÁRIOS =====
 
 func _log_debug(message: String):
+	"""Imprime mensagem de debug se habilitado"""
 	if debug_mode:
 		print("[NetworkManager] " + message)
