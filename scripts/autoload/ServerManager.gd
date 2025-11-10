@@ -30,7 +30,6 @@ extends Node
 
 # ===== VARIÁVEIS INTERNAS =====
 
-var is_dedicated_server: bool = false
 var next_room_id: int = 1
 
 ## Referência ao MapManager do servidor (criado durante rodada)
@@ -42,31 +41,12 @@ var player_states: Dictionary = {}  # {player_id: {pos, rot, vel, running, jumpi
 # ===== FUNÇÕES DE INICIALIZAÇÃO =====
 
 func _ready():
-	_detect_server_mode()
+	var args = OS.get_cmdline_args()
+	var is_server = "--server" in args or "--dedicated" in args
 	
-	if is_dedicated_server:
+	if is_server:
 		_start_server()
 		_connect_round_signals()
-	else:
-		_log_debug("Modo cliente - ServerManager inativo")
-		
-	# Timer para estatísticas (a cada 60 segundos)
-		var stats_timer = Timer.new()
-		stats_timer.wait_time = 60.0
-		stats_timer.timeout.connect(print_server_stats)
-		add_child(stats_timer)
-		stats_timer.start()
-		_log_debug("Timer de estatísticas iniciado")
-
-func _detect_server_mode():
-	"""Detecta se está rodando como servidor dedicado"""
-	var args = OS.get_cmdline_args()
-	is_dedicated_server = "--server" in args or "--dedicated" in args
-	
-	if not is_dedicated_server:
-		is_dedicated_server = OS.has_environment("DEDICATED_SERVER")
-	
-	_log_debug("Modo servidor dedicado: " + str(is_dedicated_server))
 
 func _start_server():
 	"""Inicia o servidor dedicado"""
@@ -89,7 +69,16 @@ func _start_server():
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
 	
-	_log_debug("✓ Servidor iniciado com sucesso!")
+	PlayerRegistry.reset()
+	PlayerRegistry.initialize_as_server()
+	
+	RoomRegistry.reset()
+	RoomRegistry.initialize_as_server()
+	
+	RoundRegistry.reset()
+	RoundRegistry.initialize_as_server()
+	
+	_log_debug("✓ Servidor inicializado com sucesso!")
 
 func _connect_round_signals():
 	"""Conecta sinais do RoundRegistry"""
@@ -694,40 +683,6 @@ func _kick_player(peer_id: int, reason: String):
 	# Desconecta após 1 segundo
 	await get_tree().create_timer(1.0).timeout
 	multiplayer.multiplayer_peer.disconnect_peer(peer_id)
-
-# ===== ESTATÍSTICAS E MONITORAMENTO =====
-
-func get_server_stats() -> Dictionary:
-	"""Retorna estatísticas do servidor para monitoramento"""
-	var active_syncs = 0
-	var avg_position = Vector3.ZERO
-	
-	for state in player_states.values():
-		active_syncs += 1
-		avg_position += state["pos"]
-	
-	if active_syncs > 0:
-		avg_position /= active_syncs
-	
-	return {
-		"total_players": PlayerRegistry.get_player_count(),
-		"total_rooms": RoomRegistry.get_room_count(),
-		"active_syncs": active_syncs,
-		"round_active": RoundRegistry.is_round_active(),
-		"uptime": Time.get_ticks_msec() / 1000.0,
-		"avg_player_position": avg_position
-	}
-
-func print_server_stats():
-	"""Imprime estatísticas detalhadas do servidor"""
-	var stats = get_server_stats()
-	_log_debug("\n===== ESTATÍSTICAS DO SERVIDOR =====")
-	_log_debug("Jogadores conectados: %d" % stats["total_players"])
-	_log_debug("Salas ativas: %d" % stats["total_rooms"])
-	_log_debug("Estados sincronizados: %d" % stats["active_syncs"])
-	_log_debug("Rodada ativa: %s" % ("Sim" if stats["round_active"] else "Não"))
-	_log_debug("Uptime: %.1f segundos (%.1f min)" % [stats["uptime"], stats["uptime"] / 60.0])
-	_log_debug("====================================\n")
 
 # ===== UTILITÁRIOS =====
 

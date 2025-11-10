@@ -8,17 +8,17 @@ extends Node
 @export var debug_mode: bool = true
 
 @export_category("Room Settings")
-## Número máximo de jogadores por sala
 @export var max_players_per_room: int = 8
-## Número mínimo de jogadores para iniciar rodada
-@export var min_players_to_start: int = 2
-## Permitir salas com senha
+@export var min_players_to_start: int = 1
 @export var allow_password_protected_rooms: bool = true
 
 # ===== VARIÁVEIS INTERNAS =====
 
-## Dicionário de salas {room_id: room_data}
 var rooms: Dictionary = {}
+
+# Estado de inicialização
+var _is_server: bool = false
+var _initialized: bool = false
 
 # ===== SINAIS =====
 
@@ -28,15 +28,39 @@ signal player_joined_room(room_id: int, peer_id: int)
 signal player_left_room(room_id: int, peer_id: int)
 signal round_added_to_history(room_id: int, round_data: Dictionary)
 
-# ===== INICIALIZAÇÃO =====
+# ===== INICIALIZAÇÃO CONTROLADA =====
 
-func _ready():
+func initialize_as_server():
+	if _initialized:
+		return
+	
+	_is_server = true
+	_initialized = true
 	_log_debug("RoomRegistry inicializado")
+
+func initialize_as_client():
+	if _initialized:
+		return
+	
+	# RoomRegistry NÃO DEVE ser usado no cliente!
+	# Mas mantemos para evitar erros se chamado por engano.
+	_is_server = false
+	_initialized = true
+	_log_debug("RoomRegistry acessado como CLIENTE (operações bloqueadas)")
+
+func reset():
+	rooms.clear()
+	_initialized = false
+	_is_server = false
+	_log_debug("RoomRegistry resetado")
 
 # ===== GERENCIAMENTO DE SALAS =====
 
-## Cria uma nova sala
 func create_room(room_id: int, room_name: String, password: String, host_peer_id: int) -> Dictionary:
+	if not _is_server:
+		push_warning("RoomRegistry: create_room() só pode ser chamado no servidor!")
+		return {}
+	
 	if rooms.has(room_id):
 		push_error("Sala com ID %d já existe!" % room_id)
 		return {}
@@ -48,92 +72,86 @@ func create_room(room_id: int, room_name: String, password: String, host_peer_id
 		"has_password": not password.is_empty(),
 		"host_id": host_peer_id,
 		"players": [],
+		"min_players": min_players_to_start,
 		"max_players": max_players_per_room,
-		"in_game": false,  # Se está em rodada
+		"in_game": false,
 		"created_at": Time.get_unix_time_from_system(),
-		"rounds_history": [],  # Histórico de rodadas
+		"rounds_history": [],
 		"total_rounds_played": 0,
-		"settings": {}  # Configurações customizadas da sala
+		"settings": {}
 	}
 	
 	rooms[room_id] = room_data
-	
-	# Adiciona o host automaticamente
 	add_player_to_room(room_id, host_peer_id)
 	
 	_log_debug("✓ Sala criada: '%s' (ID: %d, Host: %d)" % [room_name, room_id, host_peer_id])
 	room_created.emit(room_data.duplicate())
-	
 	return room_data.duplicate()
 
-## Remove uma sala
 func remove_room(room_id: int) -> bool:
+	if not _is_server:
+		return false
+	
 	if not rooms.has(room_id):
 		return false
 	
 	var room_name = rooms[room_id]["name"]
 	rooms.erase(room_id)
-	
 	_log_debug("✗ Sala removida: '%s' (ID: %d)" % [room_name, room_id])
 	room_removed.emit(room_id)
-	
 	return true
 
-## Retorna uma sala pelo ID
 func get_room(room_id: int) -> Dictionary:
 	return rooms.get(room_id, {}).duplicate()
 
-## Retorna uma sala pelo nome
 func get_room_by_name(room_name: String) -> Dictionary:
 	for room_id in rooms:
 		if rooms[room_id]["name"] == room_name:
 			return rooms[room_id].duplicate()
 	return {}
 
-## Verifica se um nome de sala já existe
 func room_name_exists(room_name: String) -> bool:
 	for room_id in rooms:
 		if rooms[room_id]["name"] == room_name:
 			return true
 	return false
 
-## Retorna lista de todas as salas (para lobby)
 func get_rooms_list() -> Array:
+	if not _is_server:
+		return []  # Cliente não deve acessar lista interna
+	
 	var rooms_list = []
 	for room_id in rooms:
 		var room = rooms[room_id].duplicate()
-		# Remove senha da lista pública por segurança
-		room.erase("password")
+		room.erase("password")  # Segurança
 		rooms_list.append(room)
 	return rooms_list
 
 # ===== GERENCIAMENTO DE PLAYERS =====
 
-## Adiciona um player à sala
 func add_player_to_room(room_id: int, peer_id: int) -> bool:
+	if not _is_server:
+		return false
+	
 	if not rooms.has(room_id):
 		return false
 	
 	var room = rooms[room_id]
 	
-	# Verifica se já está na sala
 	for player in room["players"]:
 		if player["id"] == peer_id:
 			_log_debug("Player %d já está na sala %d" % [peer_id, room_id])
 			return true
 	
-	# Verifica limite de players
 	if room["players"].size() >= room["max_players"]:
 		_log_debug("Sala %d está cheia!" % room_id)
 		return false
 	
-	# Busca dados do player no PlayerRegistry
 	var player_data = PlayerRegistry.get_player(peer_id)
 	if player_data.is_empty():
 		push_error("Player %d não está registrado!" % peer_id)
 		return false
 	
-	# Adiciona à sala
 	var is_host = room["players"].is_empty() or peer_id == room["host_id"]
 	room["players"].append({
 		"id": peer_id,
@@ -144,20 +162,19 @@ func add_player_to_room(room_id: int, peer_id: int) -> bool:
 	_log_debug("✓ Player '%s' (%d) entrou na sala '%s'" % [
 		player_data["name"], peer_id, room["name"]
 	])
-	
 	player_joined_room.emit(room_id, peer_id)
-	
 	return true
 
-## Remove um player da sala
 func remove_player_from_room(room_id: int, peer_id: int) -> bool:
+	if not _is_server:
+		return false
+	
 	if not rooms.has(room_id):
 		return false
 	
 	var room = rooms[room_id]
 	var player_index = -1
 	
-	# Encontra o player
 	for i in range(room["players"].size()):
 		if room["players"][i]["id"] == peer_id:
 			player_index = i
@@ -168,30 +185,27 @@ func remove_player_from_room(room_id: int, peer_id: int) -> bool:
 	
 	var player_name = room["players"][player_index]["name"]
 	var was_host = room["players"][player_index]["is_host"]
-	
-	# Remove o player
 	room["players"].remove_at(player_index)
 	
 	_log_debug("✗ Player '%s' (%d) saiu da sala '%s'" % [
 		player_name, peer_id, room["name"]
 	])
-	
 	player_left_room.emit(room_id, peer_id)
 	
-	# Se era o host e ainda há players, promove o próximo
 	if was_host and not room["players"].is_empty():
 		room["players"][0]["is_host"] = true
 		room["host_id"] = room["players"][0]["id"]
 		_log_debug("Novo host da sala '%s': %d" % [room["name"], room["host_id"]])
 	
-	# Se a sala ficou vazia, remove
 	if room["players"].is_empty():
 		remove_room(room_id)
 	
 	return true
 
-## Retorna a sala em que um player está
 func get_room_by_player(peer_id: int) -> Dictionary:
+	if not _is_server:
+		return {}
+	
 	for room_id in rooms:
 		for player in rooms[room_id]["players"]:
 			if player["id"] == peer_id:
@@ -200,33 +214,30 @@ func get_room_by_player(peer_id: int) -> Dictionary:
 
 # ===== ESTADO DA SALA =====
 
-## Define se a sala está em jogo (rodada ativa)
 func set_room_in_game(room_id: int, in_game: bool):
-	if not rooms.has(room_id):
+	if not _is_server:
 		return
 	
-	rooms[room_id]["in_game"] = in_game
-	_log_debug("Sala %d in_game = %s" % [room_id, in_game])
+	if rooms.has(room_id):
+		rooms[room_id]["in_game"] = in_game
+		_log_debug("Sala %d in_game = %s" % [room_id, in_game])
 
-## Verifica se a sala está em jogo
 func is_room_in_game(room_id: int) -> bool:
-	if not rooms.has(room_id):
+	if not _is_server or not rooms.has(room_id):
 		return false
 	return rooms[room_id]["in_game"]
 
 # ===== HISTÓRICO DE RODADAS =====
 
-## Adiciona uma rodada finalizada ao histórico da sala
 func add_round_to_history(room_id: int, round_data: Dictionary) -> bool:
+	if not _is_server:
+		return false
+	
 	if not rooms.has(room_id):
 		return false
 	
 	var room = rooms[room_id]
-	
-	# Cria cópia limpa dos dados da rodada (sem referências)
 	var clean_round = round_data.duplicate(true)
-	
-	# Adiciona ao histórico
 	room["rounds_history"].append(clean_round)
 	room["total_rounds_played"] += 1
 	
@@ -235,31 +246,23 @@ func add_round_to_history(room_id: int, round_data: Dictionary) -> bool:
 		room["name"],
 		room["total_rounds_played"]
 	])
-	
 	round_added_to_history.emit(room_id, clean_round)
-	
 	return true
 
-## Retorna histórico de rodadas da sala
 func get_rounds_history(room_id: int) -> Array:
-	if not rooms.has(room_id):
+	if not _is_server or not rooms.has(room_id):
 		return []
 	return rooms[room_id]["rounds_history"].duplicate()
 
-## Retorna a última rodada jogada na sala
 func get_last_round(room_id: int) -> Dictionary:
-	if not rooms.has(room_id):
+	if not _is_server or not rooms.has(room_id):
 		return {}
 	
 	var history = rooms[room_id]["rounds_history"]
-	if history.is_empty():
-		return {}
-	
-	return history[history.size() - 1].duplicate()
+	return {} if history.is_empty() else history[-1].duplicate()
 
-## Retorna estatísticas da sala
 func get_room_statistics(room_id: int) -> Dictionary:
-	if not rooms.has(room_id):
+	if not _is_server or not rooms.has(room_id):
 		return {}
 	
 	var room = rooms[room_id]
@@ -270,7 +273,6 @@ func get_room_statistics(room_id: int) -> Dictionary:
 		"players_participated": []
 	}
 	
-	# Calcula estatísticas do histórico
 	var total_duration = 0.0
 	var players_set = {}
 	
@@ -284,7 +286,6 @@ func get_room_statistics(room_id: int) -> Dictionary:
 	if room["total_rounds_played"] > 0:
 		stats["average_round_duration"] = total_duration / room["total_rounds_played"]
 	
-	# Lista única de players que já jogaram na sala
 	for peer_id in players_set:
 		stats["players_participated"].append({
 			"id": peer_id,
@@ -295,30 +296,22 @@ func get_room_statistics(room_id: int) -> Dictionary:
 
 # ===== VALIDAÇÕES =====
 
-## Verifica se pode iniciar uma rodada
 func can_start_match(room_id: int) -> bool:
-	if not rooms.has(room_id):
+	if not _is_server or not rooms.has(room_id):
 		return false
 	
 	var room = rooms[room_id]
-	
-	# Não pode estar em jogo
 	if room["in_game"]:
 		return false
-	
-	# Precisa ter players suficientes
 	if room["players"].size() < min_players_to_start:
 		return false
-	
 	return true
 
-## Retorna requisitos para iniciar rodada
 func get_match_requirements(room_id: int) -> Dictionary:
-	if not rooms.has(room_id):
+	if not _is_server or not rooms.has(room_id):
 		return {}
 	
 	var room = rooms[room_id]
-	
 	return {
 		"current_players": room["players"].size(),
 		"min_players": min_players_to_start,
@@ -329,28 +322,28 @@ func get_match_requirements(room_id: int) -> Dictionary:
 
 # ===== CONFIGURAÇÕES DA SALA =====
 
-## Define configurações customizadas da sala
 func set_room_settings(room_id: int, settings: Dictionary):
-	if not rooms.has(room_id):
+	if not _is_server:
 		return
 	
-	rooms[room_id]["settings"] = settings.duplicate()
-	_log_debug("Configurações da sala %d atualizadas" % room_id)
+	if rooms.has(room_id):
+		rooms[room_id]["settings"] = settings.duplicate()
+		_log_debug("Configurações da sala %d atualizadas" % room_id)
 
-## Retorna configurações da sala
 func get_room_settings(room_id: int) -> Dictionary:
-	if not rooms.has(room_id):
+	if not _is_server or not rooms.has(room_id):
 		return {}
 	return rooms[room_id]["settings"].duplicate()
 
 # ===== UTILITÁRIOS =====
 
-## Retorna número total de salas
 func get_room_count() -> int:
-	return rooms.size()
+	return rooms.size() if _is_server else 0
 
-## Retorna número total de players em todas as salas
 func get_total_players_count() -> int:
+	if not _is_server:
+		return 0
+	
 	var total = 0
 	for room_id in rooms:
 		total += rooms[room_id]["players"].size()
@@ -358,4 +351,5 @@ func get_total_players_count() -> int:
 
 func _log_debug(message: String):
 	if debug_mode:
-		print("[RoomRegistry] %s" % message)
+		var prefix = "[SERVER]" if _is_server else "[CLIENT]"
+		print("[RoomRegistry] %s %s" % [prefix, message])

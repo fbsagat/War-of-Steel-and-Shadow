@@ -52,13 +52,15 @@ func setup(p_id: int, is_local_player: bool):
 		# Jogador local: envia estados
 		last_synced_position = player.global_position
 		last_synced_rotation = player.rotation
+		print("[NetworkSync %d] Configurado como LOCAL (envia estados)" % player_id)
 	else:
 		# Jogador remoto: recebe estados
 		target_position = player.global_position
 		target_rotation = player.rotation
+		print("[NetworkSync %d] Configurado como REMOTO (recebe estados)" % player_id)
 	
 	set_physics_process(true)
-	print("[NetworkSync] Configurado para jogador %d (Local: %s)" % [player_id, is_local])
+	print("[NetworkSync %d] Physics process: %s" % [player_id, is_physics_processing()])
 
 func _physics_process(delta: float):
 	if is_local:
@@ -202,7 +204,7 @@ func receive_state(pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jump
 	if state_buffer.size() > max_buffer_size:
 		state_buffer.pop_front()
 	
-	# DEBUG
+	## DEBUG
 	#if player and player.has("frame_count") and player.frame_count % 120 == 0:
 		#print("[NetworkSync %d] Buffer: %d estados, distância: %.2fm" % [
 			#player_id,

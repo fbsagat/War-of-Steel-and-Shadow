@@ -45,15 +45,15 @@ signal returned_to_room(room_data: Dictionary)
 
 # ===== FUNÇÕES DE INICIALIZAÇÃO =====
 
-func _ready():
+func _ready():	# Verifica se é servidor
 	var args = OS.get_cmdline_args()
 	var is_server = "--server" in args or "--dedicated" in args
 	
 	if is_server:
-		_log_debug("[GameManager] Modo servidor - não inicializando cliente")
+		_log_debug("Sou o servidor - NÃO inicializando GameManager")
 		return
 	
-	_log_debug("GameManager inicializado (Cliente)")
+	_log_debug("Sou cliente - Inicializando GameManager")
 	
 	# Conecta sinais de rede
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
@@ -96,6 +96,7 @@ func connect_to_server():
 	multiplayer.multiplayer_peer = peer
 	is_connecting = true
 	connection_start_time = Time.get_ticks_msec() / 1000.0
+	
 	_log_debug("Cliente criado, aguardando conexão...")
 
 func disconnect_from_server():
@@ -122,7 +123,7 @@ func _on_connected_to_server():
 	is_connected_to_server = true
 	local_peer_id = multiplayer.get_unique_id()
 	
-	_log_debug("✓ Conectado ao servidor com sucesso! Peer ID: %d" % local_peer_id)
+	_log_debug("✓ Cliente conectado ao servidor com sucesso! Peer ID: %d" % local_peer_id)
 	
 	if main_menu:
 		main_menu.show_name_input_menu()
@@ -468,7 +469,7 @@ func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bo
 	if is_local:
 		player_instance.set_as_local_player()
 		local_player = player_instance
-		_log_debug("✓ Jogador local spawnado")
+		_log_debug("✓ Jogador local spawnado. %a, %b, %c" % [player_instance.name, player_instance.player_id, player_instance.player_name])
 	
 	# Registra no RoundRegistry
 	RoundRegistry.register_spawned_player(player_data["id"], player_instance)
@@ -588,4 +589,4 @@ func set_main_menu(menu: Control):
 func _log_debug(message: String):
 	"""Imprime mensagem de debug se habilitado"""
 	if debug_mode:
-		print("[GameManager] " + message)
+		print("[GameManager]: " + message)

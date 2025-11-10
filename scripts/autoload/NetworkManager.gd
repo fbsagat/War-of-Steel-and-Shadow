@@ -11,7 +11,7 @@ extends Node
 
 # ===== VARIÁVEIS INTERNAS =====
 
-var is_connected: bool = false
+var _is_connected: bool = false
 
 # ===== FUNÇÕES DE INICIALIZAÇÃO =====
 
@@ -21,10 +21,10 @@ func _ready():
 	var is_server = "--server" in args or "--dedicated" in args
 	
 	if is_server:
-		_log_debug("NetworkManager: Modo servidor dedicado - gerenciando apenas RPCs")
+		_log_debug("Sou o servidor - Gerenciando RPCs")
 		return
 	
-	_log_debug("NetworkManager inicializado (Cliente)")
+	_log_debug("Sou o cliente - Inicializado (Cliente)")
 	
 	# Conecta aos sinais de rede (apenas no cliente)
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
@@ -32,12 +32,12 @@ func _ready():
 
 func _on_connected_to_server():
 	"""Callback quando conecta ao servidor"""
-	is_connected = true
+	_is_connected = true
 	_log_debug("Conexão de rede estabelecida")
 
 func _on_server_disconnected():
 	"""Callback quando desconecta do servidor"""
-	is_connected = false
+	_is_connected = false
 	_log_debug("Conexão de rede perdida")
 
 # ===== REGISTRO DE JOGADOR =====
