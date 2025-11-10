@@ -469,7 +469,7 @@ func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bo
 	if is_local:
 		player_instance.set_as_local_player()
 		local_player = player_instance
-		_log_debug("✓ Jogador local spawnado. %a, %b, %c" % [player_instance.name, player_instance.player_id, player_instance.player_name])
+		_log_debug("✓ Jogador local spawnado.")
 	
 	# Registra no RoundRegistry
 	RoundRegistry.register_spawned_player(player_data["id"], player_instance)

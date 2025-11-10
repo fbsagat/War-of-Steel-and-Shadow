@@ -430,51 +430,51 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 		NetworkManager.rpc_id(room_player["id"], "_client_round_started", match_data)
 	
 	# Instancia mapa e players no servidor também
-	#await _server_instantiate_round(match_data)
+	await _server_instantiate_round(match_data)
 	
 	# Inicia a rodada
 	RoundRegistry.start_round()
 
 # ===== INSTANCIAÇÃO NO SERVIDOR =====
 
-#func _server_instantiate_round(match_data: Dictionary):
-	#"""Instancia a rodada no servidor (mapa e players)"""
-	#_log_debug("Instanciando rodada no servidor...")
-	#
-	## Cria MapManager
-	#server_map_manager = preload("res://scripts/gameplay/MapManager.gd").new()
-	#get_tree().root.add_child(server_map_manager)
-	#
-	## Carrega o mapa
-	#await server_map_manager.load_map(match_data["map_scene"], match_data["settings"])
-	#
-	#RoundRegistry.map_manager = server_map_manager
-	#
-	## Spawna todos os jogadores
-	#for player_data in match_data["players"]:
-		#var spawn_data = match_data["spawn_data"][player_data["id"]]
-		#_spawn_player_on_server(player_data, spawn_data)
-	#
-	#_log_debug("✓ Rodada instanciada no servidor")
-#
-#func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary):
-	#"""Spawna um jogador no servidor (versão autoritativa)"""
-	#var player_scene = preload("res://scenes/system/player.tscn")
-	#var player_instance = player_scene.instantiate()
-	#
-	#player_instance.name = str(player_data["id"])
-	#player_instance.player_id = player_data["id"]
-	#player_instance.player_name = player_data["name"]
-	#
-	#get_tree().root.add_child(player_instance)
-	#
-	#var spawn_pos = server_map_manager.get_spawn_position(spawn_data["spawn_index"])
-	#player_instance.initialize(player_data["id"], player_data["name"], spawn_pos)
-	#
-	## Registra no RoundRegistry
-	#RoundRegistry.register_spawned_player(player_data["id"], player_instance)
-	#
-	#_log_debug("Player spawnado no servidor: %s (ID: %d)" % [player_data["name"], player_data["id"]])
+func _server_instantiate_round(match_data: Dictionary):
+	"""Instancia a rodada no servidor (mapa e players)"""
+	_log_debug("Instanciando rodada no servidor...")
+	
+	# Cria MapManager
+	server_map_manager = preload("res://scripts/gameplay/MapManager.gd").new()
+	get_tree().root.add_child(server_map_manager)
+	
+	# Carrega o mapa
+	await server_map_manager.load_map(match_data["map_scene"], match_data["settings"])
+	
+	RoundRegistry.map_manager = server_map_manager
+	
+	# Spawna todos os jogadores
+	for player_data in match_data["players"]:
+		var spawn_data = match_data["spawn_data"][player_data["id"]]
+		_spawn_player_on_server(player_data, spawn_data)
+	
+	_log_debug("✓ Rodada instanciada no servidor")
+
+func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary):
+	"""Spawna um jogador no servidor (versão autoritativa)"""
+	var player_scene = preload("res://scenes/system/player.tscn")
+	var player_instance = player_scene.instantiate()
+	
+	player_instance.name = str(player_data["id"])
+	player_instance.player_id = player_data["id"]
+	player_instance.player_name = player_data["name"]
+	
+	get_tree().root.add_child(player_instance)
+	
+	var spawn_pos = server_map_manager.get_spawn_position(spawn_data["spawn_index"])
+	player_instance.initialize(player_data["id"], player_data["name"], spawn_pos)
+	
+	# Registra no RoundRegistry
+	RoundRegistry.register_spawned_player(player_data["id"], player_instance)
+	
+	_log_debug("Player spawnado no servidor: %s (ID: %d)" % [player_data["name"], player_data["id"]])
 
 # ===== CALLBACKS DE RODADA =====
 
@@ -560,25 +560,25 @@ func _complete_round_end():
 		for player in room["players"]:
 			NetworkManager.rpc_id(player["id"], "_client_return_to_room", room)
 
-#func _cleanup_round_objects():
-	#"""Limpa todos os objetos da rodada (players, mapa, etc)"""
-	#_log_debug("Limpando objetos da rodada...")
-	#
-	## Remove players
-	#for child in get_tree().root.get_children():
-		#if child.is_in_group("player"):
-			#child.queue_free()
-	#
-	## Remove mapa
-	#if server_map_manager:
-		#server_map_manager.unload_map()
-		#server_map_manager.queue_free()
-		#server_map_manager = null
-	#
-	## Limpa objetos spawnados
-	#ObjectSpawner.cleanup()
-	#
-	#_log_debug("✓ Limpeza completa")
+func _cleanup_round_objects():
+	"""Limpa todos os objetos da rodada (players, mapa, etc)"""
+	_log_debug("Limpando objetos da rodada...")
+	
+	# Remove players
+	for child in get_tree().root.get_children():
+		if child.is_in_group("player"):
+			child.queue_free()
+	
+	# Remove mapa
+	if server_map_manager:
+		server_map_manager.unload_map()
+		server_map_manager.queue_free()
+		server_map_manager = null
+	
+	# Limpa objetos spawnados
+	ObjectSpawner.cleanup()
+	
+	_log_debug("✓ Limpeza completa")
 
 func _handle_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
 	"""Handler para receber estado do jogador e propagar para outros"""

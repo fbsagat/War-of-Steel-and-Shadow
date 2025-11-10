@@ -16,8 +16,9 @@
 16. Quando o player não estiver lockando para um inimigo e clicar em lock(botão direito), 
 girar o player para a direção da câmera ao invés da câmera para trás do player.
 17. Mapa, próximo passo, adicionar sistema de texturização: https://chat.qwen.ai/c/371df7e0-378a-44d3-b8b7-25d5515aa1e5
-
-
+18. Sincronizar configs de mapas entre clientes e server.
+19. Aplicar player(characterbody3d) warrior que fiz para o projeto.
+20. Ajustar servidor para definir configurações do sky3d.
 
 Adicionar no modelo do player:
 	1. Anim interact com a outra mão.

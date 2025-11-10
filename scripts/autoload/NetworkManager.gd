@@ -369,42 +369,47 @@ func send_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, runn
 	"""Envia estado do jogador para o servidor"""
 	if not is_connected:
 		return
-	
-	# Usa unreliable para performance (estados são enviados frequentemente)
+	# RPC do NetworkManager → válido, pois NetworkManager é autoload
 	rpc_id(1, "_server_player_state", p_id, pos, rot, vel, running, jumping)
 
-@rpc("any_peer", "unreliable")
+@rpc("any_peer", "call_remote", "unreliable")
 func _server_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
 	"""RPC: Servidor recebe estado do jogador"""
-	if not multiplayer.is_server():
+	# Verificação robusta de servidor
+	if not (multiplayer.has_multiplayer_peer() and multiplayer.get_unique_id() == 1):
 		return
 	
 	var sender_id = multiplayer.get_remote_sender_id()
-	
-	# Valida que o sender é o dono do estado
 	if sender_id != p_id:
 		push_warning("[NetworkManager] Jogador %d tentou enviar estado do jogador %d" % [sender_id, p_id])
 		return
 	
-	# Delega processamento ao ServerManager
-	ServerManager._handle_player_state(p_id, pos, rot, vel, running, jumping)
+	# Envia estado para TODOS os clientes (incluindo o remetente, mas ele ignora)
+	for peer_id in multiplayer.get_peers():
+		rpc_id(peer_id, "_client_player_state", p_id, pos, rot, vel, running, jumping)
 
-@rpc("authority", "unreliable")
+@rpc("any_peer", "call_remote", "unreliable")
 func _client_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
 	"""RPC: Cliente recebe estado de outro jogador"""
-	if multiplayer.is_server():
+	# Só processa se NÃO for servidor
+	if multiplayer.has_multiplayer_peer() and multiplayer.get_unique_id() == 1:
 		return
 	
-	# Encontra o player node na cena
-	var player = get_tree().root.get_node_or_null(str(p_id))
+	# Encontra o player na cena
+	var player_path = str(p_id)
+	var player = get_tree().root.get_node_or_null(player_path)
 	
 	if not player:
+		# DEBUG: descomente se quiser ver quando falhar
+		#print("[NetworkManager] Player não encontrado: %s" % player_path)
 		return
 	
-	# Aplica estado via NetworkSync
-	if player.has_node("NetworkSync"):
-		var network_sync = player.get_node("NetworkSync")
-		network_sync.receive_state(pos, rot, vel, running, jumping)
+	# Atualiza estado DIRETAMENTE (sem NetworkSync)
+	player.global_position = pos
+	player.rotation = rot
+	player.velocity = vel
+	player.is_running = running
+	player.is_jumping = jumping
 
 # ===== UTILITÁRIOS DE SINCRONIZAÇÃO =====
 

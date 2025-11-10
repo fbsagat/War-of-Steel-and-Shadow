@@ -1,213 +1,233 @@
 extends CharacterBody3D
+## SimplePlayer - Player multiplayer simples com sincronização
+## Movimento baseado na direção da câmera com strafe
 
-# ===== REFERÊNCIAS =====
-@onready var name_label: Label3D = $NameLabel
-@onready var camera_controller: Node3D = $CameraController
-@onready var debug_info: Label3D = $DebugInfo
+# ===== CONFIGURAÇÕES =====
+@export_category("Movement")
+@export var walk_speed: float = 5.0
+@export var run_speed: float = 8.0
+@export var jump_velocity: float = 6.0
+@export var acceleration: float = 10.0
+@export var deceleration: float = 12.0
+@export var air_control: float = 0.3
+@export var gravity: float = 20.0
+@export var rotation_speed: float = 10.0
 
-# ===== DADOS DO JOGADOR =====
+@export_category("Network")
+@export var sync_rate: float = 0.05  # 20 updates por segundo
+
+@export_category("Debug")
+@export var debug: bool = false
+
+# ===== IDENTIFICAÇÃO MULTIPLAYER =====
 var player_id: int = 0
 var player_name: String = ""
 var is_local_player: bool = false
 
-# ===== CONFIGURAÇÕES DE MOVIMENTO =====
-@export var move_speed: float = 5.0
-@export var run_speed: float = 8.0
-@export var jump_velocity: float = 6.0
-@export var gravity: float = 9.8
-@export var rotation_speed: float = 10.0
-
-# ===== ESTADO =====
+# ===== ESTADO DO JOGADOR =====
 var is_running: bool = false
 var is_jumping: bool = false
 
 # ===== SINCRONIZAÇÃO =====
-@export var sync_rate: float = 20.0  # 20 updates/segundo
 var sync_timer: float = 0.0
-var sync_interval: float = 0.0
+
+# ===== REFERÊNCIAS =====
+@onready var camera_controller: Node3D = $CameraController
+@onready var mesh: MeshInstance3D = $MeshInstance3D
+@onready var name_label: Label3D = $NameLabel
+
+# ===== CORES PARA JOGADORES =====
+const PLAYER_COLORS: Array[Color] = [
+	Color(0.3, 0.5, 0.8),  # Azul
+	Color(0.8, 0.3, 0.3),  # Vermelho
+	Color(0.3, 0.8, 0.3),  # Verde
+	Color(0.8, 0.8, 0.3),  # Amarelo
+	Color(0.8, 0.3, 0.8),  # Roxo
+	Color(0.3, 0.8, 0.8),  # Ciano
+	Color(0.8, 0.5, 0.3),  # Laranja
+	Color(0.5, 0.3, 0.8),  # Índigo
+]
 
 # ===== INICIALIZAÇÃO =====
 
 func _ready():
 	add_to_group("player")
-	sync_interval = 1.0 / sync_rate
 	
-	if name_label:
-		name_label.text = player_name if not player_name.is_empty() else "Player"
-		name_label.pixel_size = 0.01
-		name_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	
-	if debug_info:
-		debug_info.visible = false
+	# Desativa processos por padrão (será ativado após initialize())
+	set_physics_process(false)
+	set_process(false)
 
-func initialize(p_id: int, p_name: String, spawn_position: Vector3):
+# ===== INICIALIZAÇÃO MULTIPLAYER =====
+
+func initialize(p_id: int, p_name: String, spawn_pos: Vector3):
+	"""Inicializa o player com dados multiplayer"""
 	player_id = p_id
 	player_name = p_name
-	global_position = spawn_position
 	
+	# Nome do nó = ID do player (importante para sincronização)
+	name = str(player_id)
+	
+	# Posiciona no spawn
+	global_position = spawn_pos
+	
+	# Atualiza label de nome
 	if name_label:
 		name_label.text = player_name
-		name_label.visible = true  # Será escondido se for local
+	
+	# Define autoridade multiplayer
+	set_multiplayer_authority(player_id)
+	
+	# Aplica cor baseada no ID
+	_apply_player_color()
+	
+	# Ativa processos
+	set_physics_process(true)
+	set_process(true)
+	
+	_log_debug("Player inicializado: %s (ID: %d)" % [player_name, player_id])
+	
+	# Registra no RoundRegistry
+	if RoundRegistry:
+		RoundRegistry.register_spawned_player(player_id, self)
 
 func set_as_local_player():
+	"""Configura este player como o jogador local"""
 	is_local_player = true
 	
-	# Ativa física
-	set_physics_process(true)
-	
-	# Ativa câmera
+	# Ativa a câmera
 	if camera_controller and camera_controller.has_method("set_as_active"):
 		camera_controller.set_as_active()
 	
-	# Esconde próprio nome
-	if name_label:
-		name_label.visible = false
-	
-	# Ativa debug
-	if debug_info:
-		debug_info.visible = true
-	
-	add_to_group("local_player")
+	_log_debug("✓ Configurado como jogador local")
 
-# ===== MOVIMENTO E SINCRONIZAÇÃO =====
+# ===== FÍSICA E MOVIMENTO =====
 
 func _physics_process(delta: float):
-	if is_local_player:
-		_process_local_input(delta)
-	
-	# Aplica gravidade SEMPRE (importante para interpolação)
+	# Gravidade
 	if not is_on_floor():
 		velocity.y -= gravity * delta
-	else:
-		velocity.y = 0.0
 	
+	# Só processa input se for o jogador local
+	if is_multiplayer_authority():
+		_process_local_movement(delta)
+		_send_state_to_network(delta)
+	
+	# Move o personagem
 	move_and_slide()
-	
-	# Debug
-	if debug_info and debug_info.visible and is_local_player:
-		_update_debug_info()
 
-func _process_local_input(delta: float):
-	# Mouse capturado?
-	var can_move = true
-	if camera_controller and camera_controller.has_method("is_mouse_captured"):
-		can_move = camera_controller.is_mouse_captured()
+func _process_local_movement(delta: float):
+	"""Processa movimento do jogador local"""
+	
+	# Input de movimento
+	var input_dir = Input.get_vector("move_left", "move_right", "move_forward", "move_backward")
+	
+	# Verifica corrida
+	is_running = Input.is_action_pressed("run")
 	
 	# Pulo
-	if can_move and Input.is_action_just_pressed("jump") and is_on_floor():
+	if Input.is_action_just_pressed("jump") and is_on_floor():
 		velocity.y = jump_velocity
 		is_jumping = true
 	elif is_on_floor():
 		is_jumping = false
 	
-	# Corrida
-	is_running = can_move and Input.is_action_pressed("run") and is_on_floor()
-	var current_speed = run_speed if is_running else move_speed
+	# Calcula direção do movimento baseado na câmera
+	var move_dir = Vector3.ZERO
 	
-	# Input de movimento
-	var input_dir = Vector2.ZERO
-	if can_move:
-		input_dir = Input.get_vector("move_left", "move_right", "move_forward", "move_backward")
-	
-	# Direção baseada na câmera
-	var direction = _calculate_movement_direction(input_dir)
-	
-	if direction.length() > 0.1:
-		# Aplica velocidade
-		velocity.x = direction.x * current_speed
-		velocity.z = direction.z * current_speed
+	if input_dir.length() > 0.1 and camera_controller:
+		# Pega direções da câmera
+		var cam_forward = camera_controller.get_forward_direction()
+		var cam_right = camera_controller.get_right_direction()
 		
-		# Rotaciona para frente do movimento
-		var target_rotation = atan2(-direction.x, -direction.z)
+		# Movimento relativo à câmera (strafe)
+		move_dir = (cam_forward * input_dir.y + cam_right * input_dir.x).normalized()
+	
+	# Aplica movimento
+	var target_speed = run_speed if is_running else walk_speed
+	var current_accel = acceleration if is_on_floor() else acceleration * air_control
+	
+	if move_dir.length() > 0.1:
+		# Acelera na direção do input
+		var target_velocity = move_dir * target_speed
+		velocity.x = lerp(velocity.x, target_velocity.x, current_accel * delta)
+		velocity.z = lerp(velocity.z, target_velocity.z, current_accel * delta)
+		
+		# Rotaciona o corpo na direção do movimento
+		var target_rotation = atan2(move_dir.x, move_dir.z)
 		rotation.y = lerp_angle(rotation.y, target_rotation, rotation_speed * delta)
 	else:
 		# Desacelera
-		velocity.x = move_toward(velocity.x, 0, current_speed * delta * 10)
-		velocity.z = move_toward(velocity.z, 0, current_speed * delta * 10)
-	
-	# Envia estado para servidor (só se conectado)
-	if multiplayer.has_multiplayer_peer() and is_inside_tree():
-		sync_timer += delta
-		if sync_timer >= sync_interval:
-			sync_timer = 0.0
-			rpc("_server_receive_state", global_position, rotation, velocity, is_running, is_jumping)
+		velocity.x = lerp(velocity.x, 0.0, deceleration * delta)
+		velocity.z = lerp(velocity.z, 0.0, deceleration * delta)
 
-# ===== CÁLCULO DE DIREÇÃO =====
+# ===== SINCRONIZAÇÃO DE REDE =====
 
-func _calculate_movement_direction(input_dir: Vector2) -> Vector3:
-	if input_dir.length() == 0:
-		return Vector3.ZERO
-	
-	if not camera_controller:
-		return Vector3(input_dir.x, 0, input_dir.y).normalized()
-	
-	var cam_basis = camera_controller.global_transform.basis
-	var cam_forward = -cam_basis.z
-	cam_forward.y = 0
-	cam_forward = cam_forward.normalized()
-	
-	var cam_right = cam_basis.x
-	cam_right.y = 0
-	cam_right = cam_right.normalized()
-	
-	return (cam_forward * input_dir.y + cam_right * input_dir.x).normalized()
-
-# ===== RPCs DE SINCRONIZAÇÃO =====
-
-## Recebido no SERVIDOR
-@rpc("any_peer", "call_remote", "unreliable")
-func _server_receive_state(pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
-	# Apenas o servidor processa
-	if not (multiplayer.has_multiplayer_peer() and multiplayer.get_unique_id() == 1):
+func _send_state_to_network(delta: float):
+	"""Envia estado do player para o servidor"""
+	if not is_local_player:
 		return
 	
-	global_position = pos
-	rotation = rot
-	velocity = vel
-	is_running = running
-	is_jumping = jumping
+	sync_timer += delta
 	
-	# Reenvia para todos os outros clientes
-	var sender_id = multiplayer.get_remote_sender_id()
-	for peer_id in multiplayer.get_peers():
-		if peer_id != sender_id:
-			rpc_id(peer_id, "_client_receive_state", pos, rot, vel, running, jumping)
+	if sync_timer >= sync_rate:
+		sync_timer = 0.0
+		
+		# Envia estado via NetworkManager
+		if NetworkManager and NetworkManager.is_connected:
+			NetworkManager.send_player_state(
+				player_id,
+				global_position,
+				rotation,
+				velocity,
+				is_running,
+				is_jumping
+			)
 
-## Recebido no CLIENTE REMOTO
-@rpc("authority", "call_remote", "unreliable")
-func _client_receive_state(pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
+# ===== VISUAL =====
+
+func _apply_player_color():
+	"""Aplica cor única ao player baseada no ID"""
+	if not mesh:
+		return
+	
+	# Seleciona cor baseada no ID
+	var color_index = player_id % PLAYER_COLORS.size()
+	var player_color = PLAYER_COLORS[color_index]
+	
+	# Cria material
+	var material = StandardMaterial3D.new()
+	material.albedo_color = player_color
+	material.metallic = 0.3
+	material.roughness = 0.7
+	material.rim_enabled = true
+	material.rim = 0.5
+	material.rim_tint = 0.8
+	
+	# Aplica material
+	mesh.material_override = material
+	
+	_log_debug("Cor aplicada: %s" % player_color)
+
+# ===== CLEANUP =====
+
+func _exit_tree():
+	# Remove do registro
+	if RoundRegistry:
+		RoundRegistry.unregister_spawned_player(player_id)
+	
+	# Libera mouse se for local
 	if is_local_player:
-		return  # Ignora para si mesmo
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	
-	# Atualiza estado diretamente (interpolação simples)
-	global_position = pos
-	rotation = rot
-	velocity = vel
-	is_running = running
-	is_jumping = jumping
+	_log_debug("Player destruído")
 
-# ===== DEBUG =====
+# ===== UTILITÁRIOS =====
 
-func _update_debug_info():
-	var vel_horizontal = Vector2(velocity.x, velocity.z).length()
-	
-	debug_info.text = "╔═══ PLAYER ═══╗\n"
-	debug_info.text += "%s (ID: %d)\n" % [player_name, player_id]
-	debug_info.text += "Local: %s\n" % ("SIM" if is_local_player else "NÃO")
-	debug_info.text += "──────────────\n"
-	debug_info.text += "Vel: %.1f m/s\n" % vel_horizontal
-	debug_info.text += "Pos: %.1f, %.1f, %.1f\n" % [global_position.x, global_position.y, global_position.z]
-	debug_info.text += "Chão: %s\n" % ("SIM" if is_on_floor() else "NÃO")
-	debug_info.text += "Correndo: %s | Pulando: %s\n" % [str(is_running), str(is_jumping)]
-	debug_info.text += "╚══════════════╝"
+func _log_debug(message: String):
+	if debug:
+		print("[Player:%d] %s" % [player_id, message])
 
-# ===== GETTERS =====
-
-func get_player_id() -> int:
-	return player_id
-
-func get_player_name() -> String:
-	return player_name
-
-func is_local() -> bool:
-	return is_local_player
+func teleport_to(new_position: Vector3):
+	"""Teleporta o player (apenas servidor)"""
+	if multiplayer.is_server():
+		global_position = new_position
