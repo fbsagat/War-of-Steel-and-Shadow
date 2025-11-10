@@ -270,7 +270,6 @@ func _server_start_round(round_settings: Dictionary):
 	var peer_id = multiplayer.get_remote_sender_id()
 	ServerManager._handle_start_round(peer_id, round_settings)
 
-# Mantém compatibilidade com código antigo
 func start_match(match_settings: Dictionary = {}):
 	"""Alias para start_round (compatibilidade)"""
 	start_round(match_settings)

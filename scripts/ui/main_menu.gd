@@ -808,7 +808,20 @@ func _update_room_display(room_data: Dictionary):
 	
 	# Atualiza nome da sala
 	if room_name_label and room_data.has("name"):
-		room_name_label.text = room_data["name"]
+		var host_name = ""
+		
+		# Busca o nome do host
+		for player in room_data.get("players", []):
+			if typeof(player) == TYPE_DICTIONARY and player.get("is_host", false):
+				host_name = player.get("name", "Host")
+				break  # Encontrou, pode parar
+		
+		# Monta o texto final
+		var room_name = room_data["name"]
+		if host_name:
+			room_name_label.text = "%s (Host: %s)" % [room_name, host_name]
+		else:
+			room_name_label.text = room_name
 	
 	# Atualiza lista de jogadores
 	if room_players_list and room_data.has("players"):
@@ -817,7 +830,7 @@ func _update_room_display(room_data: Dictionary):
 			if typeof(player) == TYPE_DICTIONARY:
 				var display_name = player.get("name", "Jogador")
 				if player.get("is_host", false):
-					display_name += " [host]"
+					display_name += " 🎚️"
 				room_players_list.add_item(display_name)
 			else:
 				room_players_list.add_item(str(player))  # fallback seguro
