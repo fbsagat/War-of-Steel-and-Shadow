@@ -1,9 +1,8 @@
-[gd_scene load_steps=7 format=3 uid="uid://cmou586m3qjrq"]
+[gd_scene load_steps=6 format=3 uid="uid://cmou586m3qjrq"]
 
 [ext_resource type="Script" uid="uid://dj4lxirqk3oo1" path="res://scripts/player/simple_player.gd" id="1_e7gth"]
 [ext_resource type="Script" uid="uid://wlthu11krl0v" path="res://scripts/player/simple_player_debug_info.gd" id="2_detj4"]
 [ext_resource type="Script" uid="uid://tlit5t8dir8r" path="res://scripts/player/simple_player_camera_controller.gd" id="2_mw4ws"]
-[ext_resource type="Script" uid="uid://bvyjjoaf2ytwh" path="res://scripts/player/simple_player_network_sync.gd" id="2_wm1tw"]
 
 [sub_resource type="CapsuleMesh" id="CapsuleMesh_8rjxd"]
 
@@ -29,10 +28,6 @@ transform = Transform3D(1, 0, 0, 0, 0.9396926, 0.34202012, 0, -0.34202012, 0.939
 
 [node name="Camera3D" type="Camera3D" parent="CameraController/SpringArm3D"]
 transform = Transform3D(1, 0, 0, 0, 1.0000001, 0, 0, 0, 1.0000001, 0, 0.47957444, 0.17455101)
-
-[node name="NetworkSync" type="Node" parent="."]
-script = ExtResource("2_wm1tw")
-sync_rate = 30.0
 
 [node name="DebugInfo" type="Label3D" parent="."]
 script = ExtResource("2_detj4")
