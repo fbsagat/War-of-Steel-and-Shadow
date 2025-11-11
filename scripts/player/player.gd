@@ -164,6 +164,9 @@ func initialize(p_id: int, p_name: String, spawn_pos: Vector3):
 	# Atualiza label de nome
 	if name_label:
 		name_label.text = player_name
+		
+	if not is_local_player:
+		set_physics_process(false)
 	
 	# Define autoridade multiplayer
 	set_multiplayer_authority(player_id)
