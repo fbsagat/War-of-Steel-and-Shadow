@@ -54,8 +54,17 @@ func load_map(map_scene_path: String, settings: Dictionary = {}):
 	if current_map == null:
 		push_error("Falha ao instanciar mapa")
 		return false
+		
+	var array_rel = [
+	{"nome": "Etapa 1", "tipo_relevo": "Semi-Flat", "percentual_distancia": 40},
+	{"nome": "Etapa 2", "tipo_relevo": "Gentle Hills", "percentual_distancia": 30},
+	{"nome": "Etapa 3", "tipo_relevo": "Rolling Hills", "percentual_distancia": 20},
+	{"nome": "Etapa 4", "tipo_relevo": "Valleys", "percentual_distancia": 10}
+]
 	
-	current_map.seed_geracao = 112233
+	current_map.seed_geracao = randi_range(100000, 999999)
+	current_map.preencher_etapas(array_rel)
+	current_map.tamanho_mapa = Vector2i(20, 20)
 	current_map.get_node("Sky3D").current_time = 12.0
 	
 	# Adiciona o mapa à cena
