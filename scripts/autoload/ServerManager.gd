@@ -26,7 +26,7 @@ extends Node
 ## Tempo mínimo entre validações (segundos)
 @export var validation_interval: float = 0.1
 ## Ativar validação anti-cheat
-@export var enable_anticheat: bool = true
+@export var enable_anticheat: bool = false
 
 # ===== VARIÁVEIS INTERNAS =====
 
@@ -343,10 +343,6 @@ func _handle_close_room(peer_id: int):
 
 # ===== HANDLER DE INÍCIO DE RODADA =====
 
-func _handle_start_match(peer_id: int, match_settings: Dictionary):
-	"""Handler para manter compatibilidade - chama _handle_start_round"""
-	_handle_start_round(peer_id, match_settings)
-
 func _handle_start_round(peer_id: int, round_settings: Dictionary):
 	"""Inicia uma nova rodada na sala"""
 	var player = PlayerRegistry.get_player(peer_id)
@@ -459,7 +455,7 @@ func _server_instantiate_round(match_data: Dictionary):
 
 func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary):
 	"""Spawna um jogador no servidor (versão autoritativa)"""
-	var player_scene = preload("res://scenes/system/player.tscn")
+	var player_scene = preload("res://scenes/system/player_warrior.tscn")
 	var player_instance = player_scene.instantiate()
 	
 	player_instance.name = str(player_data["id"])

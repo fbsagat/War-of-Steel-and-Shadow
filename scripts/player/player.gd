@@ -40,6 +40,7 @@ var is_attacking: bool = false
 var is_defending: bool = false
 var is_jumping: bool = false
 var is_aiming: bool = false
+var is_running: bool = false
 var current_item_right_id: int
 var current_item_left_id: int
 var current_helmet_item_id: int
@@ -54,11 +55,20 @@ var is_block_attacking: bool = false
 var sword_areas: Array[Area3D] = []
 const MAX_DIRECTION_HISTORY = 2
 
+@export_category("Network")
+@export var sync_rate: float = 0.05
+
+var player_id: int = 0
+var player_name: String = ""
+var is_local_player: bool = false
+var sync_timer: float = 0.0
+
 # referências
 @onready var animation_player: AnimationPlayer = $AnimationPlayer
 @onready var animation_tree: AnimationTree = $AnimationTree
 @onready var attack_timer: Timer = $attack_timer
-@onready var CameraController: Node3D = $"../CameraController"
+@onready var CameraController: Node3D
+@onready var name_label: Label3D = $NameLabel
 
 # Dinâmicas
 var model: Node3D = null
@@ -92,11 +102,18 @@ func _ready():
 
 # Física geral
 func _physics_process(delta):
+		var move_dir: Vector3
 		_handle_gravity(delta)
-		var move_dir = _handle_movement_input(delta)
 		handle_test_equip_inputs()
-		move_and_slide()
+		
+		# Só processa input se for o jogador local
+		if is_multiplayer_authority():
+			move_dir = _handle_movement_input(delta)
+			_send_state_to_network(delta)
+	
 		_handle_animations(move_dir)
+		move_and_slide()
+		
 
 func _process(delta: float) -> void:
 	if is_aiming and nearest_enemy:
@@ -128,6 +145,32 @@ func _process(delta: float) -> void:
 				if last_simple_directions.size() > MAX_DIRECTION_HISTORY:
 					last_simple_directions.pop_front()
 		# Diagonais NÃO entram no histórico (são usadas imediatamente no ataque)
+
+func set_as_local_player():
+	"""Configura este player como o jogador local"""
+	is_local_player = true
+
+func initialize(p_id: int, p_name: String, spawn_pos: Vector3):
+	"""Inicializa o player com dados multiplayer"""
+	player_id = p_id
+	player_name = p_name
+	
+	# Nome do nó = ID do player (importante para sincronização)
+	name = str(player_id)
+	
+	# Posiciona no spawn
+	global_position = spawn_pos
+	
+	# Atualiza label de nome
+	if name_label:
+		name_label.text = player_name
+	
+	# Define autoridade multiplayer
+	set_multiplayer_authority(player_id)
+	
+	# Ativa processos
+	set_physics_process(true)
+	set_process(true)
 
 func hitboxes_manager():
 	# Conecta todos os hitboxes de ataque
@@ -1029,7 +1072,47 @@ func handle_test_equip_inputs() -> void:
 				push_error("handle_test_equip_inputs: item não encontrado para id %d." % resolved_id)
 				continue
 
-# Utils
+# ===== SINCRONIZAÇÃO DE REDE =====
+		
+func _send_state_to_network(delta: float):
+	"""Envia estado do player para o servidor"""
+	if not is_local_player:
+		return
+	
+	sync_timer += delta
+	
+	if sync_timer >= sync_rate:
+		sync_timer = 0.0
+		
+		# Envia estado via NetworkManager
+		if NetworkManager and NetworkManager.is_connected:
+			NetworkManager.send_player_state(
+				player_id,
+				global_position,
+				rotation,
+				velocity,
+				is_running,
+				is_jumping
+			)
+
+func teleport_to(new_position: Vector3):
+	"""Teleporta o player (apenas servidor)"""
+	if multiplayer.is_server():
+		global_position = new_position
+
+# ===== CLEANUP =====
+
+func _exit_tree():
+	# Remove do registro
+	if RoundRegistry:
+		RoundRegistry.unregister_spawned_player(player_id)
+	
+	# Libera mouse se for local
+	if is_local_player:
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+
+# ===== UTILS =====
+
 # Usado por get_nearby_items
 func _sort_by_distance(a, b) -> int:
 	var da = a.global_transform.origin.distance_to(global_transform.origin)

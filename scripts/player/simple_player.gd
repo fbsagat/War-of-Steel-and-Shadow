@@ -93,11 +93,6 @@ func initialize(p_id: int, p_name: String, spawn_pos: Vector3):
 func set_as_local_player():
 	"""Configura este player como o jogador local"""
 	is_local_player = true
-	
-	# Ativa a câmera
-	if camera_controller and camera_controller.has_method("set_as_active"):
-		camera_controller.set_as_active()
-	
 	_log_debug("✓ Configurado como jogador local")
 
 # ===== FÍSICA E MOVIMENTO =====

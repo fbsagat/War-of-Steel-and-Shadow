@@ -22,6 +22,8 @@ enum CameraMode { FREE_LOOK, BEHIND_PLAYER }
 		target = value
 		if is_node_ready():
 			_initialize_target_rotation()
+@onready var spring_arm: SpringArm3D = $SpringArm3D
+@onready var camera: Camera3D = $SpringArm3D/Camera3D
 
 @export_range(0.1, 20.0, 0.1) var base_distance: float = 8.0:
 	set(value):
@@ -56,17 +58,15 @@ enum CameraMode { FREE_LOOK, BEHIND_PLAYER }
 # ==============================
 # VARIÁVEIS INTERNAS
 # ==============================
-var spring_arm: SpringArm3D = null
 var target_rotation: Vector2 = Vector2.ZERO  # (pitch, yaw) em radianos
 var current_mode: CameraMode = CameraMode.FREE_LOOK
-
+var is_active: bool = false
 
 # ==============================
 # INICIALIZAÇÃO
 # ==============================
 func _ready():
 	add_to_group("camera_controller")
-	
 	if target == null:
 		push_error("[CameraController] Alvo (target) não definido no Inspector!")
 		return
@@ -82,6 +82,15 @@ func _ready():
 	if debug:
 		print("[CameraController] Inicializado. Alvo:", target.name)
 
+func set_target(new_target: Node3D):
+	"""Define o alvo da câmera"""
+	target = new_target
+
+func set_as_active():
+	is_active = true
+	if camera:
+		camera.current = true
+	print("[Camera] ✓ Câmera ativada e mouse capturado")
 
 func _initialize_target_rotation():
 	"""Inicializa a rotação alvo com base na rotação atual do alvo."""
@@ -129,6 +138,8 @@ func release_to_free_look():
 # ATUALIZAÇÃO PRINCIPAL
 # ==============================
 func _process(delta):
+	if not is_active:
+		return
 	if target == null:
 		return
 

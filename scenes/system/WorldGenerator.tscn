@@ -1,6 +1,8 @@
-[gd_scene load_steps=3 format=3 uid="uid://dp2gq1l5kmxd6"]
+[gd_scene load_steps=8 format=3 uid="uid://dp2gq1l5kmxd6"]
 
 [ext_resource type="PackedScene" uid="uid://cwu8t6cp4qo1c" path="res://sky/sky_3d.tscn" id="1_mvrc1"]
+[ext_resource type="Material" uid="uid://d2a254xvlmxnm" path="res://tres/material_terreno.tres" id="1_xyjhq"]
+[ext_resource type="Script" uid="uid://dvc5j32rwdgv0" path="res://scripts/system/map_generator/EtapaRelevo.gd" id="2_xvkxt"]
 
 [sub_resource type="GDScript" id="GDScript_om72s"]
 script/source = "@tool
@@ -27,8 +29,6 @@ extends Node3D
 # --- Player e Renderização ---
 @export_category(\"Player e Renderização\")
 @export var distancia_render := 150.0 ## Distância de renderização (0 = tudo)
-@export_node_path(\"Node3D\") var caminho_player: NodePath ## Caminho do nó do player
-@export_node_path(\"Node3D\") var no_pai_terreno: NodePath ## Nó sob o qual gerar terreno
 
 # --- Física ---
 @export_category(\"Física\")
@@ -36,21 +36,8 @@ extends Node3D
 @export_range(1, 32) var mascara_colisao: int = 1 ## Máscara de colisão
 @export var otimizar_colisao_distante: bool = true ## Desabilitar colisão em chunks distantes
 
-# --- Geração de Relevo ---
-@export_category(\"Geração de Relevo\")
-@export_enum(\"Flat\", \"Semi-Flat\", \"Gentle Hills\", \"Rolling Hills\", \"Valleys\", \"Custom\") 
-var tipo_relevo_padrao: String = \"Gentle Hills\"
-
-@export_subgroup(\"Custom Relief Settings\")
-@export var custom_amplitude: float = 5.0 ## Amplitude das ondulações
-@export var custom_frequencia: float = 0.05 ## Frequência do ruído
-@export var custom_octaves: int = 4 ## Número de oitavas
-@export var custom_persistencia: float = 0.5 ## Persistência
-@export var custom_lacunaridade: float = 2.0 ## Lacunaridade
-
 # --- Sistema de Etapas de Relevo ---
 @export_category(\"Sistema de Etapas de Relevo\")
-@export var usar_etapas_relevo: bool = false ## Ativar sistema de etapas progressivas
 @export var etapas_relevo: Array[EtapaRelevo] = [] ## Define as etapas de progressão
 @export var suavizar_transicoes: bool = true ## Suavizar transições entre etapas
 @export var tamanho_zona_transicao: float = 0.2 ## Tamanho da zona de blend (0-1)
@@ -100,12 +87,7 @@ var tipo_relevo_padrao: String = \"Gentle Hills\"
 # CLASSE DE ETAPA DE RELEVO
 # =============================================================================
 
-#class EtapaRelevo extends Resource:
-	#@export var nome: String = \"Etapa 1\"
-	#@export_enum(\"Flat\", \"Semi-Flat\", \"Gentle Hills\", \"Rolling Hills\", \"Valleys\", \"Custom\") 
-	#var tipo_relevo: String = \"Gentle Hills\"
-	#@export_range(0.0, 100.0) var percentual_distancia: float = 25.0 ## % da distância do centro à borda
-	#@export var cor_visual: Color = Color.WHITE ## Cor para visualização (opcional)
+# É global
 
 # =============================================================================
 # VARIÁVEIS INTERNAS
@@ -121,6 +103,7 @@ var altura_cache: Dictionary = {} ## [Vector3: float] - Cache de alturas para co
 var timer: float = 0.0
 var camera: Camera3D
 var raio_mapa_metros: float = 0.0 ## Raio do mapa em metros
+var total_percentual_etapas: float = 0.0 ## Total acumulado dos percentuais das etapas
 
 class ChunkData:
 	var mesh_instance: MeshInstance3D
@@ -138,6 +121,8 @@ func _ready() -> void:
 	if Engine.is_editor_hint():
 		return
 	
+	terrain_parent = self
+	
 	print(\"[TerrainGen] Inicializando...\")
 	
 	_validar_configuracoes()
@@ -146,6 +131,9 @@ func _ready() -> void:
 	_configurar_noise()
 	_obter_referencias()
 	_calcular_raio_mapa()
+	
+	# Configurar sistema de etapas
+	_configurar_etapas_relevo()
 	
 	_gerar_chunks_iniciais()
 
@@ -171,20 +159,12 @@ func _configurar_noise() -> void:
 	noise = FastNoiseLite.new()
 	noise.seed = seed_geracao
 	noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
-	noise.frequency = custom_frequencia
-	noise.fractal_octaves = custom_octaves
-	noise.fractal_lacunarity = custom_lacunaridade
-	noise.fractal_gain = custom_persistencia
+	noise.frequency = 0.01  # Valor base, será substituído nas etapas
+	noise.fractal_octaves = 4
+	noise.fractal_lacunarity = 2.0
+	noise.fractal_gain = 0.5
 
 func _obter_referencias() -> void:
-	if caminho_player != NodePath():
-		player_node = get_node_or_null(caminho_player)
-	
-	if no_pai_terreno != NodePath():
-		terrain_parent = get_node_or_null(no_pai_terreno)
-	else:
-		terrain_parent = self
-	
 	if player_node and player_node.has_node(\"Camera3D\"):
 		camera = player_node.get_node(\"Camera3D\")
 	else:
@@ -224,6 +204,30 @@ func _calcular_raio_mapa() -> void:
 	if tamanho_mapa != Vector2i.ZERO:
 		raio_mapa_metros = max(tamanho_mapa.x, tamanho_mapa.y) * tamanho_chunk * 0.5
 		print(\"[TerrainGen] Raio do mapa: \", raio_mapa_metros, \"m\")
+
+func _configurar_etapas_relevo() -> void:
+	# Calcular total de percentuais para normalização
+	total_percentual_etapas = 0.0
+	for etapa in etapas_relevo:
+		total_percentual_etapas += etapa.percentual_distancia
+	
+	# Se não houver etapas definidas, criar padrão
+	if etapas_relevo.is_empty():
+		var etapa_padrao = EtapaRelevo.new()
+		etapa_padrao.nome = \"Padrão\"
+		etapa_padrao.tipo_relevo = \"Gentle Hills\"
+		etapa_padrao.percentual_distancia = 100.0
+		etapas_relevo.append(etapa_padrao)
+		total_percentual_etapas = 100.0
+		print(\"[TerrainGen] Nenhuma etapa definida. Usando configuração padrão.\")
+	
+	# Normalizar percentuais se necessário
+	if total_percentual_etapas > 0 and abs(total_percentual_etapas - 100.0) > 0.1:
+		print(\"[TerrainGen] Normalizando percentuais das etapas (total: \", total_percentual_etapas, \"%)\")
+		var fator = 100.0 / total_percentual_etapas
+		for etapa in etapas_relevo:
+			etapa.percentual_distancia *= fator
+		total_percentual_etapas = 100.0
 
 func _aplicar_quality_preset() -> void:
 	match quality_preset:
@@ -476,18 +480,14 @@ func _gerar_altura_com_noise(x: float, z: float, params: Dictionary) -> float:
 	return clamp(altura, 0, altura_maxima)
 
 func _obter_parametros_relevo_por_distancia(distancia_metros: float) -> Dictionary:
-	# Se etapas desativadas, usar tipo padrão
-	if not usar_etapas_relevo or etapas_relevo.is_empty():
-		return _obter_parametros_base(tipo_relevo_padrao)
-	
-	# Se mapa infinito, usar tipo padrão
-	if raio_mapa_metros <= 0:
-		return _obter_parametros_base(tipo_relevo_padrao)
+	# Tratamento especial para mapas infinitos
+	if tamanho_mapa == Vector2i.ZERO:
+		return _obter_parametros_base(\"Gentle Hills\")
 	
 	# Calcular percentual da distância (0.0 no centro, 1.0 na borda)
 	var percentual: float = clamp(distancia_metros / raio_mapa_metros, 0.0, 1.0)
 	
-	# Determinar etapa atual baseada no percentual
+	# Determinar etapa atual baseada no percentual normalizado
 	var percentual_acumulado: float = 0.0
 	var etapa_anterior: EtapaRelevo = null
 	
@@ -520,7 +520,7 @@ func _obter_parametros_relevo_por_distancia(distancia_metros: float) -> Dictiona
 	if etapas_relevo.size() > 0:
 		return _obter_parametros_base(etapas_relevo[-1].tipo_relevo)
 	
-	return _obter_parametros_base(tipo_relevo_padrao)
+	return _obter_parametros_base(\"Gentle Hills\")
 
 func _obter_parametros_base(tipo: String) -> Dictionary:
 	match tipo:
@@ -534,14 +534,12 @@ func _obter_parametros_base(tipo: String) -> Dictionary:
 			return {\"tipo\": \"Rolling Hills\", \"amplitude\": 8.0, \"frequencia\": 0.05}
 		\"Valleys\":
 			return {\"tipo\": \"Valleys\", \"amplitude\": 15.0, \"frequencia\": 0.08}
-		\"Custom\":
-			return {\"tipo\": \"Custom\", \"amplitude\": custom_amplitude, \"frequencia\": custom_frequencia}
 		_:
 			return {\"tipo\": \"Gentle Hills\", \"amplitude\": 5.0, \"frequencia\": 0.05}
 
 func _interpolar_parametros(params_a: Dictionary, params_b: Dictionary, blend: float) -> Dictionary:
 	return {
-		\"tipo\": params_b.tipo,
+		\"tipo\": params_a.tipo if blend < 0.5 else params_b.tipo,
 		\"amplitude\": lerp(params_a.amplitude, params_b.amplitude, blend),
 		\"frequencia\": lerp(params_a.frequencia, params_b.frequencia, blend)
 	}
@@ -799,6 +797,7 @@ func regenerar_terreno(nova_seed: int = 0) -> void:
 		seed_geracao = nova_seed
 	
 	_configurar_noise()
+	_configurar_etapas_relevo()
 	_gerar_chunks_iniciais()
 
 func obter_altura_em_posicao(world_pos: Vector3) -> float:
@@ -815,8 +814,26 @@ func limpar_tudo() -> void:
 	altura_cache.clear()
 "
 
+[sub_resource type="Resource" id="Resource_xvkxt"]
+script = ExtResource("2_xvkxt")
+tipo_relevo = "Semi-Flat"
+percentual_distancia = 50.0
+metadata/_custom_type_script = "uid://dvc5j32rwdgv0"
+
+[sub_resource type="Resource" id="Resource_v1xig"]
+script = ExtResource("2_xvkxt")
+metadata/_custom_type_script = "uid://dvc5j32rwdgv0"
+
+[sub_resource type="Resource" id="Resource_mkh3g"]
+script = ExtResource("2_xvkxt")
+tipo_relevo = "Rolling Hills"
+metadata/_custom_type_script = "uid://dvc5j32rwdgv0"
+
 [node name="WorldGenerator" type="Node3D"]
 script = SubResource("GDScript_om72s")
+tamanho_mapa = Vector2i(60, 60)
+material_terreno = ExtResource("1_xyjhq")
+etapas_relevo = Array[ExtResource("2_xvkxt")]([SubResource("Resource_xvkxt"), SubResource("Resource_v1xig"), SubResource("Resource_mkh3g")])
 
 [node name="SpawnPoint1" type="Marker3D" parent="." groups=["spawn_point"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.214169, 1.362243)
@@ -831,4 +848,5 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.791235, 1.4855994, -0.38611
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.9358826, 1.16964, -0.12404144)
 
 [node name="Sky3D" parent="." instance=ExtResource("1_mvrc1")]
-current_time = 0.5574933333186337
+current_time = 22.770933333104203
+minutes_per_day = 10.0

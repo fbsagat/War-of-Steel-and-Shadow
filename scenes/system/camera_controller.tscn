@@ -4,11 +4,6 @@
 
 [node name="CameraController" type="Node3D"]
 script = ExtResource("1_8y15a")
-base_distance = 4.0
-free_look_height_offset = 1.0
-behind_smoothness = 8.0
-behind_height_offset = 2.0
-behind_target_pitch_deg = 18.0
 
 [node name="SpringArm3D" type="SpringArm3D" parent="."]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0, 0, 0)

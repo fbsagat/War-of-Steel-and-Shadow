@@ -55,6 +55,9 @@ func load_map(map_scene_path: String, settings: Dictionary = {}):
 		push_error("Falha ao instanciar mapa")
 		return false
 	
+	current_map.seed_geracao = 112233
+	current_map.get_node("Sky3D").current_time = 12.0
+	
 	# Adiciona o mapa à cena
 	get_tree().root.add_child(current_map)
 	

@@ -454,7 +454,8 @@ func _start_round_locally(match_data: Dictionary):
 func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bool):
 
 	"""Spawna um jogador no cliente"""
-	var player_scene = preload("res://scenes/system/player.tscn")
+	var player_scene = preload("res://scenes/system/player_warrior.tscn")
+	var camera_scene = preload("res://scenes/system/camera_controller.tscn")
 	var player_instance = player_scene.instantiate()
 	
 	player_instance.name = str(player_data["id"])
@@ -463,10 +464,16 @@ func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bo
 
 	get_tree().root.add_child(player_instance)
 	
+	# Define o alvo da câmera
 	var spawn_pos = client_map_manager.get_spawn_position(spawn_data["spawn_index"])
 	player_instance.initialize(player_data["id"], player_data["name"], spawn_pos)
 	
 	if is_local:
+		# Só instancia câmera para jogador local
+		var camera_instance = camera_scene.instantiate()
+		camera_instance.set_target(player_instance)
+		get_tree().root.add_child(camera_instance)
+		camera_instance.set_as_active()
 		player_instance.set_as_local_player()
 		local_player = player_instance
 		_log_debug("✓ Jogador local spawnado.")
