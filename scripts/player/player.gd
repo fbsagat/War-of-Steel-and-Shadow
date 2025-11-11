@@ -35,6 +35,13 @@ extends CharacterBody3D
 @export var use_360_vision_as_backup: bool = true  # Ativa a visão 360° como fallback
 @export var update_interval: float = 0.5  # atualização a cada X segundos (0 = cada frame)
 
+# Configurações (exportáveis para ajuste no Inspector)
+@export_category("Network Sync")
+@export var sync_rate: float = 0.05          # 20 updates/segundo
+@export var interpolation_speed: float = 8.0 # Suavidade da interpolação
+@export var position_threshold: float = 0.01 # Distância mínima para sincronizar
+@export var rotation_threshold: float = 0.01 # Rotação mínima para sincronizar
+
 # Estados
 var is_attacking: bool = false
 var is_defending: bool = false
@@ -55,9 +62,10 @@ var is_block_attacking: bool = false
 var sword_areas: Array[Area3D] = []
 const MAX_DIRECTION_HISTORY = 2
 
-@export_category("Network")
-@export var sync_rate: float = 0.05
-
+# ===== SINCRONIZAÇÃO MULTPLAYER =====
+var target_position: Vector3 = Vector3.ZERO  # Para interpolação de remotos
+var target_rotation_y: float = 0.0           # Só rotação Y para personagem
+var last_update_time: float = 0.0
 var player_id: int = 0
 var player_name: String = ""
 var is_local_player: bool = false
@@ -67,12 +75,12 @@ var sync_timer: float = 0.0
 @onready var animation_player: AnimationPlayer = $AnimationPlayer
 @onready var animation_tree: AnimationTree = $AnimationTree
 @onready var attack_timer: Timer = $attack_timer
-@onready var CameraController: Node3D
 @onready var name_label: Label3D = $NameLabel
 
 # Dinâmicas
 var model: Node3D = null
 var skeleton: Skeleton3D = null
+var camera_controller: Node3D
 var damaged_entities = []
 var aiming_forward_direction: Vector3 = Vector3.FORWARD
 var defense_target_angle: float = 0.0
@@ -99,7 +107,7 @@ func _ready():
 	# visibilidade inicial (modelo)
 	if hide_itens_on_start:
 		_hide_all_model_items()
-
+	
 # Física geral
 func _physics_process(delta):
 		var move_dir: Vector3
@@ -107,14 +115,16 @@ func _physics_process(delta):
 		handle_test_equip_inputs()
 		
 		# Só processa input se for o jogador local
-		if is_multiplayer_authority():
+		if is_local_player:
 			move_dir = _handle_movement_input(delta)
 			_send_state_to_network(delta)
+			move_and_slide()
+			_send_state_to_server(delta)
+		elif multiplayer.has_multiplayer_peer():
+			_interpolate_remote_player(delta)
 	
 		_handle_animations(move_dir)
-		move_and_slide()
 		
-
 func _process(delta: float) -> void:
 	if is_aiming and nearest_enemy:
 		# 1. Vetor do jogador para o inimigo
@@ -364,19 +374,9 @@ func _get_nearby_items(radius: float = pickup_radius, _collision_mask: int = pic
 	if debug: print(" -> items filtrados:", items.size())
 	return items
 
-# Pega o nó da câmera
-func _get_camera_controller() -> Node3D:
-	var camera_list = get_tree().get_nodes_in_group("camera_controller")
-	if not camera_list.is_empty():
-		return camera_list[0]
-	var root = get_tree().root
-	if root.has_node("CameraController"):
-		return root.get_node("CameraController")
-	return null
-
 # Funções da câmera livre
 func _get_movement_direction_free_cam() -> Vector3:
-	var camera := _get_camera_controller()
+	var camera := camera_controller
 	if camera and camera.is_inside_tree():
 		var cam_basis := camera.global_transform.basis
 		var cam_forward := (-cam_basis.z).normalized()
@@ -617,23 +617,37 @@ func _apply_movement(move_dir: Vector3, delta: float) -> void:
 			var multiplier = aiming_jump_multiplyer if is_aiming else 1.0
 			velocity.x += move_dir.x * air_speed * delta * multiplier
 			velocity.z += move_dir.z * air_speed * delta * multiplier
-
-
+	is_running = Input.is_action_pressed("run") and is_on_floor()
+	
 # Chama a câmera lockada e transiciona p/ movimentação strafe
-func _strafe_mode(ativar : bool = true, com_camera_lock = true):
-	# Falta criar a animação e implementar no handle_animations
+func _strafe_mode(ativar: bool = true, com_camera_lock = true):
+	# Só o jogador local pode ativar/desativar modo de mira
+	if not is_local_player:
+		return
+	
 	if ativar:
 		is_aiming = true
-		# ✅ SALVA A FRENTE DO JOGADOR NO MOMENTO DO TRAVAMENTO
-		var cam_forward := -CameraController.global_transform.basis.z
-		cam_forward.y = 0.0
-		cam_forward = cam_forward.normalized()
-		defense_target_angle = atan2(-cam_forward.x, -cam_forward.z)
-		if com_camera_lock:
-			get_tree().call_group("camera_controller", "force_behind_player")
+		
+		# Verifica se câmera existe (deve existir para local)
+		if camera_controller and camera_controller.is_inside_tree():
+			var cam_forward = -camera_controller.global_transform.basis.z
+			cam_forward.y = 0.0
+			cam_forward = cam_forward.normalized()
+			defense_target_angle = atan2(-cam_forward.x, -cam_forward.z)
+		else:
+			# Fallback: usa direção do jogador
+			var player_forward = -global_transform.basis.z
+			player_forward.y = 0.0
+			player_forward = player_forward.normalized()
+			defense_target_angle = atan2(-player_forward.x, -player_forward.z)
+		
+		if com_camera_lock and camera_controller and camera_controller.has_method("force_behind_player"):
+			camera_controller.force_behind_player()
+		# Se não tem câmera, não faz nada (jogador remoto não chega aqui)
 	else:
 		is_aiming = false
-		get_tree().call_group("camera_controller", "release_to_free_look")
+		if camera_controller and camera_controller.has_method("release_to_free_look"):
+			camera_controller.release_to_free_look()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
@@ -780,7 +794,7 @@ func _item_drop(item_ids: Array) -> Array:
 		return dropped
 	
 	# Pegar cena atual para adicionar os itens como filhos (ou use get_tree().root se preferir)
-	var scene_root = $"../objects/coletaveis"
+	var scene_root = $"../scenes/collectibles"
 	if not scene_root:
 		push_error("item_drop: cena atual não disponível para adicionar instâncias.")
 		return dropped
@@ -946,7 +960,7 @@ func _on_hitbox_body_entered(body: Node, hitbox_area: Area3D) -> void:
 
 # Ações do player (Trancar visão no inimigo)
 func action_lock():
-	if current_item_left_id != 10:
+	if current_item_left_id != 10 and is_local_player:
 		_strafe_mode(true, true)
 	if current_item_left_id != 0:
 		is_defending = true
@@ -968,7 +982,8 @@ func action_block_attack():
 			
 # Ações do player (Quando guardar o escudo)
 func action_stop_locking():
-	_strafe_mode(false, true)
+	if is_local_player:
+		_strafe_mode(false, true)
 	if current_item_left_id != 0:
 		is_defending = false
 		is_attacking = false
@@ -1074,9 +1089,67 @@ func handle_test_equip_inputs() -> void:
 			if item == null or (item is Dictionary and item.is_empty()):
 				push_error("handle_test_equip_inputs: item não encontrado para id %d." % resolved_id)
 				continue
-
+				
 # ===== SINCRONIZAÇÃO DE REDE =====
+
+func _send_state_to_server(delta: float):
+	"""Envia estado do jogador local para o servidor"""
+	sync_timer += delta
+	
+	if sync_timer >= sync_rate:
+		sync_timer = 0.0
 		
+		# Verifica se houve mudança significativa
+		var pos_changed = global_position.distance_to(target_position) > position_threshold
+		var rot_changed = abs(rotation.y - target_rotation_y) > rotation_threshold
+		
+		if pos_changed or rot_changed:
+			# Atualiza alvos para próxima comparação
+			target_position = global_position
+			target_rotation_y = rotation.y
+			
+			# Envia via NetworkManager
+			if NetworkManager and NetworkManager.is_connected:
+				NetworkManager.send_player_state(
+					player_id,
+					global_position,
+					rotation,
+					velocity,
+					is_running,
+					is_jumping
+				)
+
+func _interpolate_remote_player(delta: float):
+	"""Interpola suavemente a posição de jogadores remotos"""
+	# Interpola posição
+	global_position = global_position.lerp(target_position, interpolation_speed * delta)
+	
+	# Interpola rotação (apenas Y)
+	rotation.y = lerp_angle(rotation.y, target_rotation_y, interpolation_speed * delta)
+	
+	# move_and_slide() para gravidade e colisão (opcional)
+	# Se quiser simular gravidade para remotos:
+	if not is_on_floor():
+		velocity.y -= ProjectSettings.get_setting("physics/3d/default_gravity") * delta
+	else:
+		velocity.y = 0
+	move_and_slide()
+
+# RPC: Recebe estado de outros jogadores
+@rpc("authority", "call_remote", "unreliable")
+func _client_receive_state(pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
+	if is_local_player:
+		return  # Ignora para si mesmo
+	
+	# Atualiza alvos para interpolação
+	target_position = pos
+	target_rotation_y = rot.y
+	
+	# Atualiza estados para animações (se usar)
+	is_running = running
+	is_jumping = jumping
+	velocity = vel
+
 func _send_state_to_network(delta: float):
 	"""Envia estado do player para o servidor"""
 	if not is_local_player:
@@ -1115,6 +1188,42 @@ func _exit_tree():
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 # ===== UTILS =====
+# Define cor aleatória e configura NameLabel para multiplayer
+func setup_name_label():
+	if not $NameLabel:
+		return
+		
+	$NameLabel.visible = true
+	
+	# 1. DEFINE COR ALEATÓRIA (baseada no player_id para ser consistente)
+	var rng = RandomNumberGenerator.new()
+	rng.seed = player_id  # Mesmo ID = mesma cor sempre
+	var r = rng.randf_range(0.5, 1.0)  # Evita cores muito escuras
+	var g = rng.randf_range(0.5, 1.0)
+	var b = rng.randf_range(0.5, 1.0)
+	$NameLabel.modulate = Color(r, g, b)
+	
+	# 2. CONFIGURA VISIBILIDADE E BILLBOARD
+	$NameLabel.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	$NameLabel.pixel_size = 0.01  # Ajuste conforme sua cena
+	
+	# Esconde nome do jogador local (opcional)
+	if is_local_player:
+		$NameLabel.visible = false
+	else:
+		$NameLabel.visible = true
+	
+	var colors = [
+	Color(1, 0, 0),    # Vermelho
+	Color(0, 1, 0),    # Verde  
+	Color(0, 0, 1),    # Azul
+	Color(1, 1, 0),    # Amarelo
+	Color(1, 0, 1),    # Magenta
+	Color(0, 1, 1)     # Ciano
+]
+	var color_index = player_id % colors.size()
+	$NameLabel.modulate = colors[color_index]
+
 
 # Usado por get_nearby_items
 func _sort_by_distance(a, b) -> int:

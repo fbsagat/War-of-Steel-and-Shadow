@@ -16,7 +16,7 @@ enum CameraMode { FREE_LOOK, BEHIND_PLAYER }
 # ==============================
 # EXPORT — CONFIGURAÇÕES GERAIS
 # ==============================
-@export var debug: bool = false
+@export var debug: bool = true
 @export var target: Node3D:
 	set(value):
 		target = value
@@ -102,9 +102,14 @@ func _initialize_target_rotation():
 # ENTRADA DE USUÁRIO
 # ==============================
 func _input(event):
+	if not is_active:
+		return
 	if target == null:
 		return
-
+	
+	if target and target.has_method("is_local") and not target.is_local():
+		return
+	
 	# Ignora mouse no modo travado, se configurado
 	if current_mode == CameraMode.BEHIND_PLAYER and disable_mouse_in_behind_mode:
 		return

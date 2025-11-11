@@ -11,7 +11,7 @@ extends Node
 @export var auto_end_on_disconnect: bool = true
 
 @export_category("Debug")
-@export var debug_mode: bool = true
+@export var debug_mode: bool = false
 
 # ===== VARIÁVEIS DE ESTADO =====
 

@@ -10,7 +10,7 @@ extends Node
 @export var connection_timeout: float = 10.0
 
 @export_category("Debug")
-@export var debug_mode: bool = true
+@export var debug_mode: bool = false
 
 # ===== VARIÁVEIS INTERNAS =====
 
@@ -399,6 +399,7 @@ func _client_round_started(match_data: Dictionary):
 	_start_round_locally(match_data)
 
 func _start_round_locally(match_data: Dictionary):
+	print("_start_round_locally")
 	"""Inicia a rodada localmente no cliente"""
 	_log_debug("========================================")
 	_log_debug("INICIANDO RODADA")
@@ -452,36 +453,64 @@ func _start_round_locally(match_data: Dictionary):
 	_log_debug("✓ Rodada carregada no cliente")
 
 func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bool):
+	"""Spawna players para cada cliente, cada cliente recebe X execuções,
+	 a do seu jogador local e a do(s) jogador(es) remoto(s), sendo o seu = local"""
+	# Verifica duplicação
+	var player_name = str(player_data["id"])
+	var camera_name = player_name + "_Camera"
+	
+	if get_tree().root.has_node(player_name):
+		_log_debug("⚠ Player já existe: %s" % player_name)
+		return
+		
+	if get_tree().root.has_node(camera_name):
+		_log_debug("⚠ Câmera já existe: %s" % camera_name)
+		return
 
-	"""Spawna um jogador no cliente"""
+	# Instancia player
 	var player_scene = preload("res://scenes/system/player_warrior.tscn")
-	var camera_scene = preload("res://scenes/system/camera_controller.tscn")
 	var player_instance = player_scene.instantiate()
 	
-	player_instance.name = str(player_data["id"])
+	player_instance.name = player_name
 	player_instance.player_id = player_data["id"]
 	player_instance.player_name = player_data["name"]
-
+	
+	# Adiciona player à cena PRIMEIRO
 	get_tree().root.add_child(player_instance)
 	
-	# Define o alvo da câmera
+	# Inicializa jogador
 	var spawn_pos = client_map_manager.get_spawn_position(spawn_data["spawn_index"])
 	player_instance.initialize(player_data["id"], player_data["name"], spawn_pos)
+	player_instance.setup_name_label()
 	
+	# Configuração ESPECÍFICA por tipo de jogador
 	if is_local:
-		# Só instancia câmera para jogador local
+		# Só instanciar e atribuir câmera para jogador LOCAL
+		var camera_scene = preload("res://scenes/system/camera_controller.tscn")
 		var camera_instance = camera_scene.instantiate()
-		camera_instance.set_target(player_instance)
+		camera_instance.name = camera_name
+		camera_instance.target = player_instance
+		
+		# Atribui referência DIRETA (só para local)
+		player_instance.camera_controller = camera_instance
+		print("player e sua camera: ",player_instance.name, player_instance.camera_controller)
+		
+		# Adiciona câmera à cena
 		get_tree().root.add_child(camera_instance)
-		camera_instance.set_as_active()
+		
+		# Ativa controle
 		player_instance.set_as_local_player()
+		camera_instance.set_as_active()
 		local_player = player_instance
-		_log_debug("✓ Jogador local spawnado.")
+		_log_debug("✓ Jogador local spawnado: %s" % player_name)
+	else:
+		# Jogador remoto: NÃO tem câmera atribuída
+		player_instance.camera_controller = null
+		print("player e sua camera: ",player_instance.name, player_instance.camera_controller)
+		_log_debug("✓ Jogador remoto spawnado: %s" % player_name)
 	
 	# Registra no RoundRegistry
 	RoundRegistry.register_spawned_player(player_data["id"], player_instance)
-	
-	_log_debug("Player spawnado: %s (ID: %d, Local: %s)" % [player_data["name"], player_data["id"], is_local])
 
 func _client_round_ended(end_data: Dictionary):
 	"""Callback quando a rodada termina"""

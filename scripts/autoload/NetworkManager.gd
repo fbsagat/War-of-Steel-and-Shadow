@@ -400,16 +400,18 @@ func _client_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, r
 	var player = get_tree().root.get_node_or_null(player_path)
 	
 	if not player:
-		# DEBUG: descomente se quiser ver quando falhar
-		#print("[NetworkManager] Player não encontrado: %s" % player_path)
+		print("[NetworkManager] Player não encontrado: %s" % player_path)
 		return
 	
-	# Atualiza estado DIRETAMENTE (sem NetworkSync)
-	player.global_position = pos
-	player.rotation = rot
-	player.velocity = vel
-	player.is_running = running
-	player.is_jumping = jumping
+	if player and player.has_method("_client_receive_state"):
+		player._client_receive_state(pos, rot, vel, running, jumping)
+		
+	## Atualiza estado DIRETAMENTE (sem NetworkSync)
+	#player.global_position = pos
+	#player.rotation = rot
+	#player.velocity = vel
+	#player.is_running = running
+	#player.is_jumping = jumping
 
 # ===== UTILITÁRIOS DE SINCRONIZAÇÃO =====
 
