@@ -143,6 +143,18 @@ func create_round(room_id: int, room_name: String, players: Array, settings: Dic
 	round_state = "loading"
 	_log_debug("✓ Rodada criada: ID %d, Sala '%s', %d players" % [round_id, room_name, players.size()])
 	round_created.emit(current_round.duplicate())
+	
+	# Configs de mapa e env da rodada
+	var array_rel = [
+	{"nome": "Etapa 1", "tipo_relevo": "Semi-Flat", "percentual_distancia": 30},
+	{"nome": "Etapa 2", "tipo_relevo": "Gentle Hills", "percentual_distancia": 30},
+	{"nome": "Etapa 3", "tipo_relevo": "Rolling Hills", "percentual_distancia": 20},
+	{"nome": "Etapa 4", "tipo_relevo": "Valleys", "percentual_distancia": 20}]
+	current_round["settings"]["map_seed"] = randi_range(100000, 999999)
+	current_round["settings"]["map_preencher_etapas"] = array_rel
+	current_round["settings"]["map_size"] = Vector2i(20, 20)
+	current_round["settings"]["env_current_time"] = 12.0
+	
 	return current_round.duplicate()
 
 func start_round():

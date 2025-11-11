@@ -120,6 +120,7 @@ extends Node3D
 @export_range(0.0, 10.0, 0.1) var distancia_suavizacao_borda: float = 2.0
 
 @export_category(\"Debug\")
+@export var console_debug: bool = false
 @export var debug_mostrar_bordas: bool = false
 @export var debug_forcar_lod_unico: bool = false
 @export var debug_lod_forcado: int = 0
@@ -165,7 +166,8 @@ func _ready() -> void:
 		return
 	
 	terrain_parent = self
-	print(\"[TerrainGen] Inicializando sistema avançado...\")
+	if console_debug:
+		print(\"[TerrainGen] Inicializando sistema avançado...\")
 	
 	_validar_configuracoes()
 	_aplicar_quality_preset()
@@ -195,8 +197,9 @@ func _validar_configuracoes() -> void:
 func _inicializar_seed() -> void:
 	if seed_geracao == 0:
 		seed_geracao = randi()
-	seed(seed_geracao)
-	print(\"[TerrainGen] Seed: \", seed_geracao)
+	if console_debug:
+		seed(seed_geracao)
+		print(\"[TerrainGen] Seed: \", seed_geracao)
 
 func _configurar_noise_multicamadas() -> void:
 	# Noise Base - Formas principais do terreno
@@ -234,7 +237,8 @@ func _processar_materiais() -> void:
 	if not usar_material_dinamico:
 		return
 	
-	print(\"[TerrainGen] Processando sistema de materiais dinâmicos...\")
+	if console_debug:
+		print(\"[TerrainGen] Processando sistema de materiais dinâmicos...\")
 	
 	# Criar materiais padrão se não especificados
 	if not material_praia:
@@ -298,7 +302,8 @@ func _verificar_e_criar_luz() -> void:
 			break
 	
 	if not luz_encontrada:
-		print(\"[TerrainGen] Criando luz automática\")
+		if console_debug:
+			print(\"[TerrainGen] Criando luz automática\")
 		var luz: DirectionalLight3D = DirectionalLight3D.new()
 		luz.name = \"TerrainAutoLight\"
 		luz.light_energy = 1.2
@@ -318,7 +323,8 @@ func _tem_luz_direcional(node: Node) -> bool:
 func _calcular_raio_mapa() -> void:
 	if tamanho_mapa != Vector2i.ZERO:
 		raio_mapa_metros = max(tamanho_mapa.x, tamanho_mapa.y) * tamanho_chunk * 0.5
-		print(\"[TerrainGen] Raio do mapa: \", raio_mapa_metros, \"m\")
+		if console_debug:
+			print(\"[TerrainGen] Raio do mapa: \", raio_mapa_metros, \"m\")
 
 func _configurar_etapas_relevo() -> void:
 	total_percentual_etapas = 0.0
@@ -363,7 +369,8 @@ func _aplicar_quality_preset() -> void:
 # =============================================================================
 
 func _gerar_chunks_iniciais() -> void:
-	print(\"[TerrainGen] Gerando chunks iniciais...\")
+	if console_debug:
+		print(\"[TerrainGen] Gerando chunks iniciais...\")
 	
 	var centro: Vector2i = Vector2i.ZERO
 	if distancia_render > 0 and player_node:
@@ -390,7 +397,8 @@ func _gerar_chunks_iniciais() -> void:
 							await get_tree().process_frame
 	
 	var tempo_total: int = Time.get_ticks_msec() - tempo_inicio
-	print(\"[TerrainGen] Concluído! \", chunks_criados, \" chunks em \", tempo_total, \"ms\")
+	if console_debug:
+		print(\"[TerrainGen] Concluído! \", chunks_criados, \" chunks em \", tempo_total, \"ms\")
 
 func _calcular_raio_chunks() -> int:
 	var raio: int = 5
@@ -816,7 +824,8 @@ func _pre_processar_terreno() -> void:
 	if not arredondar_bordas_mapa or tamanho_mapa == Vector2i.ZERO:
 		return
 	
-	print(\"[TerrainGen] Pré-processando bordas do mapa...\")
+	if console_debug:
+		print(\"[TerrainGen] Pré-processando bordas do mapa...\")
 
 # =============================================================================
 # SISTEMA DE MATERIAIS DINÂMICOS
@@ -1103,7 +1112,8 @@ func _remover_chunk(chunk_pos: Vector2i) -> void:
 # =============================================================================
 
 func regenerar_terreno(nova_seed: int = 0) -> void:
-	print(\"[TerrainGen] Regenerando terreno...\")
+	if console_debug:
+		print(\"[TerrainGen] Regenerando terreno...\")
 	
 	for chunk_pos in chunks_ativos.keys():
 		var chunk_data: ChunkData = chunks_ativos[chunk_pos]
@@ -1186,21 +1196,13 @@ func obter_estatisticas() -> Dictionary:
 [node name="WorldGenerator" type="Node3D"]
 script = SubResource("GDScript_om72s")
 distancia_render = 0.0
-usar_noise_base = null
-frequencia_base = null
-amplitude_base = null
-usar_noise_detalhes = null
-frequencia_detalhes = null
-amplitude_detalhes = null
-usar_noise_montanhas = null
-frequencia_montanhas = null
-amplitude_montanhas = null
-threshold_montanhas = null
-usar_erosao_simulada = null
-intensidade_erosao = null
-suavizar_bordas_chunks = null
-distancia_suavizacao_borda = null
-debug_mostrar_biomas = null
+altura_praia_max = 0.0
+altura_grama_max = 3.0
+altura_pedra_max = 25.0
+angulo_pedra_min = 25.0
+intensidade_suavizacao = 0.55
+iteracoes_suavizacao = 3
+simular_erosao_hidraulica = true
 
 [node name="SpawnPoint1" type="Marker3D" parent="." groups=["spawn_point"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.214169, 1.362243)
@@ -1215,5 +1217,5 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.791235, 1.4855994, -0.38611
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.9358826, 1.16964, -0.12404144)
 
 [node name="Sky3D" parent="." instance=ExtResource("1_mvrc1")]
-current_time = 10.746733333093482
+current_time = 2.495533333068372
 minutes_per_day = 10.0

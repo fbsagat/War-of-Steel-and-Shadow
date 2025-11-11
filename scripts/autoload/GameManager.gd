@@ -399,7 +399,6 @@ func _client_round_started(match_data: Dictionary):
 	_start_round_locally(match_data)
 
 func _start_round_locally(match_data: Dictionary):
-	print("_start_round_locally")
 	"""Inicia a rodada localmente no cliente"""
 	_log_debug("========================================")
 	_log_debug("INICIANDO RODADA")
@@ -493,7 +492,6 @@ func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bo
 		
 		# Atribui referência DIRETA (só para local)
 		player_instance.camera_controller = camera_instance
-		print("player e sua camera: ",player_instance.name, player_instance.camera_controller)
 		
 		# Adiciona câmera à cena
 		get_tree().root.add_child(camera_instance)
@@ -506,7 +504,6 @@ func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bo
 	else:
 		# Jogador remoto: NÃO tem câmera atribuída
 		player_instance.camera_controller = null
-		print("player e sua camera: ",player_instance.name, player_instance.camera_controller)
 		_log_debug("✓ Jogador remoto spawnado: %s" % player_name)
 	
 	# Registra no RoundRegistry

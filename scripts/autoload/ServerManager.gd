@@ -384,9 +384,6 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 	
 	_log_debug("========================================")
 	
-	# Define mapa (sempre o mesmo, gerado proceduralmente)
-	var map_scene = round_settings.get("map_scene", "res://scenes/system/WorldGenerator.tscn")
-	
 	# Cria rodada no RoundRegistry
 	var round_data = RoundRegistry.create_round(
 		room["id"],
@@ -394,6 +391,12 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 		room["players"],
 		round_settings
 	)
+	
+	# round_settings recebe configurações do round para enviar para clientes e server configurarem
+	# seus mapas e enviorments
+	round_settings = round_data.get("settings")
+	# Define mapa (sempre o mesmo, gerado proceduralmente)
+	var map_scene = round_settings.get("map_scene", "res://scenes/system/WorldGenerator.tscn")
 	
 	if round_data.is_empty():
 		_send_error(peer_id, "Erro ao criar rodada")
