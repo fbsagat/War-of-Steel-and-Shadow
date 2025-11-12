@@ -81,6 +81,8 @@ signal quit_game_requested()
 
 @onready var reset_button: Button
 
+@export var debug_mode : bool = true
+
 # Configurações atuais
 var current_settings = {
 	"video": {
@@ -120,13 +122,16 @@ var is_loading = false
 var player_count = 0
 
 func _ready():
-	# Verifica se é servidor dedicado
+	# Verifica se é servidor
 	var args = OS.get_cmdline_args()
 	var is_server = "--server" in args or "--dedicated" in args
 	
 	if is_server:
-		print("GameManager detectou modo servidor - não inicializando UI")
+		_log_debug("Sou o servidor - NÃO inicializando MainMenu")
 		return
+	
+	_log_debug("Sou o cliente - Inicializando MainMenu")
+		
 	# Configura o Control para preencher toda a tela
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	
@@ -546,11 +551,34 @@ func populate_match_list(matches: Array):
 		return
 	
 	for match_data in matches:
-		var text = match_data["name"]
-		if match_data["has_password"]:
+		var text = match_data.get("name", "Sala sem nome")  # Usa valor padrão se "name" não existir
+		if match_data.get("has_password", false):
 			text += " 🔒"
-		text += " (%d/%d)" % [match_data["players"], match_data["max_players"]]
+		
+		# Converte valores para inteiros com segurança
+		var players = match_data.get("players", 0)
+		var max_players = match_data.get("max_players", 0)
+		
+		# Garante que são inteiros (trata strings, floats, nulls)
+		players = _safe_to_int(players)
+		max_players = _safe_to_int(max_players)
+		
+		# Formatação segura
+		text += " (%d/%d)" % [players, max_players]
 		match_list.add_item(text)
+
+# Função auxiliar para conversão segura para inteiro
+func _safe_to_int(value) -> int:
+	match typeof(value):
+		TYPE_INT:
+			return value
+		TYPE_FLOAT:
+			return int(value)  # Trunca decimais
+		TYPE_STRING:
+			return value.to_int() if value.is_valid_integer() else 0
+		_:
+			push_warning("Valor inválido para conversão: ", value)
+			return 0
 
 # ===== CALLBACKS DO MENU DE ENTRADA MANUAL =====
 
@@ -604,7 +632,7 @@ func _on_options_back_pressed():
 	show_main_menu()
 
 func save_options():
-	print("Salvando configurações...")
+	_log_debug("Salvando configurações...")
 	
 	# Aplica configurações de vídeo (agora é async)
 	await _apply_video_settings()
@@ -629,18 +657,18 @@ func save_options():
 	
 	var err = config.save("user://settings.cfg")
 	if err == OK:
-		print("✓ Configurações salvas com sucesso")
+		_log_debug("✓ Configurações salvas com sucesso")
 	else:
-		print("✗ Erro ao salvar configurações: ", err)
+		_log_debug("✗ Erro ao salvar configurações: " + err)
 
 func load_options():
-	print("Carregando configurações...")
+	_log_debug("Carregando configurações...")
 	
 	var config = ConfigFile.new()
 	var err = config.load("user://settings.cfg")
 	
 	if err != OK:
-		print("Arquivo de configuração não encontrado, usando padrões")
+		_log_debug("Arquivo de configuração não encontrado, usando padrões")
 		_reset_to_default()
 	else:
 		# Carrega vídeo
@@ -658,7 +686,7 @@ func load_options():
 		current_settings["controls"]["mouse_sensitivity"] = config.get_value("controls", "mouse_sensitivity", 50)
 		current_settings["controls"]["invert_y"] = config.get_value("controls", "invert_y", false)
 		
-		print("✓ Configurações carregadas com sucesso")
+		_log_debug("✓ Configurações carregadas com sucesso")
 	
 	# Aplica configurações carregadas
 	_apply_video_settings()
@@ -683,7 +711,7 @@ func _reset_to_default():
 			"invert_y": false
 		}
 	}
-	print("Configurações resetadas para padrão")
+	_log_debug("Configurações resetadas para padrão")
 
 func _load_ui_from_settings():
 	# Atualiza UI de vídeo
@@ -780,14 +808,30 @@ func _update_room_display(room_data: Dictionary):
 	
 	# Atualiza nome da sala
 	if room_name_label and room_data.has("name"):
-		room_name_label.text = room_data["name"]
+		var host_name = ""
+		
+		# Busca o nome do host
+		for player in room_data.get("players", []):
+			if typeof(player) == TYPE_DICTIONARY and player.get("is_host", false):
+				host_name = player.get("name", "Host")
+				break  # Encontrou, pode parar
+		
+		# Monta o texto final
+		var room_name = room_data["name"]
+		if host_name:
+			room_name_label.text = "%s (Host: %s)" % [room_name, host_name]
+		else:
+			room_name_label.text = room_name
 	
 	# Atualiza lista de jogadores
 	if room_players_list and room_data.has("players"):
 		room_players_list.clear()
 		for player in room_data["players"]:
 			if typeof(player) == TYPE_DICTIONARY:
-				room_players_list.add_item(player.get("name", "Jogador"))
+				var display_name = player.get("name", "Jogador")
+				if player.get("is_host", false):
+					display_name += " 🎚️"
+				room_players_list.add_item(display_name)
 			else:
 				room_players_list.add_item(str(player))  # fallback seguro
 
@@ -804,7 +848,7 @@ func _update_room_display(room_data: Dictionary):
 	# Controla visibilidade dos botões baseado se é host
 	if room_start_button:
 		room_start_button.visible = is_host
-		room_start_button.disabled = _player_count < 2
+		room_start_button.disabled = _player_count < room_data.get("min_players", 1)
 	if room_close_button:
 		room_close_button.visible = is_host
 	if room_leave_button:
@@ -888,49 +932,47 @@ func update_loading_message(message: String):
 # ===== CALLBACKS DO GAMEMANAGER =====
 
 func _on_game_manager_connected():
-	print("[UI] Conectado ao servidor com sucesso!")
+	_log_debug("Conectado ao servidor com sucesso!")
 	# Não faz nada aqui, aguarda nome ser aceito
 
 func _on_game_manager_connection_failed(reason: String):
-	print("[UI] Falha na conexão: " + reason)
+	_log_debug("Falha na conexão: " + reason)
 	show_error_connecting("Falha ao conectar: " + reason)
 
 func _on_game_manager_disconnected():
-	print("[UI] Desconectado do servidor")
+	_log_debug("Desconectado do servidor")
 	show_main_menu()
 
 func _on_game_manager_rooms_received(rooms: Array):
-	print("[UI] Lista de salas recebida: %d salas" % rooms.size())
+	_log_debug("Lista de salas recebida: %d salas" % rooms.size())
 	populate_match_list(rooms)
 
 func _on_game_manager_name_accepted():
-	print("[UI] Nome aceito pelo servidor")
+	_log_debug("Nome aceito pelo servidor")
 	show_main_menu()
-	
-	# AJUSTAR ENTRADA MANUAL EM SALAS !!!!
 
 func _on_game_manager_name_rejected(reason: String):
-	print("[UI] Nome rejeitado: " + reason)
+	_log_debug("Nome rejeitado: " + reason)
 
 func _on_game_manager_room_created(room_data: Dictionary):
-	print("[UI] Sala criada com sucesso")
+	_log_debug("Sala criada com sucesso")
 	show_room_menu(room_data)
 
 func _on_game_manager_room_joined(room_data: Dictionary):
-	print("[UI] Entrou na sala com sucesso")
+	_log_debug("Entrou na sala com sucesso")
 	show_room_menu(room_data)
 
 func _on_game_manager_room_updated(room_data: Dictionary):
-	print("[UI] Sala atualizada: %d jogadores" % room_data.get("players", []).size())
+	_log_debug("Sala atualizada: %d jogadores" % room_data.get("players", []).size())
 	update_room_info(room_data)
 
-func _on_game_manager_match_started(match_data: Dictionary):
-	print("[UI] Partida iniciada!")
+func _on_game_manager_match_started():
+	_log_debug("Partida iniciada!")
 	# A troca de cena é feita pelo GameManager
 	# Aqui você pode mostrar uma tela de transição se quiser
 
 func _on_game_manager_error(error_message: String):
-	print("[UI] Erro: " + error_message)
+	_log_debug("Erro: " + error_message)
 	# Mostra erro no contexto apropriado
 	if room_menu.visible:
 		show_error_room(error_message)
@@ -949,11 +991,11 @@ func _on_vsync_toggled(enabled: bool):
 func _on_resolution_selected(index: int):
 	if index >= 0 and index < resolutions.size():
 		current_settings["video"]["resolution"] = resolutions[index]
-		print("Resolução selecionada: %s" % str(resolutions[index]))
+		_log_debug("Resolução selecionada: %s" % str(resolutions[index]))
 
 func _on_window_mode_selected(index: int):
 	current_settings["video"]["window_mode"] = index
-	print("Modo de janela selecionado: %d" % index)
+	_log_debug("Modo de janela selecionado: %d" % index)
 
 func _on_fps_limit_selected(index: int):
 	current_settings["video"]["fps_limit"] = index
@@ -1001,7 +1043,13 @@ func _on_invert_y_toggled(enabled: bool):
 # ===== BOTÃO RESET =====
 
 func _on_reset_pressed():
-	print("Resetando configurações para padrão")
+	_log_debug("Resetando configurações para padrão")
 	_reset_to_default()
 	_load_ui_from_settings()
 	
+# ===== UTILITÁRIOS =====
+
+func _log_debug(message: String):
+	"""Imprime mensagem de debug se habilitado"""
+	if debug_mode:
+		print("[MainMenu]: " + message)

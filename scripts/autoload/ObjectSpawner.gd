@@ -22,7 +22,7 @@ signal object_despawned(object_id: int)
 # ===== INICIALIZAÇÃO =====
 
 func _ready():
-	_log_debug("ObjectSpawner inicializado")
+	pass
 
 # ===== SPAWN DE OBJETOS (SERVIDOR) =====
 

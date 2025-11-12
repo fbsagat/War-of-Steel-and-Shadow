@@ -1,5 +1,5 @@
 extends Node
-## PlayerRegistry - Registro centralizado de jogadores
+## PlayerRegistry - Registro centralizado de jogadores (SERVIDOR APENAS)
 ## Gerencia informações de todos os jogadores conectados
 
 # ===== CONFIGURAÇÕES =====
@@ -8,13 +8,43 @@ extends Node
 
 # ===== VARIÁVEIS INTERNAS =====
 
-## Dicionário com todos os jogadores: {peer_id: player_data}
 var players: Dictionary = {}
+
+# Estado de inicialização
+var _is_server: bool = false
+var _initialized: bool = false
+
+# ===== INICIALIZAÇÃO CONTROLADA =====
+
+func initialize_as_server():
+	if _initialized:
+		return
+	
+	_is_server = true
+	_initialized = true
+	_log_debug("PlayerRegistry inicializado")
+
+func initialize_as_client():
+	if _initialized:
+		return
+	
+	# PlayerRegistry NÃO DEVE ser usado no cliente!
+	_is_server = false
+	_initialized = true
+	_log_debug("PlayerRegistry acessado como CLIENTE (operações bloqueadas)")
+
+func reset():
+	players.clear()
+	_initialized = false
+	_is_server = false
+	_log_debug("PlayerRegistry resetado")
 
 # ===== GERENCIAMENTO DE JOGADORES =====
 
-## Adiciona um novo peer (quando conecta)
 func add_peer(peer_id: int):
+	if not _is_server:
+		return
+	
 	players[peer_id] = {
 		"id": peer_id,
 		"name": "",
@@ -23,20 +53,23 @@ func add_peer(peer_id: int):
 	}
 	_log_debug("Peer adicionado: %d" % peer_id)
 
-## Remove um peer (quando desconecta)
 func remove_peer(peer_id: int):
+	if not _is_server:
+		return
+	
 	if players.has(peer_id):
 		var player = players[peer_id]
 		_log_debug("Peer removido: %d (%s)" % [peer_id, player["name"]])
 		players.erase(peer_id)
 
-## Registra um jogador (associa nome ao peer)
-func register_player(peer_id: int, player_name: String):
+func register_player(peer_id: int, player_name: String) -> bool:
+	if not _is_server:
+		return false
+	
 	if not players.has(peer_id):
 		_log_debug("Tentativa de registrar jogador inexistente: %d" % peer_id)
 		return false
 	
-	# Verifica se o nome já está em uso
 	if is_name_taken(player_name):
 		_log_debug("Nome já está em uso: %s" % player_name)
 		return false
@@ -47,50 +80,53 @@ func register_player(peer_id: int, player_name: String):
 	_log_debug("✓ Jogador registrado: %s (ID: %d)" % [player_name, peer_id])
 	return true
 
-## Verifica se um nome já está sendo usado
 func is_name_taken(player_name: String) -> bool:
-	var normalized_name = player_name.strip_edges().to_lower()
+	if not _is_server:
+		return false  # ou true, para bloquear no cliente
 	
+	var normalized_name = player_name.strip_edges().to_lower()
 	for player in players.values():
 		if player.has("name") and player["name"].strip_edges().to_lower() == normalized_name:
 			return true
-	
 	return false
 
-## Retorna dados de um jogador
 func get_player(peer_id: int) -> Dictionary:
-	if players.has(peer_id):
-		return players[peer_id]
-	return {}
+	if not _is_server or not players.has(peer_id):
+		return {}
+	return players[peer_id]
 
-## Retorna o nome de um jogador
 func get_player_name(peer_id: int) -> String:
-	if players.has(peer_id):
-		return players[peer_id]["name"]
-	return ""
+	if not _is_server or not players.has(peer_id):
+		return ""
+	return players[peer_id]["name"]
 
-## Verifica se um jogador está registrado
 func is_player_registered(peer_id: int) -> bool:
-	return players.has(peer_id) and players[peer_id]["registered"]
+	if not _is_server or not players.has(peer_id):
+		return false
+	return players[peer_id]["registered"]
 
-## Retorna lista de todos os jogadores
 func get_all_players() -> Array:
+	if not _is_server:
+		return []
 	return players.values()
 
-## Retorna número de jogadores conectados
 func get_player_count() -> int:
-	return players.size()
+	return players.size() if _is_server else 0
 
-## Retorna número de jogadores registrados
 func get_registered_player_count() -> int:
+	if not _is_server:
+		return 0
+	
 	var count = 0
 	for player in players.values():
 		if player["registered"]:
 			count += 1
 	return count
 
-## Limpa todos os jogadores (útil ao reiniciar servidor)
 func clear_all():
+	if not _is_server:
+		return
+	
 	_log_debug("Limpando todos os jogadores")
 	players.clear()
 
@@ -98,4 +134,5 @@ func clear_all():
 
 func _log_debug(message: String):
 	if debug_mode:
-		print("[PlayerRegistry] " + message)
+		var prefix = "[SERVER]" if _is_server else "[CLIENT]"
+		print("[PlayerRegistry] %s %s" % [prefix, message])

@@ -22,8 +22,6 @@ extends Node3D
 # --- Player e Renderização ---
 @export_category("Player e Renderização")
 @export var distancia_render := 150.0 ## Distância de renderização (0 = tudo)
-@export_node_path("Node3D") var caminho_player: NodePath ## Caminho do nó do player
-@export_node_path("Node3D") var no_pai_terreno: NodePath ## Nó sob o qual gerar terreno
 
 # --- Física ---
 @export_category("Física")
@@ -194,14 +192,6 @@ func _configurar_noise() -> void:
 	# pois serão ajustados dinamicamente por tipo de relevo
 
 func _obter_referencias() -> void:
-	if caminho_player != NodePath():
-		player_node = get_node_or_null(caminho_player)
-	
-	if no_pai_terreno != NodePath():
-		terrain_parent = get_node_or_null(no_pai_terreno)
-	else:
-		terrain_parent = self
-	
 	if player_node and player_node.has_node("Camera3D"):
 		camera = player_node.get_node("Camera3D")
 	else:

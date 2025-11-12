@@ -52,6 +52,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_fe2o3")
+debug_mode = false
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 follow_viewport_enabled = true
@@ -262,7 +263,6 @@ secret = true
 visible = false
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
-text = "Senha"
 horizontal_alignment = 1
 autowrap_mode = 3
 
@@ -472,16 +472,6 @@ text = "Voltar"
 custom_minimum_size = Vector2(200, 40)
 layout_mode = 2
 text = "Confirmar"
-
-[node name="MatchRoomMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control"]
-layout_mode = 0
-offset_right = 40.0
-offset_bottom = 40.0
-
-[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/MatchRoomMenu"]
-layout_mode = 2
-theme_override_constants/separation = 10
-alignment = 1
 
 [node name="HowToPlayMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control"]
 custom_minimum_size = Vector2(1200, 800)

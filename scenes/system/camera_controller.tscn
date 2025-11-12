@@ -4,7 +4,6 @@
 
 [node name="CameraController" type="Node3D"]
 script = ExtResource("1_8y15a")
-base_distance = 4.0
 free_look_height_offset = 1.0
 behind_smoothness = 8.0
 behind_height_offset = 2.0
