@@ -138,15 +138,6 @@ func _on_peer_disconnected(peer_id: int):
 	_cleanup_player_state(peer_id)
 	PlayerRegistry.remove_peer(peer_id)
 
-# Função de utilidade para verificar peers conectados
-func _is_peer_connected(peer_id: int) -> bool:
-	"""Verifica se um peer ainda está conectado"""
-	if not multiplayer.has_multiplayer_peer():
-		return false
-	
-	var connected_peers = multiplayer.get_peers()
-	return peer_id in connected_peers
-
 # ===== HANDLERS DE JOGADOR =====
 
 func _handle_register_player(peer_id: int, player_name: String):
@@ -441,6 +432,8 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 			"spawn_index": i,
 			"team": 0
 		}
+
+	round_settings["round_players_count"] = RoundRegistry.get_total_players(round_data["round_id"])
 	
 	# Prepara dados para enviar aos clientes
 	var match_data = {
@@ -616,9 +609,15 @@ func _handle_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, r
 	if not PlayerRegistry.is_player_registered(p_id):
 		return
 	
-	# Valida que está em uma rodada ativa
+	# Obtém a rodada do jogador
 	var p_round = RoundRegistry.get_round_by_player_id(p_id)
-	if not RoundRegistry.is_round_active(p_round.round_id):
+	if p_round.is_empty():
+		return
+	
+	var round_id = p_round["round_id"]
+	
+	# Valida que está em uma rodada ativa
+	if not RoundRegistry.is_round_active(round_id):
 		return
 	
 	# Validação anti-cheat (opcional)
@@ -642,16 +641,22 @@ func _handle_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, r
 		"timestamp": current_time
 	}
 	
-	# Obtém sala do jogador
-	var room = RoomRegistry.get_room_by_player(p_id)
-	if room.is_empty():
-		return
+	# PROPAGA APENAS PARA JOGADORES DA MESMA RODADA (não usa sala!)
+	for active_player in p_round["players"]:
+		var other_id = active_player["id"]
+		if other_id != p_id:  # Não envia de volta para o remetente
+			# Verifica se o peer ainda está conectado antes de enviar RPC
+			if _is_peer_connected(other_id):
+				NetworkManager.rpc_id(other_id, "_client_player_state", p_id, pos, rot, vel, running, jumping)
+
+# Função de utilidade para verificar peers conectados (adicione se não existir)
+func _is_peer_connected(peer_id: int) -> bool:
+	"""Verifica se um peer ainda está conectado"""
+	if not multiplayer.has_multiplayer_peer():
+		return false
 	
-	# Propaga para todos os outros jogadores da sala (exceto o remetente)
-	for player in room["players"]:
-		var other_id = player["id"]
-		if other_id != p_id:
-			NetworkManager.rpc_id(other_id, "_client_player_state", p_id, pos, rot, vel, running, jumping)
+	var connected_peers = multiplayer.get_peers()
+	return peer_id in connected_peers
 
 func _validate_player_movement(p_id: int, pos: Vector3, vel: Vector3) -> bool:
 	"""Valida se o movimento do jogador é razoável (anti-cheat)"""

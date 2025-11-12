@@ -408,7 +408,7 @@ func get_total_players(round_id: int) -> int:
 
 func get_active_player_count(round_id: int) -> int:
 	return get_active_players(round_id).size()
-
+	
 func get_all_rounds() -> Dictionary:
 	return rounds.duplicate()
 

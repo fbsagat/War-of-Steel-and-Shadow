@@ -20,10 +20,9 @@ girar o player para a direção da câmera ao invés da câmera para trás do pl
 19. Aplicar player(characterbody3d) warrior que fiz para o projeto.
 20. Ajustar servidor para definir configurações do sky3d.
 21. Ajustar PlayerRegistry, RoomRegistry, e RoundRegistry do cliente, inicializar corretamente, sincronizar dados
-		corretamente para o cliente usar.
-22. Syncronização de players: send_player_state, _server_player_state e _client_player_state estão
- 		sincronizando todos os players do servidor, fazer as verificações necessárias, sincronizar
-		apenas os da mesma rodada.
+	corretamente para o cliente usar.
+22. 	Ok. Server está sincronizando todos os players do servidor mutuamente, fazer as verificações
+		 necessárias, sincronizar apenas os da mesma rodada.
 23. Ajustar geração automática de spawnpoints no map manager.
 
 Adicionar no modelo do player:

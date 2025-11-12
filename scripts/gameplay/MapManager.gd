@@ -73,13 +73,11 @@ func load_map(map_scene_path: String, settings: Dictionary = {}):
 	# { "nome": "Etapa 2", "tipo_relevo": "Gentle Hills", "percentual_distancia": 30 }, 
 	# { "nome": "Etapa 3", "tipo_relevo": "Rolling Hills", "percentual_distancia": 20 }, 
 	# { "nome": "Etapa 4", "tipo_relevo": "Valleys", "percentual_distancia": 20 }],
-	#  "map_size": (20, 20), "env_current_time": 12.0, "match_players_count": 1 }
+	#  "map_size": (20, 20), "env_current_time": 12.0, "round_players_count": 1 }
 	
 	# Encontra os pontos de spawn
-	var points = _find_spawn_points()
-	#var points = _create_spawn_points(settings["match_players_count"])
-	#print("match_players_count: ", settings["match_players_count"])
-	#print(points)
+	var points = _create_spawn_points(settings["round_players_count"])
+	print(points)
 	
 	#_find_spawn_points retorna: [{ "position": (0.0, 1.214169, 1.362243), "rotation": (0.0, 0.0, 0.0) }, { "position": (-2.935883, 1.16964, -0.124041), "rotation": (0.0, 0.0, 0.0) }, { "position": (0.0, 1.459608, -1.695891), "rotation": (0.0, 0.0, 0.0) }, { "position": (1.791235, 1.485599, -0.386114), "rotation": (0.0, 0.0, 0.0) }]
 	
@@ -113,44 +111,6 @@ func unload_map():
 
 # ===== GERENCIAMENTO DE SPAWN POINTS =====
 
-
-
-
-## Encontra todos os pontos de spawn no mapa
-func _find_spawn_points():
-	spawn_points.clear()
-	used_spawn_indices.clear()
-	
-	if current_map == null:
-		return
-	
-	# Busca por nós no grupo "spawn_point"
-	var spawns = get_tree().get_nodes_in_group("spawn_point")
-	
-	if spawns.is_empty():
-		push_warning("Nenhum spawn point encontrado no mapa! Adicione nós ao grupo 'spawn_point'")
-		# Cria um spawn point padrão na origem
-		spawn_points.append({
-		"position": Vector3.ZERO,
-		"rotation": Vector3.ZERO})
-	else:
-		# Ordena spawns por nome para consistência
-		spawns.sort_custom(func(a, b): return a.name < b.name)
-		
-		for spawn in spawns:
-			var spawn_data = {
-				"position": spawn.global_position,
-				"rotation": spawn.rotation if spawn is Node3D else spawn.rotation
-			}
-			spawn_points.append(spawn_data)
-	
-	#print("spawn_points: ", spawn_points)
-	_log_debug("Spawn points criados com base na quantidade de jogadores: %d" % spawn_points.size())
-	spawn_points_ready.emit(spawn_points.size())
-	return spawn_points
-
-
-
 func _create_spawn_points(match_players_count: int) -> Array:
 	"""
 	Gera pontos de spawn simulados com base no número de jogadores.
@@ -158,8 +118,8 @@ func _create_spawn_points(match_players_count: int) -> Array:
 	"""
 	
 	# Configurações de spawn
-	var spawn_radius: float = 30.0  # Distância do centro
-	var spawn_height: float = 2.0   # Altura acima do chão
+	var spawn_radius: float = 2.0  # Distância do centroas
+	var spawn_height: float = 1.0   # Altura acima do chão
 	var spawn_center: Vector3 = Vector3.ZERO  # Centro do mapa
 	
 	# Gera um ponto de spawn para cada jogador
@@ -189,9 +149,6 @@ func _create_spawn_points(match_players_count: int) -> Array:
 	_log_debug("Spawn points criados com base na quantidade de jogadores: %d" % spawn_points.size())
 	spawn_points_ready.emit(spawn_points.size())
 	return spawn_points
-
-
-
 
 ## Retorna a posição de spawn para um índice específico
 func get_spawn_position(player_index: int) -> Variant:
