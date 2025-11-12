@@ -76,10 +76,8 @@ func load_map(map_scene_path: String, settings: Dictionary = {}):
 	#  "map_size": (20, 20), "env_current_time": 12.0, "round_players_count": 1 }
 	
 	# Encontra os pontos de spawn
-	var points = _create_spawn_points(settings["round_players_count"])
-	print(points)
-	
-	#_find_spawn_points retorna: [{ "position": (0.0, 1.214169, 1.362243), "rotation": (0.0, 0.0, 0.0) }, { "position": (-2.935883, 1.16964, -0.124041), "rotation": (0.0, 0.0, 0.0) }, { "position": (0.0, 1.459608, -1.695891), "rotation": (0.0, 0.0, 0.0) }, { "position": (1.791235, 1.485599, -0.386114), "rotation": (0.0, 0.0, 0.0) }]
+	spawn_points = settings["spawn_points"]
+	spawn_points_ready.emit(spawn_points.size())
 	
 	# Aplica configurações ao mapa (se o mapa tiver método configure)
 	if current_map.has_method("configure"):
@@ -110,45 +108,6 @@ func unload_map():
 	_log_debug("✓ Mapa descarregado")
 
 # ===== GERENCIAMENTO DE SPAWN POINTS =====
-
-func _create_spawn_points(match_players_count: int) -> Array:
-	"""
-	Gera pontos de spawn simulados com base no número de jogadores.
-	Não depende de nodes filhos - gera posições dinamicamente.
-	"""
-	
-	# Configurações de spawn
-	var spawn_radius: float = 2.0  # Distância do centroas
-	var spawn_height: float = 1.0   # Altura acima do chão
-	var spawn_center: Vector3 = Vector3.ZERO  # Centro do mapa
-	
-	# Gera um ponto de spawn para cada jogador
-	for i in range(match_players_count):
-		# Distribui os jogadores em círculo ao redor do centro
-		var angle = (i * 2.0 * PI) / match_players_count
-		var x = cos(angle) * spawn_radius
-		var z = sin(angle) * spawn_radius
-		var y = spawn_height
-		
-		# Rotação apontando para o centro
-		var rotation_y = angle + PI  # + PI para apontar para o centro
-		
-		var spawn_data = {
-			"position": Vector3(x, y, z),
-			"rotation": Vector3(0, rotation_y, 0)
-		}
-		
-		spawn_points.append(spawn_data)
-	
-	# Se não houver jogadores, adiciona um ponto no centro
-	if match_players_count == 0:
-		spawn_points.append({
-			"position": Vector3(0, spawn_height, 0),
-			"rotation": Vector3.ZERO
-		})
-	_log_debug("Spawn points criados com base na quantidade de jogadores: %d" % spawn_points.size())
-	spawn_points_ready.emit(spawn_points.size())
-	return spawn_points
 
 ## Retorna a posição de spawn para um índice específico
 func get_spawn_position(player_index: int) -> Variant:

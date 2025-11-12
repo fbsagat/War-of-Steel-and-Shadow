@@ -522,8 +522,9 @@ func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bo
 	get_tree().root.add_child(player_instance)
 	
 	# Inicializa jogador
-	var spawn_pos = client_map_manager.get_spawn_position(spawn_data["spawn_index"])
-	player_instance.initialize(player_data["id"], player_data["name"], spawn_pos)
+	var spawn_info = client_map_manager.get_spawn_data(spawn_data["spawn_index"])
+	player_instance.initialize(player_data["id"], player_data["name"], spawn_info["position"])
+	player_instance.rotation = spawn_info["rotation"]
 	player_instance.setup_name_label()
 	
 	# Configuração ESPECÍFICA por tipo de jogador

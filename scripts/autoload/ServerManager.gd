@@ -28,15 +28,29 @@ extends Node
 ## Ativar validação anti-cheat
 @export var enable_anticheat: bool = true
 
+@export_category("Configurações de spawn")
+## Raio do círculo
+@export	var spawn_radius: float = 5.0
+## Altura acima do chão
+@export	var spawn_height: float = 1.0
+## Centro do círculo
+@export	var spawn_center: Vector3 = Vector3.ZERO
+## Variação aleatória na posição (em unidades)
+@export	var position_variance: float = 4.0
+## Variação na rotação (em radianos, ~5.7 graus)
+@export	var rotation_variance: float = 0.2
+
 # ===== VARIÁVEIS INTERNAS =====
 
 var next_room_id: int = 1
+
+var spawn_points = []
 
 ## Referência ao MapManager do servidor (criado durante rodada)
 var server_map_manager: Node = null
 
 ## Rastreamento de estados dos jogadores
-var player_states: Dictionary = {}  # {player_id: {pos, rot, vel, running, jumping, timestamp}}
+var player_states: Dictionary = {}
 
 # ===== FUNÇÕES DE INICIALIZAÇÃO =====
 
@@ -432,8 +446,9 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 			"spawn_index": i,
 			"team": 0
 		}
-
-	round_settings["round_players_count"] = RoundRegistry.get_total_players(round_data["round_id"])
+	var players_qtd = RoundRegistry.get_total_players(round_data["round_id"])
+	round_settings["round_players_count"] = players_qtd
+	round_settings["spawn_points"] = _create_spawn_points(players_qtd)
 	
 	# Prepara dados para enviar aos clientes
 	var match_data = {
@@ -454,6 +469,65 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 	
 	# Inicia a rodada
 	RoundRegistry.start_round(round_data["round_id"])
+
+func _create_spawn_points(match_players_count: int) -> Array:
+	"""
+	Gera pontos de spawn em formação circular com base no número de jogadores.
+	Suporta de 1 a 14 jogadores com distribuição uniforme.
+	"""
+	
+	# Limpa array anterior
+	spawn_points.clear()
+	
+	# Caso especial: apenas 1 jogador
+	if match_players_count == 1:
+		var spawn_data = {
+			"position": Vector3(0, spawn_height, spawn_radius),
+			"rotation": Vector3(0, PI, 0)  # Olhando para o centro
+		}
+		spawn_points.append(spawn_data)
+		_log_debug("Spawn point único criado no centro")
+		return spawn_points
+	
+	# Gera pontos de spawn de 2 a 14 jogadores
+	match_players_count = clamp(match_players_count, 1, 14)
+	
+	for i in range(match_players_count):
+		# Distribui os jogadores uniformemente em círculo
+		var angle = (i * 2.0 * PI) / match_players_count
+		
+		# Calcula posição base no círculo
+		var base_x = cos(angle) * spawn_radius
+		var base_z = sin(angle) * spawn_radius
+		
+		# Adiciona variação aleatória à posição (se configurado)
+		var variance_x = randf_range(-position_variance, position_variance)
+		var variance_z = randf_range(-position_variance, position_variance)
+		
+		var final_position = spawn_center + Vector3(
+			base_x + variance_x,
+			spawn_height,
+			base_z + variance_z
+		)
+		
+		# Calcula rotação apontando PARA o centro
+		# Usando o vetor do spawn point PARA o centro
+		var to_center = spawn_center - final_position
+		# atan2(x, z) para sistema de coordenadas do Godot onde -Z é frente
+		var rotation_y = atan2(to_center.x, to_center.z)
+		
+		# Adiciona variação aleatória à rotação
+		rotation_y += randf_range(-rotation_variance, rotation_variance)
+		
+		var spawn_data = {
+			"position": final_position,
+			"rotation": Vector3(0, rotation_y, 0)
+		}
+		
+		spawn_points.append(spawn_data)
+	
+	_log_debug("Spawn points criados: %d jogadores em formação circular (raio: %.1f)" % [spawn_points.size(), spawn_radius])
+	return spawn_points
 
 # ===== INSTANCIAÇÃO NO SERVIDOR =====
 
