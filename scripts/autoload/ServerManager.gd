@@ -96,44 +96,59 @@ func _on_peer_connected(peer_id: int):
 func _on_peer_disconnected(peer_id: int):
 	"""Callback quando um cliente desconecta"""
 	_log_debug("✗ Cliente desconectado: Peer ID %d" % peer_id)
+	
+	# PRIMEIRO: Remove da rodada (atualiza lista de players imediatamente)
+	var p_round = RoundRegistry.get_round_by_player_id(peer_id)
+	if not p_round.is_empty():
+		var round_id = p_round["round_id"]
+		
+		# Marca como desconectado na rodada
+		RoundRegistry.mark_player_disconnected(round_id, peer_id)
+		_log_debug("  Marcado como desconectado na rodada %d" % round_id)
+		
+		# REMOVE DA LISTA DE PLAYERS DA RODADA
+		RoundRegistry.unregister_spawned_player(round_id, peer_id)
+		
+		# REMOVE O NÓ DO PLAYER DA CENA DO SERVIDOR
+		var player_node = RoundRegistry.get_spawned_player(round_id, peer_id)
+		if player_node and player_node.is_inside_tree():
+			player_node.queue_free()
+			_log_debug("  Nó do player removido da cena do servidor")
+		
+		# Verifica se todos os players desconectaram
+		if RoundRegistry.get_active_player_count(round_id) == 0:
+			RoundRegistry.end_round(round_id, "all_disconnected")
+	
+	# DEPOIS: Remove da sala
 	var player_data = PlayerRegistry.get_player(peer_id)
 	var room = RoomRegistry.get_room_by_player(peer_id)
 	
 	if player_data and player_data.has("name"):
 		_log_debug("  Jogador: %s" % player_data["name"])
 		
-		# Remove da sala se estiver em uma
 		if room and not room.is_empty():
 			RoomRegistry.remove_player_from_room(room["id"], peer_id)
 			_log_debug("  Removido da sala: %s" % room["name"])
 			_notify_room_update(room["id"])
 			
-			if room and not room.is_empty():
-				for player in room["players"]:
-					if player["id"] != peer_id:
-						NetworkManager.rpc_id(player["id"], "_client_remove_player", peer_id)
-		
-		# Lida com rodada ativa
-		var p_round = RoundRegistry.get_round_by_player_id(peer_id)
-		if not p_round.is_empty():
-			var round_id = p_round["round_id"]
-			
-			# Marca como desconectado na rodada
-			RoundRegistry.mark_player_disconnected(round_id, peer_id)
-			_log_debug("  Marcado como desconectado na rodada %d" % round_id)
-			
-			# REMOVE O NÓ DO PLAYER DA CENA DO SERVIDOR
-			var player_node = RoundRegistry.get_spawned_player(round_id, peer_id)
-			if player_node and player_node.is_inside_tree():
-				player_node.queue_free()
-				_log_debug("  Nó do player removido da cena do servidor")
-			
-			# Verifica se todos os players desconectaram
-			if RoundRegistry.get_active_player_count(round_id) == 0:
-				RoundRegistry.end_round(round_id, "all_disconnected")
+			# Notifica outros jogadores da sala sobre a desconexão
+			for player in room["players"]:
+				# VERIFICA SE O PEER AINDA ESTÁ CONECTADO ANTES DE ENVIAR RPC
+				if player["id"] != peer_id and _is_peer_connected(player["id"]):
+					NetworkManager.rpc_id(player["id"], "_client_remove_player", peer_id)
 	
+	# Limpeza final
 	_cleanup_player_state(peer_id)
 	PlayerRegistry.remove_peer(peer_id)
+
+# Função de utilidade para verificar peers conectados
+func _is_peer_connected(peer_id: int) -> bool:
+	"""Verifica se um peer ainda está conectado"""
+	if not multiplayer.has_multiplayer_peer():
+		return false
+	
+	var connected_peers = multiplayer.get_peers()
+	return peer_id in connected_peers
 
 # ===== HANDLERS DE JOGADOR =====
 

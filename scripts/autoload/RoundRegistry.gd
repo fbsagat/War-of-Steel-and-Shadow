@@ -351,6 +351,9 @@ func get_round_by_player_id(player_id: int) -> Dictionary:
 
 # ===== QUERIES DE ESTADO =====
 
+func is_initialized() -> bool:
+	return _initialized
+
 func is_round_active(round_id: int) -> bool:
 	return rounds.has(round_id)
 

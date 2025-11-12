@@ -36,6 +36,12 @@ func _ready():
 
 ## Carrega um mapa a partir do caminho da cena
 func load_map(map_scene_path: String, settings: Dictionary = {}):
+	"""settings example: { "map_seed": 568613, "map_preencher_etapas": 
+		[{ "nome": "Etapa 1", "tipo_relevo": "Semi-Flat", "percentual_distancia": 30 }, 
+		{ "nome": "Etapa 2", "tipo_relevo": "Gentle Hills", "percentual_distancia": 30 }, 
+		{ "nome": "Etapa 3", "tipo_relevo": "Rolling Hills", "percentual_distancia": 20 }, 
+		{ "nome": "Etapa 4", "tipo_relevo": "Valleys", "percentual_distancia": 20 }], 
+		"map_size": (20, 20), "env_current_time": 12.0 }"""
 	if current_map != null:
 		_log_debug("Já existe um mapa carregado. Descarregando primeiro...")
 		unload_map()

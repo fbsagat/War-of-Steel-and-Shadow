@@ -392,6 +392,14 @@ func send_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, runn
 	"""Envia estado do jogador para o servidor"""
 	if not is_connected:
 		return
+	
+	# Adiciona verificação: só envia se estiver em uma rodada ativa
+	if RoundRegistry and RoundRegistry.is_initialized():
+		var player_round = RoundRegistry.get_round_by_player_id(p_id)
+		if player_round.is_empty():
+			# Não está em nenhuma rodada, não envia estado
+			return
+	
 	# RPC do NetworkManager → válido, pois NetworkManager é autoload
 	rpc_id(1, "_server_player_state", p_id, pos, rot, vel, running, jumping)
 
@@ -407,9 +415,27 @@ func _server_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, r
 		push_warning("[NetworkManager] Jogador %d tentou enviar estado do jogador %d" % [sender_id, p_id])
 		return
 	
-	# Envia estado para TODOS os clientes (incluindo o remetente, mas ele ignora)
-	for peer_id in multiplayer.get_peers():
-		rpc_id(peer_id, "_client_player_state", p_id, pos, rot, vel, running, jumping)
+	# Obtém a rodada do jogador remetente
+	var player_round = RoundRegistry.get_round_by_player_id(p_id)
+	if player_round.is_empty():
+		# Jogador não está em nenhuma rodada, ignora
+		return
+	
+	var round_id = player_round["round_id"]
+	
+	# Envia estado APENAS para jogadores na mesma rodada que ainda estão conectados
+	for player_data in player_round["players"]:
+		var target_peer_id = player_data["id"]
+		
+		# Não envia de volta para o remetente
+		if target_peer_id == p_id:
+			continue
+		
+		# VERIFICAÇÃO CRUCIAL: peer ainda está conectado?
+		if not _is_peer_connected(target_peer_id):
+			continue
+		
+		rpc_id(target_peer_id, "_client_player_state", p_id, pos, rot, vel, running, jumping)
 
 @rpc("any_peer", "call_remote", "unreliable")
 func _client_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
@@ -418,12 +444,24 @@ func _client_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, r
 	if multiplayer.has_multiplayer_peer() and multiplayer.get_unique_id() == 1:
 		return
 	
+	# Verificação adicional: só processa se estiver na mesma rodada
+	var local_player_id = multiplayer.get_unique_id()
+	var local_round = RoundRegistry.get_round_by_player_id(local_player_id)
+	var sender_round = RoundRegistry.get_round_by_player_id(p_id)
+	
+	# Verifica se ambos estão na mesma rodada
+	if local_round.is_empty() or sender_round.is_empty():
+		return
+	
+	if local_round["round_id"] != sender_round["round_id"]:
+		# Não estão na mesma rodada, ignora o estado
+		return
+	
 	# Encontra o player na cena
 	var player_path = str(p_id)
 	var player = get_tree().root.get_node_or_null(player_path)
 	
 	if not player:
-		print("[NetworkManager] Player não encontrado: %s" % player_path)
 		return
 	
 	if player and player.has_method("_client_receive_state"):
@@ -438,6 +476,15 @@ func _client_error(error_message: String):
 		return
 	
 	GameManager._client_error(error_message)
+
+func _is_peer_connected(peer_id: int) -> bool:
+	"""Verifica se um peer ainda está conectado"""
+	if not multiplayer.has_multiplayer_peer():
+		return false
+	
+	# Verifica se o peer_id está na lista de peers conectados
+	var connected_peers = multiplayer.get_peers()
+	return peer_id in connected_peers
 
 # ===== UTILITÁRIOS =====
 
