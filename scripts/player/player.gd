@@ -1176,17 +1176,6 @@ func teleport_to(new_position: Vector3):
 	if multiplayer.is_server():
 		global_position = new_position
 
-# ===== CLEANUP =====
-
-func _exit_tree():
-	# Remove do registro
-	if RoundRegistry:
-		RoundRegistry.unregister_spawned_player(player_id)
-	
-	# Libera mouse se for local
-	if is_local_player:
-		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-
 # ===== UTILS =====
 # Define cor aleatória e configura NameLabel para multiplayer
 func setup_name_label():

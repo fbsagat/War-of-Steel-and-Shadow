@@ -266,8 +266,10 @@ func _client_room_updated(room_data: Dictionary):
 
 # ===== GERENCIAMENTO DE RODADAS =====
 
+# Esta funçõa foi executada pelo game manager do cliente, ela serve para pedir
+# para o servidor executar _server_start_round
 func start_round(round_settings: Dictionary = {}):
-	"""Solicita início de rodada (apenas host)"""
+	"""Solicita início de rodada (apenas host é respondido)"""
 	if not is_connected:
 		_log_debug("Erro: Não conectado ao servidor")
 		return
@@ -275,6 +277,7 @@ func start_round(round_settings: Dictionary = {}):
 	_log_debug("Iniciando rodada")
 	rpc_id(1, "_server_start_round", round_settings)
 
+# Esta função é executada pelo servidor, no ServerManager, e solicitada pelo cliente
 @rpc("any_peer", "call_remote", "reliable")
 func _server_start_round(round_settings: Dictionary):
 	"""RPC: Servidor recebe pedido de início de rodada"""
@@ -377,6 +380,12 @@ func _client_despawn_object(object_id: int):
 			obj.queue_free()
 		ObjectSpawner.spawned_objects.erase(object_id)
 
+@rpc("authority", "call_remote", "reliable")
+func _client_remove_player(peer_id: int):
+	if multiplayer.is_server():
+		return
+	GameManager._client_remove_player(peer_id)
+
 # ===== SINCRONIZAÇÃO DE JOGADORES =====
 
 func send_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
@@ -419,23 +428,6 @@ func _client_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, r
 	
 	if player and player.has_method("_client_receive_state"):
 		player._client_receive_state(pos, rot, vel, running, jumping)
-		
-	## Atualiza estado DIRETAMENTE (sem NetworkSync)
-	#player.global_position = pos
-	#player.rotation = rot
-	#player.velocity = vel
-	#player.is_running = running
-	#player.is_jumping = jumping
-
-# ===== UTILITÁRIOS DE SINCRONIZAÇÃO =====
-
-func get_network_latency() -> float:
-	"""Retorna latência estimada da rede em ms"""
-	if not multiplayer.multiplayer_peer:
-		return 0.0
-	
-	# Godot não expõe ping diretamente, estimativa baseada em RTT
-	return 50.0  # Placeholder - ajustar com sistema de ping real se necessário
 
 # ===== TRATAMENTO DE ERROS =====
 

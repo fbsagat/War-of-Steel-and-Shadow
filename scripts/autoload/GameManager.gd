@@ -367,7 +367,6 @@ func close_room():
 	_log_debug("Fechando sala: %s" % current_room["name"])
 	NetworkManager.close_room()
 	current_room = {}
-	
 	if main_menu:
 		main_menu.show_main_menu()
 
@@ -377,13 +376,18 @@ func _client_room_closed(reason: String):
 	current_room = {}
 	
 	if main_menu:
-		main_menu.show_main_menu()
+		main_menu.show_match_list_menu()
 		_show_error(reason)
+		# Arrumar algum dia
 
 # ===== GERENCIAMENTO DE RODADAS =====
 
+func start_match(match_settings: Dictionary = {}):
+	"""Alias para start_round (compatibilidade)"""
+	start_round(match_settings)
+
 func start_round(round_settings: Dictionary = {}):
-	"""Inicia uma nova rodada (apenas host)"""
+	"""Inicia uma nova rodada (apenas host, que irá solicitar início da rodada)"""
 	if current_room.is_empty():
 		_log_debug("Não está em nenhuma sala")
 		return
@@ -400,15 +404,41 @@ func start_round(round_settings: Dictionary = {}):
 	_log_debug("Solicitando início da rodada...")
 	NetworkManager.start_round(round_settings)
 
-# Mantém compatibilidade com código antigo
-func start_match(match_settings: Dictionary = {}):
-	"""Alias para start_round (compatibilidade)"""
-	start_round(match_settings)
-
 func _client_round_started(match_data: Dictionary):
 	"""Callback quando a rodada inicia"""
 	_log_debug("✓ Rodada iniciada pelo servidor!")
 	_start_round_locally(match_data)
+
+func _client_round_ended(end_data: Dictionary):
+	"""Callback quando a rodada termina"""
+	_log_debug("========================================")
+	_log_debug("RODADA FINALIZADA")
+	_log_debug("Rodada: %d" % end_data["round_number"])
+	_log_debug("Razão: %s" % end_data.get("end_reason", "desconhecida"))
+	
+	if end_data.has("winner") and not end_data["winner"].is_empty():
+		_log_debug("Vencedor: %s (Score: %d)" % [end_data["winner"]["name"], end_data["winner"]["score"]])
+	
+	_log_debug("Scores:")
+	for peer_id in end_data["scores"]:
+		_log_debug("  Peer %d: %d pontos" % [peer_id, end_data["scores"][peer_id]])
+	
+	_log_debug("========================================")
+	
+	# Atualiza RoundRegistry local
+	RoundRegistry.end_round(end_data.get("end_reason", "completed"), end_data.get("winner", {}))
+	
+	# Mostrar UI de fim de rodada (se tiver)
+	if main_menu:
+		main_menu.show_round_end_screen(end_data)
+	
+	round_ended.emit(end_data)
+	
+	# Aguarda um pouco antes de limpar
+	await get_tree().create_timer(1.0).timeout
+	
+	# Limpa objetos locais
+	_cleanup_local_round()
 
 func _start_round_locally(match_data: Dictionary):
 	"""Inicia a rodada localmente no cliente"""
@@ -448,22 +478,23 @@ func _start_round_locally(match_data: Dictionary):
 	# Carrega o mapa
 	await client_map_manager.load_map(match_data["map_scene"], match_data["settings"])
 	
-	RoundRegistry.map_manager = client_map_manager
-	
+	if RoundRegistry.rounds.has(match_data["round_id"]):
+		RoundRegistry.rounds[match_data.round_id]["map_manager"] = client_map_manager
+
 	# Spawna todos os jogadores
 	for player_data in match_data["players"]:
 		var spawn_data = match_data["spawn_data"][player_data["id"]]
 		var is_local = player_data["id"] == local_peer_id
-		_spawn_player(player_data, spawn_data, is_local)
+		_spawn_player(player_data, spawn_data, is_local, match_data)
 	
 	# Inicia rodada
-	RoundRegistry.start_round()
+	RoundRegistry.start_round(match_data.round_id)
 	
 	round_started.emit()
 	
 	_log_debug("✓ Rodada carregada no cliente")
 
-func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bool):
+func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bool, match_data: Dictionary):
 	"""Spawna players para cada cliente, cada cliente recebe X execuções,
 	 a do seu jogador local e a do(s) jogador(es) remoto(s), sendo o seu = local"""
 	# Verifica duplicação
@@ -519,38 +550,7 @@ func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bo
 		_log_debug("✓ Jogador remoto spawnado: %s" % player_name)
 	
 	# Registra no RoundRegistry
-	RoundRegistry.register_spawned_player(player_data["id"], player_instance)
-
-func _client_round_ended(end_data: Dictionary):
-	"""Callback quando a rodada termina"""
-	_log_debug("========================================")
-	_log_debug("RODADA FINALIZADA")
-	_log_debug("Rodada: %d" % end_data["round_number"])
-	_log_debug("Razão: %s" % end_data.get("end_reason", "desconhecida"))
-	
-	if end_data.has("winner") and not end_data["winner"].is_empty():
-		_log_debug("Vencedor: %s (Score: %d)" % [end_data["winner"]["name"], end_data["winner"]["score"]])
-	
-	_log_debug("Scores:")
-	for peer_id in end_data["scores"]:
-		_log_debug("  Peer %d: %d pontos" % [peer_id, end_data["scores"][peer_id]])
-	
-	_log_debug("========================================")
-	
-	# Atualiza RoundRegistry local
-	RoundRegistry.end_round(end_data.get("end_reason", "completed"), end_data.get("winner", {}))
-	
-	# Mostrar UI de fim de rodada (se tiver)
-	if main_menu:
-		main_menu.show_round_end_screen(end_data)
-	
-	round_ended.emit(end_data)
-	
-	# Aguarda um pouco antes de limpar
-	await get_tree().create_timer(1.0).timeout
-	
-	# Limpa objetos locais
-	_cleanup_local_round()
+	RoundRegistry.register_spawned_player(match_data.round_id ,player_data["id"], player_instance)
 
 func _client_return_to_room(room_data: Dictionary):
 	"""Callback quando deve retornar à sala"""
@@ -566,7 +566,8 @@ func _client_return_to_room(room_data: Dictionary):
 	_cleanup_local_round()
 	
 	# Finaliza completamente a rodada
-	RoundRegistry.complete_round_end()
+	print("Vem arrumar RoundRegistry.complete_round_end() em GameManager")
+	#RoundRegistry.complete_round_end()
 	
 	# Volta para o menu da sala
 	if main_menu:
@@ -577,6 +578,14 @@ func _client_return_to_room(room_data: Dictionary):
 	returned_to_room.emit(room_data)
 	
 	_log_debug("✓ De volta à sala")
+
+func _client_remove_player(peer_id : int):
+	"""Limpa o nó do cliente que se desconectou, esta função é para os outros 
+	que estão conectados"""
+	if local_peer_id != peer_id:
+		var player_node = get_tree().root.get_node_or_null(str(peer_id))
+		if player_node:
+			player_node.queue_free()
 
 func _cleanup_local_round():
 	"""Limpa todos os objetos da rodada no cliente"""
