@@ -53,7 +53,7 @@ func initialize_as_client():
 	_is_server = false
 	_initialized = true
 	
-	_log_debug("RoundRegistry inicializado como CLIENTE")
+	_log_debug("RoundRegistry inicializado como CLIENTE (operações bloqueadas)")
 
 func reset():
 	# Remove timers globais

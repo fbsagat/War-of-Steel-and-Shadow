@@ -349,6 +349,15 @@ func get_total_players_count() -> int:
 		total += rooms[room_id]["players"].size()
 	return total
 
+func get_total_players_in_room_count(room_id_ : int) -> int:
+	if not _is_server:
+		return 0
+	
+	var total = 0
+	for player in get_room(room_id_)["players"]:
+		total += 1
+	return total
+
 func _log_debug(message: String):
 	if debug_mode:
 		var prefix = "[SERVER]" if _is_server else "[CLIENT]"

@@ -128,6 +128,13 @@ func _on_connected_to_server():
 	if main_menu:
 		main_menu.show_name_input_menu()
 	
+	if PlayerRegistry:
+		PlayerRegistry.initialize_as_client()
+	if RoomRegistry:
+		RoomRegistry.initialize_as_client()
+	if RoundRegistry:
+		RoundRegistry.initialize_as_client()
+	
 	connected_to_server.emit()
 
 func _on_connection_failed():

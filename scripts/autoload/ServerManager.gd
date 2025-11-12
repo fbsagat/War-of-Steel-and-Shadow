@@ -69,13 +69,10 @@ func _start_server():
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
 	
-	PlayerRegistry.reset()
 	PlayerRegistry.initialize_as_server()
 	
-	RoomRegistry.reset()
 	RoomRegistry.initialize_as_server()
 	
-	RoundRegistry.reset()
 	RoundRegistry.initialize_as_server()
 	
 	_log_debug("✓ Servidor inicializado com sucesso!")

@@ -1205,5 +1205,5 @@ iteracoes_suavizacao = 3
 simular_erosao_hidraulica = true
 
 [node name="Sky3D" parent="." instance=ExtResource("1_mvrc1")]
-current_time = 9.54661333304706
+current_time = 23.61097333304063
 minutes_per_day = 10.0
