@@ -26,6 +26,8 @@ girar o player para a direção da câmera ao invés da câmera para trás do pl
 23. Ajustar geração automática de spawnpoints no map manager.
 34. Quando uma sala está com gameplay em andamento, não listar ela para os outros e fazer validação no servidor.
 35. Implementar o botão de fechar a sala.
+35. Implementar o modo teste rápido, que consiste em iniciar a play já no mapa gerado com players adicionados.
+36. Sincronizar objetos dos players.
 
 Adicionar no modelo do player:
 	1. Anim interact com a outra mão.

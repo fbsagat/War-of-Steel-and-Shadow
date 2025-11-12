@@ -252,8 +252,7 @@ func _cleanup_round(round_id: int):
 func register_spawned_player(round_id: int, peer_id: int, player_node: Node):
 	if not rounds.has(round_id):
 		return
-	
-	print("rounds: ", rounds)
+		
 	rounds[round_id]["spawned_players"][peer_id] = player_node
 	_log_debug("Player %d registrado na rodada %d" % [peer_id, round_id])
 

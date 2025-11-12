@@ -16,7 +16,7 @@ extends Node3D
 @export_category(\"Configurações Básicas\")
 @export var posicao_inicial := Vector3.ZERO
 @export var tamanho_mapa := Vector2i(50, 50)
-@export var tamanho_chunk := 16.0
+@export var tamanho_chunk := 8.0
 @export var seed_geracao := 0
 
 @export_category(\"Recursos\")
@@ -1195,15 +1195,24 @@ func obter_estatisticas() -> Dictionary:
 
 [node name="WorldGenerator" type="Node3D"]
 script = SubResource("GDScript_om72s")
-distancia_render = 0.0
+tamanho_mapa = Vector2i(80, 80)
+tamanho_chunk = 0.2
+amplitude_base = 10.0
+frequencia_montanhas = 0.008
+amplitude_montanhas = 45.0
+threshold_montanhas = 0.6
+intensidade_erosao = 0.6
+altura_maxima = 80.0
 altura_praia_max = 0.0
 altura_grama_max = 3.0
-altura_pedra_max = 25.0
-angulo_pedra_min = 25.0
+altura_pedra_max = 28.0
+angulo_pedra_min = 28.0
+suavidade_transicao_material = 1.0
 intensidade_suavizacao = 0.55
 iteracoes_suavizacao = 3
 simular_erosao_hidraulica = true
+distancia_suavizacao_borda = 0.3
 
 [node name="Sky3D" parent="." instance=ExtResource("1_mvrc1")]
-current_time = 19.864653333039424
+current_time = 0.9142933330371846
 minutes_per_day = 10.0
