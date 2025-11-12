@@ -10,7 +10,7 @@ extends Node
 @export var connection_timeout: float = 10.0
 
 @export_category("Debug")
-@export var debug_mode: bool = false
+@export var debug_mode: bool = true
 
 # ===== VARIÁVEIS INTERNAS =====
 
@@ -206,6 +206,18 @@ func _client_wrong_password():
 		main_menu.show_match_list_menu()
 		main_menu.match_password_container.visible = true
 		_show_error("Senha incorreta")
+
+func _client_room_name_exists():
+	"""Callback de quando já existe uma sala com o nome escolhido"""
+	if main_menu:
+		main_menu.show_create_match_menu()
+		_show_error("Já existe uma sala com o nome escolhido")
+
+func _client_room_name_error(error_msg : String):
+	"""Callback de quando já existe uma sala com o nome escolhido"""
+	if main_menu:
+		main_menu.show_create_match_menu()
+		_show_error(error_msg)
 
 func _client_room_not_found():
 	"""Callback quando a sala não é encontrada"""

@@ -191,11 +191,11 @@ func _handle_create_room(peer_id: int, room_name: String, password: String):
 	
 	var validation = _validate_room_name(room_name)
 	if validation != "":
-		_send_error(peer_id, validation)
+		NetworkManager.rpc_id(peer_id, "_client_room_name_error", validation)
 		return
 	
 	if RoomRegistry.room_name_exists(room_name):
-		_send_error(peer_id, "Já existe uma sala com este nome")
+		NetworkManager.rpc_id(peer_id, "_client_room_name_exists")
 		return
 	
 	var current_room = RoomRegistry.get_room_by_player(peer_id)

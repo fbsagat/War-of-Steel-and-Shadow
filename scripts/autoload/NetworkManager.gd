@@ -191,6 +191,20 @@ func _client_wrong_password():
 	GameManager._client_wrong_password()
 
 @rpc("authority", "call_remote", "reliable")
+func _client_room_name_exists():
+	"""RPC: Cliente recebe notificação de sala já tem este nome"""
+	if multiplayer.is_server():
+		return
+	GameManager._client_room_name_exists()
+
+@rpc("authority", "call_remote", "reliable")
+func _client_room_name_error(error : String):
+	"PRC: Cliente recebe notificação de erro ao definir nome da sala"
+	if multiplayer.is_server():
+		return
+	GameManager._client_room_name_error(error)
+	
+@rpc("authority", "call_remote", "reliable")
 func _client_room_not_found():
 	"""RPC: Cliente recebe notificação de sala não encontrada"""
 	if multiplayer.is_server():
