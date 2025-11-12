@@ -127,6 +127,21 @@ func get_rooms_list() -> Array:
 		rooms_list.append(room)
 	return rooms_list
 
+func get_in_game_rooms_list(out_game: bool = false) -> Array:
+	if not _is_server:
+		return []  # Cliente não deve acessar lista interna
+	
+	var rooms_list_in = []
+	var rooms_list_out = []
+	for room_id in rooms:
+		var room = rooms[room_id].duplicate()
+		room.erase("password")  # Segurança
+		if room["in_game"] == true:
+			rooms_list_in.append(room)
+		else:
+			rooms_list_out.append(room)
+	return rooms_list_out if out_game else rooms_list_in
+	
 # ===== GERENCIAMENTO DE PLAYERS =====
 
 func add_player_to_room(room_id: int, peer_id: int) -> bool:

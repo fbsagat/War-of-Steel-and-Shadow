@@ -23,11 +23,14 @@ girar o player para a direção da câmera ao invés da câmera para trás do pl
 	corretamente para o cliente usar.
 22. 	Ok. Server está sincronizando todos os players do servidor mutuamente, fazer as verificações
 		 necessárias, sincronizar apenas os da mesma rodada.
-23. Ajustar geração automática de spawnpoints no map manager.
-34. Quando uma sala está com gameplay em andamento, não listar ela para os outros e fazer validação no servidor.
-35. Implementar o botão de fechar a sala.
-35. Implementar o modo teste rápido, que consiste em iniciar a play já no mapa gerado com players adicionados.
-36. Sincronizar objetos dos players.
+23. 	Ok. Ajustar geração automática de spawnpoints no map manager.
+34. 	Ok .Quando uma sala está com gameplay em andamento, não listar ela para os outros e fazer validação no servidor.
+35. Implementar o botão de fechar/trancar a sala?
+36. Implementar o modo teste rápido, que consiste em iniciar a play já no mapa gerado com players adicionados.
+37. Sincronizar objetos dos players.
+
+
+
 
 Adicionar no modelo do player:
 	1. Anim interact com a outra mão.

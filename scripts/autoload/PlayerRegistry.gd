@@ -49,9 +49,31 @@ func add_peer(peer_id: int):
 		"id": peer_id,
 		"name": "",
 		"registered": false,
-		"connected_at": Time.get_unix_time_from_system()
+		"connected_at": Time.get_unix_time_from_system(),
+		"in_game": false
 	}
 	_log_debug("Peer adicionado: %d" % peer_id)
+
+func set_player_in_game(player_id: int, in_game: bool):
+	if not _is_server:
+		return
+	if players.has(player_id):
+		players[player_id]["in_game"] = in_game
+		_log_debug("Player %d in_game = %s" % [player_id, in_game])
+
+func get_in_game_players_list(out_game: bool = false) -> Array:
+	if not _is_server:
+		return []  # Cliente não deve acessar lista interna
+	
+	var players_list_in = []
+	var players_list_out = []
+	var players_ = players.duplicate()
+	for p_id in players_:
+		if get_player(p_id)["in_game"] == true:
+			players_list_in.append(p_id)
+		else:
+			players_list_out.append(p_id)
+	return players_list_out if out_game else players_list_in
 
 func remove_peer(peer_id: int):
 	if not _is_server:

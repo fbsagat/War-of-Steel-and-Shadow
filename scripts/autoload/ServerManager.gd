@@ -205,11 +205,10 @@ func _handle_request_rooms_list(peer_id: int):
 	if not PlayerRegistry.is_player_registered(peer_id):
 		_send_error(peer_id, "Jogador não registrado")
 		return
+	var all_out_rooms = RoomRegistry.get_in_game_rooms_list(true)
+	_log_debug("Enviando %d salas para o cliente" % all_out_rooms.size())
 	
-	var rooms = RoomRegistry.get_rooms_list()
-	_log_debug("Enviando %d salas para o cliente" % rooms.size())
-	
-	NetworkManager.rpc_id(peer_id, "_client_receive_rooms_list", rooms)
+	NetworkManager.rpc_id(peer_id, "_client_receive_rooms_list", all_out_rooms)
 
 func _handle_create_room(peer_id: int, room_name: String, password: String):
 	"""Cria uma nova sala"""
@@ -412,6 +411,7 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 	_log_debug("Jogadores participantes:")
 	
 	for room_player in room["players"]:
+		PlayerRegistry.set_player_in_game(room_player["id"],true)
 		var is_host_mark = " [HOST]" if room_player["is_host"] else ""
 		_log_debug("  - %s (ID: %d)%s" % [room_player["name"], room_player["id"], is_host_mark])
 	
@@ -469,6 +469,7 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 	
 	# Inicia a rodada
 	RoundRegistry.start_round(round_data["round_id"])
+	_send_rooms_list_to_all()
 
 func _create_spawn_points(match_players_count: int) -> Array:
 	"""
@@ -597,6 +598,11 @@ func _on_round_timeout(round_id: int):
 	
 	# Finaliza rodada por timeout
 	RoundRegistry.end_round(round_id, "timeout")
+	
+	# Todos os players in_game = false
+	var round_ = RoundRegistry.get_round(round_id)
+	for player in round_["players"]:
+		PlayerRegistry.set_player_in_game(player.id, false)
 
 # ===== FIM DE RODADA =====
 
@@ -644,8 +650,13 @@ func _complete_round_end(round_id : int):
 	# Limpa objetos da rodada
 	_cleanup_round_objects()
 	
+	# Todos os players in_game = false
+	var round_ = RoundRegistry.get_round(round_data["round_id"])
+	for player in round_["players"]:
+		PlayerRegistry.set_player_in_game(player.id, false)
+	
 	# Finaliza completamente no RoundRegistry
-	RoundRegistry.complete_round_end(round_data.round_id)
+	RoundRegistry.complete_round_end(round_data["round_id"])
 	
 	# Atualiza estado da sala
 	RoomRegistry.set_room_in_game(room_id, false)
@@ -796,13 +807,14 @@ func _kick_player(peer_id: int, reason: String):
 # ===== UTILITÁRIOS =====
 
 func _send_rooms_list_to_all():
-	"""Esta função deve atualizar a lista de salas(disponíveis/fora de jogo/não lotadas) 
+	"""Esta função atualiza a lista de salas(disponíveis/fora de jogo/não lotadas) 
 	para todos os players que não estão em partida"""
-	# AJUSTAR!!! por enquanto está enviando para todos do servidor!
-	var all_rooms = RoomRegistry.get_rooms_list()
-	for peer_id in multiplayer.get_peers():
+
+	var all_out_rooms = RoomRegistry.get_in_game_rooms_list(true)
+	var all_out_play_players = PlayerRegistry.get_in_game_players_list(true)
+	for peer_id in all_out_play_players:
 		if peer_id != 1:
-			NetworkManager.rpc_id(peer_id, "_client_receive_rooms_list_update", all_rooms)
+			NetworkManager.rpc_id(peer_id, "_client_receive_rooms_list_update", all_out_rooms)
 
 func _notify_room_update(room_id: int):
 	"""Notifica todos os players de uma sala sobre atualização"""
