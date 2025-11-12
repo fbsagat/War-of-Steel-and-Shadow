@@ -10,7 +10,7 @@ extends Node
 @export var connection_timeout: float = 10.0
 
 @export_category("Debug")
-@export var debug_mode: bool = false
+@export var debug_mode: bool = true
 
 # ===== VARIÁVEIS INTERNAS =====
 
@@ -464,14 +464,8 @@ func _start_round_locally(match_data: Dictionary):
 	_log_debug("========================================")
 	
 	is_in_round = true
-	
-	# Cria rodada no RoundRegistry local
-	RoundRegistry.create_round(
-		match_data["room_id"],
-		current_room["name"],
-		match_data["players"],
-		match_data["settings"]
-	)
+
+	RoundRegistry.set_local_player_round(match_data)
 	
 	# Esconde o menu
 	if main_menu:
@@ -555,9 +549,6 @@ func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bo
 		# Jogador remoto: NÃO tem câmera atribuída
 		player_instance.camera_controller = null
 		_log_debug("✓ Jogador remoto spawnado: %s" % player_name_)
-	
-	# Registra no RoundRegistry
-	RoundRegistry.register_spawned_player(match_data.round_id ,player_data["id"], player_instance)
 
 func _client_return_to_room(room_data: Dictionary):
 	"""Callback quando deve retornar à sala"""

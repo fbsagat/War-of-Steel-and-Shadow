@@ -420,7 +420,7 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 		round_settings
 	)
 	
-	# round_settings recebe configurações do round para enviar para clientes e server configurarem
+	# round_settings recebe configurações do round para enviar para clientes/server configurarem
 	# seus mapas e enviorments
 	round_settings = round_data.get("settings")
 	# Define mapa (sempre o mesmo, gerado proceduralmente)

@@ -16,7 +16,7 @@ enum CameraMode { FREE_LOOK, BEHIND_PLAYER }
 # ==============================
 # EXPORT — CONFIGURAÇÕES GERAIS
 # ==============================
-@export var debug: bool = true
+@export var debug: bool = false
 @export var target: Node3D:
 	set(value):
 		target = value
@@ -90,7 +90,8 @@ func set_as_active():
 	is_active = true
 	if camera:
 		camera.current = true
-	print("[Camera] ✓ Câmera ativada e mouse capturado")
+	if debug:
+		print("[Camera] ✓ Câmera ativada e mouse capturado")
 
 func _initialize_target_rotation():
 	"""Inicializa a rotação alvo com base na rotação atual do alvo."""

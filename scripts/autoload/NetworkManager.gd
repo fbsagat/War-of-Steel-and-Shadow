@@ -7,7 +7,7 @@ extends Node
 # ===== CONFIGURAÇÕES =====
 
 @export_category("Debug")
-@export var debug_mode: bool = false
+@export var debug_mode: bool = true
 
 # ===== VARIÁVEIS INTERNAS =====
 
@@ -305,16 +305,6 @@ func _client_round_started(match_data: Dictionary):
 	"""RPC: Cliente recebe notificação de rodada iniciada"""
 	if multiplayer.is_server():
 		return
-	
-	GameManager._client_round_started(match_data)
-
-# Mantém compatibilidade
-@rpc("authority", "call_remote", "reliable")
-func _client_match_started(match_data: Dictionary):
-	"""RPC: Alias para _client_round_started (compatibilidade)"""
-	if multiplayer.is_server():
-		return
-	
 	GameManager._client_round_started(match_data)
 
 @rpc("authority", "call_remote", "reliable")
@@ -423,7 +413,7 @@ func _client_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, r
 	var player = get_tree().root.get_node_or_null(player_path)
 	
 	if not player:
-		print("[NetworkManager] Player não encontrado: %s" % player_path)
+		#print("[NetworkManager] Player não encontrado: %s" % player_path)
 		return
 	
 	if player and player.has_method("_client_receive_state"):

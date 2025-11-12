@@ -79,7 +79,7 @@ func load_map(map_scene_path: String, settings: Dictionary = {}):
 	var points = _find_spawn_points()
 	#var points = _create_spawn_points(settings["match_players_count"])
 	#print("match_players_count: ", settings["match_players_count"])
-	print(points)
+	#print(points)
 	
 	#_find_spawn_points retorna: [{ "position": (0.0, 1.214169, 1.362243), "rotation": (0.0, 0.0, 0.0) }, { "position": (-2.935883, 1.16964, -0.124041), "rotation": (0.0, 0.0, 0.0) }, { "position": (0.0, 1.459608, -1.695891), "rotation": (0.0, 0.0, 0.0) }, { "position": (1.791235, 1.485599, -0.386114), "rotation": (0.0, 0.0, 0.0) }]
 	
@@ -144,7 +144,7 @@ func _find_spawn_points():
 			}
 			spawn_points.append(spawn_data)
 	
-	print("spawn_points: ", spawn_points)
+	#print("spawn_points: ", spawn_points)
 	_log_debug("Spawn points criados com base na quantidade de jogadores: %d" % spawn_points.size())
 	spawn_points_ready.emit(spawn_points.size())
 	return spawn_points
@@ -186,7 +186,6 @@ func _create_spawn_points(match_players_count: int) -> Array:
 			"position": Vector3(0, spawn_height, 0),
 			"rotation": Vector3.ZERO
 		})
-	print("spawn_points: ", spawn_points)
 	_log_debug("Spawn points criados com base na quantidade de jogadores: %d" % spawn_points.size())
 	spawn_points_ready.emit(spawn_points.size())
 	return spawn_points

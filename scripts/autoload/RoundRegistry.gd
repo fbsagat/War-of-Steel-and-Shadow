@@ -175,6 +175,16 @@ func start_round(round_id: int):
 	_log_debug("▶ Rodada %d INICIADA" % round_id)
 	round_started.emit(round_id)
 
+# RoundRegistry.gd
+func set_local_player_round(round_data: Dictionary):
+	if not _initialized:
+		return
+	
+	var local_player_id = multiplayer.get_unique_id()
+	# Armazena a rodada do jogador local
+	rounds[round_data["round_id"]] = round_data
+	_log_debug("Rodada %d definida para jogador local %d" % [round_data["round_id"], local_player_id])
+
 func end_round(round_id: int, reason: String = "completed", winner_data: Dictionary = {}) -> Dictionary:
 	if not rounds.has(round_id):
 		return {}
@@ -243,6 +253,7 @@ func register_spawned_player(round_id: int, peer_id: int, player_node: Node):
 	if not rounds.has(round_id):
 		return
 	
+	print("rounds: ", rounds)
 	rounds[round_id]["spawned_players"][peer_id] = player_node
 	_log_debug("Player %d registrado na rodada %d" % [peer_id, round_id])
 
