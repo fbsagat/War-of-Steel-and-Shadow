@@ -7,7 +7,7 @@ extends Node
 # ===== CONFIGURAÇÕES =====
 
 @export_category("Debug")
-@export var debug_mode: bool = true
+@export var debug_mode: bool = false
 
 # ===== VARIÁVEIS INTERNAS =====
 

@@ -26,7 +26,7 @@ extends Node
 ## Tempo mínimo entre validações (segundos)
 @export var validation_interval: float = 0.1
 ## Ativar validação anti-cheat
-@export var enable_anticheat: bool = false
+@export var enable_anticheat: bool = true
 
 # ===== VARIÁVEIS INTERNAS =====
 
@@ -107,6 +107,11 @@ func _on_peer_disconnected(peer_id: int):
 			RoomRegistry.remove_player_from_room(room["id"], peer_id)
 			_log_debug("  Removido da sala: %s" % room["name"])
 			_notify_room_update(room["id"])
+			
+			if room and not room.is_empty():
+				for player in room["players"]:
+					if player["id"] != peer_id:
+						NetworkManager.rpc_id(player["id"], "_client_remove_player", peer_id)
 		
 		# Lida com rodada ativa
 		var p_round = RoundRegistry.get_round_by_player_id(peer_id)
@@ -129,10 +134,6 @@ func _on_peer_disconnected(peer_id: int):
 	
 	_cleanup_player_state(peer_id)
 	PlayerRegistry.remove_peer(peer_id)
-	
-	for player in room["players"]:
-		if player["id"] != peer_id:  # para todos os outros jogadores
-			NetworkManager.rpc_id(player["id"], "_client_remove_player", peer_id)
 
 # ===== HANDLERS DE JOGADOR =====
 

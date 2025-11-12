@@ -966,7 +966,7 @@ func _on_game_manager_room_updated(room_data: Dictionary):
 	_log_debug("Sala atualizada: %d jogadores" % room_data.get("players", []).size())
 	update_room_info(room_data)
 
-func _on_game_manager_match_started(match_data: Dictionary):
+func _on_game_manager_match_started():
 	_log_debug("Partida iniciada!")
 	# A troca de cena é feita pelo GameManager
 	# Aqui você pode mostrar uma tela de transição se quiser

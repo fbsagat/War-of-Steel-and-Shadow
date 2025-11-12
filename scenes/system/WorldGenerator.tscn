@@ -764,10 +764,10 @@ func _aplicar_arredondamento_bordas(vertices: PackedVector3Array, resolution: in
 	var mundo_z_min: float = chunk_pos.y * tamanho_chunk
 	var step: float = tamanho_chunk / float(resolution)
 	
-	var centro_mapa: Vector2 = Vector2(
-		tamanho_mapa.x * tamanho_chunk / 2.0,
-		tamanho_mapa.y * tamanho_chunk / 2.0
-	)
+	#var centro_mapa: Vector2 = Vector2(
+		#tamanho_mapa.x * tamanho_chunk / 2.0,
+		#tamanho_mapa.y * tamanho_chunk / 2.0
+	#)
 	
 	var index: int = 0
 	
@@ -1217,5 +1217,5 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.791235, 1.4855994, -0.38611
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.9358826, 1.16964, -0.12404144)
 
 [node name="Sky3D" parent="." instance=ExtResource("1_mvrc1")]
-current_time = 20.31925333305547
+current_time = 23.905653333054826
 minutes_per_day = 10.0

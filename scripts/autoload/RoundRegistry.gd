@@ -11,7 +11,7 @@ extends Node
 @export var auto_end_on_disconnect: bool = true
 
 @export_category("Debug")
-@export var debug_mode: bool = false
+@export var debug_mode: bool = true
 
 # ===== VARIÁVEIS DE ESTADO =====
 
@@ -89,7 +89,6 @@ func _setup_global_timers():
 
 func create_round(room_id: int, room_name: String, players: Array, settings: Dictionary) -> Dictionary:
 	if not _is_server:
-		push_warning("RoundRegistry: create_round() só pode ser chamado no servidor!")
 		return {}
 
 	var round_id = _get_next_round_id()

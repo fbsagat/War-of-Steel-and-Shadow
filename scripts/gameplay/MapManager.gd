@@ -114,9 +114,8 @@ func _find_spawn_points():
 		push_warning("Nenhum spawn point encontrado no mapa! Adicione nós ao grupo 'spawn_point'")
 		# Cria um spawn point padrão na origem
 		spawn_points.append({
-			"position": Vector3.ZERO if current_map is Node3D else Vector2.ZERO,
-			"rotation": Vector3.ZERO if current_map is Node3D else 0.0
-		})
+		"position": Vector3.ZERO,
+		"rotation": Vector3.ZERO})
 	else:
 		# Ordena spawns por nome para consistência
 		spawns.sort_custom(func(a, b): return a.name < b.name)
@@ -135,7 +134,7 @@ func _find_spawn_points():
 func get_spawn_position(player_index: int) -> Variant:
 	if spawn_points.is_empty():
 		push_warning("Nenhum spawn point disponível!")
-		return Vector3.ZERO if current_map is Node3D else Vector2.ZERO
+		return Vector3.ZERO
 	
 	# Usa módulo para evitar índices fora do alcance
 	var spawn_index = player_index % spawn_points.size()
@@ -151,8 +150,8 @@ func get_spawn_position(player_index: int) -> Variant:
 func get_spawn_data(player_index: int) -> Dictionary:
 	if spawn_points.is_empty():
 		return {
-			"position": Vector3.ZERO if current_map is Node3D else Vector2.ZERO,
-			"rotation": Vector3.ZERO if current_map is Node3D else 0.0
+			"position": Vector3.ZERO,
+			"rotation": Vector3.ZERO
 		}
 	
 	var spawn_index = player_index % spawn_points.size()
@@ -164,8 +163,8 @@ func get_spawn_data(player_index: int) -> Dictionary:
 func get_random_unused_spawn() -> Dictionary:
 	if spawn_points.is_empty():
 		return {
-			"position": Vector3.ZERO if current_map is Node3D else Vector2.ZERO,
-			"rotation": Vector3.ZERO if current_map is Node3D else 0.0
+			"position": Vector3.ZERO,
+			"rotation": Vector3.ZERO
 		}
 	
 	var available_indices = []

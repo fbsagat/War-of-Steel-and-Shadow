@@ -10,7 +10,7 @@ extends Node
 @export var connection_timeout: float = 10.0
 
 @export_category("Debug")
-@export var debug_mode: bool = true
+@export var debug_mode: bool = false
 
 # ===== VARIÁVEIS INTERNAS =====
 
@@ -498,11 +498,11 @@ func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bo
 	"""Spawna players para cada cliente, cada cliente recebe X execuções,
 	 a do seu jogador local e a do(s) jogador(es) remoto(s), sendo o seu = local"""
 	# Verifica duplicação
-	var player_name = str(player_data["id"])
-	var camera_name = player_name + "_Camera"
+	var player_name_ = str(player_data["id"])
+	var camera_name = player_name_ + "_Camera"
 	
-	if get_tree().root.has_node(player_name):
-		_log_debug("⚠ Player já existe: %s" % player_name)
+	if get_tree().root.has_node(player_name_):
+		_log_debug("⚠ Player já existe: %s" % player_name_)
 		return
 		
 	if get_tree().root.has_node(camera_name):
@@ -513,7 +513,7 @@ func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bo
 	var player_scene = preload("res://scenes/system/player_warrior.tscn")
 	var player_instance = player_scene.instantiate()
 	
-	player_instance.name = player_name
+	player_instance.name = player_name_
 	player_instance.player_id = player_data["id"]
 	player_instance.player_name = player_data["name"]
 	
@@ -543,11 +543,11 @@ func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bo
 		player_instance.set_as_local_player()
 		camera_instance.set_as_active()
 		local_player = player_instance
-		_log_debug("✓ Jogador local spawnado: %s" % player_name)
+		_log_debug("✓ Jogador local spawnado: %s" % player_name_)
 	else:
 		# Jogador remoto: NÃO tem câmera atribuída
 		player_instance.camera_controller = null
-		_log_debug("✓ Jogador remoto spawnado: %s" % player_name)
+		_log_debug("✓ Jogador remoto spawnado: %s" % player_name_)
 	
 	# Registra no RoundRegistry
 	RoundRegistry.register_spawned_player(match_data.round_id ,player_data["id"], player_instance)
