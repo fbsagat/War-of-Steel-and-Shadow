@@ -24,6 +24,7 @@ ObjectSpawner="*res://scripts/autoload/ObjectSpawner.gd"
 PlayerRegistry="*res://scripts/autoload/PlayerRegistry.gd"
 RoomRegistry="*res://scripts/autoload/RoomRegistry.gd"
 RoundRegistry="*res://scripts/autoload/RoundRegistry.gd"
+TestManager="*res://scripts/autoload/TestManager.gd"
 
 [display]
 

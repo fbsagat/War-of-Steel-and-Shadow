@@ -1,4 +1,6 @@
 extends Node
+## RoundRegistry - Gerenciador rodadas de salas (SERVIDOR APENAS)
+## Armazena informações de rodadas nas salas sendo sala uma partida
 
 # ===== CONFIGURAÇÕES =====
 

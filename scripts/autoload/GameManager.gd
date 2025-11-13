@@ -53,6 +53,8 @@ func _ready():	# Verifica se é servidor
 		_log_debug("Sou o servidor - NÃO inicializando GameManager")
 		return
 	
+	if TestManager:
+		TestManager.initialize_as_client()
 	_log_debug("Sou cliente - Inicializando GameManager")
 	
 	# Conecta sinais de rede
@@ -128,12 +130,9 @@ func _on_connected_to_server():
 	if main_menu:
 		main_menu.show_name_input_menu()
 	
-	if PlayerRegistry:
-		PlayerRegistry.initialize_as_client()
-	if RoomRegistry:
-		RoomRegistry.initialize_as_client()
-	if RoundRegistry:
-		RoundRegistry.initialize_as_client()
+	PlayerRegistry.initialize_as_client()
+	RoomRegistry.initialize_as_client()
+	RoundRegistry.initialize_as_client()
 	
 	connected_to_server.emit()
 
@@ -495,7 +494,7 @@ func _start_round_locally(match_data: Dictionary):
 	
 	_log_debug("✓ Rodada carregada no cliente")
 
-func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bool, match_data: Dictionary):
+func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bool, _match_data: Dictionary):
 	"""Spawna players para cada cliente, cada cliente recebe X execuções,
 	 a do seu jogador local e a do(s) jogador(es) remoto(s), sendo o seu = local"""
 	# Verifica duplicação

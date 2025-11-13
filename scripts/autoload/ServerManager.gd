@@ -4,6 +4,10 @@ extends Node
 ## Todos os RPCs estão em NetworkManager
 
 # ===== CONFIGURAÇÕES (Editáveis no Inspector) =====
+@export_category("Debug")
+@export var debug_mode: bool = true
+@export var simulador_ativado: bool = true
+@export var simulador_players_qtd: int = 2
 
 @export_category("Server Settings")
 @export var server_port: int = 7777
@@ -14,9 +18,6 @@ extends Node
 @export var round_transition_time: float = 5.0
 ## Tempo de espera antes de iniciar próxima rodada (segundos)
 @export var round_preparation_time: float = 3.0
-
-@export_category("Debug")
-@export var debug_mode: bool = true
 
 @export_category("Anti-Cheat")
 ## Velocidade máxima permitida (m/s)
@@ -84,10 +85,11 @@ func _start_server():
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
 	
 	PlayerRegistry.initialize_as_server()
-	
 	RoomRegistry.initialize_as_server()
-	
 	RoundRegistry.initialize_as_server()
+	
+	if TestManager:
+		TestManager.initialize_as_server()
 	
 	_log_debug("✓ Servidor inicializado com sucesso!")
 
@@ -103,6 +105,8 @@ func _on_peer_connected(peer_id: int):
 	"""Callback quando um cliente conecta"""
 	_log_debug("✓ Cliente conectado: Peer ID %d" % peer_id)
 	PlayerRegistry.add_peer(peer_id)
+	if simulador_ativado and (multiplayer.get_peers().size() >= simulador_players_qtd) and TestManager:
+		TestManager.criar_partida_teste()
 
 func _on_peer_disconnected(peer_id: int):
 	"""Callback quando um cliente desconecta"""
