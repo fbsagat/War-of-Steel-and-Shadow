@@ -419,6 +419,80 @@ func _client_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, r
 	if player and player.has_method("_client_receive_state"):
 		player._client_receive_state(pos, rot, vel, running, jumping)
 
+# ===== SINCRONIZAÇÃO DE ANIMAÇÕES =====
+
+func send_player_animation_state(p_id: int, speed: float, attacking: bool, defending: bool, 
+								 jumping: bool, aiming: bool, running: bool, block_attacking: bool, on_floor: bool):
+	"""Envia estado de animação do jogador para o servidor"""
+	if not is_connected:
+		return
+	
+	rpc_id(1, "_server_player_animation_state", p_id, speed, attacking, defending, 
+		   jumping, aiming, running, block_attacking, on_floor)
+
+@rpc("any_peer", "call_remote", "unreliable")
+func _server_player_animation_state(p_id: int, speed: float, attacking: bool, defending: bool,
+									jumping: bool, aiming: bool, running: bool, block_attacking: bool, on_floor: bool):
+	"""RPC: Servidor recebe estado de animação"""
+	if not (multiplayer.has_multiplayer_peer() and multiplayer.get_unique_id() == 1):
+		return
+	
+	var sender_id = multiplayer.get_remote_sender_id()
+	if sender_id != p_id:
+		return
+	
+	# Propaga para todos os outros clientes
+	for peer_id in multiplayer.get_peers():
+		if peer_id != p_id:
+			rpc_id(peer_id, "_client_player_animation_state", p_id, speed, attacking, 
+				   defending, jumping, aiming, running, block_attacking, on_floor)
+
+@rpc("any_peer", "call_remote", "unreliable")
+func _client_player_animation_state(p_id: int, speed: float, attacking: bool, defending: bool,
+									jumping: bool, aiming: bool, running: bool, block_attacking: bool, on_floor: bool):
+	"""RPC: Cliente recebe estado de animação de outro jogador"""
+	if multiplayer.has_multiplayer_peer() and multiplayer.get_unique_id() == 1:
+		return
+	
+	var player = get_tree().root.get_node_or_null(str(p_id))
+	if player and player.has_method("_client_receive_animation_state"):
+		player._client_receive_animation_state(speed, attacking, defending, jumping, 
+											   aiming, running, block_attacking, on_floor)
+
+# ===== SINCRONIZAÇÃO DE AÇÕES (ATAQUES, DEFESA) =====
+
+func send_player_action(p_id: int, action_type: String, anim_name: String):
+	"""Envia ação do jogador (ataque, defesa) - RELIABLE"""
+	if not is_connected:
+		return
+	
+	rpc_id(1, "_server_player_action", p_id, action_type, anim_name)
+
+@rpc("any_peer", "call_remote", "reliable")
+func _server_player_action(p_id: int, action_type: String, anim_name: String):
+	"""RPC: Servidor recebe ação do jogador"""
+	if not (multiplayer.has_multiplayer_peer() and multiplayer.get_unique_id() == 1):
+		return
+	
+	var sender_id = multiplayer.get_remote_sender_id()
+	if sender_id != p_id:
+		return
+	
+	# Propaga para todos os outros clientes (RELIABLE para ações importantes)
+	for peer_id in multiplayer.get_peers():
+		if peer_id != p_id:
+			rpc_id(peer_id, "_client_player_action", p_id, action_type, anim_name)
+
+@rpc("any_peer", "call_remote", "reliable")
+func _client_player_action(p_id: int, action_type: String, anim_name: String):
+	"""RPC: Cliente recebe ação de outro jogador"""
+	if multiplayer.has_multiplayer_peer() and multiplayer.get_unique_id() == 1:
+		return
+	
+	var player = get_tree().root.get_node_or_null(str(p_id))
+	if player and player.has_method("_client_receive_action"):
+		player._client_receive_action(action_type, anim_name)
+
 # ===== TRATAMENTO DE ERROS =====
 
 @rpc("authority", "call_remote", "reliable")

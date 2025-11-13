@@ -86,7 +86,8 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 		_log_debug("  ✓ Jogador registrado: %s (ID: %d)" % [player_data["name"], peer_id])
 	
 	# Passo 2: Cria sala no RoomRegistry
-	var room_id = RoomRegistry.get_room_count() + 100  # ID único
+	var randomized_ = randi_range(1, 1000)
+	var room_id = RoomRegistry.get_room_count() + randomized_ # ID único
 	
 	var room_data = RoomRegistry.create_room(
 		room_id,

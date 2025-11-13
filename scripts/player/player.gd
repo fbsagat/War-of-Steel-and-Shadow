@@ -62,6 +62,13 @@ var is_block_attacking: bool = false
 var sword_areas: Array[Area3D] = []
 const MAX_DIRECTION_HISTORY = 2
 
+# Estados de animação (para sincronização)
+var anim_speed: float = 0.0
+var anim_blend_position: float = 0.0
+var last_anim_state: Dictionary = {}
+var anim_sync_timer: float = 0.0
+@export var anim_sync_rate: float = 0.1  # 10 updates/segundo (menos que posição)
+
 # ===== SINCRONIZAÇÃO MULTPLAYER =====
 var target_position: Vector3 = Vector3.ZERO  # Para interpolação de remotos
 var target_rotation_y: float = 0.0           # Só rotação Y para personagem
@@ -110,20 +117,21 @@ func _ready():
 	
 # Física geral
 func _physics_process(delta):
-		var move_dir: Vector3
-		_handle_gravity(delta)
-		handle_test_equip_inputs()
-		
-		# Só processa input se for o jogador local
-		if is_local_player:
-			move_dir = _handle_movement_input(delta)
-			_send_state_to_network(delta)
-			move_and_slide()
-			_send_state_to_server(delta)
-		elif multiplayer.has_multiplayer_peer():
-			_interpolate_remote_player(delta)
+	var move_dir: Vector3
+	_handle_gravity(delta)
 	
-		_handle_animations(move_dir)
+	# Só processa input se for o jogador local
+	if is_local_player:
+		move_dir = _handle_movement_input(delta)
+		_send_state_to_network(delta)
+		move_and_slide()
+		_send_state_to_server(delta)
+		_send_animation_state(delta)
+		handle_test_equip_inputs()
+	elif multiplayer.has_multiplayer_peer():
+		_interpolate_remote_player(delta)
+
+	_handle_animations(move_dir)
 		
 func _process(delta: float) -> void:
 	if is_aiming and nearest_enemy:
@@ -650,20 +658,21 @@ func _strafe_mode(ativar: bool = true, com_camera_lock = true):
 			camera_controller.release_to_free_look()
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("ui_cancel"):
-		_toggle_mouse_mode()
-	elif event.is_action_pressed("interact"):
-		action_pick_up_item()
-	elif event.is_action_pressed("attack"):
-		action_sword_attack()
-	elif event.is_action_pressed("lock"):
-		action_lock()
-	elif event.is_action_released("lock"):
-		action_stop_locking()
-	elif event.is_action_pressed("block_attack"):
-		action_block_attack()
-	elif event.is_action_pressed("drop"):
-		action_drop_item()
+	if is_local_player:
+		if event.is_action_pressed("ui_cancel"):
+			_toggle_mouse_mode()
+		elif event.is_action_pressed("interact"):
+			action_pick_up_item()
+		elif event.is_action_pressed("attack"):
+			action_sword_attack()
+		elif event.is_action_pressed("lock"):
+			action_lock()
+		elif event.is_action_released("lock"):
+			action_stop_locking()
+		elif event.is_action_pressed("block_attack"):
+			action_block_attack()
+		elif event.is_action_pressed("drop"):
+			action_drop_item()
 
 # Mouse
 func _toggle_mouse_mode():
@@ -785,7 +794,7 @@ func equip_item_by_id(item_id: int, drop_last_item: bool):
 	if debug:
 		print("equip_item_by_id: equipado ->", item_name, " em ", node_link)
 	_item_model_change_visibility(_get_item_by_id(item_id))
-			
+	
 # Dropar item na frente do player
 func _item_drop(item_ids: Array) -> Array:
 	var dropped: Array = []
@@ -793,83 +802,67 @@ func _item_drop(item_ids: Array) -> Array:
 		push_error("item_drop: esperado Array para item_ids.")
 		return dropped
 	
-	# Pegar cena atual para adicionar os itens como filhos (ou use get_tree().root se preferir)
-	var scene_root = $"../scenes/collectibles"
-	if not scene_root:
-		push_error("item_drop: cena atual não disponível para adicionar instâncias.")
-		return dropped
-	
 	for id in item_ids:
-		var item_name: String = ""
-		item_name = _get_item_name_by_id(id)
-		
-		# Se não tiver implementado ainda, avisar e pular
-		if item_name == null:
+		var item_name = _get_item_name_by_id(id)
+		if not item_name:
 			push_warning("_item_drop: nome do item não fornecido para ID %s. Pulei." % str(id))
 			dropped.append(null)
 			continue
-
-		# montar caminho da cena. espera-se arquivos .tscn em res://scenes/collectibles/
-		var scene_path := "res://scenes/collectibles/%s.tscn" % item_name
-		var packed := ResourceLoader.load(scene_path)
-		if not packed or not (packed is PackedScene):
-			push_error("_item_drop: não foi possível carregar PackedScene: %s" % scene_path)
+		
+		# Obtém cena PRÉ-CARREGADA do ItemPreloader
+		var item_scene = ItemPreloader.get_item_scene(item_name)
+		if not item_scene:
+			push_error("_item_drop: cena '%s' não encontrada no ItemPreloader!" % item_name)
 			dropped.append(null)
 			continue
-
-		var inst = packed.instantiate()
+		
+		var inst = item_scene.instantiate()
 		if not inst:
-			push_error("_item_drop: falha ao instanciar %s" % scene_path)
+			push_error("_item_drop: falha ao instanciar %s" % item_name)
 			dropped.append(null)
 			continue
-
-		# garantir que o nó instanciado seja (ou contenha) um RigidBody3D
+		
+		# Garantir que o nó instanciado seja (ou contenha) um RigidBody3D
 		var rigid: RigidBody3D = null
 		if inst is RigidBody3D:
 			rigid = inst
 		else:
-			# tenta encontrar um RigidBody3D dentro da cena instanciada
 			rigid = inst.get_node_or_null("RigidBody3D")
-			# alternativa genérica: procurar recursivamente o primeiro RigidBody3D
 			if not rigid:
 				for child in inst.get_children():
 					if child is RigidBody3D:
 						rigid = child
 						break
-
+		
 		if not rigid:
-			push_error("_item_drop: instância %s não contém RigidBody3D." % scene_path)
+			push_error("_item_drop: instância %s não contém RigidBody3D." % item_name)
 			dropped.append(null)
-			# opcional: liberar instância (se não anexada a árvore)
 			continue
-
-		# calcular posição de drop (um pouco à frente do player)
+		
+		# Calcular posição de drop (CORRIGIDO: global_transform, não global_path)
 		var forward_dir: Vector3 = global_transform.basis.z
 		var drop_origin: Vector3 = global_transform.origin + forward_dir * drop_distance + Vector3.UP * 0.4
-
-		# anexar a cena (como filho da cena atual)
-		scene_root.add_child(inst)
-		# definir transform global da instância:
-		# manter a base (rot) da instância local, mas ajustar a origem
-		var new_transform: Transform3D = inst.global_transform
-		new_transform.origin = drop_origin
-		inst.global_transform = new_transform
-
-		# aplicar velocidade inicial ao rigidbody (simula o "soltar/empurrar")
-		# usamos linear_velocity para simplicidade
+		
+		# Adicionar à cena raiz
+		get_tree().root.add_child(inst)
+		
+		# Definir posição de drop
+		inst.global_transform.origin = drop_origin
+		
+		# Aplicar velocidade inicial ao rigidbody
 		if rigid is RigidBody3D:
 			rigid.linear_velocity = forward_dir.normalized() * drop_force
-			# opcional: pequena rotação aleatória para visual
 			rigid.angular_velocity = Vector3(randf(), randf(), randf()) * 1.2
 		else:
 			push_warning("_item_drop: nó encontrado não é RigidBody3D apesar das checagens.")
-		# Animação Interact de item_drop
-		_execute_animation("Interact","parameters/Interact/transition_request", "parameters/Interact_shot/request")
+		
+		# Animação de drop
+		_execute_animation("Interact", "parameters/Interact/transition_request", "parameters/Interact_shot/request")
 		dropped.append(rigid)
-
-	# debug
+	
 	if debug:
 		print("_item_drop: dropped %d / %d" % [dropped.count(null), item_ids.size()])
+	
 	return dropped
 
 # Executa uma animação one-shot e retorna sua duração
@@ -925,24 +918,30 @@ func _determine_attack_from_input() -> String:
 
 # Ações do player (Espadada)
 func action_sword_attack():
-	# Limpa hit_targets sempre que iniciar algum ataque
+	"""Versão modificada que sincroniza o ataque"""
 	hit_targets.clear()
 	
 	if current_item_right_id != 0 and not is_attacking:
 		is_attacking = true
 		current_attack_item_id = current_item_right_id
-		var anim_time: float = _execute_animation(_determine_attack_from_input(),
+		var anim_name = _determine_attack_from_input()
+		var anim_time: float = _execute_animation(anim_name,
 			"parameters/sword_attacks/transition_request",
 			"parameters/Attack/request")
 		_on_attack_timer_timeout(anim_time * 0.4, current_item_right_id)
+		
+		# ✅ SINCRONIZA ATAQUE PELA REDE (RPC confiável para ações importantes)
+		if is_local_player and NetworkManager:
+			NetworkManager.send_player_action(player_id, "attack", anim_name)
 
 # Função acionada pelas animações(AnimationPlayer), habilita hitbox na hora
 # exata do golpe; Pega current_item_right_id para saber qual foi a espada usada
 func _enable_attack_area():
-	var node = _get_node_by_id(current_attack_item_id)
-	var hitbox = node.get_node("hitbox")
-	if hitbox is Area3D:
-		hitbox.monitoring = true
+	if current_attack_item_id > 0:
+		var node = _get_node_by_id(current_attack_item_id)
+		var hitbox = node.get_node("hitbox")
+		if hitbox is Area3D:
+			hitbox.monitoring = true
 
 # Para o contato das hitboxes das espadas(no momento ativo) com inimigos (área3D)
 func _on_hitbox_body_entered(body: Node, hitbox_area: Area3D) -> void:
@@ -960,17 +959,23 @@ func _on_hitbox_body_entered(body: Node, hitbox_area: Area3D) -> void:
 
 # Ações do player (Trancar visão no inimigo)
 func action_lock():
+	"""Versão modificada que sincroniza defesa"""
 	if current_item_left_id != 10 and is_local_player:
 		_strafe_mode(true, true)
 	if current_item_left_id != 0:
 		is_defending = true
 		animation_tree.set("parameters/Blocking/blend_amount", 1.0)
 		
+		# ✅ SINCRONIZA DEFESA
+		if is_local_player and NetworkManager:
+			NetworkManager.send_player_action(player_id, "defend_start", "")
+		
 func _on_block_attack_timer_timeout(duration):
 	await get_tree().create_timer(duration).timeout
 	is_block_attacking = false
 	
 func action_block_attack():
+	"""Versão modificada que sincroniza block attack"""
 	if not is_block_attacking and is_defending:
 		hit_targets.clear()
 		is_block_attacking = true
@@ -979,15 +984,23 @@ func action_block_attack():
 				"parameters/sword_attacks/transition_request",
 				"parameters/Attack/request")
 		_on_block_attack_timer_timeout(anim_time * 0.85)
+		
+		# ✅ SINCRONIZA BLOCK ATTACK
+		if is_local_player and NetworkManager:
+			NetworkManager.send_player_action(player_id, "block_attack", "Block_Attack")
 			
 # Ações do player (Quando guardar o escudo)
 func action_stop_locking():
+	"""Versão modificada que sincroniza fim da defesa"""
 	if is_local_player:
 		_strafe_mode(false, true)
 	if current_item_left_id != 0:
 		is_defending = false
 		is_attacking = false
 		animation_tree.set("parameters/Blocking/blend_amount", 0.0)
+		
+		if is_local_player and NetworkManager:
+			NetworkManager.send_player_action(player_id, "defend_stop", "")
 
 # Ações do player (Pegar item)
 func action_pick_up_item():
@@ -999,6 +1012,7 @@ func action_pick_up_item():
 	var item = found[0]
 	if item.has_method("pick_up"):
 		item.pick_up(self)
+		animation_tree.set("PickUp", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 		equip_item_by_id(item.item_id, true)
 		
 # Ações do player (Dropar item) *por enquanto dropa tudo sequencialmente
@@ -1171,12 +1185,144 @@ func _send_state_to_network(delta: float):
 				is_jumping
 			)
 
+func _send_animation_state(delta: float):
+	"""Envia estado das animações para a rede (menos frequente que posição)"""
+	if not is_local_player:
+		return
+	
+	anim_sync_timer += delta
+	
+	if anim_sync_timer >= anim_sync_rate:
+		anim_sync_timer = 0.0
+		
+		# Captura estado atual
+		var current_state = {
+			"speed": Vector2(velocity.x, velocity.z).length(),
+			"is_attacking": is_attacking,
+			"is_defending": is_defending,
+			"is_jumping": is_jumping,
+			"is_aiming": is_aiming,
+			"is_running": is_running,
+			"is_block_attacking": is_block_attacking,
+			"is_on_floor": is_on_floor()
+		}
+		
+		# Só envia se mudou
+		if _animation_state_changed(current_state):
+			last_anim_state = current_state.duplicate()
+			
+			if NetworkManager and NetworkManager.is_connected:
+				NetworkManager.send_player_animation_state(
+					player_id,
+					current_state["speed"],
+					current_state["is_attacking"],
+					current_state["is_defending"],
+					current_state["is_jumping"],
+					current_state["is_aiming"],
+					current_state["is_running"],
+					current_state["is_block_attacking"],
+					current_state["is_on_floor"]
+				)
+
+func _animation_state_changed(new_state: Dictionary) -> bool:
+	"""Verifica se o estado de animação mudou significativamente"""
+	if last_anim_state.is_empty():
+		return true
+	
+	# Verifica mudanças em flags booleanas
+	for key in ["is_attacking", "is_defending", "is_jumping", "is_aiming", "is_running", "is_block_attacking", "is_on_floor"]:
+		if new_state.get(key, false) != last_anim_state.get(key, false):
+			return true
+	
+	# Verifica mudança significativa na velocidade
+	var speed_diff = abs(new_state.get("speed", 0.0) - last_anim_state.get("speed", 0.0))
+	if speed_diff > 0.5:  # Threshold de 0.5 m/s
+		return true
+	
+	return false
+
+# ===== NOVA FUNÇÃO: Recebe estado de animação de outros jogadores =====
+
+@rpc("authority", "call_remote", "unreliable")
+func _client_receive_animation_state(speed: float, attacking: bool, defending: bool, jumping: bool, 
+									 aiming: bool, running: bool, block_attacking: bool, on_floor: bool):
+	"""Recebe e aplica estado de animação de outros jogadores"""
+	if is_local_player:
+		return  # Ignora para si mesmo
+	
+	# Atualiza estados
+	is_attacking = attacking
+	is_defending = defending
+	is_jumping = jumping
+	is_aiming = aiming
+	is_running = running
+	is_block_attacking = block_attacking
+	
+	# Atualiza AnimationTree
+	if animation_tree:
+		# Locomotion
+		animation_tree["parameters/Locomotion/blend_position"] = speed
+		
+		# Blocking
+		if defending:
+			animation_tree.set("parameters/Blocking/blend_amount", 1.0)
+		else:
+			animation_tree.set("parameters/Blocking/blend_amount", 0.0)
+		
+		# Jump transitions
+		if jumping and on_floor == false:
+			animation_tree["parameters/final_transt/transition_request"] = "jump_start"
+		elif on_floor and not jumping:
+			animation_tree["parameters/final_transt/transition_request"] = "jump_land"
+			animation_tree["parameters/final_transt/transition_request"] = "walking_e_blends"
+		
+		# Bobbing (baseado na velocidade)
+		if speed > 0.1:
+			animation_tree["parameters/bobbing/add_amount"] = bobbing_intensity * speed
+		else:
+			animation_tree["parameters/bobbing/add_amount"] = 0
+
+@rpc("authority", "call_remote", "reliable")
+func _client_receive_action(action_type: String, anim_name: String):
+	"""Recebe e executa ações de outros jogadores (ataques, defesa, etc)"""
+	if is_local_player:
+		return
+	
+	match action_type:
+		"attack":
+			if not is_attacking:
+				is_attacking = true
+				_execute_animation(anim_name,
+					"parameters/sword_attacks/transition_request",
+					"parameters/Attack/request")
+				# Timer para resetar is_attacking
+				await get_tree().create_timer(0.5).timeout
+				is_attacking = false
+		
+		"block_attack":
+			if not is_block_attacking:
+				is_block_attacking = true
+				_execute_animation(anim_name,
+					"parameters/sword_attacks/transition_request",
+					"parameters/Attack/request")
+				await get_tree().create_timer(0.5).timeout
+				is_block_attacking = false
+		
+		"defend_start":
+			is_defending = true
+			animation_tree.set("parameters/Blocking/blend_amount", 1.0)
+		
+		"defend_stop":
+			is_defending = false
+			is_attacking = false
+			animation_tree.set("parameters/Blocking/blend_amount", 0.0)
+
+# ===== UTILS =====
 func teleport_to(new_position: Vector3):
 	"""Teleporta o player (apenas servidor)"""
 	if multiplayer.is_server():
 		global_position = new_position
 
-# ===== UTILS =====
 # Define cor aleatória e configura NameLabel para multiplayer
 func setup_name_label():
 	if not $NameLabel:

@@ -53,6 +53,9 @@ var server_map_manager: Node = null
 ## Rastreamento de estados dos jogadores
 var player_states: Dictionary = {}
 
+signal server_player_animation_state
+signal server_player_action
+
 # ===== FUNÇÕES DE INICIALIZAÇÃO =====
 
 func _ready():
@@ -98,6 +101,8 @@ func _connect_round_signals():
 	RoundRegistry.round_ending.connect(_on_round_ending)
 	RoundRegistry.all_players_disconnected.connect(_on_all_players_disconnected)
 	RoundRegistry.round_timeout.connect(_on_round_timeout)
+	self.connect("server_player_animation_state", Callable(self, "_handle_player_animation_state"))
+	self.connect("server_player_action", Callable(self, "_handle_player_action"))
 
 # ===== CALLBACKS DE CONEXÃO =====
 
@@ -691,53 +696,6 @@ func _cleanup_round_objects():
 	
 	_log_debug("✓ Limpeza completa")
 
-func _handle_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
-	"""Handler para receber estado do jogador e propagar para outros"""
-	
-	# Valida que o jogador existe e está registrado
-	if not PlayerRegistry.is_player_registered(p_id):
-		return
-	
-	# Obtém a rodada do jogador
-	var p_round = RoundRegistry.get_round_by_player_id(p_id)
-	if p_round.is_empty():
-		return
-	
-	var round_id = p_round["round_id"]
-	
-	# Valida que está em uma rodada ativa
-	if not RoundRegistry.is_round_active(round_id):
-		return
-	
-	# Validação anti-cheat (opcional)
-	if enable_anticheat and not _validate_player_movement(p_id, pos, vel):
-		var player = PlayerRegistry.get_player(p_id)
-		_log_debug("⚠ Movimento suspeito detectado: %s (ID: %d)" % [
-			player.get("name", "Unknown"), p_id
-		])
-		# Em produção, poderia kickar o jogador aqui
-		# _kick_player(p_id, "Movimento inválido detectado")
-		# return
-	
-	# Atualiza estado no servidor
-	var current_time = Time.get_ticks_msec()
-	player_states[p_id] = {
-		"pos": pos,
-		"rot": rot,
-		"vel": vel,
-		"running": running,
-		"jumping": jumping,
-		"timestamp": current_time
-	}
-	
-	# PROPAGA APENAS PARA JOGADORES DA MESMA RODADA (não usa sala!)
-	for active_player in p_round["players"]:
-		var other_id = active_player["id"]
-		if other_id != p_id:  # Não envia de volta para o remetente
-			# Verifica se o peer ainda está conectado antes de enviar RPC
-			if _is_peer_connected(other_id):
-				NetworkManager.rpc_id(other_id, "_client_player_state", p_id, pos, rot, vel, running, jumping)
-
 # Função de utilidade para verificar peers conectados (adicione se não existir)
 func _is_peer_connected(peer_id: int) -> bool:
 	"""Verifica se um peer ainda está conectado"""
@@ -746,6 +704,54 @@ func _is_peer_connected(peer_id: int) -> bool:
 	
 	var connected_peers = multiplayer.get_peers()
 	return peer_id in connected_peers
+
+# ===== SINCRONIZAÇÃO DE JOGADORES =====
+
+func _handle_player_animation_state(p_id: int, speed: float, attacking: bool, defending: bool,
+									 jumping: bool, aiming: bool, running: bool, block_attacking: bool, on_floor: bool):
+	"""Handler para estado de animação"""
+	
+	if not PlayerRegistry.is_player_registered(p_id):
+		return
+	
+	var p_round = RoundRegistry.get_round_by_player_id(p_id)
+	if p_round.is_empty():
+		return
+	
+	var round_id = p_round["round_id"]
+	if not RoundRegistry.is_round_active(round_id):
+		return
+	
+	# Propaga para jogadores da mesma rodada
+	for active_player in p_round["players"]:
+		var other_id = active_player["id"]
+		if other_id != p_id and _is_peer_connected(other_id):
+			NetworkManager.rpc_id(other_id, "_client_player_animation_state", 
+								  p_id, speed, attacking, defending, jumping, aiming, 
+								  running, block_attacking, on_floor)
+
+func _handle_player_action(p_id: int, action_type: String, anim_name: String):
+	"""Handler para ações do jogador (ataques, defesa)"""
+	
+	if not PlayerRegistry.is_player_registered(p_id):
+		return
+	
+	var p_round = RoundRegistry.get_round_by_player_id(p_id)
+	if p_round.is_empty():
+		return
+	
+	var round_id = p_round["round_id"]
+	if not RoundRegistry.is_round_active(round_id):
+		return
+	
+	# Log da ação (opcional)
+	_log_debug("Player %d executou ação: %s (%s)" % [p_id, action_type, anim_name])
+	
+	# Propaga para jogadores da mesma rodada
+	for active_player in p_round["players"]:
+		var other_id = active_player["id"]
+		if other_id != p_id and _is_peer_connected(other_id):
+			NetworkManager.rpc_id(other_id, "_client_player_action", p_id, action_type, anim_name)
 
 func _validate_player_movement(p_id: int, pos: Vector3, vel: Vector3) -> bool:
 	"""Valida se o movimento do jogador é razoável (anti-cheat)"""
@@ -785,6 +791,8 @@ func _validate_player_movement(p_id: int, pos: Vector3, vel: Vector3) -> bool:
 	
 	return true
 
+# ===== UTILITÁRIOS =====
+
 func _cleanup_player_state(peer_id: int):
 	"""Remove estado do jogador (chamado quando desconecta)"""
 	if player_states.has(peer_id):
@@ -807,8 +815,6 @@ func _kick_player(peer_id: int, reason: String):
 	# Desconecta após 1 segundo
 	await get_tree().create_timer(1.0).timeout
 	multiplayer.multiplayer_peer.disconnect_peer(peer_id)
-
-# ===== UTILITÁRIOS =====
 
 func _send_rooms_list_to_all():
 	"""Esta função atualiza a lista de salas(disponíveis/fora de jogo/não lotadas) 

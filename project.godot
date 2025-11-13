@@ -25,6 +25,7 @@ PlayerRegistry="*res://scripts/autoload/PlayerRegistry.gd"
 RoomRegistry="*res://scripts/autoload/RoomRegistry.gd"
 RoundRegistry="*res://scripts/autoload/RoundRegistry.gd"
 TestManager="*res://scripts/autoload/TestManager.gd"
+ItemPreloader="*res://scripts/autoload/ItemPreloader.gd"
 
 [display]
 
