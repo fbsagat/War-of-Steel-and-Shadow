@@ -46,7 +46,7 @@ func initialize_as_server():
 	_initialized = true
 	
 	_setup_global_timers()
-	_log_debug("RoundRegistry inicializado como SERVIDOR")
+	_log_debug("RoundRegistry inicializado")
 
 func initialize_as_client():
 	if _initialized:

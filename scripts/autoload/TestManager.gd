@@ -16,7 +16,7 @@ func initialize_as_server():
 	
 	_is_server = true
 	_initialized = true
-	_log_debug("TestManager inicializado como server")
+	_log_debug("TestManager inicializado")
 
 func initialize_as_client():
 	if _initialized:
@@ -25,7 +25,7 @@ func initialize_as_client():
 	# PlayerRegistry NÃO DEVE ser usado no cliente!
 	_is_server = false
 	_initialized = true
-	_log_debug("TestManager inicializado como cliente")
+	_log_debug("TestManager inicializado")
 
 # =============================================================================
 # FUNÇÕES DE TESTE / CRIA PARTIDA DE TESTE COM PEERS CONECTADOS REAIS (apenas para desenvolvimento)

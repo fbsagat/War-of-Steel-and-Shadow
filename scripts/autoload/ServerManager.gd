@@ -6,6 +6,7 @@ extends Node
 # ===== CONFIGURAÇÕES (Editáveis no Inspector) =====
 @export_category("Debug")
 @export var debug_mode: bool = true
+@export var debug_timer: bool = true
 @export var simulador_ativado: bool = false
 @export var simulador_players_qtd: int = 2
 
@@ -53,9 +54,6 @@ var server_map_manager: Node = null
 ## Rastreamento de estados dos jogadores
 var player_states: Dictionary = {}
 
-signal server_player_animation_state
-signal server_player_action
-
 # ===== FUNÇÕES DE INICIALIZAÇÃO =====
 
 func _ready():
@@ -65,7 +63,14 @@ func _ready():
 	if is_server:
 		_start_server()
 		_connect_round_signals()
-
+		
+		if debug_timer:
+			var debug_timer_ = Timer.new()
+			debug_timer_.wait_time = 5.0
+			debug_timer_.autostart = true
+			debug_timer_.timeout.connect(_print_player_states)
+			add_child(debug_timer_)
+		
 func _start_server():
 	"""Inicia o servidor dedicado"""
 	_log_debug("========================================")
@@ -101,8 +106,6 @@ func _connect_round_signals():
 	RoundRegistry.round_ending.connect(_on_round_ending)
 	RoundRegistry.all_players_disconnected.connect(_on_all_players_disconnected)
 	RoundRegistry.round_timeout.connect(_on_round_timeout)
-	self.connect("server_player_animation_state", Callable(self, "_handle_player_animation_state"))
-	self.connect("server_player_action", Callable(self, "_handle_player_action"))
 
 # ===== CALLBACKS DE CONEXÃO =====
 
@@ -567,20 +570,38 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary):
 	var player_scene = preload("res://scenes/system/player_warrior.tscn")
 	var player_instance = player_scene.instantiate()
 	
+	# ✅ CONFIGURAÇÃO CRÍTICA: Nome = ID
 	player_instance.name = str(player_data["id"])
 	player_instance.player_id = player_data["id"]
 	player_instance.player_name = player_data["name"]
 	
+	# ✅ IMPORTANTE: No servidor, nenhum player é "local"
+	player_instance.is_local_player = false
+	
+	# Adiciona à cena
 	get_tree().root.add_child(player_instance)
 	
+	# Posiciona
 	var spawn_pos = server_map_manager.get_spawn_position(spawn_data["spawn_index"])
 	player_instance.initialize(player_data["id"], player_data["name"], spawn_pos)
 	
 	# Registra no RoundRegistry
 	var p_round = RoundRegistry.get_round_by_player_id(player_instance.player_id)
-	RoundRegistry.register_spawned_player(p_round["round_id"], player_data["id"], player_instance)
+	if not p_round.is_empty():
+		RoundRegistry.register_spawned_player(p_round["round_id"], player_data["id"], player_instance)
 	
-	_log_debug("Player spawnado no servidor: %s (ID: %d)" % [player_data["name"], player_data["id"]])
+	# ✅ INICIALIZA ESTADO PARA VALIDAÇÃO
+	player_states[player_data["id"]] = {
+		"pos": spawn_pos,
+		"vel": Vector3.ZERO,
+		"timestamp": Time.get_ticks_msec()
+	}
+	
+	_log_debug("✅ Player spawnado no servidor: %s (ID: %d) em %s" % [
+		player_data["name"], 
+		player_data["id"],
+		spawn_pos
+	])
 
 # ===== CALLBACKS DE RODADA =====
 
@@ -707,57 +728,20 @@ func _is_peer_connected(peer_id: int) -> bool:
 
 # ===== SINCRONIZAÇÃO DE JOGADORES =====
 
-func _handle_player_animation_state(p_id: int, speed: float, attacking: bool, defending: bool,
-									 jumping: bool, aiming: bool, running: bool, block_attacking: bool, on_floor: bool):
-	"""Handler para estado de animação"""
-	
-	if not PlayerRegistry.is_player_registered(p_id):
-		return
-	
-	var p_round = RoundRegistry.get_round_by_player_id(p_id)
-	if p_round.is_empty():
-		return
-	
-	var round_id = p_round["round_id"]
-	if not RoundRegistry.is_round_active(round_id):
-		return
-	
-	# Propaga para jogadores da mesma rodada
-	for active_player in p_round["players"]:
-		var other_id = active_player["id"]
-		if other_id != p_id and _is_peer_connected(other_id):
-			NetworkManager.rpc_id(other_id, "_client_player_animation_state", 
-								  p_id, speed, attacking, defending, jumping, aiming, 
-								  running, block_attacking, on_floor)
-
-func _handle_player_action(p_id: int, action_type: String, anim_name: String):
-	"""Handler para ações do jogador (ataques, defesa)"""
-	
-	if not PlayerRegistry.is_player_registered(p_id):
-		return
-	
-	var p_round = RoundRegistry.get_round_by_player_id(p_id)
-	if p_round.is_empty():
-		return
-	
-	var round_id = p_round["round_id"]
-	if not RoundRegistry.is_round_active(round_id):
-		return
-	
-	# Log da ação (opcional)
-	_log_debug("Player %d executou ação: %s (%s)" % [p_id, action_type, anim_name])
-	
-	# Propaga para jogadores da mesma rodada
-	for active_player in p_round["players"]:
-		var other_id = active_player["id"]
-		if other_id != p_id and _is_peer_connected(other_id):
-			NetworkManager.rpc_id(other_id, "_client_player_action", p_id, action_type, anim_name)
-
 func _validate_player_movement(p_id: int, pos: Vector3, vel: Vector3) -> bool:
 	"""Valida se o movimento do jogador é razoável (anti-cheat)"""
 	
+	# Se anti-cheat desativado, sempre aceita
+	if not enable_anticheat:
+		return true
+	
 	# Se não tem estado anterior, aceita (primeira sincronização)
 	if not player_states.has(p_id):
+		player_states[p_id] = {
+			"pos": pos,
+			"vel": vel,
+			"timestamp": Time.get_ticks_msec()
+		}
 		return true
 	
 	var last_state = player_states[p_id]
@@ -771,23 +755,42 @@ func _validate_player_movement(p_id: int, pos: Vector3, vel: Vector3) -> bool:
 	# Calcula distância percorrida
 	var distance = pos.distance_to(last_state["pos"])
 	
-	# Velocidade máxima permitida com margem para lag e pulos
+	# ✅ VALIDAÇÃO 1: Distância máxima permitida
 	var max_distance = max_player_speed * time_diff * speed_tolerance
 	
-	# Validação da distância percorrida
 	if distance > max_distance:
-		_log_debug("⚠ Distância suspeita - Jogador %d: %.2fm em %.3fs (máx: %.2fm)" % [
-			p_id, distance, time_diff, max_distance
-		])
+		_log_debug("⚠️ ANTI-CHEAT: Distância suspeita")
+		_log_debug("  Player: %d" % p_id)
+		_log_debug("  Distância: %.2f m em %.3f s" % [distance, time_diff])
+		_log_debug("  Máximo: %.2f m" % max_distance)
+		_log_debug("  Velocidade: %.2f m/s (máx: %.2f m/s)" % [distance/time_diff, max_player_speed * speed_tolerance])
 		return false
 	
-	# Validação da velocidade reportada
+	# ✅ VALIDAÇÃO 2: Velocidade reportada vs. real
 	var reported_speed = vel.length()
+	var actual_speed = distance / time_diff if time_diff > 0 else 0
+	
 	if reported_speed > max_player_speed * speed_tolerance:
-		_log_debug("⚠ Velocidade suspeita - Jogador %d: %.2f m/s (máx: %.2f m/s)" % [
-			p_id, reported_speed, max_player_speed * speed_tolerance
-		])
+		_log_debug("⚠️ ANTI-CHEAT: Velocidade reportada suspeita")
+		_log_debug("  Player: %d" % p_id)
+		_log_debug("  Reportada: %.2f m/s" % reported_speed)
+		_log_debug("  Máximo: %.2f m/s" % (max_player_speed * speed_tolerance))
 		return false
+	
+	# Diferença muito grande entre velocidade real e reportada
+	if abs(actual_speed - reported_speed) > max_player_speed * 0.5:
+		_log_debug("⚠️ ANTI-CHEAT: Discrepância entre velocidade real e reportada")
+		_log_debug("  Player: %d" % p_id)
+		_log_debug("  Real: %.2f m/s" % actual_speed)
+		_log_debug("  Reportada: %.2f m/s" % reported_speed)
+		# Nota: Não retorna false aqui, pois pode ser lag legítimo
+	
+	# ✅ ATUALIZA ESTADO PARA PRÓXIMA VALIDAÇÃO
+	player_states[p_id] = {
+		"pos": pos,
+		"vel": vel,
+		"timestamp": current_time
+	}
 	
 	return true
 
@@ -797,11 +800,27 @@ func _cleanup_player_state(peer_id: int):
 	"""Remove estado do jogador (chamado quando desconecta)"""
 	if player_states.has(peer_id):
 		player_states.erase(peer_id)
-		_log_debug("Estado do jogador %d removido" % peer_id)
+		_log_debug("  Estado de validação removido")
+
 
 func _kick_player(peer_id: int, reason: String):
-	"""Kicka um jogador do servidor"""
-	_log_debug("⚠ Kickando jogador %d: %s" % [peer_id, reason])
+	"""Kicka um jogador do servidor (anti-cheat)"""
+	_log_debug("========================================")
+	_log_debug("⚠️ KICKANDO JOGADOR")
+	_log_debug("Peer ID: %d" % peer_id)
+	_log_debug("Razão: %s" % reason)
+	_log_debug("========================================")
+	
+	# Remove da rodada se estiver em uma
+	var p_round = RoundRegistry.get_round_by_player_id(peer_id)
+	if not p_round.is_empty():
+		var round_id = p_round["round_id"]
+		RoundRegistry.mark_player_disconnected(round_id, peer_id)
+		RoundRegistry.unregister_spawned_player(round_id, peer_id)
+		
+		var player_node = RoundRegistry.get_spawned_player(round_id, peer_id)
+		if player_node and player_node.is_inside_tree():
+			player_node.queue_free()
 	
 	# Remove da sala
 	var room = RoomRegistry.get_room_by_player(peer_id)
@@ -809,12 +828,15 @@ func _kick_player(peer_id: int, reason: String):
 		RoomRegistry.remove_player_from_room(room["id"], peer_id)
 		_notify_room_update(room["id"])
 	
-	# Envia notificação
-	NetworkManager.rpc_id(peer_id, "_client_error", "Você foi desconectado: " + reason)
+	# Envia notificação de kick
+	NetworkManager.rpc_id(peer_id, "_client_error", "🚫 Você foi desconectado: " + reason)
 	
 	# Desconecta após 1 segundo
 	await get_tree().create_timer(1.0).timeout
-	multiplayer.multiplayer_peer.disconnect_peer(peer_id)
+	
+	if multiplayer.has_multiplayer_peer() and _is_peer_connected(peer_id):
+		multiplayer.multiplayer_peer.disconnect_peer(peer_id)
+		_log_debug("✅ Player desconectado")
 
 func _send_rooms_list_to_all():
 	"""Esta função atualiza a lista de salas(disponíveis/fora de jogo/não lotadas) 
@@ -846,3 +868,17 @@ func _log_debug(message: String):
 	"""Imprime mensagem de debug se habilitado"""
 	if debug_mode:
 		print("[ServerManager] " + message)
+
+func _print_player_states():
+	"""Debug: Imprime estados de todos os players"""
+	_log_debug("========================================")
+	_log_debug("ESTADOS DOS JOGADORES NO SERVIDOR")
+	_log_debug("Total: %d" % player_states.size())
+	for p_id in player_states.keys():
+		var state = player_states[p_id]
+		_log_debug("  Player %d:" % p_id)
+		_log_debug("    Posição: %s" % str(state["pos"]))
+		_log_debug("    Velocidade: %s" % str(state["vel"]))
+		var age = (Time.get_ticks_msec() - state["timestamp"]) / 1000.0
+		_log_debug("    Última atualização: %.2f s atrás" % age)
+	_log_debug("========================================")

@@ -1,8 +1,16 @@
 extends Node
 
 var item_scenes: Dictionary = {}
+var debug_mode : bool = true
 
 func _ready():
+	var args = OS.get_cmdline_args()
+	var is_server = "--server" in args or "--dedicated" in args
+	
+	if is_server:
+		_log_debug("Sou o servidor - NÃO inicializando ItemPreloader")
+		return
+		
 	load_all_items()
 
 func load_all_items():
@@ -32,3 +40,8 @@ func load_all_items():
 
 func get_item_scene(item_name: String) -> PackedScene:
 	return item_scenes.get(item_name, null)
+
+func _log_debug(message: String):
+	"""Imprime mensagem de debug se habilitado"""
+	if debug_mode:
+		print("[GameManager]: " + message)
