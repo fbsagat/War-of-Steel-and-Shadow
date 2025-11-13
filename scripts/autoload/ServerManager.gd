@@ -6,7 +6,7 @@ extends Node
 # ===== CONFIGURAÇÕES (Editáveis no Inspector) =====
 @export_category("Debug")
 @export var debug_mode: bool = true
-@export var simulador_ativado: bool = true
+@export var simulador_ativado: bool = false
 @export var simulador_players_qtd: int = 2
 
 @export_category("Server Settings")
