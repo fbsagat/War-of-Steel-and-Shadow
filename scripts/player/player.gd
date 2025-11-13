@@ -35,12 +35,32 @@ extends CharacterBody3D
 @export var use_360_vision_as_backup: bool = true  # Ativa a visão 360° como fallback
 @export var update_interval: float = 0.5  # atualização a cada X segundos (0 = cada frame)
 
-# Configurações (exportáveis para ajuste no Inspector)
+# ===== CONFIGURAÇÕES DE REDE (no topo do arquivo) =====
+
 @export_category("Network Sync")
-@export var sync_rate: float = 0.05          # 20 updates/segundo
-@export var interpolation_speed: float = 8.0 # Suavidade da interpolação
+@export var sync_rate: float = 0.03          # 33 updates/segundo (melhor que 0.05)
+@export var interpolation_speed: float = 12.0 # Interpolação mais rápida
 @export var position_threshold: float = 0.01 # Distância mínima para sincronizar
 @export var rotation_threshold: float = 0.01 # Rotação mínima para sincronizar
+
+# Estados de sincronização
+var target_position: Vector3 = Vector3.ZERO
+var target_rotation_y: float = 0.0
+var sync_timer: float = 0.0
+
+# Estados de animação (para sincronização)
+var anim_sync_timer: float = 0.0
+@export var anim_sync_rate: float = 0.1  # 10 updates/segundo (menos que posição)
+var last_anim_state: Dictionary = {}
+
+# Identificação multiplayer
+var player_id: int = 0
+var player_name: String = ""
+var is_local_player: bool = false
+# Sincronização multiplayer
+var last_update_time: float = 0.0
+var anim_speed: float = 0.0
+var anim_blend_position: float = 0.0
 
 # Estados
 var is_attacking: bool = false
@@ -61,22 +81,6 @@ var last_simple_directions: Array = []
 var is_block_attacking: bool = false
 var sword_areas: Array[Area3D] = []
 const MAX_DIRECTION_HISTORY = 2
-
-# Estados de animação (para sincronização)
-var anim_speed: float = 0.0
-var anim_blend_position: float = 0.0
-var last_anim_state: Dictionary = {}
-var anim_sync_timer: float = 0.0
-@export var anim_sync_rate: float = 0.1  # 10 updates/segundo (menos que posição)
-
-# ===== SINCRONIZAÇÃO MULTPLAYER =====
-var target_position: Vector3 = Vector3.ZERO  # Para interpolação de remotos
-var target_rotation_y: float = 0.0           # Só rotação Y para personagem
-var last_update_time: float = 0.0
-var player_id: int = 0
-var player_name: String = ""
-var is_local_player: bool = false
-var sync_timer: float = 0.0
 
 # referências
 @onready var animation_player: AnimationPlayer = $AnimationPlayer
@@ -120,17 +124,26 @@ func _physics_process(delta):
 	var move_dir: Vector3
 	_handle_gravity(delta)
 	
-	# Só processa input se for o jogador local
+	# ✅ APENAS JOGADOR LOCAL PROCESSA INPUT
 	if is_local_player:
 		move_dir = _handle_movement_input(delta)
-		_send_state_to_network(delta)
 		move_and_slide()
+		
+		# ✅ ENVIA ESTADO PARA SERVIDOR
 		_send_state_to_server(delta)
+		
+		# ✅ ENVIA ANIMAÇÕES (menos frequente)
 		_send_animation_state(delta)
+		
+		# Debug inputs (apenas local)
 		handle_test_equip_inputs()
+	
+	# ✅ JOGADORES REMOTOS: APENAS INTERPOLAÇÃO
 	elif multiplayer.has_multiplayer_peer():
 		_interpolate_remote_player(delta)
-
+		move_dir = Vector3.ZERO  # Remotos não têm input próprio
+	
+	# Animações (local e remoto)
 	_handle_animations(move_dir)
 		
 func _process(delta: float) -> void:
@@ -163,35 +176,6 @@ func _process(delta: float) -> void:
 				if last_simple_directions.size() > MAX_DIRECTION_HISTORY:
 					last_simple_directions.pop_front()
 		# Diagonais NÃO entram no histórico (são usadas imediatamente no ataque)
-
-func set_as_local_player():
-	"""Configura este player como o jogador local"""
-	is_local_player = true
-
-func initialize(p_id: int, p_name: String, spawn_pos: Vector3):
-	"""Inicializa o player com dados multiplayer"""
-	player_id = p_id
-	player_name = p_name
-	
-	# Nome do nó = ID do player (importante para sincronização)
-	name = str(player_id)
-	
-	# Posiciona no spawn
-	global_position = spawn_pos
-	
-	# Atualiza label de nome
-	if name_label:
-		name_label.text = player_name
-		
-	if not is_local_player:
-		set_physics_process(false)
-	
-	# Define autoridade multiplayer
-	set_multiplayer_authority(player_id)
-	
-	# Ativa processos
-	set_physics_process(true)
-	set_process(true)
 
 func hitboxes_manager():
 	# Conecta todos os hitboxes de ataque
@@ -917,22 +901,6 @@ func _determine_attack_from_input() -> String:
 	return "1H_Melee_Attack_Slice_Horizontal"
 
 # Ações do player (Espadada)
-func action_sword_attack():
-	"""Versão modificada que sincroniza o ataque"""
-	hit_targets.clear()
-	
-	if current_item_right_id != 0 and not is_attacking:
-		is_attacking = true
-		current_attack_item_id = current_item_right_id
-		var anim_name = _determine_attack_from_input()
-		var anim_time: float = _execute_animation(anim_name,
-			"parameters/sword_attacks/transition_request",
-			"parameters/Attack/request")
-		_on_attack_timer_timeout(anim_time * 0.4, current_item_right_id)
-		
-		# ✅ SINCRONIZA ATAQUE PELA REDE (RPC confiável para ações importantes)
-		if is_local_player and NetworkManager:
-			NetworkManager.send_player_action(player_id, "attack", anim_name)
 
 # Função acionada pelas animações(AnimationPlayer), habilita hitbox na hora
 # exata do golpe; Pega current_item_right_id para saber qual foi a espada usada
@@ -958,50 +926,9 @@ func _on_hitbox_body_entered(body: Node, hitbox_area: Area3D) -> void:
 				print(body.name, " foi acertado por ", hitbox_area.get_parent().name)
 
 # Ações do player (Trancar visão no inimigo)
-func action_lock():
-	"""Versão modificada que sincroniza defesa"""
-	if current_item_left_id != 10 and is_local_player:
-		_strafe_mode(true, true)
-	if current_item_left_id != 0:
-		is_defending = true
-		animation_tree.set("parameters/Blocking/blend_amount", 1.0)
-		
-		# ✅ SINCRONIZA DEFESA
-		if is_local_player and NetworkManager:
-			NetworkManager.send_player_action(player_id, "defend_start", "")
-		
 func _on_block_attack_timer_timeout(duration):
 	await get_tree().create_timer(duration).timeout
 	is_block_attacking = false
-	
-func action_block_attack():
-	"""Versão modificada que sincroniza block attack"""
-	if not is_block_attacking and is_defending:
-		hit_targets.clear()
-		is_block_attacking = true
-		current_attack_item_id = current_item_left_id
-		var anim_time = _execute_animation("Block_Attack",
-				"parameters/sword_attacks/transition_request",
-				"parameters/Attack/request")
-		_on_block_attack_timer_timeout(anim_time * 0.85)
-		
-		# ✅ SINCRONIZA BLOCK ATTACK
-		if is_local_player and NetworkManager:
-			NetworkManager.send_player_action(player_id, "block_attack", "Block_Attack")
-			
-# Ações do player (Quando guardar o escudo)
-func action_stop_locking():
-	"""Versão modificada que sincroniza fim da defesa"""
-	if is_local_player:
-		_strafe_mode(false, true)
-	if current_item_left_id != 0:
-		is_defending = false
-		is_attacking = false
-		animation_tree.set("parameters/Blocking/blend_amount", 0.0)
-		
-		if is_local_player and NetworkManager:
-			NetworkManager.send_player_action(player_id, "defend_stop", "")
-
 # Ações do player (Pegar item)
 func action_pick_up_item():
 	var found = _get_nearby_items()
@@ -1103,17 +1030,33 @@ func handle_test_equip_inputs() -> void:
 			if item == null or (item is Dictionary and item.is_empty()):
 				push_error("handle_test_equip_inputs: item não encontrado para id %d." % resolved_id)
 				continue
-				
-# ===== SINCRONIZAÇÃO DE REDE =====
+
+# ===== UTILS =====
+func teleport_to(new_position: Vector3):
+	"""Teleporta o player (apenas servidor)"""
+	if multiplayer.is_server():
+		global_position = new_position
+
+# Usado por get_nearby_items
+func _sort_by_distance(a, b) -> int:
+	var da = a.global_transform.origin.distance_to(global_transform.origin)
+	var db = b.global_transform.origin.distance_to(global_transform.origin)
+	if da < db: return -1
+	if da > db: return 1
+	return 0
+
+# ===== FUNÇÕES DE REDE =====
+# ===== ENVIO DE ESTADO PARA SERVIDOR (APENAS LOCAL) =====
 
 func _send_state_to_server(delta: float):
 	"""Envia estado do jogador local para o servidor"""
+	
 	sync_timer += delta
 	
 	if sync_timer >= sync_rate:
 		sync_timer = 0.0
 		
-		# Verifica se houve mudança significativa
+		# ✅ Verifica se houve mudança significativa
 		var pos_changed = global_position.distance_to(target_position) > position_threshold
 		var rot_changed = abs(rotation.y - target_rotation_y) > rotation_threshold
 		
@@ -1122,7 +1065,7 @@ func _send_state_to_server(delta: float):
 			target_position = global_position
 			target_rotation_y = rotation.y
 			
-			# Envia via NetworkManager
+			# ✅ ENVIA VIA NETWORKMANAGER (UNRELIABLE = RÁPIDO)
 			if NetworkManager and NetworkManager.is_connected:
 				NetworkManager.send_player_state(
 					player_id,
@@ -1133,62 +1076,10 @@ func _send_state_to_server(delta: float):
 					is_jumping
 				)
 
-func _interpolate_remote_player(delta: float):
-	"""Interpola suavemente a posição de jogadores remotos"""
-	# Interpola posição
-	global_position = global_position.lerp(target_position, interpolation_speed * delta)
-	
-	# Interpola rotação (apenas Y)
-	rotation.y = lerp_angle(rotation.y, target_rotation_y, interpolation_speed * delta)
-	
-	# move_and_slide() para gravidade e colisão (opcional)
-	# Se quiser simular gravidade para remotos:
-	if not is_on_floor():
-		velocity.y -= ProjectSettings.get_setting("physics/3d/default_gravity") * delta
-	else:
-		velocity.y = 0
-	move_and_slide()
-
-# RPC: Recebe estado de outros jogadores
-@rpc("authority", "call_remote", "unreliable")
-func _client_receive_state(pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
-	if is_local_player:
-		return  # Ignora para si mesmo
-	
-	# Atualiza alvos para interpolação
-	target_position = pos
-	target_rotation_y = rot.y
-	
-	# Atualiza estados para animações (se usar)
-	is_running = running
-	is_jumping = jumping
-	velocity = vel
-
-func _send_state_to_network(delta: float):
-	"""Envia estado do player para o servidor"""
-	if not is_local_player:
-		return
-	
-	sync_timer += delta
-	
-	if sync_timer >= sync_rate:
-		sync_timer = 0.0
-		
-		# Envia estado via NetworkManager
-		if NetworkManager and NetworkManager.is_connected:
-			NetworkManager.send_player_state(
-				player_id,
-				global_position,
-				rotation,
-				velocity,
-				is_running,
-				is_jumping
-			)
+# ===== ENVIO DE ANIMAÇÕES (MENOS FREQUENTE) =====
 
 func _send_animation_state(delta: float):
-	"""Envia estado das animações para a rede (menos frequente que posição)"""
-	if not is_local_player:
-		return
+	"""Envia estado das animações para a rede"""
 	
 	anim_sync_timer += delta
 	
@@ -1207,7 +1098,7 @@ func _send_animation_state(delta: float):
 			"is_on_floor": is_on_floor()
 		}
 		
-		# Só envia se mudou
+		# ✅ Só envia se mudou
 		if _animation_state_changed(current_state):
 			last_anim_state = current_state.duplicate()
 			
@@ -1236,21 +1127,60 @@ func _animation_state_changed(new_state: Dictionary) -> bool:
 	
 	# Verifica mudança significativa na velocidade
 	var speed_diff = abs(new_state.get("speed", 0.0) - last_anim_state.get("speed", 0.0))
-	if speed_diff > 0.5:  # Threshold de 0.5 m/s
+	if speed_diff > 0.5:
 		return true
 	
 	return false
 
-# ===== NOVA FUNÇÃO: Recebe estado de animação de outros jogadores =====
+# ===== INTERPOLAÇÃO DE JOGADORES REMOTOS =====
+
+func _interpolate_remote_player(delta: float):
+	"""Interpola suavemente a posição de jogadores remotos"""
+	
+	# ✅ INTERPOLAÇÃO SUAVE (evita teleporte)
+	global_position = global_position.lerp(target_position, interpolation_speed * delta)
+	
+	# ✅ INTERPOLAÇÃO DE ROTAÇÃO (apenas Y)
+	rotation.y = lerp_angle(rotation.y, target_rotation_y, interpolation_speed * delta)
+	
+	# ✅ OPCIONAL: Simula gravidade para remotos
+	if not is_on_floor():
+		velocity.y -= gravity * delta
+	else:
+		velocity.y = 0
+	
+	# Move para aplicar física/colisões
+	move_and_slide()
+
+# ===== RECEPÇÃO DE ESTADO (REMOTOS) =====
+
+@rpc("authority", "call_remote", "unreliable")
+func _client_receive_state(pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
+	"""Recebe estado de outros jogadores e define alvos para interpolação"""
+	
+	if is_local_player:
+		return  # ✅ Ignora para si mesmo
+	
+	# ✅ ATUALIZA ALVOS PARA INTERPOLAÇÃO SUAVE
+	target_position = pos
+	target_rotation_y = rot.y
+	
+	# Atualiza estados para animações (opcional: pode vir de _client_receive_animation_state)
+	is_running = running
+	is_jumping = jumping
+	velocity = vel  # Para gravidade
+
+# ===== RECEPÇÃO DE ANIMAÇÕES (REMOTOS) =====
 
 @rpc("authority", "call_remote", "unreliable")
 func _client_receive_animation_state(speed: float, attacking: bool, defending: bool, jumping: bool, 
 									 aiming: bool, running: bool, block_attacking: bool, on_floor: bool):
 	"""Recebe e aplica estado de animação de outros jogadores"""
-	if is_local_player:
-		return  # Ignora para si mesmo
 	
-	# Atualiza estados
+	if is_local_player:
+		return  # ✅ Ignora para si mesmo
+	
+	# ✅ ATUALIZA ESTADOS
 	is_attacking = attacking
 	is_defending = defending
 	is_jumping = jumping
@@ -1258,7 +1188,7 @@ func _client_receive_animation_state(speed: float, attacking: bool, defending: b
 	is_running = running
 	is_block_attacking = block_attacking
 	
-	# Atualiza AnimationTree
+	# ✅ ATUALIZA ANIMATIONTREE
 	if animation_tree:
 		# Locomotion
 		animation_tree["parameters/Locomotion/blend_position"] = speed
@@ -1270,7 +1200,7 @@ func _client_receive_animation_state(speed: float, attacking: bool, defending: b
 			animation_tree.set("parameters/Blocking/blend_amount", 0.0)
 		
 		# Jump transitions
-		if jumping and on_floor == false:
+		if jumping and not on_floor:
 			animation_tree["parameters/final_transt/transition_request"] = "jump_start"
 		elif on_floor and not jumping:
 			animation_tree["parameters/final_transt/transition_request"] = "jump_land"
@@ -1282,11 +1212,14 @@ func _client_receive_animation_state(speed: float, attacking: bool, defending: b
 		else:
 			animation_tree["parameters/bobbing/add_amount"] = 0
 
+# ===== RECEPÇÃO DE AÇÕES (ATAQUES, DEFESA) =====
+
 @rpc("authority", "call_remote", "reliable")
 func _client_receive_action(action_type: String, anim_name: String):
 	"""Recebe e executa ações de outros jogadores (ataques, defesa, etc)"""
+	
 	if is_local_player:
-		return
+		return  # ✅ Ignora para si mesmo
 	
 	match action_type:
 		"attack":
@@ -1317,53 +1250,157 @@ func _client_receive_action(action_type: String, anim_name: String):
 			is_attacking = false
 			animation_tree.set("parameters/Blocking/blend_amount", 0.0)
 
-# ===== UTILS =====
-func teleport_to(new_position: Vector3):
-	"""Teleporta o player (apenas servidor)"""
-	if multiplayer.is_server():
-		global_position = new_position
+# ===== AÇÕES DO JOGADOR (CORRIGIDAS PARA SINCRONIZAR) =====
 
-# Define cor aleatória e configura NameLabel para multiplayer
-func setup_name_label():
-	if not $NameLabel:
+func action_sword_attack():
+	"""Versão modificada que sincroniza o ataque"""
+	
+	# ✅ APENAS JOGADOR LOCAL PODE ATACAR
+	if not is_local_player:
 		return
+	
+	hit_targets.clear()
+	
+	if current_item_right_id != 0 and not is_attacking:
+		is_attacking = true
+		current_attack_item_id = current_item_right_id
 		
-	$NameLabel.visible = true
+		var anim_name = _determine_attack_from_input()
+		var anim_time: float = _execute_animation(anim_name,
+			"parameters/sword_attacks/transition_request",
+			"parameters/Attack/request")
+		
+		_on_attack_timer_timeout(anim_time * 0.4, current_item_right_id)
+		
+		# ✅ SINCRONIZA ATAQUE PELA REDE (RELIABLE = GARANTIDO)
+		if NetworkManager and NetworkManager.is_connected:
+			NetworkManager.send_player_action(player_id, "attack", anim_name)
+
+func action_lock():
+	"""Versão modificada que sincroniza defesa"""
 	
-	# 1. DEFINE COR ALEATÓRIA (baseada no player_id para ser consistente)
-	var rng = RandomNumberGenerator.new()
-	rng.seed = player_id  # Mesmo ID = mesma cor sempre
-	var r = rng.randf_range(0.5, 1.0)  # Evita cores muito escuras
-	var g = rng.randf_range(0.5, 1.0)
-	var b = rng.randf_range(0.5, 1.0)
-	$NameLabel.modulate = Color(r, g, b)
+	# ✅ APENAS JOGADOR LOCAL
+	if not is_local_player:
+		return
 	
-	# 2. CONFIGURA VISIBILIDADE E BILLBOARD
-	$NameLabel.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	$NameLabel.pixel_size = 0.01  # Ajuste conforme sua cena
+	if current_item_left_id != 10:
+		_strafe_mode(true, true)
 	
-	# Esconde nome do jogador local (opcional)
-	if is_local_player:
-		$NameLabel.visible = false
-	else:
-		$NameLabel.visible = true
+	if current_item_left_id != 0:
+		is_defending = true
+		animation_tree.set("parameters/Blocking/blend_amount", 1.0)
+		
+		# ✅ SINCRONIZA DEFESA (RELIABLE)
+		if NetworkManager and NetworkManager.is_connected:
+			NetworkManager.send_player_action(player_id, "defend_start", "")
+
+func action_block_attack():
+	"""Versão modificada que sincroniza block attack"""
 	
+	# ✅ APENAS JOGADOR LOCAL
+	if not is_local_player:
+		return
+	
+	if not is_block_attacking and is_defending:
+		hit_targets.clear()
+		is_block_attacking = true
+		current_attack_item_id = current_item_left_id
+		
+		var anim_time = _execute_animation("Block_Attack",
+				"parameters/sword_attacks/transition_request",
+				"parameters/Attack/request")
+		
+		_on_block_attack_timer_timeout(anim_time * 0.85)
+		
+		# ✅ SINCRONIZA BLOCK ATTACK (RELIABLE)
+		if NetworkManager and NetworkManager.is_connected:
+			NetworkManager.send_player_action(player_id, "block_attack", "Block_Attack")
+
+func action_stop_locking():
+	"""Versão modificada que sincroniza fim da defesa"""
+	
+	# ✅ APENAS JOGADOR LOCAL
+	if not is_local_player:
+		return
+	
+	_strafe_mode(false, true)
+	
+	if current_item_left_id != 0:
+		is_defending = false
+		is_attacking = false
+		animation_tree.set("parameters/Blocking/blend_amount", 0.0)
+		
+		# ✅ SINCRONIZA FIM DE DEFESA (RELIABLE)
+		if NetworkManager and NetworkManager.is_connected:
+			NetworkManager.send_player_action(player_id, "defend_stop", "")
+
+# ===== INICIALIZAÇÃO MULTIPLAYER =====
+
+func set_as_local_player():
+	"""Configura este player como o jogador local"""
+	is_local_player = true
+	
+	# ✅ APENAS JOGADOR LOCAL PROCESSA INPUT
+	set_process_input(true)
+	set_process_unhandled_input(true)
+
+func initialize(p_id: int, p_name: String, spawn_pos: Vector3):
+	"""Inicializa o player com dados multiplayer"""
+	player_id = p_id
+	player_name = p_name
+	
+	# ✅ NOME DO NÓ = ID DO PLAYER (IMPORTANTE!)
+	name = str(player_id)
+	
+	# Posiciona no spawn
+	global_position = spawn_pos
+	target_position = spawn_pos  # ✅ Inicializa target também
+	
+	# Atualiza label de nome
+	if name_label:
+		name_label.text = player_name
+		setup_name_label()
+	
+	# ✅ CONFIGURAÇÃO DE PROCESSOS
+	if not is_local_player:
+		# Remotos não processam input
+		set_process_input(false)
+		set_process_unhandled_input(false)
+	
+	# Define autoridade multiplayer
+	set_multiplayer_authority(player_id)
+	
+	# Ativa processos
+	set_physics_process(true)
+	set_process(true)
+
+# ===== CONFIGURAÇÃO DE NOME LABEL =====
+
+func setup_name_label():
+	"""Configura label de nome para multiplayer"""
+	if not name_label:
+		return
+	
+	name_label.visible = true
+	
+	# ✅ COR BASEADA NO ID (consistente)
 	var colors = [
-	Color(1, 0, 0),    # Vermelho
-	Color(0, 1, 0),    # Verde  
-	Color(0, 0, 1),    # Azul
-	Color(1, 1, 0),    # Amarelo
-	Color(1, 0, 1),    # Magenta
-	Color(0, 1, 1)     # Ciano
-]
+		Color(1, 0.2, 0.2),    # Vermelho
+		Color(0.2, 1, 0.2),    # Verde  
+		Color(0.2, 0.2, 1),    # Azul
+		Color(1, 1, 0.2),      # Amarelo
+		Color(1, 0.2, 1),      # Magenta
+		Color(0.2, 1, 1)       # Ciano
+	]
 	var color_index = player_id % colors.size()
-	$NameLabel.modulate = colors[color_index]
-
-
-# Usado por get_nearby_items
-func _sort_by_distance(a, b) -> int:
-	var da = a.global_transform.origin.distance_to(global_transform.origin)
-	var db = b.global_transform.origin.distance_to(global_transform.origin)
-	if da < db: return -1
-	if da > db: return 1
-	return 0
+	name_label.modulate = colors[color_index]
+	
+	# ✅ CONFIGURAÇÃO DE BILLBOARD
+	name_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	name_label.pixel_size = 0.01
+	
+	# ✅ ESCONDE NOME DO JOGADOR LOCAL (OPCIONAL)
+	if is_local_player:
+		name_label.visible = false
+	else:
+		name_label.visible = true
