@@ -65,7 +65,8 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 	
 	# Passo 1: Garante que todos os peers conectados estão registrados no PlayerRegistry
 	var players: Array = []
-	for i in range(connected_peers.size()):
+	
+	for i in range(ServerManager.simulador_players_qtd):
 		var peer_id = connected_peers[i]
 		
 		# Verifica se o peer já está registrado

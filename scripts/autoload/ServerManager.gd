@@ -6,8 +6,8 @@ extends Node
 # ===== CONFIGURAÇÕES (Editáveis no Inspector) =====
 @export_category("Debug")
 @export var debug_mode: bool = true
-@export var debug_timer: bool = true
-@export var simulador_ativado: bool = false
+@export var debug_timer: bool = false
+@export var simulador_ativado: bool = true
 @export var simulador_players_qtd: int = 2
 
 @export_category("Server Settings")
@@ -359,6 +359,27 @@ func _handle_leave_room(peer_id: int):
 	RoomRegistry.remove_player_from_room(room["id"], peer_id)
 	
 	_notify_room_update(room["id"])
+
+func _send_rooms_list_to_all():
+	"""Esta função atualiza a lista de salas(disponíveis/fora de jogo/não lotadas) 
+	para todos os players que não estão em partida"""
+
+	var all_out_rooms = RoomRegistry.get_in_game_rooms_list(true)
+	var all_out_play_players = PlayerRegistry.get_in_game_players_list(true)
+	for peer_id in all_out_play_players:
+		if peer_id != 1:
+			NetworkManager.rpc_id(peer_id, "_client_receive_rooms_list_update", all_out_rooms)
+
+func _notify_room_update(room_id: int):
+	"""Notifica todos os players de uma sala sobre atualização"""
+	var room = RoomRegistry.get_room(room_id)
+	if room.is_empty():
+		return
+	
+	_log_debug("Notificando atualização da sala: %s" % room["name"])
+	
+	for player in room["players"]:
+		NetworkManager.rpc_id(player["id"], "_client_room_updated", room)
 
 func _handle_close_room(peer_id: int):
 	"""Fecha uma sala (apenas host pode fazer isso)"""
@@ -794,6 +815,42 @@ func _validate_player_movement(p_id: int, pos: Vector3, vel: Vector3) -> bool:
 	
 	return true
 
+# Recebe pedidos dos clientes, valida e broadcast para todos (ou para alvos específicos)
+@rpc("any_peer", "call_remote", "reliable")
+func server_validate_equip_item(requesting_player_id: int, item_id: int):
+	"""Servidor recebe pedido, valida e redistribui se ok"""
+	
+	# fazer outras verificações futuramente
+	
+	var items_size : int = ItemPreloader.item_paths.size()
+	
+	if item_id <= 0 or item_id > items_size:
+		push_warning("O id de item recebido é inválido: %d" % item_id)
+		return
+
+	_log_debug("🔵 Servidor: Redistribuindo equipamento de um player para todos os seus remotos")
+
+# ✅ ENVIA PARA TODOS OS CLIENTES
+	for peer_id in multiplayer.get_peers():
+		NetworkManager.rpc_id(peer_id, "apply_visual_action", requesting_player_id, item_id)
+
+@rpc("any_peer", "call_remote", "reliable")
+func server_validate_drop_item(requesting_player_id: int, item_id: int):
+	"""Servidor recebe pedido, valida e redistribui se ok"""
+	# fazer outras verificações futuramente
+	
+	var items_size : int = ItemPreloader.item_paths.size()
+	
+	if item_id <= 0 or item_id > items_size:
+		push_warning("O id de item recebido é inválido: %d" % item_id)
+		return
+
+	_log_debug("🔵 Servidor: Redistribuindo drop de um player para todos os seus remotos")
+	
+# ✅ ENVIA PARA TODOS OS CLIENTES
+	for peer_id in multiplayer.get_peers():
+		NetworkManager.rpc_id(peer_id, "apply_drop_action", requesting_player_id, item_id)
+
 # ===== UTILITÁRIOS =====
 
 func _cleanup_player_state(peer_id: int):
@@ -837,27 +894,6 @@ func _kick_player(peer_id: int, reason: String):
 	if multiplayer.has_multiplayer_peer() and _is_peer_connected(peer_id):
 		multiplayer.multiplayer_peer.disconnect_peer(peer_id)
 		_log_debug("✅ Player desconectado")
-
-func _send_rooms_list_to_all():
-	"""Esta função atualiza a lista de salas(disponíveis/fora de jogo/não lotadas) 
-	para todos os players que não estão em partida"""
-
-	var all_out_rooms = RoomRegistry.get_in_game_rooms_list(true)
-	var all_out_play_players = PlayerRegistry.get_in_game_players_list(true)
-	for peer_id in all_out_play_players:
-		if peer_id != 1:
-			NetworkManager.rpc_id(peer_id, "_client_receive_rooms_list_update", all_out_rooms)
-
-func _notify_room_update(room_id: int):
-	"""Notifica todos os players de uma sala sobre atualização"""
-	var room = RoomRegistry.get_room(room_id)
-	if room.is_empty():
-		return
-	
-	_log_debug("Notificando atualização da sala: %s" % room["name"])
-	
-	for player in room["players"]:
-		NetworkManager.rpc_id(player["id"], "_client_room_updated", room)
 
 func _send_error(peer_id: int, message: String):
 	"""Envia mensagem de erro para um cliente"""

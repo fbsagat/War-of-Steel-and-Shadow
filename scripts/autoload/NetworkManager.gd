@@ -419,6 +419,56 @@ func _client_remove_player(peer_id: int):
 
 # ===== SINCRONIZAÇÃO DE JOGADORES (POSIÇÃO/ROTAÇÃO) =====
 
+func request_equip_item(player_id: int, item_id: int) -> void:
+	"""Chama RPC no servidor para pedir para equipar um item"""
+	rpc_id(1, "_server_equip_player_item", player_id, item_id)
+
+func request_drop_item(player_id, item_id):
+	print("player_id, item_id: ", player_id, item_id)
+	rpc_id(1, "_server_drop_player_item", player_id, item_id)
+
+@rpc("any_peer", "call_remote", "unreliable")
+func _server_drop_player_item(player_id, item_id):
+	ServerManager.server_validate_drop_item(player_id, item_id)
+	#ObjectSpawner.spawn_object()
+
+@rpc("any_peer", "call_remote", "unreliable")
+func _server_equip_player_item(player_id, item_id):
+	ServerManager.server_validate_equip_item(player_id, item_id)
+
+@rpc("authority", "call_remote", "reliable")
+func apply_visual_action(player_id: int, change_data: int):
+	"""Cliente recebe comando de equipamento"""
+	
+	if multiplayer.is_server():
+		return
+	
+	_log_debug("📥 Recebendo equipamento: Player %d, Item %d" % [player_id, change_data])
+	
+	# ✅ ENCONTRA O PLAYER E EXECUTA
+	var player_node = get_tree().root.get_node_or_null(str(player_id))
+	if player_node and player_node.has_method("apply_visual_items_on_remote"):
+		player_node.apply_visual_items_on_remote(player_node, change_data)
+
+@rpc("authority", "call_remote", "reliable")
+func apply_drop_action(player_id: int, change_data: int):
+	"""Cliente recebe comando de drop"""
+	
+	if multiplayer.is_server():
+		return
+	
+	_log_debug("📥 Dropando equipamento: Player %d, Item %d" % [player_id, change_data])
+	
+	# ✅ ENCONTRA O PLAYER E EXECUTA
+	var player_node = get_tree().root.get_node_or_null(str(player_id))
+	if player_node and player_node.has_method("execute_item_drop"):
+		player_node.execute_item_drop(player_node, change_data)
+
+#rpc("apply_visual_action", player_id, change_data)
+# Enviar para todos e todos tratam a informação /\
+# Enviar para um player específico \/
+#NetworkManager.rpc_id(requesting_player_id, "rpc_apply_visual_action", target_change)
+
 func send_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
 	"""Envia estado do jogador para o servidor (UNRELIABLE - rápido)"""
 	if not is_connected:
