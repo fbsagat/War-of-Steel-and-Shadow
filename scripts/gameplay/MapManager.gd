@@ -83,7 +83,7 @@ func load_map(map_scene_path: String, settings: Dictionary = {}):
 	if current_map.has_method("configure"):
 		current_map.configure(settings)
 	
-	_log_debug("✓ Mapa carregado com sucesso: %d spawn points encontrados" % spawn_points.size())
+	_log_debug(" Mapa carregado com sucesso: %d spawn points encontrados" % spawn_points.size())
 	
 	map_loaded.emit(current_map)
 	return true
@@ -105,7 +105,7 @@ func unload_map():
 	map_settings = {}
 	
 	map_unloaded.emit()
-	_log_debug("✓ Mapa descarregado")
+	_log_debug(" Mapa descarregado")
 
 # ===== GERENCIAMENTO DE SPAWN POINTS =====
 
@@ -203,4 +203,4 @@ func find_map_nodes_in_group(group_name: String) -> Array:
 
 func _log_debug(message: String):
 	if debug_mode:
-		print("[MapManager] " + message)
+		print("[SERVER][MapManager] " + message)

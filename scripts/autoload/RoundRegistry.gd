@@ -135,7 +135,7 @@ func create_round(room_id: int, room_name: String, players: Array, settings: Dic
 	# Armazena rodada
 	rounds[round_id] = round_data
 
-	_log_debug("✓ Rodada criada: ID %d, Sala '%s', %d players" % [round_id, room_name, players.size()])
+	_log_debug(" Rodada criada: ID %d, Sala '%s', %d players" % [round_id, room_name, players.size()])
 	round_created.emit(round_data.duplicate())
 	
 	return round_data.duplicate()
@@ -225,7 +225,7 @@ func complete_round_end(round_id: int) -> Dictionary:
 		return {}
 
 	var round_data = rounds[round_id].duplicate()
-	_log_debug("✓ Rodada %d FINALIZADA" % round_data["round_id"])
+	_log_debug(" Rodada %d FINALIZADA" % round_data["round_id"])
 	round_ended.emit(round_data)
 	
 	# Limpa rodada
@@ -427,4 +427,4 @@ func _log_debug(message: String):
 		return
 
 	var prefix = "[SERVER]" if _is_server else "[CLIENT]"
-	print("[RoundRegistry] %s %s" % [prefix, message])
+	print("%s[RoundRegistry] %s" % [prefix, message])

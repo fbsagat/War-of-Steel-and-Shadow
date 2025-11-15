@@ -91,7 +91,7 @@ func set_as_active():
 	if camera:
 		camera.current = true
 	if debug:
-		print("[Camera] ✓ Câmera ativada e mouse capturado")
+		print("[Camera]  Câmera ativada e mouse capturado")
 
 func _initialize_target_rotation():
 	"""Inicializa a rotação alvo com base na rotação atual do alvo."""

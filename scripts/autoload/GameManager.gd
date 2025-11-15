@@ -21,6 +21,8 @@ var player_name: String = ""
 var current_room: Dictionary = {}
 var connection_start_time: float = 0.0
 var is_connecting: bool = false
+var _is_server: bool = false
+
 
 ## Referências da rodada atual
 var client_map_manager: Node = null
@@ -47,15 +49,16 @@ signal returned_to_room(room_data: Dictionary)
 
 func _ready():	# Verifica se é servidor
 	var args = OS.get_cmdline_args()
-	var is_server = "--server" in args or "--dedicated" in args
+	_is_server = "--server" in args or "--dedicated" in args
 	
-	if is_server:
-		_log_debug("Sou o servidor - NÃO inicializando GameManager")
+	if _is_server:
+		_log_debug("Servidor - NÃO inicializando GameManager")
 		return
 	
 	if TestManager:
 		TestManager.initialize_as_client()
-	_log_debug("Sou cliente - Inicializando GameManager")
+		
+	_log_debug("Inicializando GameManager como cliente")
 	
 	# Conecta sinais de rede
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
@@ -125,7 +128,7 @@ func _on_connected_to_server():
 	is_connected_to_server = true
 	local_peer_id = multiplayer.get_unique_id()
 	
-	_log_debug("✓ Cliente conectado ao servidor com sucesso! Peer ID: %d" % local_peer_id)
+	_log_debug(" Cliente conectado ao servidor com sucesso! Peer ID: %d" % local_peer_id)
 	
 	if main_menu:
 		main_menu.show_name_input_menu()
@@ -139,12 +142,12 @@ func _on_connected_to_server():
 func _on_connection_failed():
 	"""Callback quando falha ao conectar"""
 	is_connecting = false
-	_log_debug("✗ Falha ao conectar ao servidor")
+	_log_debug("Falha ao conectar ao servidor")
 	_handle_connection_error("Não foi possível conectar ao servidor")
 
 func _on_server_disconnected():
 	"""Callback quando o servidor desconecta"""
-	_log_debug("✗ Desconectado do servidor")
+	_log_debug("Desconectado do servidor")
 	is_connected_to_server = false
 	local_peer_id = 0
 	current_room = {}
@@ -188,7 +191,7 @@ func set_player_name(p_name: String):
 func _client_name_accepted(accepted_name: String):
 	"""Callback quando o nome é aceito pelo servidor"""
 	player_name = accepted_name
-	_log_debug("✓ Nome aceito pelo servidor: " + player_name)
+	_log_debug(" Nome aceito pelo servidor: " + player_name)
 	
 	if main_menu:
 		main_menu.show_main_menu()
@@ -198,7 +201,7 @@ func _client_name_accepted(accepted_name: String):
 
 func _client_name_rejected(reason: String):
 	"""Callback quando o nome é rejeitado"""
-	_log_debug("✗ Nome rejeitado: " + reason)
+	_log_debug("Nome rejeitado: " + reason)
 	
 	if main_menu:
 		main_menu.show_name_input_menu()
@@ -286,7 +289,7 @@ func create_room(room_name: String, password: String = ""):
 func _client_room_created(room_data: Dictionary):
 	"""Callback quando sala é criada com sucesso"""
 	current_room = room_data
-	_log_debug("✓ Sala criada com sucesso: %s (ID: %d)" % [room_data["name"], room_data["id"]])
+	_log_debug(" Sala criada com sucesso: %s (ID: %d)" % [room_data["name"], room_data["id"]])
 	
 	if main_menu:
 		main_menu.show_room_menu(room_data)
@@ -330,7 +333,7 @@ func join_room_by_name(room_name: String, password: String = ""):
 func _client_joined_room(room_data: Dictionary):
 	"""Callback quando entra em uma sala com sucesso"""
 	current_room = room_data
-	_log_debug("✓ Entrou na sala com sucesso: %s (ID: %d)" % [room_data["name"], room_data["id"]])
+	_log_debug(" Entrou na sala com sucesso: %s (ID: %d)" % [room_data["name"], room_data["id"]])
 	
 	if main_menu:
 		main_menu.show_room_menu(room_data)
@@ -412,7 +415,7 @@ func start_round(round_settings: Dictionary = {}):
 
 func _client_round_started(match_data: Dictionary):
 	"""Callback quando a rodada inicia"""
-	_log_debug("✓ Rodada iniciada pelo servidor!")
+	_log_debug(" Rodada iniciada pelo servidor!")
 	_start_round_locally(match_data)
 
 func _client_round_ended(end_data: Dictionary):
@@ -457,7 +460,7 @@ func _start_round_locally(match_data: Dictionary):
 	
 	for player in match_data["players"]:
 		var is_host = " [HOST]" if player["is_host"] else ""
-		var is_me = " [VOCÊ]" if player["id"] == local_peer_id else ""
+		var is_me = " [GUEST]" if player["id"] == local_peer_id else ""
 		_log_debug("  - %s (ID: %d)%s%s" % [player["name"], player["id"], is_host, is_me])
 	
 	_log_debug("========================================")
@@ -492,7 +495,7 @@ func _start_round_locally(match_data: Dictionary):
 	
 	round_started.emit()
 	
-	_log_debug("✓ Rodada carregada no cliente")
+	_log_debug(" Rodada carregada no cliente")
 
 func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bool, _match_data: Dictionary):
 	"""Spawna players para cada cliente, cada cliente recebe X execuções,
@@ -544,11 +547,11 @@ func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bo
 		player_instance.set_as_local_player()
 		camera_instance.set_as_active()
 		local_player = player_instance
-		_log_debug("✓ Jogador local spawnado: %s" % player_name_)
+		_log_debug(" Jogador local spawnado: %s" % player_name_)
 	else:
 		# Jogador remoto: NÃO tem câmera atribuída
 		player_instance.camera_controller = null
-		_log_debug("✓ Jogador remoto spawnado: %s" % player_name_)
+		_log_debug(" Jogador remoto spawnado: %s" % player_name_)
 
 func _client_return_to_room(room_data: Dictionary):
 	"""Callback quando deve retornar à sala"""
@@ -575,7 +578,7 @@ func _client_return_to_room(room_data: Dictionary):
 	
 	returned_to_room.emit(room_data)
 	
-	_log_debug("✓ De volta à sala")
+	_log_debug(" De volta à sala")
 
 func _client_remove_player(peer_id : int):
 	"""Limpa o nó do cliente que se desconectou, esta função é para os outros 
@@ -605,13 +608,13 @@ func _cleanup_local_round():
 	# Limpa ObjectSpawner
 	ObjectSpawner.cleanup()
 	
-	_log_debug("✓ Limpeza completa")
+	_log_debug(" Limpeza completa")
 
 # ===== TRATAMENTO DE ERROS =====
 
 func _client_error(error_message: String):
 	"""Callback quando recebe erro do servidor"""
-	_log_debug("✗ Erro recebido do servidor: " + error_message)
+	_log_debug("Erro recebido do servidor: " + error_message)
 	_show_error(error_message)
 	error_occurred.emit(error_message)
 
@@ -639,6 +642,6 @@ func set_main_menu(menu: Control):
 	_log_debug("UI principal registrada")
 
 func _log_debug(message: String):
-	"""Imprime mensagem de debug se habilitado"""
 	if debug_mode:
-		print("[GameManager]: " + message)
+		var prefix = "[SERVER]" if _is_server else "[CLIENT]"
+		print("%s[GameManager] %s" % [prefix, message])

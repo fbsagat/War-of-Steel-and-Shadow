@@ -73,8 +73,10 @@ func _ready():
 		
 func _start_server():
 	"""Inicia o servidor dedicado"""
+	var timestamp = Time.get_datetime_string_from_system()
 	_log_debug("========================================")
 	_log_debug("INICIANDO SERVIDOR DEDICADO")
+	_log_debug(timestamp)
 	_log_debug("Porta: %d" % server_port)
 	_log_debug("Máximo de clientes: %d" % max_clients)
 	_log_debug("========================================")
@@ -83,7 +85,7 @@ func _start_server():
 	var error = peer.create_server(server_port, max_clients)
 	
 	if error != OK:
-		_log_debug("✗ ERRO ao criar servidor: " + str(error))
+		_log_debug("ERRO ao criar servidor: " + str(error))
 		return
 	
 	multiplayer.multiplayer_peer = peer
@@ -99,7 +101,7 @@ func _start_server():
 	if TestManager:
 		TestManager.initialize_as_server()
 	
-	_log_debug("✓ Servidor inicializado com sucesso!")
+	_log_debug(" Servidor inicializado com sucesso!")
 
 func _connect_round_signals():
 	"""Conecta sinais do RoundRegistry"""
@@ -111,14 +113,14 @@ func _connect_round_signals():
 
 func _on_peer_connected(peer_id: int):
 	"""Callback quando um cliente conecta"""
-	_log_debug("✓ Cliente conectado: Peer ID %d" % peer_id)
+	_log_debug(" Cliente conectado: Peer ID %d" % peer_id)
 	PlayerRegistry.add_peer(peer_id)
 	if simulador_ativado and (multiplayer.get_peers().size() >= simulador_players_qtd) and TestManager:
 		TestManager.criar_partida_teste()
 
 func _on_peer_disconnected(peer_id: int):
 	"""Callback quando um cliente desconecta"""
-	_log_debug("✗ Cliente desconectado: Peer ID %d" % peer_id)
+	_log_debug("Cliente desconectado: Peer ID %d" % peer_id)
 	
 	# PRIMEIRO: Remove da rodada (atualiza lista de players imediatamente)
 	var p_round = RoundRegistry.get_round_by_player_id(peer_id)
@@ -146,7 +148,8 @@ func _on_peer_disconnected(peer_id: int):
 	var player_data = PlayerRegistry.get_player(peer_id)
 	var room = RoomRegistry.get_room_by_player(peer_id)
 	
-	if player_data and player_data.has("name"):
+	if player_data and player_data["name"] != "":
+		print('teeeemp: ', player_data["name"])
 		_log_debug("  Jogador: %s" % player_data["name"])
 		
 		if room and not room.is_empty():
@@ -172,17 +175,17 @@ func _handle_register_player(peer_id: int, player_name: String):
 	
 	var validation_result = _validate_player_name(player_name)
 	if validation_result != "":
-		_log_debug("✗ Nome rejeitado: " + validation_result)
+		_log_debug("Nome rejeitado: " + validation_result)
 		NetworkManager.rpc_id(peer_id, "_client_name_rejected", validation_result)
 		return
 	
 	var success = PlayerRegistry.register_player(peer_id, player_name)
 	
 	if success:
-		_log_debug("✓ Jogador registrado: %s (Peer ID: %d)" % [player_name, peer_id])
+		_log_debug(" Jogador registrado: %s (Peer ID: %d)" % [player_name, peer_id])
 		NetworkManager.rpc_id(peer_id, "_client_name_accepted", player_name)
 	else:
-		_log_debug("✗ Falha ao registrar jogador")
+		_log_debug("Falha ao registrar jogador")
 		NetworkManager.rpc_id(peer_id, "_client_name_rejected", "Erro ao registrar no servidor")
 
 func _validate_player_name(player_name: String) -> String:
@@ -251,7 +254,7 @@ func _handle_create_room(peer_id: int, room_name: String, password: String):
 	
 	var room_data = RoomRegistry.create_room(room_id, room_name, password, peer_id)
 	
-	_log_debug("✓ Sala criada: %s (ID: %d, Host: %s)" % [room_name, room_id, player["name"]])
+	_log_debug(" Sala criada: %s (ID: %d, Host: %s)" % [room_name, room_id, player["name"]])
 	
 	_send_rooms_list_to_all()
 	
@@ -301,7 +304,7 @@ func _handle_join_room(peer_id: int, room_id: int, password: String):
 		_send_error(peer_id, "Não foi possível entrar na sala (pode estar cheia)")
 		return
 	
-	_log_debug("✓ Jogador %s entrou na sala: %s" % [player["name"], room["name"]])
+	_log_debug(" Jogador %s entrou na sala: %s" % [player["name"], room["name"]])
 	
 	var room_data = RoomRegistry.get_room(room_id)
 	NetworkManager.rpc_id(peer_id, "_client_joined_room", room_data)
@@ -337,7 +340,7 @@ func _handle_join_room_by_name(peer_id: int, room_name: String, password: String
 		_send_error(peer_id, "Não foi possível entrar na sala (pode estar cheia)")
 		return
 	
-	_log_debug("✓ Jogador %s entrou na sala: %s" % [player["name"], room["name"]])
+	_log_debug(" Jogador %s entrou na sala: %s" % [player["name"], room["name"]])
 	
 	var room_data = RoomRegistry.get_room(room["id"])
 	NetworkManager.rpc_id(peer_id, "_client_joined_room", room_data)
@@ -584,23 +587,29 @@ func _server_instantiate_round(match_data: Dictionary):
 		var spawn_data = match_data["spawn_data"][player_data["id"]]
 		_spawn_player_on_server(player_data, spawn_data)
 	
-	_log_debug("✓ Rodada instanciada no servidor")
+	_log_debug(" Rodada instanciada no servidor")
 
 func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary):
 	"""Spawna um jogador no servidor (versão autoritativa)"""
 	var player_scene = preload("res://scenes/system/player_warrior.tscn")
 	var player_instance = player_scene.instantiate()
 	
-	# ✅ CONFIGURAÇÃO CRÍTICA: Nome = ID
+	# CONFIGURAÇÃO CRÍTICA: Nome = ID
 	player_instance.name = str(player_data["id"])
 	player_instance.player_id = player_data["id"]
 	player_instance.player_name = player_data["name"]
 	
-	# ✅ IMPORTANTE: No servidor, nenhum player é "local"
+	# IMPORTANTE: No servidor, nenhum player é "local"
 	player_instance.is_local_player = false
 	
 	# Adiciona à cena
 	get_tree().root.add_child(player_instance)
+	
+	# Salva o caminho no registro
+	# Ajustar isso depois que conseguir resolver no TestManager
+	# Depois disso ir resolver o respaw(tem q respawnar na frente do player)
+	PlayerRegistry.register_player_node(player_data["id"], player_instance)
+	print(PlayerRegistry.get_player(player_data["id"]).node_path)
 	
 	# Posiciona
 	var spawn_pos = server_map_manager.get_spawn_position(spawn_data["spawn_index"])
@@ -611,14 +620,14 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary):
 	if not p_round.is_empty():
 		RoundRegistry.register_spawned_player(p_round["round_id"], player_data["id"], player_instance)
 	
-	# ✅ INICIALIZA ESTADO PARA VALIDAÇÃO
+	# INICIALIZA ESTADO PARA VALIDAÇÃO
 	player_states[player_data["id"]] = {
 		"pos": spawn_pos,
 		"vel": Vector3.ZERO,
 		"timestamp": Time.get_ticks_msec()
 	}
 	
-	_log_debug("✅ Player spawnado no servidor: %s (ID: %d) em %s" % [
+	_log_debug("Player spawnado no servidor: %s (ID: %d) em %s" % [
 		player_data["name"], 
 		player_data["id"],
 		spawn_pos
@@ -736,7 +745,7 @@ func _cleanup_round_objects():
 	# Limpa objetos spawnados
 	ObjectSpawner.cleanup()
 	
-	_log_debug("✓ Limpeza completa")
+	_log_debug(" Limpeza completa")
 
 # Função de utilidade para verificar peers conectados (adicione se não existir)
 func _is_peer_connected(peer_id: int) -> bool:
@@ -776,7 +785,7 @@ func _validate_player_movement(p_id: int, pos: Vector3, vel: Vector3) -> bool:
 	# Calcula distância percorrida
 	var distance = pos.distance_to(last_state["pos"])
 	
-	# ✅ VALIDAÇÃO 1: Distância máxima permitida
+	# VALIDAÇÃO 1: Distância máxima permitida
 	var max_distance = max_player_speed * time_diff * speed_tolerance
 	
 	if distance > max_distance:
@@ -787,7 +796,7 @@ func _validate_player_movement(p_id: int, pos: Vector3, vel: Vector3) -> bool:
 		_log_debug("  Velocidade: %.2f m/s (máx: %.2f m/s)" % [distance/time_diff, max_player_speed * speed_tolerance])
 		return false
 	
-	# ✅ VALIDAÇÃO 2: Velocidade reportada vs. real
+	# VALIDAÇÃO 2: Velocidade reportada vs. real
 	var reported_speed = vel.length()
 	var actual_speed = distance / time_diff if time_diff > 0 else 0
 	
@@ -806,7 +815,7 @@ func _validate_player_movement(p_id: int, pos: Vector3, vel: Vector3) -> bool:
 		_log_debug("  Reportada: %.2f m/s" % reported_speed)
 		# Nota: Não retorna false aqui, pois pode ser lag legítimo
 	
-	# ✅ ATUALIZA ESTADO PARA PRÓXIMA VALIDAÇÃO
+	# ATUALIZA ESTADO PARA PRÓXIMA VALIDAÇÃO
 	player_states[p_id] = {
 		"pos": pos,
 		"vel": vel,
@@ -822,32 +831,43 @@ func server_validate_equip_item(requesting_player_id: int, item_id: int):
 	
 	# fazer outras verificações futuramente
 	
-	var items_size : int = ItemPreloader.item_paths.size()
+	var items_size : int = ItemDatabase.get_item_count()
 	
 	if item_id <= 0 or item_id > items_size:
 		push_warning("O id de item recebido é inválido: %d" % item_id)
 		return
 
-	_log_debug("🔵 Servidor: Redistribuindo equipamento de um player para todos os seus remotos")
-
-# ✅ ENVIA PARA TODOS OS CLIENTES
+# ENVIA PARA TODOS OS CLIENTES
 	for peer_id in multiplayer.get_peers():
 		NetworkManager.rpc_id(peer_id, "apply_visual_action", requesting_player_id, item_id)
 
+func get_position_front_and_above_from_state(pos: Vector3, rot: Vector3, dist: float = -1.1, height: float = 1.6) -> Vector3:
+	# Cria uma Basis a partir dos ângulos de Euler (em radianos)
+	var basis = Basis.from_euler(rot)
+	# Direção "frente" no Godot geralmente é -Z local
+	var forward: Vector3 = -basis.z
+	# Calcula o ponto deslocado
+	return pos + forward * dist + Vector3.UP * height
+
 @rpc("any_peer", "call_remote", "reliable")
-func server_validate_drop_item(requesting_player_id: int, item_id: int):
+func server_validate_drop_item(requesting_player_id: int, item_id):
 	"""Servidor recebe pedido, valida e redistribui se ok"""
 	# fazer outras verificações futuramente
-	
-	var items_size : int = ItemPreloader.item_paths.size()
+
+	var items_size : int = ItemDatabase.get_item_count()
 	
 	if item_id <= 0 or item_id > items_size:
 		push_warning("O id de item recebido é inválido: %d" % item_id)
 		return
 
 	_log_debug("🔵 Servidor: Redistribuindo drop de um player para todos os seus remotos")
+	var pos = player_states[requesting_player_id]["pos"]
+	var rot = player_states[requesting_player_id]["rot"]
+	var position = get_position_front_and_above_from_state(pos, rot)
+	var round_ = RoundRegistry.get_round_by_player_id(requesting_player_id)
+	ObjectSpawner.spawn_item_by_id(round_.round_id, item_id, position)
 	
-# ✅ ENVIA PARA TODOS OS CLIENTES
+	# ENVIA PARA TODOS OS CLIENTES
 	for peer_id in multiplayer.get_peers():
 		NetworkManager.rpc_id(peer_id, "apply_drop_action", requesting_player_id, item_id)
 
@@ -893,7 +913,7 @@ func _kick_player(peer_id: int, reason: String):
 	
 	if multiplayer.has_multiplayer_peer() and _is_peer_connected(peer_id):
 		multiplayer.multiplayer_peer.disconnect_peer(peer_id)
-		_log_debug("✅ Player desconectado")
+		_log_debug("Player desconectado")
 
 func _send_error(peer_id: int, message: String):
 	"""Envia mensagem de erro para um cliente"""
@@ -903,7 +923,7 @@ func _send_error(peer_id: int, message: String):
 func _log_debug(message: String):
 	"""Imprime mensagem de debug se habilitado"""
 	if debug_mode:
-		print("[ServerManager] " + message)
+		print("[SERVER][ServerManager] " + message)
 
 func _print_player_states():
 	"""Debug: Imprime estados de todos os players"""

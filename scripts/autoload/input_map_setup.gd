@@ -68,7 +68,7 @@ func _remove_conflicting_ui_actions():
 		var config = actions_config[action_name]
 		_ensure_action(action_name, config["keys"], config["deadzone"])
 	
-	print("\n✅ Conflitos resolvidos e ações configuradas!")
+	print("\nConflitos resolvidos e ações configuradas!")
 
 func _ensure_action(action_name: String, keys: Array, deadzone: float = 0.5):
 	"""Garante que uma ação existe com as teclas especificadas"""
@@ -92,7 +92,7 @@ func _ensure_action(action_name: String, keys: Array, deadzone: float = 0.5):
 			var event = InputEventKey.new()
 			event.keycode = key
 			InputMap.action_add_event(action_name, event)
-			print("    ✓ Adicionada tecla: %s → %s" % [action_name, _key_to_string(key)])
+			print("     Adicionada tecla: %s → %s" % [action_name, _key_to_string(key)])
 
 func _print_summary():
 	"""Imprime resumo das configurações"""
@@ -123,15 +123,15 @@ func _print_summary():
 					if i < events.size() - 1:
 						keys_str += ", "
 			
-			print("  ✓ %-15s : %s" % [action, keys_str])
+			print("   %-15s : %s" % [action, keys_str])
 		else:
-			print("  ✗ %-15s : FALTANDO!" % action)
+			print("  %-15s : FALTANDO!" % action)
 			all_ok = false
 	
 	print("─────────────────────────────────────────")
 	
 	if all_ok:
-		print("✅ Input Map configurado com sucesso!\n")
+		print("Input Map configurado com sucesso!\n")
 	else:
 		print("⚠️  Algumas ações estão faltando!\n")
 
@@ -181,4 +181,4 @@ func test_input():
 		
 		await get_tree().process_frame
 	
-	print("✓ Teste concluído\n")
+	print(" Teste concluído\n")

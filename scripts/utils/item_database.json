@@ -1,0 +1,102 @@
+[
+  {
+	"id": 1,
+	"scene_path": "res://scenes/collectibles/sword_1.tscn",
+	"node_link": "Knight/Rig/Skeleton3D/handslot_r/sword_1",
+	"item_prop": "knight",
+	"item_name": "sword_1",
+	"item_type": "hand",
+	"item_side": "right",
+	"item_level": "1"
+  },
+  {
+	"id": 2,
+	"scene_path": "res://scenes/collectibles/sword_2.tscn",
+	"node_link": "Knight/Rig/Skeleton3D/handslot_r/sword_2",
+	"item_prop": "knight",
+	"item_name": "sword_2",
+	"item_type": "hand",
+	"item_side": "right",
+	"item_level": "2"
+  },
+  {
+	"id": 3,
+	"scene_path": "res://scenes/collectibles/shield_1.tscn",
+	"node_link": "Knight/Rig/Skeleton3D/handslot_l/shield_1",
+	"item_prop": "knight",
+	"item_name": "shield_1",
+	"item_type": "hand",
+	"item_side": "left",
+	"item_level": "1"
+  },
+  {
+	"id": 4,
+	"scene_path": "res://scenes/collectibles/shield_2.tscn",
+	"node_link": "Knight/Rig/Skeleton3D/handslot_l/shield_2",
+	"item_prop": "knight",
+	"item_name": "shield_2",
+	"item_type": "hand",
+	"item_side": "left",
+	"item_level": "2"
+  },
+  {
+	"id": 5,
+	"scene_path": "res://scenes/collectibles/iron_helmet.tscn",
+	"node_link": "Knight/Rig/Skeleton3D/head/iron_helmet",
+	"item_prop": "knight",
+	"item_name": "iron_helmet",
+	"item_type": "head",
+	"item_side": "up",
+	"item_level": "1"
+  },
+  {
+	"id": 6,
+	"scene_path": "res://scenes/collectibles/steel_helmet.tscn",
+	"node_link": "Knight/Rig/Skeleton3D/head/steel_helmet",
+	"item_prop": "knight",
+	"item_name": "steel_helmet",
+	"item_type": "head",
+	"item_side": "up",
+	"item_level": "2"
+  },
+  {
+	"id": 7,
+	"scene_path": "res://scenes/collectibles/knight_cape_red.tscn",
+	"node_link": "Knight/Rig/Skeleton3D/chest/Knight_cape_red",
+	"item_prop": "knight",
+	"item_name": "cape_1",
+	"item_type": "body",
+	"item_side": "down",
+	"item_level": "1"
+  },
+  {
+	"id": 8,
+	"scene_path": "res://scenes/collectibles/knight_cape_blue.tscn",
+	"node_link": "Knight/Rig/Skeleton3D/chest/Knight_cape_blue",
+	"item_prop": "knight",
+	"item_name": "cape_2",
+	"item_type": "body",
+	"item_side": "down",
+	"item_level": "2"
+  },
+  {
+	"id": 9,
+	"scene_path": "res://scenes/collectibles/shield_3.tscn",
+	"node_link": "Knight/Rig/Skeleton3D/handslot_l/shield_3",
+	"item_prop": "knight",
+	"item_name": "shield_3",
+	"item_type": "hand",
+	"item_side": "left",
+	"item_level": "3"
+  },
+  {
+	"id": 10,
+	"scene_path": "res://scenes/collectibles/torch.tscn",
+	"node_link": "Knight/Rig/Skeleton3D/handslot_l/torch",
+	"item_prop": "knight",
+	"item_name": "torch",
+	"item_type": "hand",
+	"item_side": "left",
+	"item_level": "1"
+  }
+]

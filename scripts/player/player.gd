@@ -124,20 +124,20 @@ func _physics_process(delta):
 	var move_dir: Vector3
 	_handle_gravity(delta)
 	
-	# ✅ APENAS JOGADOR LOCAL PROCESSA INPUT
+	# APENAS JOGADOR LOCAL PROCESSA INPUT
 	if is_local_player:
 		move_dir = _handle_movement_input(delta)
 		move_and_slide()
 		
-		# ✅ ENVIA ESTADO PARA SERVIDOR
+		# ENVIA ESTADO PARA SERVIDOR
 		_send_state_to_server(delta)
 		
-		# ✅ ENVIA ANIMAÇÕES (menos frequente)
+		# ENVIA ANIMAÇÕES (menos frequente)
 		_send_animation_state(delta)
 		
 		handle_test_equip_inputs_call()
 	
-	# ✅ JOGADORES REMOTOS: APENAS INTERPOLAÇÃO
+	# JOGADORES REMOTOS: APENAS INTERPOLAÇÃO
 	elif multiplayer.has_multiplayer_peer():
 		_interpolate_remote_player(delta)
 		move_dir = Vector3.ZERO  # Remotos não têm input próprio
@@ -189,7 +189,7 @@ func hitboxes_manager():
 
 # 1. Funções para requisição de itens do modelo
 func _load_item_data():
-	var file = FileAccess.open("res://scripts/utils/model_map.json", FileAccess.READ)
+	var file = FileAccess.open("res://scripts/utils/item_database.json", FileAccess.READ)
 	if file:
 		var json_text = file.get_as_text()
 		file.close()
@@ -207,11 +207,11 @@ func _load_item_data():
 		else:
 			push_error("Erro ao fazer parse do model_map.json: " + str(json.get_error_line()))
 	else:
-		push_error("Não foi possível abrir model_map.json")
+		push_error("Não foi possível abrir item_database.json")
 
 # 1.1. Retorna o item completo pelo ID
 func _get_item_by_id(p_id: int) -> Dictionary:
-	for item in _item_data:  # ✅ Corrigido: _item_data
+	for item in _item_data:  # Corrigido: _item_data
 		if item.has("id") and item["id"] == p_id:
 			return item.duplicate()
 	return {}
@@ -390,11 +390,11 @@ func _get_movement_direction_locked() -> Vector3:
 	if input_vec.length() <= 0.1:
 		return Vector3.ZERO
 
-	# ✅ Usa a FRENTE ATUAL DO CORPO (não aiming_forward_direction)
+	# Usa a FRENTE ATUAL DO CORPO (não aiming_forward_direction)
 	var forward = Vector3(-global_transform.basis.z.x, 0, -global_transform.basis.z.z).normalized()
 	var right = Vector3.UP.cross(forward).normalized()
 
-	# ✅ Input: Y = para frente/trás, X = strafe
+	# Input: Y = para frente/trás, X = strafe
 	return (forward * input_vec.y + right * input_vec.x).normalized()
 
 # Configura timer para atualização periódica de inimigos próximos
@@ -666,10 +666,11 @@ func _toggle_mouse_mode():
 		
 # Visual
 func _hide_all_model_items():
-	var nodes: Array = _get_all_item_nodes()
-	for node in nodes:
-		if node is Node and node.has_method("set_visible"):
-			node.visible = false
+	var knight_items = ItemDatabase.query_items({"item_prop": "knight"})
+	for item in knight_items:
+		if item.get_metadata("item_prop") == "knight":
+			var target = get_node_or_null(item.node_link)
+			target.visible = false
 			
 # Equipar item pelo ID
 func equip_item_by_id(item_id: int, drop_last_item: bool):
@@ -679,7 +680,7 @@ func equip_item_by_id(item_id: int, drop_last_item: bool):
 		if data["id"] == item_id:
 			item_data = data
 			break
-
+			
 	if item_data == null:
 		if debug:
 			print("equip_item_by_id: item_id não encontrado -> ", item_id)
@@ -715,7 +716,7 @@ func equip_item_by_id(item_id: int, drop_last_item: bool):
 				print("equip_item_by_id: combinação tipo/lado desconhecida -> ", item_type, "/", item_side)
 	if debug:
 		print("equip_item_by_id: equipado ->", item_name, " em ", node_link)
-	_item_model_change_visibility(self, _get_item_by_id(item_id))
+	_item_model_change_visibility(self, node_link)
 	
 # Dropar item na frente do player (visual apenas, modelo do item / chamado por action_drop_item)
 func _item_drop(item_ids: Array) -> Array:
@@ -731,10 +732,10 @@ func _item_drop(item_ids: Array) -> Array:
 			dropped.append(null)
 			continue
 		
-		# Obtém cena PRÉ-CARREGADA do ItemPreloader
-		var item_scene = ItemPreloader.get_item_scene(item_name)
+		# Obtém cena PRÉ-CARREGADA do ItemDatabase
+		var item_scene = ItemDatabase.get_item_scene(item_name)
 		if not item_scene:
-			push_error("_item_drop: cena '%s' não encontrada no ItemPreloader!" % item_name)
+			push_error("_item_drop: cena '%s' não encontrada no ItemDatabase!" % item_name)
 			dropped.append(null)
 			continue
 		
@@ -898,7 +899,7 @@ func action_drop_item_call() -> void:
 			NetworkManager.request_drop_item(player_id, items_tt[0])
 	
 	# Atualiza o item atual em sua variável correspondente
-		var item_id = _get_item_by_id(items_tt[0])["id"]
+		var item_id = ItemDatabase.get_item_by_id(items_tt[0]).id
 		if item_id == current_cape_item_id:
 			current_cape_item_id = 0
 		elif item_id == current_helmet_item_id:
@@ -909,13 +910,15 @@ func action_drop_item_call() -> void:
 			current_item_right_id = 0
 		
 func execute_item_drop(player_node, item):
-		# Executa o drop do node do item
-		#_item_drop(item)
+	# Executa o drop do node do item
+	#_item_drop(item) - Apagar depois que implementar o drop do servidor
 		
-		# Atualiza visibilidade do item no modelo (uma vez)
-		_item_model_change_visibility(player_node, _get_item_by_id(item), false)
-		# Animação de drop
-		_execute_animation("Interact", "parameters/Interact/transition_request", "parameters/Interact_shot/request")
+	var item_node_link = ItemDatabase.get_item_by_id(item).node_link
+		
+	# Atualiza visibilidade do item no modelo (uma vez)
+	_item_model_change_visibility(player_node, item_node_link, false)
+	# Animação de drop
+	_execute_animation("Interact", "parameters/Interact/transition_request", "parameters/Interact_shot/request")
 		
 func _on_impact_detected(impulse: float):
 	if debug:
@@ -930,7 +933,7 @@ func _on_impact_detected(impulse: float):
 # Quando terminar o ataque desativar hitbox da espada, is_attacking false e 
 # timer para impedir repetição de golpe antes do final
 func _on_attack_timer_timeout(duration, current_id):
-	# ✅ APENAS JOGADOR LOCAL
+	# APENAS JOGADOR LOCAL
 	if not is_local_player:
 		return
 		
@@ -976,10 +979,11 @@ func handle_test_equip_inputs_call():
 	# caso contrário, mapped_id == -1 -> nada a fazer
 	
 func apply_visual_items_on_remote(player_node, item_mapped_id):
-	_item_model_change_visibility(player_node, _get_item_by_id(item_mapped_id), )
+	var item_node_link = ItemDatabase.get_item_by_id(item_mapped_id).node_link
+	_item_model_change_visibility(player_node, item_node_link)
 	
 # Modifica a visibilidade do item na mão do modelo
-func _item_model_change_visibility(player_node, item: Dictionary, visible_ : bool = true):
+func _item_model_change_visibility(player_node, node_link: String, visible_ : bool = true):
 	"""
 	Aplica visibilidade em um item específico através do node_link
 	Se visible = true, ESCONDE todos os outros itens no mesmo slot
@@ -998,32 +1002,24 @@ func _item_model_change_visibility(player_node, item: Dictionary, visible_ : boo
 		EXCETO "shield_2" que será mostrado
 		"""
 	
-	# ✅ VALIDAÇÃO: Verifica se node é válido
+	# VALIDAÇÃO: Verifica se node é válido
 	if not player_node or not is_instance_valid(player_node):
 		push_error("apply_item_visibility: node inválido ou null")
 		return false
 	
-	# ✅ VALIDAÇÃO: Verifica se item tem node_link
-	if not item.has("node_link") or item["node_link"].is_empty():
-		push_error("apply_item_visibility: item sem 'node_link' válido")
-		return false
+	# VALIDAÇÃO: Verifica se item tem node_link
 	
-	var node_link = item["node_link"]
-	var item_id = item.get("id", -1)
-	var item_name = item.get("item_name", "desconhecido")
-	
-	# ✅ BUSCA O NÓ DO ITEM A PARTIR DO PLAYER
+	# BUSCA O NÓ DO ITEM A PARTIR DO PLAYER
 	var item_node = player_node.get_node_or_null(node_link)
 	
 	if not item_node:
 		push_error("apply_item_visibility: nó não encontrado no caminho '%s'" % node_link)
 		if debug:
-			print("  Tentando buscar item: %s (ID: %d)" % [item_name, item_id])
 			print("  Caminho base: %s" % player_node.get_path())
 			print("  Caminho completo: %s/%s" % [player_node.get_path(), node_link])
 		return false
 	
-	# ✅ SE VISIBLE = TRUE, ESCONDE TODOS OS IRMÃOS (outros itens no mesmo slot)
+	# SE VISIBLE = TRUE, ESCONDE TODOS OS IRMÃOS (outros itens no mesmo slot)
 	if visible_:
 		var parent_node = item_node.get_parent()
 		
@@ -1047,7 +1043,7 @@ func _item_model_change_visibility(player_node, item: Dictionary, visible_ : boo
 				if debug:
 					print("  🚫 Escondendo irmão: %s" % sibling.name)
 	
-	# ✅ APLICA VISIBILIDADE NO ITEM ALVO
+	# APLICA VISIBILIDADE NO ITEM ALVO
 	# Suporta Node3D, VisualInstance3D, MeshInstance3D, etc
 	var applied = false
 	
@@ -1095,7 +1091,7 @@ func _send_state_to_server(delta: float):
 	if sync_timer >= sync_rate:
 		sync_timer = 0.0
 		
-		# ✅ Verifica se houve mudança significativa
+		# Verifica se houve mudança significativa
 		var pos_changed = global_position.distance_to(target_position) > position_threshold
 		var rot_changed = abs(rotation.y - target_rotation_y) > rotation_threshold
 		
@@ -1104,7 +1100,7 @@ func _send_state_to_server(delta: float):
 			target_position = global_position
 			target_rotation_y = rotation.y
 			
-			# ✅ ENVIA VIA NETWORKMANAGER (UNRELIABLE = RÁPIDO)
+			# ENVIA VIA NETWORKMANAGER (UNRELIABLE = RÁPIDO)
 			if NetworkManager and NetworkManager.is_connected:
 				NetworkManager.send_player_state(
 					player_id,
@@ -1137,7 +1133,7 @@ func _send_animation_state(delta: float):
 			"is_on_floor": is_on_floor()
 		}
 		
-		# ✅ Só envia se mudou
+		# Só envia se mudou
 		if _animation_state_changed(current_state):
 			last_anim_state = current_state.duplicate()
 			
@@ -1176,13 +1172,13 @@ func _animation_state_changed(new_state: Dictionary) -> bool:
 func _interpolate_remote_player(delta: float):
 	"""Interpola suavemente a posição de jogadores remotos"""
 	
-	# ✅ INTERPOLAÇÃO SUAVE (evita teleporte)
+	# INTERPOLAÇÃO SUAVE (evita teleporte)
 	global_position = global_position.lerp(target_position, interpolation_speed * delta)
 	
-	# ✅ INTERPOLAÇÃO DE ROTAÇÃO (apenas Y)
+	# INTERPOLAÇÃO DE ROTAÇÃO (apenas Y)
 	rotation.y = lerp_angle(rotation.y, target_rotation_y, interpolation_speed * delta)
 	
-	# ✅ OPCIONAL: Simula gravidade para remotos
+	# OPCIONAL: Simula gravidade para remotos
 	if not is_on_floor():
 		velocity.y -= gravity * delta
 	else:
@@ -1198,9 +1194,9 @@ func _client_receive_state(pos: Vector3, rot: Vector3, vel: Vector3, running: bo
 	"""Recebe estado de outros jogadores e define alvos para interpolação"""
 	
 	if is_local_player:
-		return  # ✅ Ignora para si mesmo
+		return  # Ignora para si mesmo
 	
-	# ✅ ATUALIZA ALVOS PARA INTERPOLAÇÃO SUAVE
+	# ATUALIZA ALVOS PARA INTERPOLAÇÃO SUAVE
 	target_position = pos
 	target_rotation_y = rot.y
 	
@@ -1217,9 +1213,9 @@ func _client_receive_animation_state(speed: float, attacking: bool, defending: b
 	"""Recebe e aplica estado de animação de outros jogadores"""
 	
 	if is_local_player:
-		return  # ✅ Ignora para si mesmo
+		return  # Ignora para si mesmo
 	
-	# ✅ ATUALIZA ESTADOS
+	# ATUALIZA ESTADOS
 	is_attacking = attacking
 	is_defending = defending
 	is_jumping = jumping
@@ -1227,7 +1223,7 @@ func _client_receive_animation_state(speed: float, attacking: bool, defending: b
 	is_running = running
 	is_block_attacking = block_attacking
 	
-	# ✅ ATUALIZA ANIMATIONTREE
+	# ATUALIZA ANIMATIONTREE
 	if animation_tree:
 		# Locomotion
 		animation_tree["parameters/Locomotion/blend_position"] = speed
@@ -1258,7 +1254,7 @@ func _client_receive_action(action_type: String, anim_name: String):
 	"""Recebe e executa ações de outros jogadores (ataques, defesa, etc)"""
 	
 	if is_local_player:
-		return  # ✅ Ignora para si mesmo
+		return  # Ignora para si mesmo
 	
 	match action_type:
 		"attack":
@@ -1294,7 +1290,7 @@ func _client_receive_action(action_type: String, anim_name: String):
 func action_sword_attack():
 	"""Versão modificada que sincroniza o ataque"""
 	
-	# ✅ APENAS JOGADOR LOCAL PODE ATACAR
+	# APENAS JOGADOR LOCAL PODE ATACAR
 	if not is_local_player:
 		return
 	
@@ -1311,14 +1307,14 @@ func action_sword_attack():
 		
 		_on_attack_timer_timeout(anim_time * 0.4, current_item_right_id)
 		
-		# ✅ SINCRONIZA ATAQUE PELA REDE (RELIABLE = GARANTIDO)
+		# SINCRONIZA ATAQUE PELA REDE (RELIABLE = GARANTIDO)
 		if NetworkManager and NetworkManager.is_connected:
 			NetworkManager.send_player_action(player_id, "attack", anim_name)
 
 func action_lock():
 	"""Versão modificada que sincroniza defesa"""
 	
-	# ✅ APENAS JOGADOR LOCAL
+	# APENAS JOGADOR LOCAL
 	if not is_local_player:
 		return
 	
@@ -1329,14 +1325,14 @@ func action_lock():
 		is_defending = true
 		animation_tree.set("parameters/Blocking/blend_amount", 1.0)
 		
-		# ✅ SINCRONIZA DEFESA (RELIABLE)
+		# SINCRONIZA DEFESA (RELIABLE)
 		if NetworkManager and NetworkManager.is_connected:
 			NetworkManager.send_player_action(player_id, "defend_start", "")
 
 func action_block_attack():
 	"""Versão modificada que sincroniza block attack"""
 	
-	# ✅ APENAS JOGADOR LOCAL
+	# APENAS JOGADOR LOCAL
 	if not is_local_player:
 		return
 	
@@ -1351,14 +1347,14 @@ func action_block_attack():
 		
 		_on_block_attack_timer_timeout(anim_time * 0.85)
 		
-		# ✅ SINCRONIZA BLOCK ATTACK (RELIABLE)
+		# SINCRONIZA BLOCK ATTACK (RELIABLE)
 		if NetworkManager and NetworkManager.is_connected:
 			NetworkManager.send_player_action(player_id, "block_attack", "Block_Attack")
 
 func action_stop_locking():
 	"""Versão modificada que sincroniza fim da defesa"""
 	
-	# ✅ APENAS JOGADOR LOCAL
+	# APENAS JOGADOR LOCAL
 	if not is_local_player:
 		return
 	
@@ -1369,7 +1365,7 @@ func action_stop_locking():
 		is_attacking = false
 		animation_tree.set("parameters/Blocking/blend_amount", 0.0)
 		
-		# ✅ SINCRONIZA FIM DE DEFESA (RELIABLE)
+		# SINCRONIZA FIM DE DEFESA (RELIABLE)
 		if NetworkManager and NetworkManager.is_connected:
 			NetworkManager.send_player_action(player_id, "defend_stop", "")
 
@@ -1379,7 +1375,7 @@ func set_as_local_player():
 	"""Configura este player como o jogador local"""
 	is_local_player = true
 	
-	# ✅ APENAS JOGADOR LOCAL PROCESSA INPUT
+	# APENAS JOGADOR LOCAL PROCESSA INPUT
 	set_process_input(true)
 	set_process_unhandled_input(true)
 
@@ -1388,19 +1384,19 @@ func initialize(p_id: int, p_name: String, spawn_pos: Vector3):
 	player_id = p_id
 	player_name = p_name
 	
-	# ✅ NOME DO NÓ = ID DO PLAYER (IMPORTANTE!)
+	# NOME DO NÓ = ID DO PLAYER (IMPORTANTE!)
 	name = str(player_id)
 	
 	# Posiciona no spawn
 	global_position = spawn_pos
-	target_position = spawn_pos  # ✅ Inicializa target também
+	target_position = spawn_pos  # Inicializa target também
 	
 	# Atualiza label de nome
 	if name_label:
 		name_label.text = player_name
 		setup_name_label()
 	
-	# ✅ CONFIGURAÇÃO DE PROCESSOS
+	# CONFIGURAÇÃO DE PROCESSOS
 	if not is_local_player:
 		# Remotos não processam input
 		set_process_input(false)
@@ -1422,7 +1418,7 @@ func setup_name_label():
 	
 	name_label.visible = true
 	
-	# ✅ COR BASEADA NO ID (consistente)
+	# COR BASEADA NO ID (consistente)
 	var colors = [
 		Color(1, 0.2, 0.2),    # Vermelho
 		Color(0.2, 1, 0.2),    # Verde  
@@ -1434,11 +1430,11 @@ func setup_name_label():
 	var color_index = player_id % colors.size()
 	name_label.modulate = colors[color_index]
 	
-	# ✅ CONFIGURAÇÃO DE BILLBOARD
+	# CONFIGURAÇÃO DE BILLBOARD
 	name_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	name_label.pixel_size = 0.01
 	
-	# ✅ ESCONDE NOME DO JOGADOR LOCAL (OPCIONAL)
+	# ESCONDE NOME DO JOGADOR LOCAL (OPCIONAL)
 	if is_local_player:
 		name_label.visible = false
 	else:

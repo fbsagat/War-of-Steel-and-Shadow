@@ -11,21 +11,22 @@ config_version=5
 [application]
 
 config/name="War of Steel and Shadow"
+config/tags=PackedStringArray("3d", "multiplayer", "official")
 run/main_scene="uid://dwnsmgw3eenld"
 config/features=PackedStringArray("4.5", "Forward Plus")
 config/icon="res://icon.svg"
 
 [autoload]
 
-GameManager="*res://scripts/autoload/GameManager.gd"
-NetworkManager="*res://scripts/autoload/NetworkManager.gd"
-ObjectSpawner="*res://scripts/autoload/ObjectSpawner.gd"
 ServerManager="*res://scripts/autoload/ServerManager.gd"
+NetworkManager="*res://scripts/autoload/NetworkManager.gd"
+GameManager="*res://scripts/autoload/GameManager.gd"
 PlayerRegistry="*res://scripts/autoload/PlayerRegistry.gd"
 RoomRegistry="*res://scripts/autoload/RoomRegistry.gd"
 RoundRegistry="*res://scripts/autoload/RoundRegistry.gd"
+ItemDatabase="*res://scripts/autoload/ItemDatabase.gd"
+ObjectSpawner="*res://scripts/autoload/ObjectSpawner.gd"
 TestManager="*res://scripts/autoload/TestManager.gd"
-ItemPreloader="*res://scripts/autoload/ItemPreloader.gd"
 
 [display]
 

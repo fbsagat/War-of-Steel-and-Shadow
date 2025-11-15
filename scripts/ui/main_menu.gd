@@ -657,9 +657,9 @@ func save_options():
 	
 	var err = config.save("user://settings.cfg")
 	if err == OK:
-		_log_debug("✓ Configurações salvas com sucesso")
+		_log_debug(" Configurações salvas com sucesso")
 	else:
-		_log_debug("✗ Erro ao salvar configurações: " + err)
+		_log_debug("Erro ao salvar configurações: " + err)
 
 func load_options():
 	_log_debug("Carregando configurações...")
@@ -686,7 +686,7 @@ func load_options():
 		current_settings["controls"]["mouse_sensitivity"] = config.get_value("controls", "mouse_sensitivity", 50)
 		current_settings["controls"]["invert_y"] = config.get_value("controls", "invert_y", false)
 		
-		_log_debug("✓ Configurações carregadas com sucesso")
+		_log_debug(" Configurações carregadas com sucesso")
 	
 	# Aplica configurações carregadas
 	_apply_video_settings()

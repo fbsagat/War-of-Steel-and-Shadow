@@ -84,7 +84,7 @@ func create_room(room_id: int, room_name: String, password: String, host_peer_id
 	rooms[room_id] = room_data
 	add_player_to_room(room_id, host_peer_id)
 	
-	_log_debug("✓ Sala criada: '%s' (ID: %d, Host: %d)" % [room_name, room_id, host_peer_id])
+	_log_debug(" Sala criada: '%s' (ID: %d, Host: %d)" % [room_name, room_id, host_peer_id])
 	room_created.emit(room_data.duplicate())
 	return room_data.duplicate()
 
@@ -97,7 +97,7 @@ func remove_room(room_id: int) -> bool:
 	
 	var room_name = rooms[room_id]["name"]
 	rooms.erase(room_id)
-	_log_debug("✗ Sala removida: '%s' (ID: %d)" % [room_name, room_id])
+	_log_debug("Sala removida: '%s' (ID: %d)" % [room_name, room_id])
 	room_removed.emit(room_id)
 	return true
 
@@ -174,7 +174,7 @@ func add_player_to_room(room_id: int, peer_id: int) -> bool:
 		"is_host": is_host
 	})
 	
-	_log_debug("✓ Player '%s' (%d) entrou na sala '%s'" % [
+	_log_debug(" Player '%s' (%d) entrou na sala '%s'" % [
 		player_data["name"], peer_id, room["name"]
 	])
 	player_joined_room.emit(room_id, peer_id)
@@ -202,7 +202,7 @@ func remove_player_from_room(room_id: int, peer_id: int) -> bool:
 	var was_host = room["players"][player_index]["is_host"]
 	room["players"].remove_at(player_index)
 	
-	_log_debug("✗ Player '%s' (%d) saiu da sala '%s'" % [
+	_log_debug("Player '%s' (%d) saiu da sala '%s'" % [
 		player_name, peer_id, room["name"]
 	])
 	player_left_room.emit(room_id, peer_id)
@@ -256,7 +256,7 @@ func add_round_to_history(room_id: int, round_data: Dictionary) -> bool:
 	room["rounds_history"].append(clean_round)
 	room["total_rounds_played"] += 1
 	
-	_log_debug("✓ Rodada %d adicionada ao histórico da sala '%s' (Total: %d rodadas)" % [
+	_log_debug(" Rodada %d adicionada ao histórico da sala '%s' (Total: %d rodadas)" % [
 		clean_round["round_id"],
 		room["name"],
 		room["total_rounds_played"]
@@ -376,4 +376,4 @@ func get_total_players_in_room_count(room_id_ : int) -> int:
 func _log_debug(message: String):
 	if debug_mode:
 		var prefix = "[SERVER]" if _is_server else "[CLIENT]"
-		print("[RoomRegistry] %s %s" % [prefix, message])
+		print("%s[RoomRegistry] %s" % [prefix, message])
