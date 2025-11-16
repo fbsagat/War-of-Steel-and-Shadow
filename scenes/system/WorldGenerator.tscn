@@ -461,7 +461,8 @@ func _gerar_mesh_chunk(chunk_data: ChunkData, lod_level: int = 0) -> void:
 		return
 	
 	var lod_divisor: int = lod_resolutions[lod_level] if enable_lod and lod_level < lod_resolutions.size() else 1
-	var resolution: int = clamp(subdivisions / lod_divisor, 8, 128)
+	var resolution: int = clamp(int(subdivisions / float(lod_divisor)), 8, 128)
+
 	var step: float = tamanho_chunk / float(resolution)
 	
 	var vertices: PackedVector3Array = PackedVector3Array()
@@ -948,7 +949,8 @@ func _chunk_dentro_limites(chunk_pos: Vector2i) -> bool:
 func _limpar_cache_se_necessario() -> void:
 	if mesh_cache.size() > max_cached_chunks:
 		var keys: Array = mesh_cache.keys()
-		var remover: int = keys.size() / 2
+		var remover: int = int(keys.size() / 2.0)
+
 		for i in range(remover):
 			mesh_cache.erase(keys[i])
 

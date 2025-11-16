@@ -15,6 +15,13 @@ var spawned_objects_by_round: Dictionary = {}
 ## Índice global para acesso rápido: {object_id: {round_id, node}}
 var object_index: Dictionary = {}
 
+# ===== REGISTROS =====
+
+var player_registry = null
+var room_registry = null
+var round_registry = null
+var object_spawner = null
+
 # ===== SINAIS =====
 
 signal object_spawned(round_id: int, object_id: int, object_node: Node)
@@ -24,10 +31,15 @@ signal round_objects_cleared(round_id: int, count: int)
 # ===== INICIALIZAÇÃO =====
 
 func _ready():
+	player_registry = ServerManager.player_registry
+	room_registry = ServerManager.room_registry
+	round_registry = ServerManager.round_registry
+	object_spawner = ServerManager.object_spawner
+	
 	# Conecta ao RoundRegistry para limpar objetos quando rodada termina
-	if RoundRegistry.is_initialized():
-		if not RoundRegistry.round_ended.is_connected(_on_round_ended):
-			RoundRegistry.round_ended.connect(_on_round_ended)
+	if round_registry.is_initialized():
+		if not round_registry.round_ended.is_connected(_on_round_ended):
+			round_registry.round_ended.connect(_on_round_ended)
 		_log_debug(" Conectado ao RoundRegistry")
 
 # ===== SPAWN DE OBJETOS (SERVIDOR) =====
@@ -38,7 +50,7 @@ func spawn_object(round_id: int, scene_path: String, spawn_position: Variant, da
 		push_error("Apenas o servidor pode spawnar objetos!")
 		return -1
 	
-	if not RoundRegistry.is_round_active(round_id):
+	if not round_registry.is_round_active(round_id):
 		push_error("Rodada %d não está ativa!" % round_id)
 		return -1
 	
@@ -374,7 +386,7 @@ func _rpc_to_round_players(round_id: int, method: String, data):
 	Envia RPC apenas para jogadores da rodada específica.
 	Muito mais eficiente que broadcast global.
 	"""
-	var round_data = RoundRegistry.get_round(round_id)
+	var round_data = round_registry.get_round(round_id)
 	if round_data.is_empty():
 		return
 	
@@ -532,7 +544,7 @@ func spawn_and_collect(round_id: int, item_name: String, spawn_position: Vector3
 	dummy_node.global_position = spawn_position
 	get_tree().root.add_child(dummy_node)
 	
-	var nearest = PlayerRegistry.get_nearest_player_to(dummy_node, auto_collect_radius)
+	var nearest = player_registry.get_nearest_player_to(dummy_node, auto_collect_radius)
 	dummy_node.queue_free()
 	
 	if nearest.is_empty():
@@ -540,7 +552,7 @@ func spawn_and_collect(round_id: int, item_name: String, spawn_position: Vector3
 	
 	# Adiciona ao inventário
 	var player_id = nearest["id"]
-	var collected = PlayerRegistry.add_item_to_inventory(round_id, player_id, item_name)
+	var collected = player_registry.add_item_to_inventory(round_id, player_id, item_name)
 	
 	if collected:
 		# Despawna o objeto já que foi coletado
@@ -569,7 +581,7 @@ func spawn_item_to_inventory(round_id: int, player_id: int, item_name: String) -
 		return false
 	
 	# Adiciona ao inventário
-	var success = PlayerRegistry.add_item_to_inventory(round_id, player_id, item_name)
+	var success = player_registry.add_item_to_inventory(round_id, player_id, item_name)
 	
 	if success:
 		_log_debug(" Item adicionado ao inventário: %s → Player %d" % [item_name, player_id])
@@ -619,12 +631,12 @@ func drop_item_from_inventory(round_id: int, player_id: int, item_name: String, 
 		return -1
 	
 	# Verifica se jogador tem o item
-	if not PlayerRegistry.has_item(round_id, player_id, item_name):
+	if not player_registry.has_item(round_id, player_id, item_name):
 		_log_debug("⚠ Player %d não possui item %s" % [player_id, item_name])
 		return -1
 	
 	# Obtém posição do jogador
-	var player_node = PlayerRegistry.get_player_node(player_id)
+	var player_node = player_registry.get_player_node(player_id)
 	if not player_node or not player_node is Node3D:
 		push_error("Nó do player inválido: %d" % player_id)
 		return -1
@@ -632,7 +644,7 @@ func drop_item_from_inventory(round_id: int, player_id: int, item_name: String, 
 	var drop_position = player_node.global_position + drop_offset
 	
 	# Remove do inventário
-	if not PlayerRegistry.remove_item_from_inventory(round_id, player_id, item_name):
+	if not player_registry.remove_item_from_inventory(round_id, player_id, item_name):
 		return -1
 	
 	# Spawna no mundo
@@ -717,7 +729,7 @@ func collect_item_object(object_id: int, player_id: int) -> bool:
 		return false
 	
 	# Adiciona ao inventário
-	var success = PlayerRegistry.add_item_to_inventory(round_id, player_id, item_name)
+	var success = player_registry.add_item_to_inventory(round_id, player_id, item_name)
 	
 	if success:
 		# Remove do mundo
@@ -738,7 +750,7 @@ func get_collectible_items_near_player(round_id: int, player_id: int, radius: fl
 	if not multiplayer.is_server():
 		return []
 	
-	var player_node = PlayerRegistry.get_player_node(player_id)
+	var player_node = player_registry.get_player_node(player_id)
 	if not player_node or not player_node is Node3D:
 		return []
 	
@@ -797,7 +809,7 @@ func spawn_reward_for_all_players(round_id: int, item_name: String) -> Dictionar
 	if not multiplayer.is_server():
 		return {}
 	
-	var round_data = RoundRegistry.get_round(round_id)
+	var round_data = round_registry.get_round(round_id)
 	if round_data.is_empty():
 		return {"success": [], "failed": []}
 	
@@ -827,7 +839,7 @@ func spawn_reward_for_all_players(round_id: int, item_name: String) -> Dictionar
 
 func _notify_inventory_update(round_id: int, player_id: int):
 	"""Notifica cliente sobre atualização de inventário"""
-	var inventory = PlayerRegistry.get_player_inventory(round_id, player_id)
+	var inventory = player_registry.get_player_inventory(round_id, player_id)
 	
 	if inventory.is_empty():
 		return
@@ -854,10 +866,10 @@ func cleanup_round_complete(round_id: int):
 	despawn_round_objects(round_id)
 	
 	# Limpa inventários (PlayerRegistry já faz isso via signal, mas garante)
-	var round_data = RoundRegistry.get_round(round_id)
+	var round_data = round_registry.get_round(round_id)
 	if not round_data.is_empty():
 		for player_data in round_data["players"]:
-			PlayerRegistry.clear_player_inventory(round_id, player_data["id"])
+			player_registry.clear_player_inventory(round_id, player_data["id"])
 	
 	_log_debug(" Limpeza completa da rodada %d: %d objetos + inventários" % [round_id, obj_count])
 
@@ -880,12 +892,12 @@ func debug_print_round_items_and_inventories(round_id: int):
 			print("  • %s em %s" % [item_name, pos])
 	
 	# Inventários
-	var round_data = RoundRegistry.get_round(round_id)
+	var round_data = round_registry.get_round(round_id)
 	if not round_data.is_empty():
 		print("\n[INVENTÁRIOS] %d jogadores:" % round_data["players"].size())
 		for player_data in round_data["players"]:
 			var player_id = player_data["id"]
-			var inventory = PlayerRegistry.get_player_inventory(round_id, player_id)
+			var inventory = player_registry.get_player_inventory(round_id, player_id)
 			
 			if not inventory.is_empty():
 				print("  Player %d (%s):" % [player_id, player_data.get("name", "?")])

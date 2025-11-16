@@ -7,10 +7,11 @@ extends Node
 @export_category("Debug")
 @export var debug_mode: bool = true
 
-@export_category("Room Settings")
-@export var max_players_per_room: int = 8
-@export var min_players_to_start: int = 1
-@export var allow_password_protected_rooms: bool = true
+# ===== REGISTROS =====
+
+var player_registry = ServerManager.player_registry
+var round_registry = ServerManager.round_registry
+var object_spawner = ServerManager.object_spawner
 
 # ===== VARIÁVEIS INTERNAS =====
 
@@ -72,8 +73,8 @@ func create_room(room_id: int, room_name: String, password: String, host_peer_id
 		"has_password": not password.is_empty(),
 		"host_id": host_peer_id,
 		"players": [],
-		"min_players": min_players_to_start,
-		"max_players": max_players_per_room,
+		"min_players": ServerManager.min_players_to_start,
+		"max_players": ServerManager.max_players_per_room,
 		"in_game": false,
 		"created_at": Time.get_unix_time_from_system(),
 		"rounds_history": [],
@@ -162,7 +163,7 @@ func add_player_to_room(room_id: int, peer_id: int) -> bool:
 		_log_debug("Sala %d está cheia!" % room_id)
 		return false
 	
-	var player_data = PlayerRegistry.get_player(peer_id)
+	var player_data = player_registry.get_player(peer_id)
 	if player_data.is_empty():
 		push_error("Player %d não está registrado!" % peer_id)
 		return false
@@ -318,7 +319,7 @@ func can_start_match(room_id: int) -> bool:
 	var room = rooms[room_id]
 	if room["in_game"]:
 		return false
-	if room["players"].size() < min_players_to_start:
+	if room["players"].size() < ServerManager.min_players_to_start:
 		return false
 	return true
 
@@ -329,7 +330,7 @@ func get_match_requirements(room_id: int) -> Dictionary:
 	var room = rooms[room_id]
 	return {
 		"current_players": room["players"].size(),
-		"min_players": min_players_to_start,
+		"min_players": ServerManager.min_players_to_start,
 		"max_players": room["max_players"],
 		"can_start": can_start_match(room_id),
 		"in_game": room["in_game"]

@@ -8,17 +8,17 @@ extends Node
 @export_category("Debug")
 @export var debug_mode: bool = true
 
+# ===== REGISTROS =====
+
+var player_registry = null
+var room_registry = null
+var round_registry = null
+var object_spawner = null
+
 # ===== VARIÁVEIS INTERNAS =====
 
-var is_connected: bool = false
+var is_connected_: bool = false
 var _is_server: bool = false
-
-# ===== PROPRIEDADE PARA COMPATIBILIDADE =====
-
-# Permite que outros scripts usem NetworkManager.is_connected
-var _is_connected: bool = false:
-	get:
-		return is_connected
 
 # ===== FUNÇÕES DE INICIALIZAÇÃO =====
 
@@ -28,6 +28,11 @@ func _ready():
 	_is_server = "--server" in args or "--dedicated" in args
 	
 	if _is_server:
+		player_registry = ServerManager.player_registry
+		room_registry = ServerManager.room_registry
+		round_registry = ServerManager.round_registry
+		object_spawner = ServerManager.object_spawner
+		
 		_log_debug("Inicializando NetworkManager como servidor")
 		return
 	
@@ -40,17 +45,17 @@ func _ready():
 
 func _on_connected_to_server():
 	"""Callback quando conecta ao servidor"""
-	is_connected = true
+	is_connected_ = true
 	_log_debug("Conexão de rede estabelecida")
 
 func _on_server_disconnected():
 	"""Callback quando desconecta do servidor"""
-	is_connected = false
+	is_connected_ = false
 	_log_debug("❌ Conexão de rede perdida")
 
 func _on_connection_failed():
 	"""Callback quando falha ao conectar"""
-	is_connected = false
+	is_connected_ = false
 	_log_debug("❌ Falha ao conectar ao servidor")
 
 # ===== REGISTRO DE JOGADOR =====
@@ -74,11 +79,19 @@ func _server_register_player(player_name: String):
 	ServerManager._handle_register_player(peer_id, player_name)
 
 @rpc("authority", "call_remote", "reliable")
+func configs_to_client(configs):
+	if multiplayer.is_server():
+		return
+		
+	if GameManager and GameManager.has_method("update_client_configs"):
+		GameManager.update_client_configs(configs)
+		
+@rpc("authority", "call_remote", "reliable")
 func _client_name_accepted(accepted_name: String):
 	"""RPC: Cliente recebe confirmação de nome aceito"""
 	if multiplayer.is_server():
 		return
-	
+		
 	_log_debug("Nome aceito: " + accepted_name)
 	GameManager._client_name_accepted(accepted_name)
 
@@ -372,7 +385,7 @@ func _client_spawn_object(spawn_data: Dictionary):
 	var data = spawn_data.get("data", {})
 	
 	# Verifica se já existe (evita duplicatas)
-	if ObjectSpawner and ObjectSpawner.get_round_objects(spawn_data.round_id).has(object_id):
+	if object_spawner and object_spawner.get_round_objects(spawn_data.round_id).has(object_id):
 		push_warning("⚠ Objeto %d já existe no cliente, pulando..." % object_id)
 		return
 	
@@ -433,8 +446,8 @@ func _client_spawn_object(spawn_data: Dictionary):
 				obj.set(key, data[key])
 	
 	# Registra no ObjectSpawner
-	if ObjectSpawner:
-		ObjectSpawner._register_object(spawn_data.round_id, object_id, obj)
+	if object_spawner:
+		object_spawner._register_object(spawn_data.round_id, object_id, obj)
 		_log_debug(" Objeto %d registrado no ObjectSpawner.spawned_objects" % object_id)
 	else:
 		push_warning("⚠ ObjectSpawner não encontrado para registrar objeto")
@@ -448,17 +461,17 @@ func _client_despawn_object(object_id: int):
 	_log_debug("❌ Cliente despawnando objeto: %d" % object_id)
 	
 	# Valida que o ObjectSpawner existe
-	if not ObjectSpawner:
+	if not object_spawner:
 		push_warning("⚠ ObjectSpawner não encontrado")
 		return
 	
 	# Verifica se o objeto existe
-	if not ObjectSpawner.spawned_objects.has(object_id):
+	if not object_spawner.spawned_objects.has(object_id):
 		push_warning("⚠ Tentativa de despawnar objeto inexistente: %d" % object_id)
 		return
 	
 	# Remove o objeto
-	var obj = ObjectSpawner.spawned_objects[object_id]
+	var obj = object_spawner.spawned_objects[object_id]
 	
 	if obj and is_instance_valid(obj):
 		obj.queue_free()
@@ -467,7 +480,7 @@ func _client_despawn_object(object_id: int):
 		push_warning("⚠ Objeto %d inválido ou já removido" % object_id)
 	
 	# Remove do registro
-	ObjectSpawner.spawned_objects.erase(object_id)
+	object_spawner.spawned_objects.erase(object_id)
 	_log_debug(" Objeto %d removido do registro" % object_id)
 
 @rpc("authority", "call_remote", "reliable")

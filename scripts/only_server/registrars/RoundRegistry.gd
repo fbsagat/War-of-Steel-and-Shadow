@@ -36,6 +36,12 @@ signal round_ended(round_data: Dictionary)
 signal all_players_disconnected(round_id: int)
 signal round_timeout(round_id: int)
 
+# ===== REGISTROS =====
+
+var player_registry = ServerManager.player_registry
+var room_registry = ServerManager.room_registry
+var object_spawner = ServerManager.object_spawner
+
 # ===== INICIALIZAÇÃO CONTROLADA =====
 
 func initialize_as_server():
@@ -170,7 +176,7 @@ func start_round(round_id: int):
 
 	# Marca jogadores como em jogo
 	for player in round_data["players"]:
-		var player_data = PlayerRegistry.get_player(player.get("id"))
+		var player_data = player_registry.get_player(player.get("id"))
 		if player_data:
 			player_data.in_game = true
 
@@ -214,7 +220,7 @@ func end_round(round_id: int, reason: String = "completed", winner_data: Diction
 
 	# Marca jogadores como fora do jogo
 	for player in round_data["players"]:
-		var player_data = PlayerRegistry.get_player(player.get("id"))
+		var player_data = player_registry.get_player(player.get("id"))
 		if player_data:
 			player_data.in_game = false
 

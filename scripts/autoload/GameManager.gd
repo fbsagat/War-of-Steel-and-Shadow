@@ -18,7 +18,9 @@ var main_menu: Control = null
 var is_connected_to_server: bool = false
 var local_peer_id: int = 0
 var player_name: String = ""
+var configs: Dictionary = {}
 var current_room: Dictionary = {}
+var current_round: Dictionary = {}
 var connection_start_time: float = 0.0
 var is_connecting: bool = false
 var _is_server: bool = false
@@ -54,9 +56,6 @@ func _ready():	# Verifica se é servidor
 	if _is_server:
 		_log_debug("Servidor - NÃO inicializando GameManager")
 		return
-	
-	if TestManager:
-		TestManager.initialize_as_client()
 		
 	_log_debug("Inicializando GameManager como cliente")
 	
@@ -132,17 +131,7 @@ func _on_connected_to_server():
 	
 	if main_menu:
 		main_menu.show_name_input_menu()
-	
-	# SEPARAR MELHOR SERVIDOR DE CLIENTES / NÃO CARREGAR MAIS PlayerRegistry, RoomRegistry E RoundRegistry NO CLIENTE
-	# ATUALIZAR GAME MANAGER E CRIAR RPCS PARA SERVIDOR ENVIAR E CLIENTE RECEBER COMANDOS PARA REGISTROS LOCAIS DE CLIENTES
-	# ATUALIZAR OS SCRIPTS DOS MANAGERS PARA UM FORMATO EM QUE APENAS O SERVER EXECUTA
-	# CONFIGURAR OS MANAGERS PARA ATUALIZAR INFORMAÇÕES DOS CLIENTES COM A CÓPIA SEGURA DELES QUANDO O SERVER ATUALIZA ALGO NOS MANAGERS
-	# PEDIR PRA IA, CLAUDIO, INTERLIGAR OS TRÊS MANAGERS TAMBÉM, RETIRAR FUNÇÕES DE CLIENTES SE EXISTIREM
-	
-	PlayerRegistry.initialize_as_client()
-	RoomRegistry.initialize_as_client()
-	RoundRegistry.initialize_as_client()
-	
+		
 	connected_to_server.emit()
 
 func _on_connection_failed():
@@ -178,6 +167,18 @@ func _handle_connection_error(message: String):
 		main_menu.show_error_connecting(message)
 	
 	connection_failed.emit(message)
+
+func update_client_configs(configs_from_server: Dictionary):
+	_log_debug("Atualizando configurações do servidor:")
+
+	for key in configs_from_server.keys():
+		var new_value = configs_from_server[key]
+
+		# Se não existe ou se mudou, atualiza
+		if not configs.has(key) or configs[key] != new_value:
+			configs[key] = new_value
+			_log_debug("[UPDATED] %s: %s" % [str(key), str(new_value)])
+
 
 # ===== REGISTRO DE JOGADOR =====
 
@@ -411,9 +412,11 @@ func start_round(round_settings: Dictionary = {}):
 		_show_error("Apenas o host pode iniciar a rodada")
 		return
 	
-	var min_p: int = RoomRegistry.min_players_to_start
-	if current_room.players.size() < min_p:
-		_show_error("Pelo menos %d jogadores são necessários para iniciar uma rodada" % min_p)
+	# FUTURAMENTE COLOCAR COMO VARIÁVEL DEFINIDA PELO SERVIDOR
+	# FUTURAMENTE COLOCAR COMO VARIÁVEL DEFINIDA PELO SERVIDOR
+	#								\/
+	if current_room.players.size() < 1:
+		_show_error("Pelo menos %d jogadores são necessários para iniciar uma rodada" % 1)
 		return
 	
 	_log_debug("Solicitando início da rodada...")
@@ -439,9 +442,6 @@ func _client_round_ended(end_data: Dictionary):
 		_log_debug("  Peer %d: %d pontos" % [peer_id, end_data["scores"][peer_id]])
 	
 	_log_debug("========================================")
-	
-	# Atualiza RoundRegistry local
-	RoundRegistry.end_round(end_data.get("end_reason", "completed"), end_data.get("winner", {}))
 	
 	# Mostrar UI de fim de rodada (se tiver)
 	if main_menu:
@@ -472,8 +472,6 @@ func _start_round_locally(match_data: Dictionary):
 	_log_debug("========================================")
 	
 	is_in_round = true
-
-	RoundRegistry.set_local_player_round(match_data)
 	
 	# Esconde o menu
 	if main_menu:
@@ -486,18 +484,12 @@ func _start_round_locally(match_data: Dictionary):
 	
 	# Carrega o mapa
 	await client_map_manager.load_map(match_data["map_scene"], match_data["settings"])
-	
-	if RoundRegistry.rounds.has(match_data["round_id"]):
-		RoundRegistry.rounds[match_data.round_id]["map_manager"] = client_map_manager
 
 	# Spawna todos os jogadores
 	for player_data in match_data["players"]:
 		var spawn_data = match_data["spawn_data"][player_data["id"]]
 		var is_local = player_data["id"] == local_peer_id
 		_spawn_player(player_data, spawn_data, is_local, match_data)
-	
-	# Inicia rodada
-	RoundRegistry.start_round(match_data.round_id)
 	
 	round_started.emit()
 	
@@ -610,9 +602,6 @@ func _cleanup_local_round():
 		client_map_manager.unload_map()
 		client_map_manager.queue_free()
 		client_map_manager = null
-	
-	# Limpa ObjectSpawner
-	ObjectSpawner.cleanup()
 	
 	_log_debug(" Limpeza completa")
 

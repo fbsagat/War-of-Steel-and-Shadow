@@ -7,6 +7,12 @@ extends Node
 @export var debug_mode: bool = true
 @export var max_inventory_slots: int = 20  # Limite de itens por jogador
 
+# ===== REGISTROS =====
+
+var room_registry = ServerManager.player_registry
+var round_registry = ServerManager.round_registry
+var object_spawner = ServerManager.object_spawner
+
 # ===== VARIÁVEIS INTERNAS =====
 
 var players: Dictionary = {}
@@ -35,11 +41,6 @@ func initialize_as_server():
 	
 	_is_server = true
 	_initialized = true
-	
-	# Conecta ao RoundRegistry para limpar inventários
-	if RoundRegistry.is_initialized():
-		if not RoundRegistry.round_ended.is_connected(_on_round_ended):
-			RoundRegistry.round_ended.connect(_on_round_ended)
 	
 	_log_debug("PlayerRegistry inicializado")
 

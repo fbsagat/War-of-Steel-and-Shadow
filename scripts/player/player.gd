@@ -673,7 +673,7 @@ func _hide_all_model_items():
 			target.visible = false
 			
 # Equipar item pelo ID
-func equip_item_by_id(item_id: int, drop_last_item: bool):
+func equip_item_by_id(item_id: int, _drop_last_item: bool):
 	# Encontra o item correspondente pelo ID na lista global de itens
 	var item_data = null
 	for data in _item_data:

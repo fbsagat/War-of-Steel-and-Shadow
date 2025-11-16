@@ -5,6 +5,13 @@ extends Node
 @export_category("Debug")
 @export var debug_mode: bool = true
 
+# ===== REGISTROS =====
+
+var player_registry = ServerManager.player_registry
+var room_registry = ServerManager.room_registry
+var round_registry = ServerManager.round_registry
+var object_spawner = ServerManager.object_spawner
+
 # Estado de inicialização
 var _is_server: bool = false
 var _initialized: bool = false
@@ -70,13 +77,13 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 		var peer_id = connected_peers[i]
 		
 		# Verifica se o peer já está registrado
-		var player_data = PlayerRegistry.get_player(peer_id)
+		var player_data = player_registry.get_player(peer_id)
 		if not (player_data and player_data.has("name") and player_data["registered"]):
 			# Registra com nome padrão
 			var player_name = "Player %d" % (i + 1)
-			PlayerRegistry.add_peer(peer_id)
-			PlayerRegistry.register_player(peer_id, player_name)
-			player_data = PlayerRegistry.get_player(peer_id)
+			player_registry.add_peer(peer_id)
+			player_registry.register_player(peer_id, player_name)
+			player_data = player_registry.get_player(peer_id)
 		
 		players.append({
 			"id": peer_id,
@@ -88,9 +95,9 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 	
 	# Passo 2: Cria sala no RoomRegistry
 	var randomized_ = randi_range(1, 1000)
-	var room_id = RoomRegistry.get_room_count() + randomized_ # ID único
+	var room_id = room_registry.get_room_count() + randomized_ # ID único
 	
-	var room_data = RoomRegistry.create_room(
+	var room_data = room_registry.create_room(
 		room_id,
 		nome_sala,
 		"",  # sem senha
@@ -105,13 +112,13 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 	
 	# Passo 3: Adiciona todos os outros jogadores à sala (host já foi adicionado)
 	for i in range(1, players.size()):
-		var success = RoomRegistry.add_player_to_room(room_id, players[i]["id"])
+		var success = room_registry.add_player_to_room(room_id, players[i]["id"])
 		if not success:
 			_log_debug("⚠ Falha ao adicionar jogador %s à sala" % players[i]["name"])
 	
 	# Passo 4: Verifica se pode iniciar a rodada (mesma lógica de _handle_start_round)
-	if not RoomRegistry.can_start_match(room_id):
-		var reqs = RoomRegistry.get_match_requirements(room_id)
+	if not room_registry.can_start_match(room_id):
+		var reqs = room_registry.get_match_requirements(room_id)
 		_log_debug("❌ Requisitos não atendidos: %d/%d jogadores (mínimo: %d)" % [
 			reqs["current_players"],
 			reqs["max_players"],
@@ -119,12 +126,11 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 		])
 		return
 	
-	if RoomRegistry.is_room_in_game(room_id):
+	if room_registry.is_room_in_game(room_id):
 		_log_debug("❌ A sala já está em uma rodada")
 		return
 	
 	# Passo 5: Define o primeiro jogador como host e inicia a rodada
-	var host_peer_id = players[0]["id"]
 	
 	_log_debug("========================================")
 	_log_debug("HOST INICIANDO RODADA (TESTE)")
@@ -132,14 +138,14 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 	_log_debug("Jogadores participantes:")
 	
 	for room_player in room_data["players"]:
-		PlayerRegistry.set_player_in_game(room_player["id"], true)
+		player_registry.set_player_in_game(room_player["id"], true)
 		var is_host_mark = " [HOST]" if room_player["is_host"] else ""
 		_log_debug("  - %s (ID: %d)%s" % [room_player["name"], room_player["id"], is_host_mark])
 	
 	_log_debug("========================================")
 	
 	# Cria rodada no RoundRegistry
-	var round_data = RoundRegistry.create_round(
+	var round_data = round_registry.create_round(
 		room_id,
 		room_data["name"],
 		room_data["players"],
@@ -151,11 +157,11 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 		return
 	
 	# Atualiza estado da sala
-	RoomRegistry.set_room_in_game(room_id, true)
+	room_registry.set_room_in_game(room_id, true)
 	
 	# Gera dados de spawn para cada jogador
 	var spawn_data = {}
-	var players_qtd = RoundRegistry.get_total_players(round_data["round_id"])
+	var players_qtd = round_registry.get_total_players(round_data["round_id"])
 	
 	# Cria pontos de spawn
 	var spawn_points = ServerManager._create_spawn_points(players_qtd)
@@ -195,7 +201,7 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 	await _server_instantiate_round(match_data)
 	
 	# Inicia a rodada
-	RoundRegistry.start_round(round_data["round_id"])
+	round_registry.start_round(round_data["round_id"])
 	
 	# Atualiza lista de salas
 	ServerManager._send_rooms_list_to_all()
@@ -219,8 +225,8 @@ func _server_instantiate_round(match_data:  Dictionary):
 	# Carrega o mapa
 	await server_map_manager.load_map(match_data["map_scene"], match_data["settings"])
 	
-	if RoundRegistry.rounds.has(match_data["round_id"]):
-		RoundRegistry.rounds[match_data["round_id"]]["map_manager"] = server_map_manager
+	if round_registry.rounds.has(match_data["round_id"]):
+		round_registry.rounds[match_data["round_id"]]["map_manager"] = server_map_manager
 	
 	# Spawna todos os jogadores
 	for player_data in match_data["players"]:
@@ -271,11 +277,11 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary):
 		return
 	
 	# 7. REGISTRA NO PlayerRegistry
-	PlayerRegistry.register_player_node(p_id, player_instance)
+	player_registry.register_player_node(p_id, player_instance)
 	
 	# 8. Debug: Verifica registro (opcional)
 	if debug_mode:
-		var registered_path = PlayerRegistry.get_player_node_path(p_id)
+		var registered_path = player_registry.get_player_node_path(p_id)
 		if registered_path.is_empty():
 			push_warning("Aviso: node_path vazio após registro (player %d)" % p_id)
 		else:
@@ -285,8 +291,8 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary):
 	var spawn_pos = Vector3.ZERO
 	var round_id = spawn_data.get("round_id", 0)
 	
-	if RoundRegistry.rounds.has(round_id):
-		var round_data = RoundRegistry.rounds[round_id]
+	if round_registry.rounds.has(round_id):
+		var round_data = round_registry.rounds[round_id]
 		if round_data.has("map_manager") and round_data["map_manager"]:
 			var map_mgr = round_data["map_manager"]
 			if map_mgr.has_method("get_spawn_position"):
@@ -304,9 +310,9 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary):
 		player_instance.initialize(p_id, p_name, spawn_pos)
 	
 	# 12. Registra no RoundRegistry
-	var p_round = RoundRegistry.get_round_by_player_id(p_id)
+	var p_round = round_registry.get_round_by_player_id(p_id)
 	if not p_round.is_empty():
-		RoundRegistry.register_spawned_player(p_round["round_id"], p_id, player_instance)
+		round_registry.register_spawned_player(p_round["round_id"], p_id, player_instance)
 	
 	_log_debug(" Player spawnado: %s (ID: %d) em %s" % [p_name, p_id, spawn_pos])
 	

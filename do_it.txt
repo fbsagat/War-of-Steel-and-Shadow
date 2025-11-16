@@ -29,7 +29,7 @@ girar o player para a direção da câmera ao invés da câmera para trás do pl
 36. 	Ok. Implementar o modo teste rápido, que consiste em iniciar a play já no mapa gerado com players adicionados.
 37. Sincronizar objetos dos players.
 38. Verificar se todos os registros estão se comportando corretamente, criar jogadores quando logal,
- apagar jogadores quando logam, criar salas quando criadas pelos jogadores, apagar quando o host apaga ou ficam vazias,
+apagar jogadores quando logam, criar salas quando criadas pelos jogadores, apagar quando o host apaga ou ficam vazias,
 criar rodadas quando o host inicia uma rodada, apagar rodada e registrar resultados na sala quando termina, e etc...
 
 
