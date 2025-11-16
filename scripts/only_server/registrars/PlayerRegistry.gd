@@ -1,69 +1,117 @@
 extends Node
 ## PlayerRegistry - Registro centralizado de jogadores (SERVIDOR APENAS)
 ## Gerencia informações de todos os jogadores conectados + Inventário por Rodada
+## 
+## RESPONSABILIDADES:
+## - Adicionar/remover peers conectados
+## - Registrar nomes de jogadores
+## - Gerenciar inventários por rodada
+## - Rastrear em qual sala/rodada cada jogador está
+## - Fornecer queries de localização de jogadores
 
 # ===== CONFIGURAÇÕES =====
 
 @export var debug_mode: bool = true
 @export var max_inventory_slots: int = 20  # Limite de itens por jogador
 
-# ===== REGISTROS =====
+# ===== REGISTROS (Injetados pelo ServerManager) =====
 
-var room_registry = ServerManager.player_registry
-var round_registry = ServerManager.round_registry
-var object_spawner = ServerManager.object_spawner
+var room_registry = null  # Injetado
+var round_registry = null  # Injetado
+var object_spawner = null  # Injetado
 
 # ===== VARIÁVEIS INTERNAS =====
 
+## Dados completos dos jogadores: {peer_id: PlayerData}
 var players: Dictionary = {}
-var players_cache: Dictionary = {}  # Cache de NodePath para acesso rápido
 
-## Inventários organizados por rodada e jogador: {round_id: {player_id: {equipped: {}, inventory: []}}}
+## Cache de NodePath para acesso rápido: {peer_id: NodePath_string}
+var players_cache: Dictionary = {}
+
+## Inventários organizados por rodada: {round_id: {player_id: InventoryData}}
 var player_inventories: Dictionary = {}
 
 # Estado de inicialização
-var _is_server: bool = false
 var _initialized: bool = false
 
 # ===== SINAIS =====
 
+# --- Sinais de Conexão ---
+signal peer_added(peer_id: int)
+signal peer_removed(peer_id: int)
+signal player_registered(peer_id: int, player_name: String)
+
+# --- Sinais de Localização ---
+signal player_joined_room(peer_id: int, room_id: int)
+signal player_left_room(peer_id: int, room_id: int)
+signal player_joined_round(peer_id: int, round_id: int)
+signal player_left_round(peer_id: int, round_id: int)
+
+# --- Sinais de Inventário ---
 signal item_added_to_inventory(round_id: int, player_id: int, item_name: String)
 signal item_removed_from_inventory(round_id: int, player_id: int, item_name: String)
 signal item_equipped(round_id: int, player_id: int, item_name: String, slot: String)
 signal item_unequipped(round_id: int, player_id: int, slot: String)
 signal inventory_full(round_id: int, player_id: int)
 
-# ===== INICIALIZAÇÃO CONTROLADA =====
+# ===== ESTRUTURAS DE DADOS =====
 
-func initialize_as_server():
+## PlayerData:
+## {
+##   "id": int,
+##   "name": String,
+##   "registered": bool,
+##   "connected_at": float,
+##   "room_id": int (-1 se não estiver em sala),
+##   "round_id": int (-1 se não estiver em rodada),
+##   "node_path": String
+## }
+
+## InventoryData:
+## {
+##   "inventory": Array[String],  # Lista de item_names
+##   "equipped": {                 # Itens equipados por slot
+##     "hand_right": String,
+##     "hand_left": String,
+##     "head": String,
+##     "body": String
+##   },
+##   "stats": {
+##     "items_collected": int,
+##     "items_used": int
+##   }
+## }
+
+# ===== INICIALIZAÇÃO =====
+
+func initialize():
+	"""Inicializa o PlayerRegistry (chamado apenas no servidor)"""
 	if _initialized:
+		_log_debug("⚠ PlayerRegistry já inicializado")
 		return
 	
-	_is_server = true
 	_initialized = true
-	
-	_log_debug("PlayerRegistry inicializado")
-
-func initialize_as_client():
-	if _initialized:
-		return
-	
-	_is_server = false
-	_initialized = true
-	_log_debug("PlayerRegistry acessado como CLIENTE (operações bloqueadas)")
+	_log_debug("✓ PlayerRegistry inicializado")
 
 func reset():
+	"""Reseta completamente o registro (usado ao desligar servidor)"""
+	# Limpa todos os dados
 	players.clear()
 	players_cache.clear()
 	player_inventories.clear()
+	
 	_initialized = false
-	_is_server = false
-	_log_debug("PlayerRegistry resetado")
+	_log_debug("🔄 PlayerRegistry resetado")
 
-# ===== GERENCIAMENTO DE JOGADORES =====
+# ===== GERENCIAMENTO DE PEERS =====
 
 func add_peer(peer_id: int):
-	if not _is_server:
+	"""
+	Adiciona um novo peer conectado (ainda não registrado)
+	Chamado quando um cliente se conecta ao servidor
+	"""
+	if players.has(peer_id):
+		_log_debug("⚠ Peer %d já existe" % peer_id)
 		return
 	
 	players[peer_id] = {
@@ -71,135 +119,261 @@ func add_peer(peer_id: int):
 		"name": "",
 		"registered": false,
 		"connected_at": Time.get_unix_time_from_system(),
-		"in_game": false,
+		"room_id": -1,  # -1 = não está em sala
+		"round_id": -1,  # -1 = não está em rodada
 		"node_path": ""
 	}
-	_log_debug("Peer adicionado: %d" % peer_id)
-
-func set_player_in_game(player_id: int, in_game: bool):
-	if not _is_server:
-		return
-	if players.has(player_id):
-		players[player_id]["in_game"] = in_game
-		_log_debug("Player %d in_game = %s" % [player_id, in_game])
-
-func get_in_game_players_list(out_game: bool = false) -> Array:
-	if not _is_server:
-		return []
 	
-	var players_list_in = []
-	var players_list_out = []
-	var players_ = players.duplicate()
-	for p_id in players_:
-		if get_player(p_id)["in_game"] == true:
-			players_list_in.append(p_id)
-		else:
-			players_list_out.append(p_id)
-	return players_list_out if out_game else players_list_in
+	_log_debug("✓ Peer adicionado: %d" % peer_id)
+	peer_added.emit(peer_id)
 
 func remove_peer(peer_id: int):
-	if not _is_server:
+	"""
+	Remove um peer desconectado
+	Limpa todas as referências (inventários, cache, etc)
+	"""
+	if not players.has(peer_id):
+		_log_debug("⚠ Tentou remover peer inexistente: %d" % peer_id)
 		return
 	
-	if players.has(peer_id):
-		var player = players[peer_id]
-		_log_debug("Peer removido: %d (%s)" % [peer_id, player["name"] if player["name"] else "sem_nome"])
-		
-		# Limpa inventários do jogador em todas as rodadas
-		_cleanup_player_inventories(peer_id)
-		
-		players.erase(peer_id)
-		players_cache.erase(peer_id)
+	var player = players[peer_id]
+	var player_name = player["name"] if player["name"] else "sem_nome"
+	
+	# Remove das salas/rodadas (se estiver)
+	if player["room_id"] != -1:
+		_leave_room_internal(peer_id)
+	
+	# Limpa inventários do jogador em todas as rodadas
+	_cleanup_player_inventories(peer_id)
+	
+	# Remove dados e cache
+	players.erase(peer_id)
+	players_cache.erase(peer_id)
+	
+	_log_debug("✓ Peer removido: %d (%s)" % [peer_id, player_name])
+	peer_removed.emit(peer_id)
 
 func register_player(peer_id: int, player_name: String) -> bool:
-	if not _is_server:
-		return false
-	
+	"""
+	Registra nome do jogador (transforma peer em player)
+	Retorna false se nome já está em uso
+	"""
 	if not players.has(peer_id):
-		_log_debug("Tentativa de registrar jogador inexistente: %d" % peer_id)
+		_log_debug("❌ Tentou registrar jogador inexistente: %d" % peer_id)
 		return false
 	
+	# Verifica se nome já está em uso
 	if is_name_taken(player_name):
-		_log_debug("Nome já está em uso: %s" % player_name)
+		_log_debug("❌ Nome já em uso: %s" % player_name)
 		return false
 	
+	# Registra nome
 	players[peer_id]["name"] = player_name
 	players[peer_id]["registered"] = true
 	
-	_log_debug(" Jogador registrado: %s (ID: %d)" % [player_name, peer_id])
+	_log_debug("✓ Jogador registrado: %s (ID: %d)" % [player_name, peer_id])
+	player_registered.emit(peer_id, player_name)
 	return true
 
 func is_name_taken(player_name: String) -> bool:
-	if not _is_server:
-		return false
-	
+	"""Verifica se um nome já está em uso"""
 	var normalized_name = player_name.strip_edges().to_lower()
 	for player in players.values():
 		if player.has("name") and player["name"].strip_edges().to_lower() == normalized_name:
 			return true
 	return false
 
+# ===== GERENCIAMENTO DE SALAS/RODADAS =====
+
+func join_room(peer_id: int, room_id: int):
+	"""
+	Marca jogador como dentro de uma sala
+	IMPORTANTE: Não adiciona na RoomRegistry, apenas rastreia aqui
+	"""
+	if not players.has(peer_id):
+		push_error("PlayerRegistry: Tentou marcar player %d em sala, mas não existe" % peer_id)
+		return
+	
+	var player = players[peer_id]
+	
+	# Se já estava em outra sala, sai primeiro
+	if player["room_id"] != -1 and player["room_id"] != room_id:
+		_leave_room_internal(peer_id)
+	
+	player["room_id"] = room_id
+	_log_debug("✓ Player %d entrou na sala %d" % [peer_id, room_id])
+	player_joined_room.emit(peer_id, room_id)
+
+func leave_room(peer_id: int):
+	"""Remove jogador da sala atual"""
+	_leave_room_internal(peer_id)
+
+func _leave_room_internal(peer_id: int):
+	"""Implementação interna de sair da sala"""
+	if not players.has(peer_id):
+		return
+	
+	var player = players[peer_id]
+	var old_room_id = player["room_id"]
+	
+	if old_room_id == -1:
+		return  # Já não estava em sala
+	
+	# Se estava em rodada, sai também
+	if player["round_id"] != -1:
+		_leave_round_internal(peer_id)
+	
+	player["room_id"] = -1
+	_log_debug("✓ Player %d saiu da sala %d" % [peer_id, old_room_id])
+	player_left_room.emit(peer_id, old_room_id)
+
+func join_round(peer_id: int, round_id: int):
+	"""
+	Marca jogador como dentro de uma rodada
+	Inicializa inventário automaticamente
+	"""
+	if not players.has(peer_id):
+		push_error("PlayerRegistry: Tentou marcar player %d em rodada, mas não existe" % peer_id)
+		return
+	
+	var player = players[peer_id]
+	
+	# Se já estava em outra rodada, sai primeiro
+	if player["round_id"] != -1 and player["round_id"] != round_id:
+		_leave_round_internal(peer_id)
+	
+	player["round_id"] = round_id
+	
+	# Inicializa inventário
+	init_player_inventory(round_id, peer_id)
+	
+	_log_debug("✓ Player %d entrou na rodada %d" % [peer_id, round_id])
+	player_joined_round.emit(peer_id, round_id)
+
+func leave_round(peer_id: int):
+	"""Remove jogador da rodada atual"""
+	_leave_round_internal(peer_id)
+
+func _leave_round_internal(peer_id: int):
+	"""Implementação interna de sair da rodada"""
+	if not players.has(peer_id):
+		return
+	
+	var player = players[peer_id]
+	var old_round_id = player["round_id"]
+	
+	if old_round_id == -1:
+		return  # Já não estava em rodada
+	
+	# Limpa inventário
+	clear_player_inventory(old_round_id, peer_id)
+	
+	player["round_id"] = -1
+	_log_debug("✓ Player %d saiu da rodada %d" % [peer_id, old_round_id])
+	player_left_round.emit(peer_id, old_round_id)
+
+# ===== QUERIES DE LOCALIZAÇÃO =====
+
+func in_room(peer_id: int) -> bool:
+	"""Verifica se jogador está em alguma sala"""
+	if not players.has(peer_id):
+		return false
+	return players[peer_id]["room_id"] != -1
+
+func in_round(peer_id: int) -> bool:
+	"""Verifica se jogador está em alguma rodada"""
+	if not players.has(peer_id):
+		return false
+	return players[peer_id]["round_id"] != -1
+
+func get_player_room(peer_id: int) -> int:
+	"""Retorna ID da sala em que o jogador está (-1 se não estiver)"""
+	if not players.has(peer_id):
+		return -1
+	return players[peer_id]["room_id"]
+
+func get_player_round(peer_id: int) -> int:
+	"""Retorna ID da rodada em que o jogador está (-1 se não estiver)"""
+	if not players.has(peer_id):
+		return -1
+	return players[peer_id]["round_id"]
+
+func get_players_in_room(room_id: int) -> Array:
+	"""Retorna lista de peer_ids na sala especificada"""
+	var result = []
+	for peer_id in players:
+		if players[peer_id]["room_id"] == room_id:
+			result.append(peer_id)
+	return result
+
+func get_players_in_round(round_id: int) -> Array:
+	"""Retorna lista de peer_ids na rodada especificada"""
+	var result = []
+	for peer_id in players:
+		if players[peer_id]["round_id"] == round_id:
+			result.append(peer_id)
+	return result
+
+# ===== QUERIES DE DADOS =====
+
 func get_player(peer_id: int) -> Dictionary:
-	if not _is_server or not players.has(peer_id):
+	"""Retorna cópia completa dos dados do jogador"""
+	if not players.has(peer_id):
 		return {}
-	return players[peer_id]
+	return players[peer_id].duplicate()
 
 func get_player_name(peer_id: int) -> String:
-	if not _is_server or not players.has(peer_id):
+	"""Retorna nome do jogador"""
+	if not players.has(peer_id):
 		return ""
 	return players[peer_id]["name"]
 
 func is_player_registered(peer_id: int) -> bool:
-	if not _is_server or not players.has(peer_id):
+	"""Verifica se jogador completou registro (tem nome)"""
+	if not players.has(peer_id):
 		return false
 	return players[peer_id]["registered"]
 
 func get_all_players() -> Array:
-	if not _is_server:
-		return []
-	return players.values()
+	"""Retorna lista de todos os PlayerData"""
+	return players.values().duplicate()
 
 func get_player_count() -> int:
-	return players.size() if _is_server else 0
+	"""Retorna total de peers conectados"""
+	return players.size()
 
 func get_registered_player_count() -> int:
-	if not _is_server:
-		return 0
-	
+	"""Retorna total de jogadores registrados"""
 	var count = 0
 	for player in players.values():
 		if player["registered"]:
 			count += 1
 	return count
 
-func clear_all():
-	if not _is_server:
-		return
-	
-	_log_debug("Limpando todos os jogadores")
-	players.clear()
-	players_cache.clear()
-	player_inventories.clear()
-
 # ===== SISTEMA DE INVENTÁRIO POR RODADA =====
 
-## Inicializa inventário do jogador em uma rodada
 func init_player_inventory(round_id: int, player_id: int) -> bool:
-	if not _is_server:
-		return false
-	
+	"""
+	Inicializa inventário do jogador em uma rodada específica
+	Chamado automaticamente quando jogador entra em rodada
+	"""
 	if not is_player_registered(player_id):
-		push_error("Tentou inicializar inventário de player %d não registrado" % player_id)
+		push_error("PlayerRegistry: Tentou inicializar inventário de player %d não registrado" % player_id)
 		return false
 	
 	# Cria estrutura da rodada se não existir
 	if not player_inventories.has(round_id):
 		player_inventories[round_id] = {}
 	
+	# Não reinicializa se já existe
+	if player_inventories[round_id].has(player_id):
+		_log_debug("⚠ Inventário do player %d na rodada %d já existe" % [player_id, round_id])
+		return true
+	
 	# Cria inventário do jogador
 	player_inventories[round_id][player_id] = {
-		"inventory": [],  # Array de item_names
-		"equipped": {     # Itens equipados por slot
+		"inventory": [],
+		"equipped": {
 			"hand_right": "",
 			"hand_left": "",
 			"head": "",
@@ -211,17 +385,14 @@ func init_player_inventory(round_id: int, player_id: int) -> bool:
 		}
 	}
 	
-	_log_debug(" Inventário inicializado: Player %d na rodada %d" % [player_id, round_id])
+	_log_debug("✓ Inventário inicializado: Player %d na rodada %d" % [player_id, round_id])
 	return true
 
-## Adiciona item ao inventário
 func add_item_to_inventory(round_id: int, player_id: int, item_name: String) -> bool:
-	if not _is_server:
-		return false
-	
+	"""Adiciona item ao inventário do jogador"""
 	var inventory = _get_player_inventory(round_id, player_id)
 	if inventory.is_empty():
-		push_error("Inventário não encontrado: Player %d, Rodada %d" % [player_id, round_id])
+		push_error("PlayerRegistry: Inventário não encontrado: Player %d, Rodada %d" % [player_id, round_id])
 		return false
 	
 	# Verifica limite de slots
@@ -230,25 +401,22 @@ func add_item_to_inventory(round_id: int, player_id: int, item_name: String) -> 
 		inventory_full.emit(round_id, player_id)
 		return false
 	
-	# Valida item no database
-	if not ItemDatabase.item_exists(item_name):
-		push_error("Item inválido: %s" % item_name)
-		return false
+	# TODO: Validar item no ItemDatabase quando disponível
+	# if not ItemDatabase.item_exists(item_name):
+	#     push_error("Item inválido: %s" % item_name)
+	#     return false
 	
 	# Adiciona ao inventário
 	inventory["inventory"].append(item_name)
 	inventory["stats"]["items_collected"] += 1
 	
-	_log_debug(" Item adicionado: %s → Player %d (Rodada %d)" % [item_name, player_id, round_id])
+	_log_debug("✓ Item adicionado: %s → Player %d (Rodada %d)" % [item_name, player_id, round_id])
 	item_added_to_inventory.emit(round_id, player_id, item_name)
 	
 	return true
 
-## Remove item do inventário
 func remove_item_from_inventory(round_id: int, player_id: int, item_name: String) -> bool:
-	if not _is_server:
-		return false
-	
+	"""Remove item do inventário do jogador"""
 	var inventory = _get_player_inventory(round_id, player_id)
 	if inventory.is_empty():
 		return false
@@ -261,16 +429,16 @@ func remove_item_from_inventory(round_id: int, player_id: int, item_name: String
 	inventory["inventory"].remove_at(idx)
 	inventory["stats"]["items_used"] += 1
 	
-	_log_debug(" Item removido: %s de Player %d (Rodada %d)" % [item_name, player_id, round_id])
+	_log_debug("✓ Item removido: %s de Player %d (Rodada %d)" % [item_name, player_id, round_id])
 	item_removed_from_inventory.emit(round_id, player_id, item_name)
 	
 	return true
 
-## Equipa item em um slot
-func equip_item(round_id: int, player_id: int, item_name: String) -> bool:
-	if not _is_server:
-		return false
-	
+func equip_item(round_id: int, player_id: int, item_name: String, slot: String) -> bool:
+	"""
+	Equipa item em um slot específico
+	slot pode ser: "hand_right", "hand_left", "head", "body"
+	"""
 	var inventory = _get_player_inventory(round_id, player_id)
 	if inventory.is_empty():
 		return false
@@ -280,15 +448,9 @@ func equip_item(round_id: int, player_id: int, item_name: String) -> bool:
 		_log_debug("⚠ Item não está no inventário: %s" % item_name)
 		return false
 	
-	# Obtém dados do item
-	var item_data = ItemDatabase.get_item(item_name)
-	if not item_data:
-		return false
-	
-	# Determina slot baseado no tipo
-	var slot = _get_slot_for_item(item_data)
-	if slot.is_empty():
-		push_error("Não foi possível determinar slot para item: %s" % item_name)
+	# Valida slot
+	if not inventory["equipped"].has(slot):
+		push_error("PlayerRegistry: Slot inválido: %s" % slot)
 		return false
 	
 	# Desequipa item atual se houver
@@ -299,22 +461,19 @@ func equip_item(round_id: int, player_id: int, item_name: String) -> bool:
 	# Equipa novo item
 	inventory["equipped"][slot] = item_name
 	
-	_log_debug(" Item equipado: %s em %s (Player %d, Rodada %d)" % [item_name, slot, player_id, round_id])
+	_log_debug("✓ Item equipado: %s em %s (Player %d, Rodada %d)" % [item_name, slot, player_id, round_id])
 	item_equipped.emit(round_id, player_id, item_name, slot)
 	
 	return true
 
-## Desequipa item de um slot
 func unequip_item(round_id: int, player_id: int, slot: String) -> bool:
-	if not _is_server:
-		return false
-	
+	"""Desequipa item de um slot"""
 	var inventory = _get_player_inventory(round_id, player_id)
 	if inventory.is_empty():
 		return false
 	
 	if not inventory["equipped"].has(slot):
-		push_error("Slot inválido: %s" % slot)
+		push_error("PlayerRegistry: Slot inválido: %s" % slot)
 		return false
 	
 	var item_name = inventory["equipped"][slot]
@@ -323,90 +482,13 @@ func unequip_item(round_id: int, player_id: int, slot: String) -> bool:
 	
 	inventory["equipped"][slot] = ""
 	
-	_log_debug(" Item desequipado: %s de %s (Player %d, Rodada %d)" % [item_name, slot, player_id, round_id])
-	item_unequipped.emit(round_id, player_id, slot)
+	_log_debug("✓ Item desequipado: %s de %s (Player %d, Rodada %d)" % [item_name, slot, player_id, round_id])
+	item_unequipped.emit(round_id, slot)
 	
 	return true
 
-## Retorna inventário completo do jogador
-func get_player_inventory(round_id: int, player_id: int) -> Dictionary:
-	return _get_player_inventory(round_id, player_id).duplicate(true)
-
-## Retorna apenas itens no inventário (não equipados)
-func get_inventory_items(round_id: int, player_id: int) -> Array:
-	var inventory = _get_player_inventory(round_id, player_id)
-	if inventory.is_empty():
-		return []
-	return inventory["inventory"].duplicate()
-
-## Retorna itens equipados
-func get_equipped_items(round_id: int, player_id: int) -> Dictionary:
-	var inventory = _get_player_inventory(round_id, player_id)
-	if inventory.is_empty():
-		return {}
-	return inventory["equipped"].duplicate()
-
-## Verifica se jogador tem um item
-func has_item(round_id: int, player_id: int, item_name: String) -> bool:
-	var inventory = _get_player_inventory(round_id, player_id)
-	if inventory.is_empty():
-		return false
-	return item_name in inventory["inventory"]
-
-## Verifica se item está equipado
-func is_item_equipped(round_id: int, player_id: int, item_name: String) -> bool:
-	var inventory = _get_player_inventory(round_id, player_id)
-	if inventory.is_empty():
-		return false
-	return item_name in inventory["equipped"].values()
-
-## Retorna slot onde item está equipado
-func get_equipped_slot(round_id: int, player_id: int, item_name: String) -> String:
-	var inventory = _get_player_inventory(round_id, player_id)
-	if inventory.is_empty():
-		return ""
-	
-	for slot in inventory["equipped"]:
-		if inventory["equipped"][slot] == item_name:
-			return slot
-	
-	return ""
-
-## Retorna contagem de itens no inventário
-func get_inventory_count(round_id: int, player_id: int) -> int:
-	var inventory = _get_player_inventory(round_id, player_id)
-	if inventory.is_empty():
-		return 0
-	return inventory["inventory"].size()
-
-## Verifica se inventário está cheio
-func is_inventory_full(round_id: int, player_id: int) -> bool:
-	return get_inventory_count(round_id, player_id) >= max_inventory_slots
-
-## Limpa inventário do jogador em uma rodada
-func clear_player_inventory(round_id: int, player_id: int):
-	if not _is_server:
-		return
-	
-	if not player_inventories.has(round_id):
-		return
-	
-	if player_inventories[round_id].has(player_id):
-		player_inventories[round_id].erase(player_id)
-		_log_debug("Inventário limpo: Player %d na rodada %d" % [player_id, round_id])
-
-## Retorna estatísticas do inventário
-func get_inventory_stats(round_id: int, player_id: int) -> Dictionary:
-	var inventory = _get_player_inventory(round_id, player_id)
-	if inventory.is_empty():
-		return {}
-	return inventory["stats"].duplicate()
-
-## NOVO: Transfere item entre jogadores (trade)
 func transfer_item(round_id: int, from_player: int, to_player: int, item_name: String) -> bool:
-	if not _is_server:
-		return false
-	
+	"""Transfere item entre jogadores (trade)"""
 	# Verifica se from_player tem o item
 	if not has_item(round_id, from_player, item_name):
 		_log_debug("⚠ Player %d não possui item %s" % [from_player, item_name])
@@ -428,176 +510,145 @@ func transfer_item(round_id: int, from_player: int, to_player: int, item_name: S
 		add_item_to_inventory(round_id, from_player, item_name)
 		return false
 	
-	_log_debug(" Item transferido: %s (Player %d → Player %d)" % [item_name, from_player, to_player])
+	_log_debug("✓ Item transferido: %s (Player %d → Player %d)" % [item_name, from_player, to_player])
 	return true
 
-# ===== FUNÇÕES INTERNAS =====
-
-func _get_player_inventory(round_id: int, player_id: int) -> Dictionary:
-	"""Retorna referência interna do inventário (não duplica)"""
+func clear_player_inventory(round_id: int, player_id: int):
+	"""Limpa inventário do jogador em uma rodada"""
 	if not player_inventories.has(round_id):
-		return {}
-	
-	if not player_inventories[round_id].has(player_id):
-		return {}
-	
-	return player_inventories[round_id][player_id]
-
-func _get_slot_for_item(item_data) -> String:
-	"""Determina slot baseado no tipo e lado do item"""
-	match item_data.item_type:
-		"hand":
-			return "hand_right" if item_data.item_side == "right" else "hand_left"
-		"head":
-			return "head"
-		"body":
-			return "body"
-		_:
-			return ""
-
-func _cleanup_player_inventories(player_id: int):
-	"""Remove inventários do jogador de todas as rodadas"""
-	for round_id in player_inventories:
-		if player_inventories[round_id].has(player_id):
-			player_inventories[round_id].erase(player_id)
-
-func _on_round_ended(round_data: Dictionary):
-	"""Limpa inventários quando rodada termina"""
-	var round_id = round_data["round_id"]
-	
-	if player_inventories.has(round_id):
-		var player_count = player_inventories[round_id].size()
-		player_inventories.erase(round_id)
-		_log_debug(" Inventários da rodada %d limpos (%d jogadores)" % [round_id, player_count])
-
-# ===== QUERIES AVANÇADAS =====
-
-## Retorna todos os jogadores que possuem um item específico
-func get_players_with_item(round_id: int, item_name: String) -> Array:
-	var result = []
-	
-	if not player_inventories.has(round_id):
-		return result
-	
-	for player_id in player_inventories[round_id]:
-		if has_item(round_id, player_id, item_name):
-			result.append(player_id)
-	
-	return result
-
-## Retorna jogador com mais itens na rodada
-func get_richest_player(round_id: int) -> Dictionary:
-	if not player_inventories.has(round_id):
-		return {}
-	
-	var richest_id = -1
-	var max_items = 0
-	
-	for player_id in player_inventories[round_id]:
-		var count = get_inventory_count(round_id, player_id)
-		if count > max_items:
-			max_items = count
-			richest_id = player_id
-	
-	if richest_id == -1:
-		return {}
-	
-	return {
-		"player_id": richest_id,
-		"item_count": max_items,
-		"items": get_inventory_items(round_id, richest_id)
-	}
-
-## Estatísticas gerais da rodada
-func get_round_inventory_stats(round_id: int) -> Dictionary:
-	if not player_inventories.has(round_id):
-		return {}
-	
-	var stats = {
-		"total_players": 0,
-		"total_items": 0,
-		"total_collected": 0,
-		"total_used": 0,
-		"items_by_type": {}
-	}
-	
-	for player_id in player_inventories[round_id]:
-		stats["total_players"] += 1
-		
-		var inv = player_inventories[round_id][player_id]
-		stats["total_items"] += inv["inventory"].size()
-		stats["total_collected"] += inv["stats"]["items_collected"]
-		stats["total_used"] += inv["stats"]["items_used"]
-		
-		# Conta por tipo
-		for item_name in inv["inventory"]:
-			var item_data = ItemDatabase.get_item(item_name)
-			if item_data:
-				var type = item_data.item_type
-				if not stats["items_by_type"].has(type):
-					stats["items_by_type"][type] = 0
-				stats["items_by_type"][type] += 1
-	
-	return stats
-
-# ===== GERENCIAMENTO DE NODES (continuação do código original) =====
-
-func register_player_node(p_id: int, player_node: Node):
-	if not _is_server:
-		push_warning("register_player_node chamado no cliente!")
 		return
 	
-	if not is_player_registered(p_id):
-		push_error("Tentou registrar nó de player %d não registrado" % p_id)
+	if player_inventories[round_id].has(player_id):
+		player_inventories[round_id].erase(player_id)
+		_log_debug("✓ Inventário limpo: Player %d na rodada %d" % [player_id, round_id])
+
+func clear_round_inventories(round_id: int):
+	"""
+	Limpa todos os inventários de uma rodada
+	Chamado quando rodada termina
+	"""
+	if not player_inventories.has(round_id):
+		return
+	
+	var player_count = player_inventories[round_id].size()
+	player_inventories.erase(round_id)
+	_log_debug("✓ Inventários da rodada %d limpos (%d jogadores)" % [round_id, player_count])
+
+# ===== QUERIES DE INVENTÁRIO =====
+
+func get_player_inventory(round_id: int, player_id: int) -> Dictionary:
+	"""Retorna cópia completa do inventário do jogador"""
+	return _get_player_inventory(round_id, player_id).duplicate(true)
+
+func get_inventory_items(round_id: int, player_id: int) -> Array:
+	"""Retorna apenas lista de itens no inventário (não equipados)"""
+	var inventory = _get_player_inventory(round_id, player_id)
+	if inventory.is_empty():
+		return []
+	return inventory["inventory"].duplicate()
+
+func get_equipped_items(round_id: int, player_id: int) -> Dictionary:
+	"""Retorna dicionário de itens equipados"""
+	var inventory = _get_player_inventory(round_id, player_id)
+	if inventory.is_empty():
+		return {}
+	return inventory["equipped"].duplicate()
+
+func has_item(round_id: int, player_id: int, item_name: String) -> bool:
+	"""Verifica se jogador possui um item"""
+	var inventory = _get_player_inventory(round_id, player_id)
+	if inventory.is_empty():
+		return false
+	return item_name in inventory["inventory"]
+
+func is_item_equipped(round_id: int, player_id: int, item_name: String) -> bool:
+	"""Verifica se item está equipado"""
+	var inventory = _get_player_inventory(round_id, player_id)
+	if inventory.is_empty():
+		return false
+	return item_name in inventory["equipped"].values()
+
+func get_equipped_slot(round_id: int, player_id: int, item_name: String) -> String:
+	"""Retorna slot onde item está equipado (ou "" se não equipado)"""
+	var inventory = _get_player_inventory(round_id, player_id)
+	if inventory.is_empty():
+		return ""
+	
+	for slot in inventory["equipped"]:
+		if inventory["equipped"][slot] == item_name:
+			return slot
+	
+	return ""
+
+func get_inventory_count(round_id: int, player_id: int) -> int:
+	"""Retorna quantidade de itens no inventário"""
+	var inventory = _get_player_inventory(round_id, player_id)
+	if inventory.is_empty():
+		return 0
+	return inventory["inventory"].size()
+
+func is_inventory_full(round_id: int, player_id: int) -> bool:
+	"""Verifica se inventário está cheio"""
+	return get_inventory_count(round_id, player_id) >= max_inventory_slots
+
+func get_inventory_stats(round_id: int, player_id: int) -> Dictionary:
+	"""Retorna estatísticas do inventário (items_collected, items_used)"""
+	var inventory = _get_player_inventory(round_id, player_id)
+	if inventory.is_empty():
+		return {}
+	return inventory["stats"].duplicate()
+
+# ===== GERENCIAMENTO DE NODES =====
+
+func register_player_node(peer_id: int, player_node: Node):
+	"""
+	Registra referência ao node do jogador na cena
+	Usado para localizar visualmente o jogador no mundo
+	"""
+	if not is_player_registered(peer_id):
+		push_error("PlayerRegistry: Tentou registrar nó de player %d não registrado" % peer_id)
 		return
 	
 	if not player_node or not player_node.is_inside_tree():
-		push_error("Tentou registrar nó inválido ou não na árvore para player %d" % p_id)
+		push_error("PlayerRegistry: Tentou registrar nó inválido para player %d" % peer_id)
 		return
 	
-	var node_path = player_node.get_path()
-	players[p_id]["node_path"] = str(node_path)
-	players_cache[p_id] = str(node_path)
+	var node_path = str(player_node.get_path())
+	players[peer_id]["node_path"] = node_path
+	players_cache[peer_id] = node_path
 	
-	_log_debug(" Nó registrado: Player %d → %s" % [p_id, node_path])
+	_log_debug("✓ Nó registrado: Player %d → %s" % [peer_id, node_path])
 
-func update_player_node_path(p_id: int, new_path: NodePath) -> bool:
-	if not _is_server:
-		push_warning("update_player_node_path chamado no cliente!")
-		return false
+func unregister_player_node(peer_id: int):
+	"""Remove referência ao node do jogador"""
+	if not players.has(peer_id):
+		return
 	
-	if not is_player_registered(p_id):
-		push_error("Tentou atualizar node_path de player %d não registrado" % p_id)
-		return false
-	
-	var node = get_node_or_null(new_path)
-	if not node:
-		push_error("Caminho inválido ao atualizar node_path de player %d: %s" % [p_id, new_path])
-		return false
-	
-	players[p_id]["node_path"] = str(new_path)
-	players_cache[p_id] = str(new_path)
-	
-	_log_debug(" Node path atualizado: Player %d → %s" % [p_id, new_path])
-	return true
+	players[peer_id]["node_path"] = ""
+	players_cache.erase(peer_id)
+	_log_debug("✓ Nó desregistrado: Player %d" % peer_id)
 
-func get_player_node(p_id: int) -> Node:
-	if not _is_server:
+func get_player_node(peer_id: int) -> Node:
+	"""
+	Retorna o node do jogador na cena
+	Usa cache para otimização
+	"""
+	if not is_player_registered(peer_id):
 		return null
 	
-	if not is_player_registered(p_id):
-		return null
-	
-	if players_cache.has(p_id):
-		var cached_path = players_cache[p_id]
+	# Tenta cache primeiro
+	if players_cache.has(peer_id):
+		var cached_path = players_cache[peer_id]
 		var node = get_node_or_null(cached_path)
 		if node:
 			return node
 		else:
-			players_cache.erase(p_id)
-			_log_debug("⚠ Cache desatualizado para player %d, removido" % p_id)
+			# Cache desatualizado
+			players_cache.erase(peer_id)
+			_log_debug("⚠ Cache desatualizado para player %d" % peer_id)
 	
-	var player_data = get_player(p_id)
+	# Busca no registro principal
+	var player_data = players[peer_id]
 	var node_path = player_data.get("node_path", "")
 	
 	if node_path.is_empty():
@@ -606,236 +657,86 @@ func get_player_node(p_id: int) -> Node:
 	var player_node = get_node_or_null(node_path)
 	
 	if player_node:
-		players_cache[p_id] = node_path
+		# Atualiza cache
+		players_cache[peer_id] = node_path
 	else:
-		_log_debug("⚠ Nó não encontrado no caminho: %s (Player %d)" % [node_path, p_id])
+		_log_debug("⚠ Nó não encontrado: %s (Player %d)" % [node_path, peer_id])
 	
 	return player_node
 
-func unregister_player_node(p_id: int) -> void:
-	if not _is_server:
-		return
-	
-	if players.has(p_id):
-		players[p_id]["node_path"] = ""
-	
-	players_cache.erase(p_id)
-	_log_debug("Nó desregistrado: Player %d" % p_id)
+func has_player_node(peer_id: int) -> bool:
+	"""Verifica se jogador tem node registrado válido"""
+	return get_player_node(peer_id) != null
 
-func has_player_node(p_id: int) -> bool:
-	if not _is_server:
-		return false
-	
-	var player_data = get_player(p_id)
-	if player_data.is_empty():
-		return false
-	
-	var node_path = player_data.get("node_path", "")
-	if node_path.is_empty():
-		return false
-	
-	var node = get_node_or_null(node_path)
-	return node != null
-
-func get_player_node_path(p_id: int) -> String:
-	if not _is_server:
+func get_player_node_path(peer_id: int) -> String:
+	"""Retorna string do NodePath do jogador"""
+	if not players.has(peer_id):
 		return ""
-	
-	var player_data = get_player(p_id)
-	return player_data.get("node_path", "")
+	return players[peer_id].get("node_path", "")
 
-func get_players_in_node(parent_path: NodePath) -> Array[int]:
-	if not _is_server:
-		return []
-	
-	var result: Array[int] = []
-	var parent_str = str(parent_path)
-	
-	for p_id in players.keys():
-		var node_path = get_player_node_path(p_id)
-		if node_path.begins_with(parent_str):
-			result.append(p_id)
-	
-	return result
+# ===== FUNÇÕES INTERNAS =====
 
-func get_nearest_player_to(target_node: Node3D, max_distance: float = INF) -> Dictionary:
-	if not _is_server or not target_node:
+func _get_player_inventory(round_id: int, player_id: int) -> Dictionary:
+	"""
+	Retorna referência INTERNA do inventário (não duplica)
+	Usar apenas internamente, nunca expor ao exterior
+	"""
+	if not player_inventories.has(round_id):
 		return {}
 	
-	var closest_id: int = -1
-	var closest_node: Node = null
-	var closest_distance: float = INF
-	
-	for p_id in players.keys():
-		var player_node = get_player_node(p_id)
-		if not player_node or not player_node is Node3D:
-			continue
-		
-		var distance = target_node.global_position.distance_to(player_node.global_position)
-		
-		if distance < closest_distance and distance <= max_distance:
-			closest_distance = distance
-			closest_node = player_node
-			closest_id = p_id
-	
-	if closest_id == -1:
+	if not player_inventories[round_id].has(player_id):
 		return {}
 	
-	return {
-		"id": closest_id,
-		"node": closest_node,
-		"distance": closest_distance
-	}
+	return player_inventories[round_id][player_id]
+
+func _cleanup_player_inventories(player_id: int):
+	"""Remove inventários do jogador de todas as rodadas"""
+	for round_id in player_inventories:
+		if player_inventories[round_id].has(player_id):
+			player_inventories[round_id].erase(player_id)
 
 # ===== DEBUG =====
 
 func debug_print_all_players():
-	if not _is_server:
-		print("[PlayerRegistry] Chamado no cliente, operação bloqueada")
-		return
+	"""Imprime estado completo de todos os jogadores"""
+	print("\n========== PLAYER REGISTRY ==========")
+	print("Total de players: %d" % players.size())
+	print("Registrados: %d" % get_registered_player_count())
+	print("Cache de nodes: %d entradas" % players_cache.size())
 	
-	print("\n=== PLAYERS REGISTRADOS ===")
-	print("Total: %d players" % players.size())
-	print("Cache: %d entradas" % players_cache.size())
-	
-	# Estatísticas de inventários
+	# Conta inventários
 	var total_inventories = 0
 	for round_id in player_inventories:
 		total_inventories += player_inventories[round_id].size()
 	print("Inventários ativos: %d" % total_inventories)
-	print("---")
+	print("-------------------------------------")
 	
-	for p_id in players.keys():
-		var player = players[p_id]
-		var name_str = player.get("name", "N/A")
-		var registered = player.get("registered", false)
-		var in_game = player.get("in_game", false)
-		var node_path = player.get("node_path", "")
+	for peer_id in players:
+		var p = players[peer_id]
+		print("\n[Player %d]" % peer_id)
+		print("  Nome: %s" % (p["name"] if p["name"] else "(sem nome)"))
+		print("  Registrado: %s" % p["registered"])
+		print("  Sala: %s" % (p["room_id"] if p["room_id"] != -1 else "(nenhuma)"))
+		print("  Rodada: %s" % (p["round_id"] if p["round_id"] != -1 else "(nenhuma)"))
 		
-		var node_status = "SEM NÓ"
-		if not node_path.is_empty():
+		# Node status
+		var node_path = p["node_path"]
+		if node_path.is_empty():
+			print("  Node: (não registrado)")
+		else:
 			var node = get_node_or_null(node_path)
-			node_status = " OK" if node else "MORTO"
+			var status = "✓ VÁLIDO" if node else "✗ INVÁLIDO"
+			print("  Node: %s [%s]" % [node_path, status])
 		
-		print("  Player %d:" % p_id)
-		print("    Nome: %s" % name_str)
-		print("    Registrado: %s" % registered)
-		print("    In Game: %s" % in_game)
-		print("    Node: %s [%s]" % [node_path, node_status])
-		print("    Cache: %s" % ("SIM" if players_cache.has(p_id) else "NÃO"))
-		
-		# Mostra inventários do jogador em todas as rodadas
-		var player_inv_count = 0
+		# Inventários
 		for round_id in player_inventories:
-			if player_inventories[round_id].has(p_id):
-				var inv = player_inventories[round_id][p_id]
-				var item_count = inv["inventory"].size()
-				player_inv_count += item_count
-				print("    Inventário [Rodada %d]: %d itens" % [round_id, item_count])
-		
-		if player_inv_count == 0:
-			print("    Inventário: (nenhum)")
-		
-		print("  ---")
+			if player_inventories[round_id].has(peer_id):
+				var inv = player_inventories[round_id][peer_id]
+				print("  Inventário [Rodada %d]: %d itens" % [round_id, inv["inventory"].size()])
 	
-	print("===========================\n")
-
-# ===== UTILITÁRIOS =====
-
-func debug_print_inventory(round_id: int, player_id: int):
-	"""Imprime inventário detalhado de um jogador"""
-	if not _is_server:
-		return
-	
-	var inventory = _get_player_inventory(round_id, player_id)
-	if inventory.is_empty():
-		print("❌ Inventário não encontrado: Player %d, Rodada %d" % [player_id, round_id])
-		return
-	
-	print("\n=== INVENTÁRIO DO PLAYER %d (Rodada %d) ===" % [player_id, round_id])
-	print("Slots: %d/%d" % [inventory["inventory"].size(), max_inventory_slots])
-	print("\nItens no Inventário:")
-	for item in inventory["inventory"]:
-		var item_data = ItemDatabase.get_item(item)
-		if item_data:
-			print("  • %s (Tipo: %s, Lv%d)" % [item, item_data.item_type, item_data.item_level])
-	
-	print("\nItens Equipados:")
-	for slot in inventory["equipped"]:
-		var item = inventory["equipped"][slot]
-		if item.is_empty():
-			print("  [%s]: (vazio)" % slot)
-		else:
-			print("  [%s]: %s" % [slot, item])
-	
-	print("\nEstatísticas:")
-	print("  Coletados: %d" % inventory["stats"]["items_collected"])
-	print("  Usados: %d" % inventory["stats"]["items_used"])
-	print("=====================================\n")
-
-func validate_all_nodes() -> Dictionary:
-	if not _is_server:
-		return {}
-	
-	var stats = {
-		"total": 0,
-		"valid": 0,
-		"invalid": 0,
-		"missing": 0,
-		"cache_hits": 0,
-		"cache_misses": 0
-	}
-	
-	for p_id in players.keys():
-		stats.total += 1
-		
-		var node_path = get_player_node_path(p_id)
-		
-		if node_path.is_empty():
-			stats.missing += 1
-			continue
-		
-		if players_cache.has(p_id):
-			stats.cache_hits += 1
-		else:
-			stats.cache_misses += 1
-		
-		var node = get_node_or_null(node_path)
-		if node:
-			stats.valid += 1
-		else:
-			stats.invalid += 1
-			_log_debug("⚠ Nó inválido detectado: Player %d (%s)" % [p_id, node_path])
-	
-	return stats
-
-func cleanup_invalid_nodes():
-	if not _is_server:
-		return
-	
-	var cleaned = 0
-	
-	for p_id in players.keys():
-		var node_path = get_player_node_path(p_id)
-		if node_path.is_empty():
-			continue
-		
-		var node = get_node_or_null(node_path)
-		if not node:
-			players[p_id]["node_path"] = ""
-			players_cache.erase(p_id)
-			cleaned += 1
-			_log_debug(" Nó inválido limpo: Player %d" % p_id)
-	
-	if cleaned > 0:
-		_log_debug("Limpeza completa: %d nós inválidos removidos" % cleaned)
-
-func get_player_node_by_id(p_id: int) -> Node:
-	return get_player_node(p_id)
-
-# ===== UTILITÁRIOS =====
+	print("\n=====================================\n")
 
 func _log_debug(message: String):
+	"""Função padrão de debug"""
 	if debug_mode:
-		var prefix = "[SERVER]" if _is_server else "[CLIENT]"
-		print("%s[PlayerRegistry] %s" % [prefix, message])
+		print("[PlayerRegistry] %s" % message)

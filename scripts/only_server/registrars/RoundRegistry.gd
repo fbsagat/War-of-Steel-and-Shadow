@@ -1,30 +1,44 @@
 extends Node
-## RoundRegistry - Gerenciador rodadas de salas (SERVIDOR APENAS)
-## Armazena informações de rodadas nas salas sendo sala uma partida
+## RoundRegistry - Gerenciador de rodadas/partidas (SERVIDOR APENAS)
+## Rodadas são partidas ativas jogadas dentro de salas
+##
+## RESPONSABILIDADES:
+## - Criar/iniciar rodadas
+## - Gerenciar estado da rodada (loading, playing, ending, results)
+## - Controlar timer de duração máxima
+## - Detectar desconexões e finalizar automaticamente se necessário
+## - Rastrear jogadores spawnados na cena
+## - Registrar eventos da rodada
+## - Finalizar rodada e enviar dados para RoomRegistry
 
 # ===== CONFIGURAÇÕES =====
 
-@export_category("Round Duration")
-@export var max_round_duration: float = 600.0
+@export_group("Round Duration")
+@export var max_round_duration: float = 600.0  # 10 minutos
 @export var results_display_time: float = 5.0
 
-@export_category("Auto-End Settings")
-@export var disconnect_check_interval: float = 2.0
-@export var auto_end_on_disconnect: bool = true
+@export_group("Auto-End Settings")
+@export var disconnect_check_interval: float = 2.0  # Verifica a cada 2s
+@export var auto_end_on_all_disconnected: bool = true
 
-@export_category("Debug")
+@export_group("Debug")
 @export var debug_mode: bool = true
 
-# ===== VARIÁVEIS DE ESTADO =====
+# ===== REGISTROS (Injetados pelo ServerManager) =====
 
-# Dicionário de todas as rodadas: {round_id: RoundData}
+var player_registry = null  # Injetado
+var room_registry = null  # Injetado
+var object_spawner = null  # Injetado
+
+# ===== VARIÁVEIS INTERNAS =====
+
+## Dicionário de todas as rodadas ativas: {round_id: RoundData}
 var rounds: Dictionary = {}
 
-# Timers globais (só no servidor)
-var global_timers: Dictionary = {}
+## Timer global para verificar desconexões
+var disconnect_check_timer: Timer = null
 
 # Estado de inicialização
-var _is_server: bool = false
 var _initialized: bool = false
 
 # ===== SINAIS =====
@@ -35,79 +49,107 @@ signal round_ending(round_id: int, reason: String)
 signal round_ended(round_data: Dictionary)
 signal all_players_disconnected(round_id: int)
 signal round_timeout(round_id: int)
+signal player_spawned_in_round(round_id: int, peer_id: int, player_node: Node)
+signal player_despawned_from_round(round_id: int, peer_id: int)
 
-# ===== REGISTROS =====
+# ===== ESTRUTURAS DE DADOS =====
 
-var player_registry = ServerManager.player_registry
-var room_registry = ServerManager.room_registry
-var object_spawner = ServerManager.object_spawner
+## RoundData:
+## {
+##   "round_id": int,
+##   "room_id": int,
+##   "room_name": String,
+##   "players": Array[PlayerInRound],  # [{id, name}]
+##   "settings": Dictionary,  # Configurações da partida (mapa, etc)
+##   "start_time": float,
+##   "end_time": float,
+##   "duration": float,
+##   "winner": Dictionary,  # {id, name, score}
+##   "scores": Dictionary,  # {peer_id: score}
+##   "events": Array[Event],  # Histórico de eventos
+##   "disconnected_players": Array[int],  # peer_ids desconectados
+##   "end_reason": String,  # "completed", "timeout", "all_disconnected"
+##   "state": String,  # "loading", "playing", "ending", "results"
+##   "map_manager": Node,  # Referência ao gerenciador de mapa
+##   "spawned_players": Dictionary,  # {peer_id: Node}
+##   "round_timer": Timer  # Timer específico desta rodada
+## }
 
-# ===== INICIALIZAÇÃO CONTROLADA =====
+## Event:
+## {
+##   "type": String,
+##   "timestamp": float,
+##   "data": Dictionary
+## }
 
-func initialize_as_server():
+# ===== INICIALIZAÇÃO =====
+
+func initialize():
+	"""Inicializa o RoundRegistry (chamado apenas no servidor)"""
 	if _initialized:
+		_log_debug("⚠ RoundRegistry já inicializado")
 		return
-	
-	_is_server = true
-	_initialized = true
 	
 	_setup_global_timers()
-	_log_debug("RoundRegistry inicializado")
-
-func initialize_as_client():
-	if _initialized:
-		return
-	
-	_is_server = false
 	_initialized = true
-	
-	_log_debug("RoundRegistry inicializado como CLIENTE (operações bloqueadas)")
+	_log_debug("✓ RoundRegistry inicializado")
 
 func reset():
-	# Remove timers globais
-	for timer_name in global_timers:
-		var timer = global_timers[timer_name]
-		if timer and timer.is_inside_tree():
-			timer.stop()
-			timer.disconnect("timeout", _check_all_disconnected)
-			remove_child(timer)
+	"""Reseta completamente o registro (usado ao desligar servidor)"""
+	# Para e remove timer global
+	if disconnect_check_timer:
+		disconnect_check_timer.stop()
+		if disconnect_check_timer.is_inside_tree():
+			remove_child(disconnect_check_timer)
+		disconnect_check_timer.queue_free()
+		disconnect_check_timer = null
 	
-	global_timers.clear()
+	# Limpa todas as rodadas (e seus timers)
+	for round_id in rounds.keys():
+		_cleanup_round(round_id)
+	
 	rounds.clear()
 	_initialized = false
-	_is_server = false
-	_log_debug("RoundRegistry resetado")
-
-# ===== TIMERS GLOBAIS (APENAS SERVIDOR) =====
+	_log_debug("🔄 RoundRegistry resetado")
 
 func _setup_global_timers():
-	if not _is_server:
-		return
-	
-	# Timer de verificação de desconexões (global para todas as rodadas)
-	var check_timer = Timer.new()
-	check_timer.wait_time = disconnect_check_interval
-	check_timer.autostart = false
-	check_timer.one_shot = false
-	add_child(check_timer)
-	check_timer.timeout.connect(_check_all_disconnected)
-	global_timers["disconnect_check"] = check_timer
+	"""Cria timer global de verificação de desconexões"""
+	disconnect_check_timer = Timer.new()
+	disconnect_check_timer.wait_time = disconnect_check_interval
+	disconnect_check_timer.autostart = false
+	disconnect_check_timer.one_shot = false
+	disconnect_check_timer.timeout.connect(_check_all_disconnected)
+	add_child(disconnect_check_timer)
 
 # ===== GERENCIAMENTO DE RODADAS =====
 
 func create_round(room_id: int, room_name: String, players: Array, settings: Dictionary) -> Dictionary:
-	if not _is_server:
-		return {}
-
+	"""
+	Cria nova rodada (mas não inicia ainda)
+	Retorna RoundData completo ou {} se falhar
+	
+	IMPORTANTE: Não spawna jogadores nem inicia timer aqui!
+	Isso é feito em start_round()
+	"""
 	var round_id = _get_next_round_id()
 	
-	# Cria nova rodada
+	# Valida sala
+	if not room_registry or not room_registry.room_exists(room_id):
+		push_error("RoundRegistry: Sala %d não existe" % room_id)
+		return {}
+	
+	# Valida jogadores
+	if players.is_empty():
+		push_error("RoundRegistry: Tentou criar rodada sem jogadores")
+		return {}
+	
+	# Cria estrutura da rodada
 	var round_data = {
 		"round_id": round_id,
 		"room_id": room_id,
 		"room_name": room_name,
-		"players": players.duplicate(),
-		"settings": settings.duplicate(),
+		"players": players.duplicate(true),
+		"settings": settings.duplicate(true),
 		"start_time": Time.get_unix_time_from_system(),
 		"end_time": 0,
 		"duration": 0.0,
@@ -116,195 +158,285 @@ func create_round(room_id: int, room_name: String, players: Array, settings: Dic
 		"events": [],
 		"disconnected_players": [],
 		"end_reason": "",
-		"state": "loading",
+		"state": "loading",  # Estados: loading -> playing -> ending -> results
 		"map_manager": null,
 		"spawned_players": {},
 		"round_timer": null
 	}
-
-	# Inicializa scores
+	
+	# Inicializa scores zerados
 	for player in players:
 		round_data["scores"][player["id"]] = 0
-
-	# Configs de mapa e env da rodada
-	var array_rel = [
-		{"nome": "Etapa 1", "tipo_relevo": "Semi-Flat", "percentual_distancia": 30},
-		{"nome": "Etapa 2", "tipo_relevo": "Gentle Hills", "percentual_distancia": 30},
-		{"nome": "Etapa 3", "tipo_relevo": "Rolling Hills", "percentual_distancia": 20},
-		{"nome": "Etapa 4", "tipo_relevo": "Valleys", "percentual_distancia": 20}
-	]
-	round_data["settings"]["map_seed"] = randi_range(100000, 999999)
-	round_data["settings"]["map_preencher_etapas"] = array_rel
-	round_data["settings"]["map_size"] = Vector2i(20, 20)
-	round_data["settings"]["env_current_time"] = 12.0
-
+	
+	# Aplica configurações padrão de mapa se não especificadas
+	if not round_data["settings"].has("map_seed"):
+		round_data["settings"]["map_seed"] = randi_range(100000, 999999)
+	
+	if not round_data["settings"].has("map_size"):
+		round_data["settings"]["map_size"] = Vector2i(20, 20)
+	
+	if not round_data["settings"].has("env_current_time"):
+		round_data["settings"]["env_current_time"] = 12.0
+	
 	# Armazena rodada
 	rounds[round_id] = round_data
-
-	_log_debug(" Rodada criada: ID %d, Sala '%s', %d players" % [round_id, room_name, players.size()])
-	round_created.emit(round_data.duplicate())
 	
-	return round_data.duplicate()
+	# Registra jogadores na rodada (PlayerRegistry)
+	if player_registry:
+		for player in players:
+			player_registry.join_round(player["id"], round_id)
+	
+	_log_debug("✓ Rodada criada: ID %d, Sala '%s', %d players" % [round_id, room_name, players.size()])
+	_add_event(round_id, "round_created", {"room_id": room_id})
+	round_created.emit(round_data.duplicate(true))
+	
+	return round_data.duplicate(true)
 
 func start_round(round_id: int):
-	if not _is_server:
-		return
-
+	"""
+	Inicia rodada (muda estado para 'playing')
+	Ativa timer de duração e verificação de desconexões
+	
+	Chamado DEPOIS de spawnar todos os jogadores na cena
+	"""
 	if not rounds.has(round_id):
-		push_error("Rodada %d não existe!" % round_id)
+		push_error("RoundRegistry: Rodada %d não existe" % round_id)
 		return
-
+	
 	var round_data = rounds[round_id]
+	
+	if round_data["state"] != "loading":
+		_log_debug("⚠ Rodada %d já foi iniciada (estado: %s)" % [round_id, round_data["state"]])
+		return
+	
+	# Muda estado
 	round_data["state"] = "playing"
-
-	# Cria timer de duração específica para esta rodada
+	round_data["start_time"] = Time.get_unix_time_from_system()
+	
+	# Cria timer de duração específico para esta rodada
 	if max_round_duration > 0:
 		var round_timer = Timer.new()
 		round_timer.wait_time = max_round_duration
 		round_timer.autostart = false
 		round_timer.one_shot = true
-		add_child(round_timer)
 		round_timer.timeout.connect(_on_round_timeout.bind(round_id))
+		add_child(round_timer)
 		round_data["round_timer"] = round_timer
 		round_timer.start()
-
-	_log_debug("Timer de duração iniciado: %.1f segundos" % max_round_duration)
-
-	# Ativa verificação de desconexão global
-	if global_timers.has("disconnect_check"):
-		global_timers["disconnect_check"].start()
-
-	# Marca jogadores como em jogo
-	for player in round_data["players"]:
-		var player_data = player_registry.get_player(player.get("id"))
-		if player_data:
-			player_data.in_game = true
-
+		_log_debug("  Timer de duração: %.1fs" % max_round_duration)
+	
+	# Ativa verificação global de desconexão
+	if disconnect_check_timer and not disconnect_check_timer.is_stopped():
+		disconnect_check_timer.start()
+	
 	_log_debug("▶ Rodada %d INICIADA" % round_id)
+	_add_event(round_id, "round_started", {})
 	round_started.emit(round_id)
 
-# RoundRegistry.gd
-func set_local_player_round(round_data: Dictionary):
-	if not _initialized:
-		return
-	
-	var local_player_id = multiplayer.get_unique_id()
-	# Armazena a rodada do jogador local
-	rounds[round_data["round_id"]] = round_data
-	_log_debug("Rodada %d definida para jogador local %d" % [round_data["round_id"], local_player_id])
-
 func end_round(round_id: int, reason: String = "completed", winner_data: Dictionary = {}) -> Dictionary:
+	"""
+	Finaliza rodada (muda estado para 'ending')
+	Não remove da memória ainda, apenas marca como finalizada
+	
+	reason pode ser: "completed", "timeout", "all_disconnected"
+	"""
 	if not rounds.has(round_id):
+		_log_debug("⚠ Tentou finalizar rodada inexistente: %d" % round_id)
 		return {}
-
+	
 	var round_data = rounds[round_id]
+	
+	# Evita finalizar múltiplas vezes
 	if round_data["state"] == "ending" or round_data["state"] == "results":
-		return round_data.duplicate()
-
+		_log_debug("⚠ Rodada %d já está finalizando/finalizada" % round_id)
+		return round_data.duplicate(true)
+	
+	# Muda estado
 	round_data["state"] = "ending"
-
+	
 	# Para timer da rodada
 	if round_data["round_timer"]:
 		round_data["round_timer"].stop()
-		remove_child(round_data["round_timer"])
+		round_data["round_timer"].queue_free()
 		round_data["round_timer"] = null
-
+	
+	# Registra dados finais
 	round_data["end_time"] = Time.get_unix_time_from_system()
 	round_data["duration"] = round_data["end_time"] - round_data["start_time"]
 	round_data["end_reason"] = reason
-
-	_log_debug("⏹ Rodada %d FINALIZANDO | Razão: %s" % [round_id, reason])
-	_add_event(round_id, "round_ended", {"reason": reason, "winner": winner_data})
+	round_data["winner"] = winner_data.duplicate(true)
+	
+	_log_debug("⏹ Rodada %d FINALIZANDO | Razão: %s | Duração: %.1fs" % [
+		round_id, reason, round_data["duration"]
+	])
+	
+	_add_event(round_id, "round_ended", {
+		"reason": reason,
+		"winner": winner_data,
+		"duration": round_data["duration"]
+	})
+	
 	round_ending.emit(round_id, reason)
-	round_data["state"] = "results"
-
-	# Marca jogadores como fora do jogo
-	for player in round_data["players"]:
-		var player_data = player_registry.get_player(player.get("id"))
-		if player_data:
-			player_data.in_game = false
-
-	return round_data.duplicate()
+	
+	return round_data.duplicate(true)
 
 func complete_round_end(round_id: int) -> Dictionary:
+	"""
+	Completa finalização da rodada (muda estado para 'results')
+	Adiciona ao histórico da sala e limpa recursos
+	
+	Chamado DEPOIS de mostrar resultados na UI
+	"""
 	if not rounds.has(round_id):
 		return {}
-
-	var round_data = rounds[round_id].duplicate()
-	_log_debug(" Rodada %d FINALIZADA" % round_data["round_id"])
-	round_ended.emit(round_data)
 	
-	# Limpa rodada
+	var round_data = rounds[round_id]
+	
+	if round_data["state"] != "ending":
+		_log_debug("⚠ Rodada %d não está no estado 'ending'" % round_id)
+		return round_data.duplicate(true)
+	
+	# Muda para estado final
+	round_data["state"] = "results"
+	
+	# Adiciona ao histórico da sala
+	if room_registry:
+		room_registry.add_round_to_history(round_data["room_id"], round_data)
+	
+	# Remove jogadores da rodada (PlayerRegistry)
+	if player_registry:
+		for player in round_data["players"]:
+			player_registry.leave_round(player["id"])
+			# Limpa inventário
+			player_registry.clear_player_inventory(round_id, player["id"])
+	
+	_log_debug("✓ Rodada %d FINALIZADA" % round_id)
+	round_ended.emit(round_data.duplicate(true))
+	
+	# Limpa rodada da memória
+	var final_data = round_data.duplicate(true)
 	_cleanup_round(round_id)
-	return round_data
+	
+	return final_data
 
 func _cleanup_round(round_id: int):
+	"""
+	Limpa todos os recursos da rodada
+	Remove timer, limpa referências, apaga da memória
+	"""
 	if not rounds.has(round_id):
 		return
 	
 	var round_data = rounds[round_id]
+	
+	# Remove timer se existir
+	if round_data["round_timer"] and is_instance_valid(round_data["round_timer"]):
+		round_data["round_timer"].stop()
+		if round_data["round_timer"].is_inside_tree():
+			remove_child(round_data["round_timer"])
+		round_data["round_timer"].queue_free()
 	
 	# Limpa referências
 	round_data["map_manager"] = null
 	round_data["spawned_players"].clear()
+	round_data["round_timer"] = null
 	
-	# Remove timer se existir
-	if round_data["round_timer"]:
-		round_data["round_timer"].queue_free()
-	
-	# Remove da lista
+	# Remove da memória
 	rounds.erase(round_id)
+	
+	# Para verificação de desconexão se não houver mais rodadas
+	if rounds.is_empty() and disconnect_check_timer:
+		disconnect_check_timer.stop()
 
-# ===== GERENCIAMENTO DE PLAYERS POR RODADA =====
+# ===== GERENCIAMENTO DE PLAYERS SPAWNADOS =====
 
 func register_spawned_player(round_id: int, peer_id: int, player_node: Node):
+	"""
+	Registra player que foi spawnado na cena da rodada
+	Usado para rastrear e destruir nodes depois
+	"""
 	if not rounds.has(round_id):
+		push_error("RoundRegistry: Tentou registrar player em rodada inexistente: %d" % round_id)
 		return
-		
+	
 	rounds[round_id]["spawned_players"][peer_id] = player_node
-	_log_debug("Player %d registrado na rodada %d" % [peer_id, round_id])
+	
+	_log_debug("✓ Player %d spawnado na rodada %d" % [peer_id, round_id])
+	player_spawned_in_round.emit(round_id, peer_id, player_node)
 
 func unregister_spawned_player(round_id: int, peer_id: int):
+	"""
+	Remove registro de player spawnado
+	Chamado quando player é removido da cena
+	"""
 	if not rounds.has(round_id):
 		return
 	
 	if rounds[round_id]["spawned_players"].has(peer_id):
 		rounds[round_id]["spawned_players"].erase(peer_id)
-		_log_debug("Player %d removido da rodada %d" % [peer_id, round_id])
+		_log_debug("✓ Player %d despawnado da rodada %d" % [peer_id, round_id])
+		player_despawned_from_round.emit(round_id, peer_id)
 
 func mark_player_disconnected(round_id: int, peer_id: int):
+	"""
+	Marca player como desconectado durante a rodada
+	NÃO remove da rodada, apenas registra desconexão
+	"""
 	if not rounds.has(round_id):
 		return
 	
 	var round_data = rounds[round_id]
-	if peer_id not in round_data["disconnected_players"]:
-		round_data["disconnected_players"].append(peer_id)
-		_add_event(round_id, "player_disconnected", {"peer_id": peer_id})
+	
+	if peer_id in round_data["disconnected_players"]:
+		return  # Já está marcado
+	
+	round_data["disconnected_players"].append(peer_id)
+	_add_event(round_id, "player_disconnected", {"peer_id": peer_id})
+	_log_debug("⚠ Player %d marcado como desconectado na rodada %d" % [peer_id, round_id])
 
 func get_spawned_player(round_id: int, peer_id: int) -> Node:
+	"""Retorna node do player spawnado (ou null se não encontrado)"""
 	if not rounds.has(round_id):
 		return null
 	return rounds[round_id]["spawned_players"].get(peer_id, null)
 
 func get_all_spawned_players(round_id: int) -> Array:
+	"""Retorna array com todos os nodes de players spawnados"""
 	if not rounds.has(round_id):
 		return []
 	return rounds[round_id]["spawned_players"].values()
 
 func get_active_players(round_id: int) -> Array:
+	"""
+	Retorna lista de PlayerData dos jogadores ATIVOS (não desconectados)
+	"""
 	if not rounds.has(round_id):
 		return []
 	
 	var round_data = rounds[round_id]
 	var active = []
+	
 	for player_data in round_data["players"]:
 		if player_data["id"] not in round_data["disconnected_players"]:
 			active.append(player_data)
+	
 	return active
 
-# ===== EVENTOS POR RODADA =====
+func get_active_player_count(round_id: int) -> int:
+	"""Retorna quantidade de jogadores ativos (não desconectados)"""
+	return get_active_players(round_id).size()
+
+# ===== EVENTOS DA RODADA =====
+
+func add_event(round_id: int, event_type: String, event_data: Dictionary = {}):
+	"""
+	Adiciona evento ao histórico da rodada
+	Útil para debug e análise posterior
+	"""
+	_add_event(round_id, event_type, event_data)
 
 func _add_event(round_id: int, event_type: String, event_data: Dictionary = {}):
+	"""Implementação interna de adicionar evento"""
 	if not rounds.has(round_id):
 		return
 	
@@ -312,34 +444,107 @@ func _add_event(round_id: int, event_type: String, event_data: Dictionary = {}):
 	var event = {
 		"type": event_type,
 		"timestamp": Time.get_unix_time_from_system(),
-		"data": event_data
+		"data": event_data.duplicate(true)
 	}
+	
 	round_data["events"].append(event)
 
 func get_events(round_id: int) -> Array:
+	"""Retorna histórico completo de eventos da rodada"""
 	if not rounds.has(round_id):
 		return []
-	return rounds[round_id]["events"].duplicate()
+	return rounds[round_id]["events"].duplicate(true)
 
-# ===== VERIFICAÇÕES (APENAS SERVIDOR) =====
+func get_events_of_type(round_id: int, event_type: String) -> Array:
+	"""Retorna apenas eventos de um tipo específico"""
+	var filtered = []
+	for event in get_events(round_id):
+		if event["type"] == event_type:
+			filtered.append(event)
+	return filtered
+
+# ===== PONTUAÇÃO =====
+
+func set_player_score(round_id: int, peer_id: int, score: int):
+	"""Define pontuação de um jogador"""
+	if not rounds.has(round_id):
+		return
+	
+	rounds[round_id]["scores"][peer_id] = score
+	_add_event(round_id, "score_updated", {"peer_id": peer_id, "score": score})
+
+func add_player_score(round_id: int, peer_id: int, points: int):
+	"""Adiciona pontos à pontuação atual do jogador"""
+	if not rounds.has(round_id):
+		return
+	
+	var current = rounds[round_id]["scores"].get(peer_id, 0)
+	rounds[round_id]["scores"][peer_id] = current + points
+	_add_event(round_id, "score_added", {"peer_id": peer_id, "points": points})
+
+func get_player_score(round_id: int, peer_id: int) -> int:
+	"""Retorna pontuação atual do jogador"""
+	if not rounds.has(round_id):
+		return 0
+	return rounds[round_id]["scores"].get(peer_id, 0)
+
+func get_all_scores(round_id: int) -> Dictionary:
+	"""Retorna dicionário com todas as pontuações {peer_id: score}"""
+	if not rounds.has(round_id):
+		return {}
+	return rounds[round_id]["scores"].duplicate()
+
+func get_leaderboard(round_id: int) -> Array:
+	"""
+	Retorna array ordenado por pontuação (maior primeiro)
+	Formato: [{peer_id, name, score}, ...]
+	"""
+	if not rounds.has(round_id):
+		return []
+	
+	var round_data = rounds[round_id]
+	var leaderboard = []
+	
+	for player in round_data["players"]:
+		leaderboard.append({
+			"peer_id": player["id"],
+			"name": player["name"],
+			"score": round_data["scores"].get(player["id"], 0)
+		})
+	
+	# Ordena por score (decrescente)
+	leaderboard.sort_custom(func(a, b): return a["score"] > b["score"])
+	
+	return leaderboard
+
+# ===== VERIFICAÇÕES AUTOMÁTICAS =====
 
 func _check_all_disconnected():
-	if not _is_server:
-		return
-
-	# Verifica todas as rodadas ativas
+	"""
+	Verifica se todos os jogadores desconectaram de rodadas ativas
+	Finaliza automaticamente se configurado
+	Executado pelo timer global
+	"""
 	for round_id in rounds:
 		var round_data = rounds[round_id]
-		if round_data["state"] == "playing":
-			if get_active_players(round_id).is_empty():
-				_log_debug("⚠ Todos os players desconectaram da rodada %d!" % round_id)
-				all_players_disconnected.emit(round_id)
+		
+		# Só verifica rodadas em andamento
+		if round_data["state"] != "playing":
+			continue
+		
+		# Verifica se todos desconectaram
+		if get_active_player_count(round_id) == 0:
+			_log_debug("⚠ Todos os jogadores desconectaram da rodada %d!" % round_id)
+			all_players_disconnected.emit(round_id)
+			
+			if auto_end_on_all_disconnected:
 				end_round(round_id, "all_disconnected")
 
 func _on_round_timeout(round_id: int):
-	if not _is_server:
-		return
-	
+	"""
+	Callback do timer de duração da rodada
+	Finaliza rodada por timeout
+	"""
 	if not rounds.has(round_id):
 		return
 	
@@ -347,90 +552,135 @@ func _on_round_timeout(round_id: int):
 	round_timeout.emit(round_id)
 	end_round(round_id, "timeout")
 
-func get_round_by_player_id(player_id: int) -> Dictionary:
-	"""
-	Retorna os dados da rodada em que o jogador está participando.
-	Se o jogador não estiver em nenhuma rodada, retorna um dicionário vazio.
-	
-	@param player_id: ID do jogador (peer_id)
-	@return: Dicionário com dados da rodada ou {} se não encontrado
-	"""
-	if not _is_server:
-		return {}
-	
-	for round_id in rounds:
-		var round_data = rounds[round_id]
-		# Verifica se o jogador está na lista de players da rodada
-		for player in round_data["players"]:
-			if player.has("id") and player["id"] == player_id:
-				return round_data.duplicate()
-	
-	return {}
-
 # ===== QUERIES DE ESTADO =====
 
-func is_initialized() -> bool:
-	return _initialized
-
 func is_round_active(round_id: int) -> bool:
+	"""Verifica se rodada existe e está ativa"""
 	return rounds.has(round_id)
 
 func get_round_state(round_id: int) -> String:
+	"""
+	Retorna estado atual da rodada
+	Estados: "none", "loading", "playing", "ending", "results"
+	"""
 	if not rounds.has(round_id):
 		return "none"
 	return rounds[round_id]["state"]
 
 func get_round(round_id: int) -> Dictionary:
+	"""Retorna cópia completa dos dados da rodada"""
 	if not rounds.has(round_id):
 		return {}
-	return rounds[round_id].duplicate()
+	return rounds[round_id].duplicate(true)
+
+func get_round_by_player_id(player_id: int) -> Dictionary:
+	"""
+	Retorna rodada em que o jogador está participando
+	Útil para localizar jogador quando só temos seu peer_id
+	"""
+	for round_id in rounds:
+		var round_data = rounds[round_id]
+		for player in round_data["players"]:
+			if player["id"] == player_id:
+				return round_data.duplicate(true)
+	return {}
 
 func get_round_duration(round_id: int) -> float:
+	"""
+	Retorna duração da rodada em segundos
+	Se ainda está ativa, retorna tempo decorrido
+	Se já terminou, retorna duração total
+	"""
 	if not rounds.has(round_id):
 		return 0.0
 	
 	var round_data = rounds[round_id]
+	
 	if round_data["state"] == "playing":
 		return Time.get_unix_time_from_system() - round_data["start_time"]
-	return round_data.get("duration", 0.0)
+	else:
+		return round_data.get("duration", 0.0)
 
 func get_time_remaining(round_id: int) -> float:
-	if not _is_server or not rounds.has(round_id):
+	"""
+	Retorna tempo restante da rodada em segundos
+	Retorna -1 se rodada não tem limite de tempo ou já terminou
+	"""
+	if not rounds.has(round_id):
 		return -1.0
 	
-	var round_timer = rounds[round_id]["round_timer"]
-	if not round_timer:
+	var round_data = rounds[round_id]
+	
+	if round_data["state"] != "playing":
 		return -1.0
+	
+	var round_timer = round_data["round_timer"]
+	if not round_timer or not is_instance_valid(round_timer):
+		return -1.0
+	
 	return round_timer.time_left
 
 func get_settings(round_id: int) -> Dictionary:
+	"""Retorna configurações da rodada (mapa, modo, etc)"""
 	if not rounds.has(round_id):
 		return {}
-	return rounds[round_id]["settings"].duplicate()
+	return rounds[round_id]["settings"].duplicate(true)
 
 func get_total_players(round_id: int) -> int:
+	"""Retorna total de jogadores na rodada (incluindo desconectados)"""
 	if not rounds.has(round_id):
 		return 0
 	return rounds[round_id]["players"].size()
 
-func get_active_player_count(round_id: int) -> int:
-	return get_active_players(round_id).size()
-	
 func get_all_rounds() -> Dictionary:
-	return rounds.duplicate()
+	"""Retorna todas as rodadas ativas"""
+	return rounds.duplicate(true)
+
+func get_active_rounds_count() -> int:
+	"""Retorna quantidade de rodadas ativas"""
+	return rounds.size()
 
 # ===== UTILITÁRIOS =====
 
 func _get_next_round_id() -> int:
+	"""Gera próximo ID de rodada disponível"""
 	var max_id = 0
 	for round_id in rounds:
 		if round_id > max_id:
 			max_id = round_id
 	return max_id + 1
 
-func _log_debug(message: String):
-	if not debug_mode:
-		return
+func debug_print_all_rounds():
+	"""Imprime estado completo de todas as rodadas"""
+	print("\n========== ROUND REGISTRY ==========")
+	print("Rodadas ativas: %d" % rounds.size())
+	print("------------------------------------")
+	
+	for round_id in rounds:
+		var r = rounds[round_id]
+		print("\n[Rodada %d]" % round_id)
+		print("  Sala: %s (ID: %d)" % [r["room_name"], r["room_id"]])
+		print("  Estado: %s" % r["state"])
+		print("  Jogadores: %d (%d ativos)" % [r["players"].size(), get_active_player_count(round_id)])
+		print("  Duração: %.1fs" % get_round_duration(round_id))
+		
+		if r["state"] == "playing" and r["round_timer"]:
+			print("  Tempo restante: %.1fs" % r["round_timer"].time_left)
+		
+		print("  Spawnados: %d" % r["spawned_players"].size())
+		print("  Eventos: %d" % r["events"].size())
+		
+		if not r["disconnected_players"].is_empty():
+			print("  Desconectados: %s" % r["disconnected_players"])
+		
+		print("  Pontuações:")
+		var scores = get_leaderboard(round_id)
+		for entry in scores:
+			print("    %s: %d pts" % [entry["name"], entry["score"]])
+	
+	print("\n====================================\n")
 
-	var prefix = "[SERVER]" if _is_server else "[CLIENT]"
-	print("%s[RoundRegistry] %s" % [prefix, message])
+func _log_debug(message: String):
+	"""Função padrão de debug"""
+	if debug_mode:
+		print("[RoundRegistry] %s" % message)

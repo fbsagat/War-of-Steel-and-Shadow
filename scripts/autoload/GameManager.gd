@@ -416,6 +416,7 @@ func start_round(round_settings: Dictionary = {}):
 	# FUTURAMENTE COLOCAR COMO VARIÁVEL DEFINIDA PELO SERVIDOR
 	#								\/
 	if current_room.players.size() < 1:
+	print(configs.min_players_to_start)
 		_show_error("Pelo menos %d jogadores são necessários para iniciar uma rodada" % 1)
 		return
 	

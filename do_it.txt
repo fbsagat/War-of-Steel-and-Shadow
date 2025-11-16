@@ -31,6 +31,7 @@ girar o player para a direção da câmera ao invés da câmera para trás do pl
 38. Verificar se todos os registros estão se comportando corretamente, criar jogadores quando logal,
 apagar jogadores quando logam, criar salas quando criadas pelos jogadores, apagar quando o host apaga ou ficam vazias,
 criar rodadas quando o host inicia uma rodada, apagar rodada e registrar resultados na sala quando termina, e etc...
+39. Implementar validação de inventário nos RPCs de item(Verificar se player possui item antes de equipar/dropar)
 
 
 Adicionar no modelo do player:

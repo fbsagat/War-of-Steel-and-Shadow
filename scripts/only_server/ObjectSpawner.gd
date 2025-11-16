@@ -37,7 +37,7 @@ func _ready():
 	object_spawner = ServerManager.object_spawner
 	
 	# Conecta ao RoundRegistry para limpar objetos quando rodada termina
-	if round_registry.is_initialized():
+	if round_registry._initialized:
 		if not round_registry.round_ended.is_connected(_on_round_ended):
 			round_registry.round_ended.connect(_on_round_ended)
 		_log_debug(" Conectado ao RoundRegistry")
@@ -383,8 +383,7 @@ func _unregister_object(round_id: int, object_id: int):
 
 func _rpc_to_round_players(round_id: int, method: String, data):
 	"""
-	Envia RPC apenas para jogadores da rodada específica.
-	Muito mais eficiente que broadcast global.
+	Envia RPC para jogadores da rodada específica.
 	"""
 	var round_data = round_registry.get_round(round_id)
 	if round_data.is_empty():

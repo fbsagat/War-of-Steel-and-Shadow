@@ -79,12 +79,12 @@ func _server_register_player(player_name: String):
 	ServerManager._handle_register_player(peer_id, player_name)
 
 @rpc("authority", "call_remote", "reliable")
-func configs_to_client(configs):
+func update_client_info(info):
 	if multiplayer.is_server():
 		return
 		
-	if GameManager and GameManager.has_method("update_client_configs"):
-		GameManager.update_client_configs(configs)
+	if GameManager and GameManager.has_method("update_client_info"):
+		GameManager.update_client_info(info)
 		
 @rpc("authority", "call_remote", "reliable")
 func _client_name_accepted(accepted_name: String):
