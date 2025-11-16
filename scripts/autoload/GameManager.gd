@@ -168,11 +168,11 @@ func _handle_connection_error(message: String):
 	
 	connection_failed.emit(message)
 
-func update_client_configs(configs_from_server: Dictionary):
+func update_client_info(info: Dictionary):
 	_log_debug("Atualizando configurações do servidor:")
 
-	for key in configs_from_server.keys():
-		var new_value = configs_from_server[key]
+	for key in info.keys():
+		var new_value = info[key]
 
 		# Se não existe ou se mudou, atualiza
 		if not configs.has(key) or configs[key] != new_value:
@@ -412,11 +412,8 @@ func start_round(round_settings: Dictionary = {}):
 		_show_error("Apenas o host pode iniciar a rodada")
 		return
 	
-	# FUTURAMENTE COLOCAR COMO VARIÁVEL DEFINIDA PELO SERVIDOR
-	# FUTURAMENTE COLOCAR COMO VARIÁVEL DEFINIDA PELO SERVIDOR
-	#								\/
-	if current_room.players.size() < 1:
 	print(configs.min_players_to_start)
+	if current_room.players.size() < configs.min_players_to_start:
 		_show_error("Pelo menos %d jogadores são necessários para iniciar uma rodada" % 1)
 		return
 	
