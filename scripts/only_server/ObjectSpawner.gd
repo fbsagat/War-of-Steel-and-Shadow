@@ -107,14 +107,14 @@ func spawn_item(round_id: int, item_name: String, spawn_position: Variant, data:
 	return await spawn_object(round_id, item_data.scene_path, spawn_position, enhanced_data)
 
 ## Spawna um item por ID
-func spawn_item_by_id(round_id: int, item_id: int, spawn_position: Variant, data: Dictionary = {}) -> int:
+func spawn_item_by_id(round_id: int, item_id: int, spawn_position: Variant, obj_data: Dictionary = {}) -> int:
 	var item_data = ItemDatabase.get_item_by_id(item_id)
 	
 	if item_data == null:
 		push_error("Item não encontrado com ID: %d" % item_id)
 		return -1
 	
-	return await spawn_item(round_id, item_data.item_name, spawn_position, data)
+	return await spawn_item(round_id, item_data.item_name, spawn_position, obj_data)
 
 ## Spawna múltiplos objetos de uma vez
 func spawn_multiple(round_id: int, scene_path: String, positions: Array, data: Dictionary = {}) -> Array:

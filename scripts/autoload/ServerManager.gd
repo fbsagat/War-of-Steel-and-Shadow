@@ -1010,6 +1010,31 @@ func _validate_player_movement(p_id: int, pos: Vector3, vel: Vector3, rot: Vecto
 	
 	return true
 
+func _apply_player_state_on_server(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
+	var node = player_registry.get_player_node(p_id)
+	if not (node and node.is_inside_tree()):
+		return
+	
+	# Aplica no nó
+	node.global_position = pos
+	node.global_rotation = rot
+	if node.has_method("set_velocity"):
+		node.set_velocity(vel)
+	
+	# Atualiza estado interno
+	if node.has_method("_set_state"):
+		node._set_state({"running": running, "jumping": jumping})
+	
+	# Atualiza player_states para validação futura
+	player_states[p_id] = {
+		"pos": pos,
+		"rot": rot,
+		"vel": vel,
+		"running": running,
+		"jumping": jumping,
+		"timestamp": Time.get_ticks_msec()
+	}
+
 # ===== VALIDAÇÃO DE ITENS =====
 
 @rpc("any_peer", "call_remote", "reliable")
@@ -1070,11 +1095,13 @@ func server_validate_drop_item(requesting_player_id: int, item_id: int):
 	# Calcula posição de drop (na frente e acima do player)
 	var pos = player_states[requesting_player_id]["pos"]
 	var rot = player_states[requesting_player_id]["rot"]
+	print(pos, rot)
 	var drop_position = _get_position_front_and_above(pos, rot)
 	
 	# Spawna item no mundo
 	var round_data = round_registry.get_round_by_player_id(requesting_player_id)
 	if not round_data.is_empty():
+		print("[SERVER]Dropar nesta posição: ", drop_position, "ID: ", item_id, "neste round: ", round_data["round_id"])
 		object_spawner.spawn_item_by_id(round_data["round_id"], item_id, drop_position)
 		_log_debug("✓ Item dropado: Player %d dropou item %d em %s" % [requesting_player_id, item_id, drop_position])
 	

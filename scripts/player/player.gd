@@ -120,29 +120,34 @@ func _ready():
 		_hide_all_model_items()
 	
 # Física geral
-func _physics_process(delta):
-	var move_dir: Vector3
+func _physics_process(delta: float) -> void:
+	var move_dir: Vector3 = Vector3.ZERO
+	
 	_handle_gravity(delta)
 	
-	# APENAS JOGADOR LOCAL PROCESSA INPUT
+	# CASO 1: JOGADOR LOCAL (apenas no CLIENTE)
 	if is_local_player:
 		move_dir = _handle_movement_input(delta)
 		move_and_slide()
-		
-		# ENVIA ESTADO PARA SERVIDOR
 		_send_state_to_server(delta)
-		
-		# ENVIA ANIMAÇÕES (menos frequente)
 		_send_animation_state(delta)
-		
 		handle_test_equip_inputs_call()
 	
-	# JOGADORES REMOTOS: APENAS INTERPOLAÇÃO
-	elif multiplayer.has_multiplayer_peer():
+	# CASO 2: JOGADOR REMOTO NO CLIENTE (interpolação visual)
+	elif not multiplayer.is_server():
+		# Só interpola se estiver rodando como CLIENTE
 		_interpolate_remote_player(delta)
-		move_dir = Vector3.ZERO  # Remotos não têm input próprio
+		move_dir = Vector3.ZERO
 	
-	# Animações (local e remoto)
+	# CASO 3: JOGADOR NO SERVIDOR (não faz nada aqui!)
+	# - Movimento é aplicado diretamente por _apply_player_state_on_server()
+	# - Nenhuma interpolação, input ou física de movimento
+	else:
+		# Servidor: não faz nada de movimento ou interpolação
+		# A posição já foi definida por RPC validado
+		move_dir = Vector3.ZERO
+
+	# ANIMAÇÕES: aplicáveis em todos os contextos (local, remoto, servidor)
 	_handle_animations(move_dir)
 		
 func _process(delta: float) -> void:

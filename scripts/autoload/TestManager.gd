@@ -26,6 +26,9 @@ var object_spawner = null
 ## Referência ao MapManager criado para a rodada de teste
 var test_map_manager: Node = null
 
+## Referência à câmera livre para visualização no servidor
+var free_camera: Camera3D = null
+
 # Estado de inicialização
 var _initialized: bool = false
 
@@ -276,7 +279,18 @@ func _server_instantiate_round(match_data: Dictionary):
 		var spawn_data = match_data["spawn_data"][player_data["id"]]
 		_spawn_player_on_server(player_data, spawn_data, match_data["round_id"])
 	
+	# Cria câmera livre se não estiver em modo headless
+	if not OS.has_feature("Server"):
+		var debug_cam = preload("res://scenes/server_scenes/server_camera.tscn").instantiate()
+		add_child(debug_cam)
+		debug_cam.global_position = Vector3(0, 3, 5)  # X=0, Y=10 (altura), Z=15 (distância)
+		var ui = get_tree().root.get_node_or_null("Control")
+		if ui:
+			ui.queue_free()
+	
 	_log_debug("  ✓ Rodada instanciada no servidor")
+
+# ===== SPAWN DE JOGADORES =====
 
 func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, round_id: int):
 	"""
@@ -398,11 +412,18 @@ func cleanup_test_resources():
 	Limpa recursos criados durante testes
 	Chamado ao finalizar partida de teste
 	"""
+	# Limpa câmera
+	if free_camera and is_instance_valid(free_camera):
+		free_camera.queue_free()
+		free_camera = null
+	
+	# Limpa mapa
 	if test_map_manager and is_instance_valid(test_map_manager):
 		test_map_manager.unload_map()
 		test_map_manager.queue_free()
 		test_map_manager = null
-		_log_debug("✓ Recursos de teste limpos")
+	
+	_log_debug("✓ Recursos de teste limpos")
 
 func _log_debug(message: String):
 	"""Função padrão de debug"""

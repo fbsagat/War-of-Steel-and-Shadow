@@ -77,7 +77,7 @@ func _ready():
 		spring_arm.margin = collision_margin
 
 	_initialize_target_rotation()
-	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	#Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 	if debug:
 		print("[CameraController] Inicializado. Alvo:", target.name)

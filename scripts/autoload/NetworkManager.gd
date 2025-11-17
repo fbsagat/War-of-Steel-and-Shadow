@@ -368,6 +368,7 @@ func _client_return_to_room(room_data: Dictionary):
 
 @rpc("authority", "call_remote", "reliable")
 func _client_spawn_object(spawn_data: Dictionary):
+	print(spawn_data)
 	"""RPC: Cliente recebe comando para spawnar objeto"""
 	if multiplayer.is_server():
 		return
@@ -382,6 +383,7 @@ func _client_spawn_object(spawn_data: Dictionary):
 	var object_id = spawn_data["object_id"]
 	var scene_path = spawn_data["scene_path"]
 	var spawn_position = spawn_data.get("position", Vector3.ZERO)
+	print("spawn_position recebido              >>> ", spawn_position)
 	var data = spawn_data.get("data", {})
 	
 	# Verifica se já existe (evita duplicatas)
@@ -444,13 +446,6 @@ func _client_spawn_object(spawn_data: Dictionary):
 		for key in data:
 			if key in obj:
 				obj.set(key, data[key])
-	
-	# Registra no ObjectSpawner
-	if object_spawner:
-		object_spawner._register_object(spawn_data.round_id, object_id, obj)
-		_log_debug(" Objeto %d registrado no ObjectSpawner.spawned_objects" % object_id)
-	else:
-		push_warning("⚠ ObjectSpawner não encontrado para registrar objeto")
 
 @rpc("authority", "call_remote", "reliable")
 func _client_despawn_object(object_id: int):
@@ -580,6 +575,8 @@ func _server_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, r
 			"timestamp": Time.get_ticks_msec()
 		}
 	
+	ServerManager._apply_player_state_on_server(p_id, pos, rot, vel, running, jumping)
+	
 	# REDISTRIBUI PARA TODOS OS OUTROS CLIENTES
 	for peer_id in multiplayer.get_peers():
 		if peer_id != p_id:
@@ -589,8 +586,8 @@ func _server_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, r
 func _client_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
 	"""RPC: Cliente recebe estado de OUTRO jogador"""
 	# Só processa se NÃO for servidor
-	if multiplayer.has_multiplayer_peer() and multiplayer.get_unique_id() == 1:
-		return
+	#if multiplayer.has_multiplayer_peer() and multiplayer.get_unique_id() == 1:
+		#return
 	
 	# ENCONTRA O PLAYER NA CENA (nome = player_id)
 	var player = get_tree().root.get_node_or_null(str(p_id))

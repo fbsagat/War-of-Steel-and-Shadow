@@ -45,6 +45,7 @@ font_size = 24
 bg_color = Color(0.13, 0.81149995, 1, 1)
 
 [node name="Control" type="Control"]
+visible = false
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
