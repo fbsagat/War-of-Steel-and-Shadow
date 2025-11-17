@@ -741,45 +741,178 @@ func _load_ui_from_settings():
 		invert_y_check.button_pressed = current_settings["controls"]["invert_y"]
 
 func _apply_video_settings():
-	# Modo de janela
-	match current_settings["video"]["window_mode"]:
-		0:  # Janela
-			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
-			DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_BORDERLESS, false)
-		1:  # Tela cheia
-			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
-		2:  # Sem bordas
-			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
-			DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_BORDERLESS, true)
+	"""Aplica configurações de vídeo de forma robusta"""
+	# Valida se as configurações existem
+	if not current_settings.has("video"):
+		push_error("Configurações de vídeo não encontradas")
+		return
 	
-	# Aguarda modo de janela ser aplicado
+	var video = current_settings["video"]
+	
+	# Garante que a janela existe
+	var window = get_window()
+	if not window:
+		push_error("Janela não disponível")
+		return
+	
+	# Armazena modo e resolução antes de aplicar
+	var target_mode = video.get("window_mode", 0)
+	var target_resolution = video.get("resolution", Vector2i(1280, 720))
+	
+	# 1. Remove flags antes de mudar modo
+	DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_BORDERLESS, false)
 	await get_tree().process_frame
 	
-	# Resolução (apenas em modo janela ou sem bordas)
-	if current_settings["video"]["window_mode"] != 1:  # Se não for fullscreen
-		get_window().size = current_settings["video"]["resolution"]
+	# 2. Aplica modo de janela
+	match target_mode:
+		0:  # Janela
+			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+			await get_tree().process_frame
+			
+		1:  # Tela cheia
+			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+			await get_tree().process_frame
+			
+		2:  # Sem bordas (janela maximizada sem bordas)
+			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+			await get_tree().process_frame
+			DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_BORDERLESS, true)
+			await get_tree().process_frame
+	
+	# 3. Move para monitor principal ANTES de ajustar tamanho
+	_move_to_primary_screen()
+	await get_tree().process_frame
+	
+	# 4. Aplica resolução (apenas em modos não-fullscreen)
+	if target_mode != 1:
+		# Valida resolução mínima
+		var min_size = Vector2i(800, 600)
+		if target_resolution.x < min_size.x or target_resolution.y < min_size.y:
+			push_warning("Resolução muito pequena, usando mínimo: %s" % min_size)
+			target_resolution = min_size
+		
+		# Valida resolução máxima (tamanho da tela)
+		var screen_size = DisplayServer.screen_get_size(DisplayServer.window_get_current_screen())
+		if target_resolution.x > screen_size.x or target_resolution.y > screen_size.y:
+			push_warning("Resolução maior que a tela, ajustando...")
+			target_resolution = screen_size * 0.9  # 90% do tamanho da tela
+		
+		window.size = target_resolution
+		await get_tree().process_frame
+		
+		# Centraliza após redimensionar
 		_center_window()
 	
-	# VSync
-	if current_settings["video"]["vsync"]:
+	# 5. VSync
+	var vsync_enabled = video.get("vsync", true)
+	if vsync_enabled:
 		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED)
 	else:
 		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	
-	# FPS Limit
-	match current_settings["video"]["fps_limit"]:
+	# 6. FPS Limit
+	var fps_limit = video.get("fps_limit", 1)
+	match fps_limit:
 		0:  Engine.max_fps = 30
 		1:  Engine.max_fps = 60
 		2:  Engine.max_fps = 120
 		3:  Engine.max_fps = 144
 		4:  Engine.max_fps = 0  # Ilimitado
+		_:  
+			push_warning("FPS limit inválido: %s, usando 60 FPS" % fps_limit)
+			Engine.max_fps = 60
+	
+	print("Configurações de vídeo aplicadas com sucesso")
+
 
 func _center_window():
-	"""Centraliza a janela na tela"""
-	await get_tree().process_frame  # Aguarda 1 frame para aplicar
-	var screen_size = DisplayServer.screen_get_size()
-	var window_size = get_window().size
-	get_window().position = (screen_size - window_size) / 2
+	"""Centraliza a janela no monitor atual"""
+	await get_tree().process_frame
+	
+	var window = get_window()
+	if not window:
+		return
+	
+	# Pega o monitor onde a janela está
+	var current_screen = DisplayServer.window_get_current_screen()
+	
+	# Tamanho da tela e da janela
+	var screen_size = DisplayServer.screen_get_size(current_screen)
+	var screen_position = DisplayServer.screen_get_position(current_screen)
+	var window_size = window.size
+	
+	# Calcula posição centralizada
+	var centered_position = screen_position + (screen_size - window_size) / 2
+	
+	# Garante que a janela não fique fora da tela
+	centered_position.x = max(screen_position.x, centered_position.x)
+	centered_position.y = max(screen_position.y, centered_position.y)
+	
+	window.position = centered_position
+	
+	# Aguarda aplicação
+	await get_tree().process_frame
+
+
+func _move_to_primary_screen():
+	"""Move a janela para o monitor principal"""
+	var window = get_window()
+	if not window:
+		return
+	
+	# Monitor principal (índice 0)
+	var primary_screen = 0
+	
+	# Verifica se já está no monitor principal
+	if DisplayServer.window_get_current_screen() == primary_screen:
+		return
+	
+	# Move para o monitor principal
+	DisplayServer.window_set_current_screen(primary_screen)
+	
+	print("Janela movida para o monitor principal")
+
+# FUNÇÃO AUXILIAR: Retorna lista de resoluções disponíveis para o monitor atual
+func get_available_resolutions() -> Array[Vector2i]:
+	"""Retorna resoluções comuns que cabem no monitor atual"""
+	var current_screen = DisplayServer.window_get_current_screen()
+	var screen_size = DisplayServer.screen_get_size(current_screen)
+	
+	var resolutions: Array[Vector2i] = [
+		Vector2i(1280, 720),   # HD
+		Vector2i(1600, 900),   # HD+
+		Vector2i(1920, 1080),  # Full HD
+		Vector2i(2560, 1440),  # 2K
+		Vector2i(3840, 2160),  # 4K
+	]
+	
+	var valid_resolutions: Array[Vector2i] = []
+	
+	for res in resolutions:
+		if res.x <= screen_size.x and res.y <= screen_size.y:
+			valid_resolutions.append(res)
+	
+	return valid_resolutions
+
+
+# FUNÇÃO AUXILIAR: Debug de informações da tela
+func print_screen_info():
+	"""Imprime informações sobre os monitores disponíveis"""
+	var screen_count = DisplayServer.get_screen_count()
+	print("=== INFORMAÇÕES DE TELA ===")
+	print("Total de monitores: %d" % screen_count)
+	
+	for i in range(screen_count):
+		print("\nMonitor %d:" % i)
+		print("  Tamanho: %s" % DisplayServer.screen_get_size(i))
+		print("  Posição: %s" % DisplayServer.screen_get_position(i))
+		print("  DPI: %d" % DisplayServer.screen_get_dpi(i))
+		print("  Refresh rate: %d Hz" % DisplayServer.screen_get_refresh_rate(i))
+		
+		if i == DisplayServer.window_get_current_screen():
+			print("  [MONITOR ATUAL]")
+	
+	print("\n===========================")
 
 func _apply_audio_settings():
 	_apply_volume_realtime("Master", current_settings["audio"]["master_volume"])

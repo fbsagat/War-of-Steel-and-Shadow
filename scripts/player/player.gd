@@ -866,6 +866,7 @@ func _on_hitbox_body_entered(body: Node, hitbox_area: Area3D) -> void:
 func _on_block_attack_timer_timeout(duration):
 	await get_tree().create_timer(duration).timeout
 	is_block_attacking = false
+	
 # Ações do player (Pegar item)
 func action_pick_up_item():
 	var found = _get_nearby_items()
