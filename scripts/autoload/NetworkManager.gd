@@ -10,15 +10,23 @@ extends Node
 
 # ===== REGISTROS =====
 
-var player_registry = null
-var room_registry = null
-var round_registry = null
-var object_spawner = null
+var player_registry: PlayerRegistry = null
+var room_registry: RoomRegistry = null
+var round_registry: RoundRegistry = null
+var object_manager: ObjectManager = null
+
+## Objetos spawnados no cliente, organizados por object_id
+## Estrutura: {object_id: Node}
+var client_spawned_objects: Dictionary = {}
+
+## Referência ao ItemDatabase (autoload)
+var item_database = null
 
 # ===== VARIÁVEIS INTERNAS =====
 
 var is_connected_: bool = false
 var _is_server: bool = false
+var server_is_headless: bool = false
 
 # ===== FUNÇÕES DE INICIALIZAÇÃO =====
 
@@ -28,15 +36,21 @@ func _ready():
 	_is_server = "--server" in args or "--dedicated" in args
 	
 	if _is_server:
+		server_is_headless = ServerManager.is_headless
+	
+	if _is_server:
 		player_registry = ServerManager.player_registry
 		room_registry = ServerManager.room_registry
 		round_registry = ServerManager.round_registry
-		object_spawner = ServerManager.object_spawner
+		object_manager = ServerManager.object_manager
 		
 		_log_debug("Inicializando NetworkManager como servidor")
 		return
 	
+	item_database = ItemDatabase
 	_log_debug("Inicializando NetworkManager como cliente")
+	if not item_database:
+		push_error("NetworkManager: ItemDatabase não encontrado!")
 	
 	# Conecta aos sinais de rede (apenas no cliente)
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
@@ -364,160 +378,121 @@ func _client_return_to_room(room_data: Dictionary):
 	_log_debug("↩️ Voltando para sala")
 	GameManager._client_return_to_room(room_data)
 
-# ===== SPAWN DE OBJETOS (ObjectSpawner) =====
-
-@rpc("authority", "call_remote", "reliable")
-func _client_spawn_object(spawn_data: Dictionary):
-	print(spawn_data)
-	"""RPC: Cliente recebe comando para spawnar objeto"""
-	if multiplayer.is_server():
-		return
-	
-	_log_debug("🎯 Cliente spawnando objeto: " + str(spawn_data.get("object_id", "?")))
-	
-	# Validações
-	if not spawn_data.has("scene_path") or not spawn_data.has("object_id"):
-		push_error("❌ spawn_data inválido: faltam campos obrigatórios")
-		return
-	
-	var object_id = spawn_data["object_id"]
-	var scene_path = spawn_data["scene_path"]
-	var spawn_position = spawn_data.get("position", Vector3.ZERO)
-	print("spawn_position recebido              >>> ", spawn_position)
-	var data = spawn_data.get("data", {})
-	
-	# Verifica se já existe (evita duplicatas)
-	if object_spawner and object_spawner.get_round_objects(spawn_data.round_id).has(object_id):
-		push_warning("⚠ Objeto %d já existe no cliente, pulando..." % object_id)
-		return
-	
-	# Carrega cena
-	if not ResourceLoader.exists(scene_path):
-		push_error("❌ Caminho não existe: %s" % scene_path)
-		return
-	
-	var scene = load(scene_path)
-	if scene == null:
-		push_error("❌ Falha ao carregar cena: %s" % scene_path)
-		return
-	
-	# Instancia
-	var obj = scene.instantiate()
-	if obj == null:
-		push_error("❌ Falha ao instanciar cena: %s" % scene_path)
-		return
-	
-	obj.name = "Object_%d" % object_id
-	
-	# ADICIONA À ÁRVORE PRIMEIRO
-	get_tree().root.add_child(obj)
-	
-	# AGUARDA ESTAR PRONTO
-	if not obj.is_node_ready():
-		await obj.ready
-	await get_tree().process_frame
-	
-	# VALIDA
-	if not obj.is_inside_tree():
-		push_error("❌ Objeto não foi adicionado à árvore!")
-		obj.queue_free()
-		return
-	
-	# AGORA define posição (seguro)
-	if obj is Node3D:
-		if spawn_position is Vector3:
-			obj.global_position = spawn_position
-		elif spawn_position is Vector2:
-			obj.global_position = Vector3(spawn_position.x, 0, spawn_position.y)
-		else:
-			push_warning("⚠ Tipo de posição não suportado para Node3D: %s" % type_string(typeof(spawn_position)))
-	elif obj is Node2D:
-		if spawn_position is Vector2:
-			obj.global_position = spawn_position
-		elif spawn_position is Vector3:
-			obj.global_position = Vector2(spawn_position.x, spawn_position.z)
-		else:
-			push_warning("⚠ Tipo de posição não suportado para Node2D: %s" % type_string(typeof(spawn_position)))
-	
-	# Aplica configurações customizadas
-	if obj.has_method("configure"):
-		obj.configure(data)
-	elif not data.is_empty():
-		for key in data:
-			if key in obj:
-				obj.set(key, data[key])
-
-@rpc("authority", "call_remote", "reliable")
-func _client_despawn_object(object_id: int):
-	"""RPC: Cliente recebe comando para despawnar objeto"""
-	if multiplayer.is_server():
-		return
-	
-	_log_debug("❌ Cliente despawnando objeto: %d" % object_id)
-	
-	# Valida que o ObjectSpawner existe
-	if not object_spawner:
-		push_warning("⚠ ObjectSpawner não encontrado")
-		return
-	
-	# Verifica se o objeto existe
-	if not object_spawner.spawned_objects.has(object_id):
-		push_warning("⚠ Tentativa de despawnar objeto inexistente: %d" % object_id)
-		return
-	
-	# Remove o objeto
-	var obj = object_spawner.spawned_objects[object_id]
-	
-	if obj and is_instance_valid(obj):
-		obj.queue_free()
-		_log_debug(" Objeto %d removido da cena" % object_id)
-	else:
-		push_warning("⚠ Objeto %d inválido ou já removido" % object_id)
-	
-	# Remove do registro
-	object_spawner.spawned_objects.erase(object_id)
-	_log_debug(" Objeto %d removido do registro" % object_id)
-
 @rpc("authority", "call_remote", "reliable")
 func _client_remove_player(peer_id: int):
 	"""RPC: Cliente recebe comando para remover player"""
 	if multiplayer.is_server():
 		return
-	
 	_log_debug("👤 Removendo player: %d" % peer_id)
 	GameManager._client_remove_player(peer_id)
 
-# ===== SINCRONIZAÇÃO DE JOGADORES (POSIÇÃO/ROTAÇÃO) =====
+# ===== SPAWN DE OBJETOS (ObjectSpawner) =====
 
-func request_equip_item(player_id: int, item_id: int) -> void:
-	"""Chama RPC no servidor para pedir para equipar um item"""
-	rpc_id(1, "_server_equip_player_item", player_id, item_id)
+@rpc("authority", "call_remote", "reliable")
+func _rpc_spawn_on_clients(active_players, object_id: int, round_id: int, item_name: String, position: Vector3, rotation: Vector3, owner_id: int):
+	"""
+	RPC chamado pelo servidor para spawnar objeto em todos os clientes
+	Cada cliente executa localmente baseado no ItemDatabase
+	"""
+	
+	_log_debug("🔄 RPC recebido: spawn_on_client (ID: %d, Item: %s)" % [object_id, item_name])
+	
+	# Cliente spawna localmente
+	for player_id in active_players:
+		if player_id == 1:  # Ignora servidor
+			continue
+		rpc_id(player_id, "_rpc_receive_spawn_on_clients", object_id, round_id, item_name, position, rotation, owner_id)
+	
+	_log_debug("✓ Item spawnado: %s (ID: %d)" % [item_name, object_id])
 
-func request_drop_item(player_id, item_id):
+@rpc("authority", "call_remote", "reliable")
+func _rpc_receive_spawn_on_clients(object_id: int, round_id: int, item_name: String, position: Vector3, rotation: Vector3, owner_id: int):
+	if GameManager.has_method("_spawn_on_client"):
+		GameManager._spawn_on_client(object_id, round_id, item_name, position, rotation, owner_id)
+
+@rpc("authority", "call_remote", "reliable")
+func _rpc_client_despawn_item(object_id: int, round_id: int):
+	"""
+	RPC: Cliente recebe comando para despawnar item
+	"""
+	
+	if multiplayer.is_server():
+		return
+	
+	# Chama ObjectManager do cliente para despawnar
+	if ServerManager.object_manager:
+		ServerManager.object_manager._despawn_on_client(object_id, round_id)
+	
+	_log_debug("✓ Objeto despawnado no cliente: ID %d" % object_id)
+
+@rpc("authority", "call_remote", "reliable")
+func _client_clear_all_objects():
+	"""
+	RPC para limpar todos os objetos (chamado ao sair de rodada)
+	"""
+	
+	var count = client_spawned_objects.size()
+	
+	# Despawna todos os objetos
+	for object_id in client_spawned_objects.keys():
+		var item_instance = client_spawned_objects[object_id]
+		
+		if is_instance_valid(item_instance) and item_instance.is_inside_tree():
+			item_instance.queue_free()
+	
+	# Limpa dicionário
+	client_spawned_objects.clear()
+	
+	_log_debug("✓ Todos os objetos limpos no cliente (%d objetos)" % count)
+
+# ===== REQUISIÇÕES DE CLIENTES =====
+
+func request_pick_up_item(player_id: int, item_id: int) -> void:
+	"""Requisição do player: Chama RPC no servidor para pedir para equipar um item"""
+	rpc_id(1, "_server_pick_up_player_item", player_id, item_id)
+
+func request_equip_item(player_id: int, item_id: int, from_test: bool) -> void:
+	"""Requisição do player: Chama RPC no servidor para pedir para equipar um item"""
+	rpc_id(1, "_server_equip_player_item", player_id, item_id, from_test)
+
+func request_drop_item(player_id, item_id=0):
+	"""Requisição do player: Chama RPC no servidor para pedir para dropar um item"""
 	rpc_id(1, "_server_drop_player_item", player_id, item_id)
 
 @rpc("any_peer", "call_remote", "unreliable")
-func _server_drop_player_item(player_id, item_id):
-	ServerManager.server_validate_drop_item(player_id, item_id)
+func _server_pick_up_player_item(player_id, item_id):
+	ServerManager._server_validate_pick_up_item(player_id, item_id)
 
 @rpc("any_peer", "call_remote", "unreliable")
-func _server_equip_player_item(player_id, item_id):
-	ServerManager.server_validate_equip_item(player_id, item_id)
+func _server_equip_player_item(player_id, item_id, from_test):
+	ServerManager._server_validate_equip_item(player_id, item_id, from_test)
+
+@rpc("any_peer", "call_remote", "unreliable")
+func _server_drop_player_item(player_id, item_id):
+	ServerManager._server_validate_drop_item(player_id, item_id)
 
 @rpc("authority", "call_remote", "reliable")
-func apply_visual_action(player_id: int, change_data: int):
+func server_apply_picked_up_item(player_id, change_data):
+	
+	# Encontra o player e executa a mudança de item equipado
+	var player_node = get_tree().root.get_node_or_null(str(player_id))
+	if player_node and player_node.has_method("apply_visual_equip_on_player_node"):
+		player_node.apply_visual_equip_on_player_node(player_node, change_data, false)
+
+@rpc("authority", "call_remote", "reliable")
+func server_apply_equiped_item(player_id: int, change_data: int, from_test):
 	"""Cliente recebe comando de equipamento"""
 	
 	if multiplayer.is_server():
 		return
 	
-	# ENCONTRA O PLAYER E EXECUTA
+	# Encontra o player e executa a mudança de item equipado
 	var player_node = get_tree().root.get_node_or_null(str(player_id))
-	if player_node and player_node.has_method("apply_visual_items_on_remote"):
-		player_node.apply_visual_items_on_remote(player_node, change_data)
+	if player_node and player_node.has_method("apply_visual_equip_on_player_node"):
+		player_node.apply_visual_equip_on_player_node(player_node, change_data, from_test)
 
 @rpc("authority", "call_remote", "reliable")
-func apply_drop_action(player_id: int, item_id: int):
+func server_apply_drop_item(player_id: int, item_id: int):
 	"""Cliente recebe comando de drop"""
 	
 	if multiplayer.is_server():
@@ -530,10 +505,7 @@ func apply_drop_action(player_id: int, item_id: int):
 	if player_node and player_node.has_method("execute_item_drop"):
 		player_node.execute_item_drop(player_node, item_id)
 
-#rpc("apply_visual_action", player_id, change_data)
-# Enviar para todos e todos tratam a informação /\
-# Enviar para um player específico \/
-#NetworkManager.rpc_id(requesting_player_id, "rpc_apply_visual_action", target_change)
+# ===== ATUALIZAÇÕES DE ESTADOS DE CLIENTES =====
 
 func send_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
 	"""Envia estado do jogador para o servidor (UNRELIABLE - rápido)"""
@@ -599,7 +571,7 @@ func _client_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, r
 	if player.has_method("_client_receive_state"):
 		player._client_receive_state(pos, rot, vel, running, jumping)
 
-# ===== SINCRONIZAÇÃO DE ANIMAÇÕES =====
+# ===== SINCRONIZAÇÃO DE ESTADOS DE ANIMAÇÕES =====
 
 func send_player_animation_state(p_id: int, speed: float, attacking: bool, defending: bool, 
 								 jumping: bool, aiming: bool, running: bool, block_attacking: bool, on_floor: bool):
@@ -676,6 +648,42 @@ func _client_player_action(p_id: int, action_type: String, anim_name: String):
 	if player and player.has_method("_client_receive_action"):
 		player._client_receive_action(action_type, anim_name)
 
+# ===== SINCRONIZAÇÃO DE ITENS =====
+
+func _rpc_sync_dropped_item(player_ids: Array, object_id: int, round_id: int, pos: Vector3, rot: Vector3, lin_vel: Vector3, ang_vel: Vector3):
+	"""
+	Envia sincronização de item dropado para clientes
+	Chamado pelo DroppedItem._send_sync_to_clients()
+	"""
+	
+	if not multiplayer.is_server():
+		return
+	
+	# Envia RPC para cada cliente
+	for player_id in player_ids:
+		if player_id != 1:  # Ignora servidor
+			NetworkManager._rpc_client_sync_item.rpc_id(object_id, round_id, pos, rot, lin_vel, ang_vel)
+
+@rpc("authority", "call_remote", "unreliable")
+func _rpc_client_sync_item(object_id: int, round_id: int, pos: Vector3, rot: Vector3, lin_vel: Vector3, ang_vel: Vector3):
+	"""
+	RPC: Cliente recebe sincronização de item
+	Nota: unreliable para performance (pacotes podem se perder)
+	"""
+	
+	if multiplayer.is_server():
+		return
+	
+	# Encontra o item no ObjectManager
+	print("[OBJECT]: ", round_id, object_id)
+	var item_node = object_manager.get_object_node(round_id, object_id)
+	
+	if not item_node or not item_node.has_method("receive_sync"):
+		return
+	
+	# Chama método de sincronização do item
+	item_node.receive_sync(pos, rot, lin_vel, ang_vel)
+
 # ===== TRATAMENTO DE ERROS =====
 
 @rpc("authority", "call_remote", "reliable")
@@ -689,7 +697,24 @@ func _client_error(error_message: String):
 	if GameManager and GameManager.has_method("_client_error"):
 		GameManager._client_error(error_message)
 
-# ===== UTILITÁRIOS =====
+# ===== VALIDAÇÕES =====
+
+func _validate_spawn_info(spawn_info: Dictionary) -> bool:
+	"""Valida estrutura de dados de spawn"""
+	
+	if not spawn_info.has("object_id"):
+		push_error("Cliente: spawn_info sem 'object_id'")
+		return false
+	
+	if not spawn_info.has("item_name"):
+		push_error("Cliente: spawn_info sem 'item_name'")
+		return false
+	
+	if not spawn_info.has("position"):
+		push_error("Cliente: spawn_info sem 'position'")
+		return false
+	
+	return true
 
 func _is_peer_connected(peer_id: int) -> bool:
 	"""Verifica se um peer ainda está conectado"""
@@ -698,6 +723,8 @@ func _is_peer_connected(peer_id: int) -> bool:
 	
 	var connected_peers = multiplayer.get_peers()
 	return peer_id in connected_peers
+
+# ===== UTILITÁRIOS =====
 
 func _log_debug(message: String):
 	"""Imprime mensagem de debug se habilitado"""

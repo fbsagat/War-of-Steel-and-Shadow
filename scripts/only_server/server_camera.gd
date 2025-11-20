@@ -10,7 +10,7 @@ var debug: bool = true
 
 func _ready():
 	if not OS.has_feature("Server"):  # Só ativa se NÃO for headless
-		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	else:
 		queue_free()  # Remove no servidor headless
 

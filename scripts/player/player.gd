@@ -134,10 +134,11 @@ func _physics_process(delta: float) -> void:
 		handle_test_equip_inputs_call()
 	
 	# CASO 2: JOGADOR REMOTO NO CLIENTE (interpolação visual)
-	elif not multiplayer.is_server():
-		# Só interpola se estiver rodando como CLIENTE
-		_interpolate_remote_player(delta)
-		move_dir = Vector3.ZERO
+	elif multiplayer:
+		if multiplayer.has_multiplayer_peer() and not multiplayer.is_server():
+			# Só interpola se estiver rodando como CLIENTE
+			_interpolate_remote_player(delta)
+			move_dir = Vector3.ZERO
 	
 	# CASO 3: JOGADOR NO SERVIDOR (não faz nada aqui!)
 	# - Movimento é aplicado diretamente por _apply_player_state_on_server()
@@ -194,7 +195,7 @@ func hitboxes_manager():
 
 # 1. Funções para requisição de itens do modelo
 func _load_item_data():
-	var file = FileAccess.open("res://scripts/utils/item_database.json", FileAccess.READ)
+	var file = FileAccess.open("res://scripts/utils/item_database_regs.json", FileAccess.READ)
 	if file:
 		var json_text = file.get_as_text()
 		file.close()
@@ -361,9 +362,9 @@ func _get_nearby_items(radius: float = pickup_radius, _collision_mask: int = pic
 			print(" -> collider:", body.name, " type:", body.get_class())
 		if body.is_in_group("item"):
 			items.append(body); continue
-		if body.has_method("pick_up"):
+		if body.has_method("collect"):
 			items.append(body); continue
-		var maybe_name = body.get("item_name")
+		var maybe_name = body.get("name")
 		if maybe_name != null:
 			items.append(body); continue
 	items.sort_custom(Callable(self, "_sort_by_distance"))
@@ -671,125 +672,80 @@ func _toggle_mouse_mode():
 		
 # Visual
 func _hide_all_model_items():
-	var knight_items = ItemDatabase.query_items({"item_prop": "knight"})
+	var knight_items = ItemDatabase.query_items({"owner": "knight"})
 	for item in knight_items:
-		if item.get_metadata("item_prop") == "knight":
-			var target = get_node_or_null(item.node_link)
+		if item.owner:
+			var target = get_node_or_null(item.model_node_link)
 			target.visible = false
-			
-# Equipar item pelo ID
-func equip_item_by_id(item_id: int, _drop_last_item: bool):
-	# Encontra o item correspondente pelo ID na lista global de itens
-	var item_data = null
-	for data in _item_data:
-		if data["id"] == item_id:
-			item_data = data
-			break
-			
-	if item_data == null:
-		if debug:
-			print("equip_item_by_id: item_id não encontrado -> ", item_id)
-		return
-
-	# Extrai os campos do item
-	var id: int = item_data["id"]
-	var node_link: String = item_data["node_link"]
-	var item_name: String = item_data["item_name"]
-	var item_type: String = item_data["item_type"]
-	var item_side: String = item_data["item_side"]
-	
-	# Define a variável de controle correta com base no tipo e lado
-	match [item_type, item_side]:
-		["hand", "right"]:
-			#if drop_last_item and current_item_right_id != 0:
-				#_item_drop([current_item_right_id])
-			current_item_right_id = id
-		["hand", "left"]:
-			#if drop_last_item and current_item_left_id != 0:
-				#_item_drop([current_item_left_id])
-			current_item_left_id = id
-		["head", "up"]:
-			#if drop_last_item and current_helmet_item_id != 0:
-				#_item_drop([current_helmet_item_id])
-			current_helmet_item_id = id
-		["body", "down"]:
-			#if drop_last_item and current_cape_item_id != 0:
-				#_item_drop([current_cape_item_id])
-			current_cape_item_id = id
-		_:
-			if debug:
-				print("equip_item_by_id: combinação tipo/lado desconhecida -> ", item_type, "/", item_side)
-	if debug:
-		print("equip_item_by_id: equipado ->", item_name, " em ", node_link)
-	_item_model_change_visibility(self, node_link)
 	
 # Dropar item na frente do player (visual apenas, modelo do item / chamado por action_drop_item)
-func _item_drop(item_ids: Array) -> Array:
-	var dropped: Array = []
-	if typeof(item_ids) != TYPE_ARRAY:
-		push_error("item_drop: esperado Array para item_ids.")
-		return dropped
-	
-	for id in item_ids:
-		var item_name = _get_item_name_by_id(id)
-		if not item_name:
-			push_warning("_item_drop: nome do item não fornecido para ID %s. Pulei." % str(id))
-			dropped.append(null)
-			continue
-		
-		# Obtém cena PRÉ-CARREGADA do ItemDatabase
-		var item_scene = ItemDatabase.get_item_scene(item_name)
-		if not item_scene:
-			push_error("_item_drop: cena '%s' não encontrada no ItemDatabase!" % item_name)
-			dropped.append(null)
-			continue
-		
-		var inst = item_scene.instantiate()
-		if not inst:
-			push_error("_item_drop: falha ao instanciar %s" % item_name)
-			dropped.append(null)
-			continue
-		
-		# Garantir que o nó instanciado seja (ou contenha) um RigidBody3D
-		var rigid: RigidBody3D = null
-		if inst is RigidBody3D:
-			rigid = inst
-		else:
-			rigid = inst.get_node_or_null("RigidBody3D")
-			if not rigid:
-				for child in inst.get_children():
-					if child is RigidBody3D:
-						rigid = child
-						break
-		
-		if not rigid:
-			push_error("_item_drop: instância %s não contém RigidBody3D." % item_name)
-			dropped.append(null)
-			continue
-		
-		# Calcular posição de drop (CORRIGIDO: global_transform, não global_path)
-		var forward_dir: Vector3 = global_transform.basis.z
-		var drop_origin: Vector3 = global_transform.origin + forward_dir * drop_distance + Vector3.UP * 0.4
-		
-		# Adicionar à cena raiz
-		get_tree().root.add_child(inst)
-		
-		# Definir posição de drop
-		inst.global_transform.origin = drop_origin
-		
-		# Aplicar velocidade inicial ao rigidbody
-		if rigid is RigidBody3D:
-			rigid.linear_velocity = forward_dir.normalized() * drop_force
-			rigid.angular_velocity = Vector3(randf(), randf(), randf()) * 1.2
-		else:
-			push_warning("_item_drop: nó encontrado não é RigidBody3D apesar das checagens.")
-
-		dropped.append(rigid)
-	
-	if debug:
-		print("_item_drop: dropped %d / %d" % [dropped.count(null), item_ids.size()])
-	
-	return dropped
+# função antiga, apagar depois
+#func _item_drop(item_ids: Array) -> Array:
+	#var dropped: Array = []
+	#if typeof(item_ids) != TYPE_ARRAY:
+		#push_error("item_drop: esperado Array para item_ids.")
+		#return dropped
+	#
+	#for id in item_ids:
+		#var item_name = _get_item_name_by_id(id)
+		#if not item_name:
+			#push_warning("_item_drop: nome do item não fornecido para ID %s. Pulei." % str(id))
+			#dropped.append(null)
+			#continue
+		#
+		## Obtém cena PRÉ-CARREGADA do ItemDatabase
+		#var item_scene = ItemDatabase.get_item_scene(item_name)
+		#if not item_scene:
+			#push_error("_item_drop: cena '%s' não encontrada no ItemDatabase!" % item_name)
+			#dropped.append(null)
+			#continue
+		#
+		#var inst = item_scene.instantiate()
+		#if not inst:
+			#push_error("_item_drop: falha ao instanciar %s" % item_name)
+			#dropped.append(null)
+			#continue
+		#
+		## Garantir que o nó instanciado seja (ou contenha) um RigidBody3D
+		#var rigid: RigidBody3D = null
+		#if inst is RigidBody3D:
+			#rigid = inst
+		#else:
+			#rigid = inst.get_node_or_null("RigidBody3D")
+			#if not rigid:
+				#for child in inst.get_children():
+					#if child is RigidBody3D:
+						#rigid = child
+						#break
+		#
+		#if not rigid:
+			#push_error("_item_drop: instância %s não contém RigidBody3D." % item_name)
+			#dropped.append(null)
+			#continue
+		#
+		## Calcular posição de drop (CORRIGIDO: global_transform, não global_path)
+		#var forward_dir: Vector3 = global_transform.basis.z
+		#var drop_origin: Vector3 = global_transform.origin + forward_dir * drop_distance + Vector3.UP * 0.4
+		#
+		## Adicionar à cena raiz
+		#get_tree().root.add_child(inst)
+		#
+		## Definir posição de drop
+		#inst.global_transform.origin = drop_origin
+		#
+		## Aplicar velocidade inicial ao rigidbody
+		#if rigid is RigidBody3D:
+			#rigid.linear_velocity = forward_dir.normalized() * drop_force
+			#rigid.angular_velocity = Vector3(randf(), randf(), randf()) * 1.2
+		#else:
+			#push_warning("_item_drop: nó encontrado não é RigidBody3D apesar das checagens.")
+#
+		#dropped.append(rigid)
+	#
+	#if debug:
+		#print("_item_drop: dropped %d / %d" % [dropped.count(null), item_ids.size()])
+	#
+	#return dropped
 
 # Executa uma animação one-shot e retorna sua duração
 func _execute_animation(anim_name: String, anim_param_path: String, oneshot_request_path: String = "") -> float:
@@ -871,60 +827,6 @@ func _on_hitbox_body_entered(body: Node, hitbox_area: Area3D) -> void:
 func _on_block_attack_timer_timeout(duration):
 	await get_tree().create_timer(duration).timeout
 	is_block_attacking = false
-	
-# Ações do player (Pegar item)
-func action_pick_up_item():
-	var found = _get_nearby_items()
-	if found.size() == 0:
-		if debug:
-			print("Nenhum item por perto")
-		return
-	var item = found[0]
-	if item.has_method("pick_up"):
-		item.pick_up(self)
-		animation_tree.set("PickUp", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
-		equip_item_by_id(item.item_id, true)
-		
-# Ações do player (Dropar item) *por enquanto dropa tudo sequencialmente
-func action_drop_item_call() -> void:
-	var items = [
-		current_cape_item_id,
-		current_helmet_item_id,
-		current_item_left_id,
-		current_item_right_id
-	]
-	var items_tt = []
-	for item_id in items:
-		if item_id == 0:
-			continue
-		else:
-			items_tt.append(item_id)
-			
-	if len(items_tt) > 0:
-		if NetworkManager and NetworkManager.is_connected:
-			NetworkManager.request_drop_item(player_id, items_tt[0])
-	
-	# Atualiza o item atual em sua variável correspondente
-		var item_id = ItemDatabase.get_item_by_id(items_tt[0]).id
-		if item_id == current_cape_item_id:
-			current_cape_item_id = 0
-		elif item_id == current_helmet_item_id:
-			current_helmet_item_id = 0
-		elif item_id == current_item_left_id:
-			current_item_left_id = 0
-		elif item_id == current_item_right_id:
-			current_item_right_id = 0
-		
-func execute_item_drop(player_node, item):
-	# Executa o drop do node do item
-	#_item_drop(item) - Apagar depois que implementar o drop do servidor
-		
-	var item_node_link = ItemDatabase.get_item_by_id(item).node_link
-		
-	# Atualiza visibilidade do item no modelo (uma vez)
-	_item_model_change_visibility(player_node, item_node_link, false)
-	# Animação de drop
-	_execute_animation("Interact", "parameters/Interact/transition_request", "parameters/Interact_shot/request")
 		
 func _on_impact_detected(impulse: float):
 	if debug:
@@ -950,128 +852,7 @@ func _on_attack_timer_timeout(duration, current_id):
 		hitbox.monitoring = false
 		is_attacking = false
 		is_block_attacking = false
-
-func handle_test_equip_inputs_call():
-	# mapa base (ajuste se algum action deve apontar pra outro item_id)
-	var mapped_id: int
-	var test_equip_map: Dictionary = {}
-
-	# preenche o resto até 8 com o padrão action_n -> n
-	for i in range(1, 9):
-		var key: String = "test_equip%d" % i
-		test_equip_map[key] = i
-
-	# Checa entradas em ordem de 1..8 e pega o primeiro pressionado
-	for i in range(1, 9):
-		var key := "test_equip%d" % i
-		if Input.is_action_just_pressed(key):
-			mapped_id = i
-			break # evita sobrescrever com outra ação no mesmo frame
-
-	# Somente envie ao servidor / equipe se o mapped_id estiver no intervalo válido 1..8
-	if mapped_id >= 1 and mapped_id <= 8:
-		# envia para o servidor (se conectado)
-		if NetworkManager and NetworkManager.is_connected:
-			NetworkManager.request_equip_item(player_id, mapped_id)
-
-		# checa nó e equipa
-		var node := _get_node_by_id(mapped_id)
-		if node == null:
-			push_error("handle_test_equip_inputs: _get_node_by_id(%d) retornou null." % mapped_id)
-			return
-
-		# equipa o item
-		equip_item_by_id(mapped_id, true)
-	# caso contrário, mapped_id == -1 -> nada a fazer
 	
-func apply_visual_items_on_remote(player_node, item_mapped_id):
-	var item_node_link = ItemDatabase.get_item_by_id(item_mapped_id).node_link
-	_item_model_change_visibility(player_node, item_node_link)
-	
-# Modifica a visibilidade do item na mão do modelo
-func _item_model_change_visibility(player_node, node_link: String, visible_ : bool = true):
-	"""
-	Aplica visibilidade em um item específico através do node_link
-	Se visible = true, ESCONDE todos os outros itens no mesmo slot
-	
-	Args:
-		node: O nó do player (CharacterBody3D)
-		item: Dicionário com dados do item (deve ter 'node_link')
-		visible: true para mostrar (e esconder outros), false para esconder
-	
-	Returns:
-		bool: true se conseguiu aplicar, false se falhou
-	
-	Exemplo:
-		node_link: "Knight/Rig/Skeleton3D/handslot_l/shield_2"
-		Se visible=true, TODOS os filhos de "handslot_l" serão escondidos,
-		EXCETO "shield_2" que será mostrado
-		"""
-	
-	# VALIDAÇÃO: Verifica se node é válido
-	if not player_node or not is_instance_valid(player_node):
-		push_error("apply_item_visibility: node inválido ou null")
-		return false
-	
-	# VALIDAÇÃO: Verifica se item tem node_link
-	
-	# BUSCA O NÓ DO ITEM A PARTIR DO PLAYER
-	var item_node = player_node.get_node_or_null(node_link)
-	
-	if not item_node:
-		push_error("apply_item_visibility: nó não encontrado no caminho '%s'" % node_link)
-		if debug:
-			print("  Caminho base: %s" % player_node.get_path())
-			print("  Caminho completo: %s/%s" % [player_node.get_path(), node_link])
-		return false
-	
-	# SE VISIBLE = TRUE, ESCONDE TODOS OS IRMÃOS (outros itens no mesmo slot)
-	if visible_:
-		var parent_node = item_node.get_parent()
-		
-		if parent_node:
-			# Esconde todos os filhos do slot (ex: todos em "handslot_l")
-			for sibling in parent_node.get_children():
-				if sibling == item_node:
-					continue  # Pula o item atual (será mostrado depois)
-				
-				# Esconde o irmão
-				if sibling is CanvasItem:
-					sibling.visible = false
-				elif sibling is VisualInstance3D:
-					sibling.visible = false
-				elif sibling.has_method("set_visible"):
-					sibling.set_visible(false)
-				elif "visible" in sibling:
-					sibling.visible = false
-				
-				# Debug
-				if debug:
-					print("  🚫 Escondendo irmão: %s" % sibling.name)
-	
-	# APLICA VISIBILIDADE NO ITEM ALVO
-	# Suporta Node3D, VisualInstance3D, MeshInstance3D, etc
-	var applied = false
-	
-	if item_node is CanvasItem:
-		item_node.visible = visible_
-		applied = true
-	elif item_node is VisualInstance3D:
-		item_node.visible = visible_
-		applied = true
-	elif item_node.has_method("set_visible"):
-		item_node.set_visible(visible_)
-		applied = true
-	elif "visible" in item_node:
-		item_node.visible = visible_
-		applied = true
-	else:
-		push_warning("apply_item_visibility: nó '%s' não tem propriedade 'visible'" % item_node.name)
-		return false
-	
-	if not applied:
-		return false
-
 # ===== UTILS =====
 func teleport_to(new_position: Vector3):
 	"""Teleporta o player (apenas servidor)"""
@@ -1445,3 +1226,232 @@ func setup_name_label():
 		name_label.visible = false
 	else:
 		name_label.visible = true
+
+
+
+
+
+
+
+
+
+
+
+
+
+# FUNÇÕES DE ITENS
+
+func handle_test_equip_inputs_call():
+	var mapped_id: int
+	var test_equip_map: Dictionary = {}
+
+	# preenche o resto até 8 com o padrão action_n -> n
+	for i in range(1, 9):
+		var key: String = "test_equip%d" % i
+		test_equip_map[key] = i
+
+	# Checa entradas em ordem de 1..8 e pega o primeiro pressionado
+	for i in range(1, 9):
+		var key := "test_equip%d" % i
+		if Input.is_action_just_pressed(key):
+			mapped_id = i
+			break # evita sobrescrever com outra ação no mesmo frame
+
+	# Somente envie ao servidor / equipe se o mapped_id estiver no intervalo válido 1..8
+	if mapped_id >= 1 and mapped_id <= 8:
+		# envia para o servidor (se conectado)
+		if NetworkManager and NetworkManager.is_connected:
+			NetworkManager.request_equip_item(player_id, mapped_id, true)
+	
+func apply_visual_equip_on_player_node(player_node, item_mapped_id, from_test):
+	if not from_test:
+		animation_tree.set("PickUp", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+	
+	var item_node_link = ItemDatabase.get_item_by_id(item_mapped_id).model_node_link
+	_item_model_change_visibility(player_node, item_node_link)
+
+# \/ função que atualiza o player com o item de acordo, fazer isso no servidor 
+# agora, aqui só visual
+# Equipar item pelo ID
+#func equip_item_by_id(item_id: int, _drop_last_item: bool):
+	## Encontra o item correspondente pelo ID na lista global de itens
+	#var item_data = null
+	#for data in _item_data:
+		#if data["id"] == item_id:
+			#item_data = data
+			#break
+			#
+	#if item_data == null:
+		#if debug:
+			#print("equip_item_by_id: item_id não encontrado -> ", item_id)
+		#return
+#
+	## Extrai os campos do item
+	#var id: int = item_data["id"]
+	#var node_link: String = item_data["node_link"]
+	#var item_name: String = item_data["item_name"]
+	#var item_type: String = item_data["item_type"]
+	#var item_side: String = item_data["item_side"]
+	#
+	## Define a variável de controle correta com base no tipo e lado
+	#match [item_type, item_side]:
+		#["hand", "right"]:
+			##if drop_last_item and current_item_right_id != 0:
+				##_item_drop([current_item_right_id])
+			#current_item_right_id = id
+		#["hand", "left"]:
+			##if drop_last_item and current_item_left_id != 0:
+				##_item_drop([current_item_left_id])
+			#current_item_left_id = id
+		#["head", "up"]:
+			##if drop_last_item and current_helmet_item_id != 0:
+				##_item_drop([current_helmet_item_id])
+			#current_helmet_item_id = id
+		#["body", "down"]:
+			##if drop_last_item and current_cape_item_id != 0:
+				##_item_drop([current_cape_item_id])
+			#current_cape_item_id = id
+		#_:
+			#if debug:
+				#print("equip_item_by_id: combinação tipo/lado desconhecida -> ", item_type, "/", item_side)
+	#if debug:
+		#print("equip_item_by_id: equipado ->", item_name, " em ", node_link)
+		#
+	#_item_model_change_visibility(self, node_link)
+
+# Ações do player (Pegar item) FAZER!!!!
+func action_pick_up_item():
+	print("action_pick_up_item")
+	var found = _get_nearby_items()
+	if found.size() == 0:
+		if debug:
+			print("Nenhum item por perto")
+		return
+	var item = found[0]
+	if NetworkManager and NetworkManager.is_connected and item:
+		NetworkManager.request_pick_up_item(player_id, item["object_id"])
+		
+# Ações do player (Dropar item) *por enquanto dropa tudo sequencialmente
+func action_drop_item_call() -> void:
+	if NetworkManager and NetworkManager.is_connected:
+		NetworkManager.request_drop_item(player_id)
+	#var items = [
+		#current_cape_item_id,
+		#current_helmet_item_id,
+		#current_item_left_id,
+		#current_item_right_id
+	#]
+	#var items_tt = []
+	#for item_id in items:
+		#if item_id == 0:
+			#continue
+		#else:
+			#items_tt.append(item_id)
+			#
+	#if len(items_tt) > 0:
+		#if NetworkManager and NetworkManager.is_connected:
+			#NetworkManager.request_drop_item(player_id, items_tt[0])
+	#
+	## Atualiza o item atual em sua variável correspondente
+		#var item_id = ItemDatabase.get_item_by_id(items_tt[0]).id
+		#if item_id == current_cape_item_id:
+			#current_cape_item_id = 0
+		#elif item_id == current_helmet_item_id:
+			#current_helmet_item_id = 0
+		#elif item_id == current_item_left_id:
+			#current_item_left_id = 0
+		#elif item_id == current_item_right_id:
+			#current_item_right_id = 0
+		
+func execute_item_drop(player_node, item):
+	# Executa o drop do node do item
+	var item_node_link = ItemDatabase.get_item_model_link(item)
+		
+	# Atualiza visibilidade do item no modelo (uma vez)
+	_item_model_change_visibility(player_node, item_node_link, false)
+	# Animação de drop
+	_execute_animation("Interact", "parameters/Interact/transition_request", "parameters/Interact_shot/request")
+
+# Modifica a visibilidade do item na mão do modelo
+func _item_model_change_visibility(player_node, node_link: String, visible_ : bool = true):
+	"""
+	Aplica visibilidade em um item específico através do node_link
+	Se visible = true, ESCONDE todos os outros itens no mesmo slot
+	
+	Args:
+		node: O nó do player (CharacterBody3D)
+		item: Dicionário com dados do item (deve ter 'node_link')
+		visible: true para mostrar (e esconder outros), false para esconder
+	
+	Returns:
+		bool: true se conseguiu aplicar, false se falhou
+	
+	Exemplo:
+		node_link: "Knight/Rig/Skeleton3D/handslot_l/shield_2"
+		Se visible=true, TODOS os filhos de "handslot_l" serão escondidos,
+		EXCETO "shield_2" que será mostrado
+		"""
+	
+	# VALIDAÇÃO: Verifica se node é válido
+	if not player_node or not is_instance_valid(player_node):
+		push_error("apply_item_visibility: node inválido ou null")
+		return false
+	
+	# VALIDAÇÃO: Verifica se item tem node_link
+	
+	# BUSCA O NÓ DO ITEM A PARTIR DO PLAYER
+	var item_node = player_node.get_node_or_null(node_link)
+	
+	if not item_node:
+		push_error("apply_item_visibility: nó não encontrado no caminho '%s'" % node_link)
+		if debug:
+			print("  Caminho base: %s" % player_node.get_path())
+			print("  Caminho completo: %s/%s" % [player_node.get_path(), node_link])
+		return false
+	
+	# SE VISIBLE = TRUE, ESCONDE TODOS OS IRMÃOS (outros itens no mesmo slot)
+	if visible_:
+		var parent_node = item_node.get_parent()
+		
+		if parent_node:
+			# Esconde todos os filhos do slot (ex: todos em "handslot_l")
+			for sibling in parent_node.get_children():
+				if sibling == item_node:
+					continue  # Pula o item atual (será mostrado depois)
+				
+				# Esconde o irmão
+				if sibling is CanvasItem:
+					sibling.visible = false
+				elif sibling is VisualInstance3D:
+					sibling.visible = false
+				elif sibling.has_method("set_visible"):
+					sibling.set_visible(false)
+				elif "visible" in sibling:
+					sibling.visible = false
+				
+				# Debug
+				if debug:
+					print("  🚫 Escondendo irmão: %s" % sibling.name)
+	
+	# APLICA VISIBILIDADE NO ITEM ALVO
+	# Suporta Node3D, VisualInstance3D, MeshInstance3D, etc
+	var applied = false
+	
+	if item_node is CanvasItem:
+		item_node.visible = visible_
+		applied = true
+	elif item_node is VisualInstance3D:
+		item_node.visible = visible_
+		applied = true
+	elif item_node.has_method("set_visible"):
+		item_node.set_visible(visible_)
+		applied = true
+	elif "visible" in item_node:
+		item_node.visible = visible_
+		applied = true
+	else:
+		push_warning("apply_item_visibility: nó '%s' não tem propriedade 'visible'" % item_node.name)
+		return false
+	
+	if not applied:
+		return false

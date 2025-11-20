@@ -1,0 +1,102 @@
+[
+  {
+	"id": 1,
+	"scene_path": "res://scenes/collectibles/sword_1.tscn",
+	"model_node_link": "Knight/Rig/Skeleton3D/handslot_r/sword_1",
+	"owner": "knight",
+	"name": "sword_1",
+	"type": "hand-right",
+	"level": "1",
+	"condition": "100"
+  },
+  {
+	"id": 2,
+	"scene_path": "res://scenes/collectibles/sword_2.tscn",
+	"model_node_link": "Knight/Rig/Skeleton3D/handslot_r/sword_2",
+	"owner": "knight",
+	"name": "sword_2",
+	"type": "hand-right",
+	"level": "2",
+	"condition": "100"
+  },
+  {
+	"id": 3,
+	"scene_path": "res://scenes/collectibles/shield_1.tscn",
+	"model_node_link": "Knight/Rig/Skeleton3D/handslot_l/shield_1",
+	"owner": "knight",
+	"name": "shield_1",
+	"type": "hand-left",
+	"level": "1",
+	"condition": "100"
+  },
+  {
+	"id": 4,
+	"scene_path": "res://scenes/collectibles/shield_2.tscn",
+	"model_node_link": "Knight/Rig/Skeleton3D/handslot_l/shield_2",
+	"owner": "knight",
+	"name": "shield_2",
+	"type": "hand-left",
+	"level": "2",
+	"condition": "100"
+  },
+  {
+	"id": 5,
+	"scene_path": "res://scenes/collectibles/iron_helmet.tscn",
+	"model_node_link": "Knight/Rig/Skeleton3D/head/iron_helmet",
+	"owner": "knight",
+	"name": "iron_helmet",
+	"type": "head",
+	"level": "1",
+	"condition": "100"
+  },
+  {
+	"id": 6,
+	"scene_path": "res://scenes/collectibles/steel_helmet.tscn",
+	"model_node_link": "Knight/Rig/Skeleton3D/head/steel_helmet",
+	"owner": "knight",
+	"name": "steel_helmet",
+	"type": "head",
+	"level": "2",
+	"condition": "100"
+  },
+  {
+	"id": 7,
+	"scene_path": "res://scenes/collectibles/knight_cape_red.tscn",
+	"model_node_link": "Knight/Rig/Skeleton3D/chest/Knight_cape_red",
+	"owner": "knight",
+	"name": "cape_1",
+	"type": "back",
+	"level": "1",
+	"condition": "100"
+  },
+  {
+	"id": 8,
+	"scene_path": "res://scenes/collectibles/knight_cape_blue.tscn",
+	"model_node_link": "Knight/Rig/Skeleton3D/chest/Knight_cape_blue",
+	"owner": "knight",
+	"name": "cape_2",
+	"type": "back",
+	"level": "2",
+	"condition": "100"
+  },
+  {
+	"id": 9,
+	"scene_path": "res://scenes/collectibles/shield_3.tscn",
+	"model_node_link": "Knight/Rig/Skeleton3D/handslot_l/shield_3",
+	"owner": "knight",
+	"name": "shield_3",
+	"type": "hand-left",
+	"level": "3",
+	"condition": "100"
+  },
+  {
+	"id": 10,
+	"scene_path": "res://scenes/collectibles/torch.tscn",
+	"model_node_link": "Knight/Rig/Skeleton3D/handslot_l/torch",
+	"owner": "knight",
+	"name": "torch",
+	"type": "hand-left",
+	"level": "1",
+	"condition": "100"
+  }
+]

@@ -22,6 +22,7 @@ extends Node
 @export_category("Server Settings")
 @export var server_port: int = 7777
 @export var max_clients: int = 32
+@export var is_headless : bool = true
 
 @export_category("Room Settings")
 @export var max_players_per_room: int = 12
@@ -55,11 +56,11 @@ extends Node
 
 # ===== REGISTROS (Injetados após inicialização) =====
 
-var player_registry = null
-var room_registry = null
-var round_registry = null
-var object_spawner = null
-var test_manager = null
+var player_registry : PlayerRegistry = null
+var room_registry: RoomRegistry = null
+var round_registry: RoundRegistry = null
+var object_manager: ObjectManager = null
+var test_manager: TestManager = null
 
 # ===== VARIÁVEIS INTERNAS =====
 
@@ -81,8 +82,14 @@ var player_states: Dictionary = {}
 func _ready():
 	"""Ponto de entrada principal - verifica se é servidor e inicializa"""
 	var args = OS.get_cmdline_args()
-	var is_server = "--server" in args or "--dedicated" in args
+	var is_server = "--server" in args
+	is_headless = DisplayServer.get_name() == "headless"
 	
+	if is_headless and is_server:
+		_log_debug("Modo HEADLESS detectado (sem janela)")
+	elif not is_headless and is_server:
+		_log_debug("Modo VISUAL detectado (com janela)")
+		
 	if is_server:
 		_start_server()
 		_connect_signals()
@@ -119,14 +126,14 @@ func _start_server():
 	player_registry = load("res://scripts/only_server/registrars/PlayerRegistry.gd").new()
 	room_registry = load("res://scripts/only_server/registrars/RoomRegistry.gd").new()
 	round_registry = load("res://scripts/only_server/registrars/RoundRegistry.gd").new()
-	object_spawner = load("res://scripts/only_server/ObjectSpawner.gd").new()
-	test_manager = load("res://scripts/autoload/TestManager.gd").new()
+	object_manager = load("res://scripts/only_server/ObjectManager.gd").new()
+	test_manager = load("res://scripts/only_server/TestManager.gd").new()
 	
 	# Adiciona à árvore
 	add_child(player_registry)
 	add_child(room_registry)
 	add_child(round_registry)
-	add_child(object_spawner)
+	add_child(object_manager)
 	add_child(test_manager)
 	
 	# Injeta dependências cruzadas
@@ -137,6 +144,7 @@ func _start_server():
 	room_registry.initialize()
 	round_registry.initialize()
 	test_manager.initialize()
+	object_manager.initialize()
 	
 	_log_debug("✓ Servidor inicializado com sucesso!")
 
@@ -145,17 +153,23 @@ func _inject_dependencies():
 	# PlayerRegistry precisa de:
 	player_registry.room_registry = room_registry
 	player_registry.round_registry = round_registry
-	player_registry.object_spawner = object_spawner
+	player_registry.object_manager = object_manager
+	player_registry.item_database = ItemDatabase
 	
 	# RoomRegistry precisa de:
 	room_registry.player_registry = player_registry
 	room_registry.round_registry = round_registry
-	room_registry.object_spawner = object_spawner
+	room_registry.object_manager = object_manager
 	
 	# RoundRegistry precisa de:
 	round_registry.player_registry = player_registry
 	round_registry.room_registry = room_registry
-	round_registry.object_spawner = object_spawner
+	round_registry.object_manager = object_manager
+	
+	# ObjectManager precisa de:
+	object_manager.player_registry = player_registry
+	object_manager.round_registry = round_registry
+	object_manager.item_database = ItemDatabase
 
 func _connect_signals():
 	"""Conecta sinais dos registries"""
@@ -924,10 +938,6 @@ func _cleanup_round_objects(round_id: int):
 		server_map_manager.queue_free()
 		server_map_manager = null
 	
-	# Limpa objetos spawnados
-	if object_spawner:
-		object_spawner.cleanup()
-	
 	_log_debug("✓ Limpeza completa")
 
 # ===== VALIDAÇÃO ANTI-CHEAT =====
@@ -1035,91 +1045,160 @@ func _apply_player_state_on_server(p_id: int, pos: Vector3, rot: Vector3, vel: V
 		"timestamp": Time.get_ticks_msec()
 	}
 
+func _rpc_despawn_on_clients(player_ids: Array, round_id: int, object_id: int):
+	"""
+	Envia comando de despawn para clientes
+	Chamado pelo ObjectManager.despawn_object()
+	"""
+	
+	if not multiplayer.is_server():
+		return
+	
+	# Envia RPC para cada cliente
+	for player_id in player_ids:
+		if player_id == 1:  # Ignora servidor
+			continue
+		
+		NetworkManager._rpc_client_despawn_item.rpc_id(player_id, object_id, round_id)
+
 # ===== VALIDAÇÃO DE ITENS =====
 
 @rpc("any_peer", "call_remote", "reliable")
-func server_validate_equip_item(requesting_player_id: int, item_id: int):
-	"""
-	Servidor recebe pedido de equipar item, valida e redistribui
+func _server_validate_pick_up_item(requesting_player_id: int, item_id: int):
+	"""Servidor recebe pedido de pegar item, equipa automaticamente se for equipável, valida e redistribui"""
+	print("[SERVER][ITEM] _server_validate_pick_up_item")
+	var player = player_registry.get_player(requesting_player_id)
+	var round_ = round_registry.get_round_by_player_id(player["id"])
+	var item = ItemDatabase.get_item_by_id(item_id)
+	print("[SERVER][ITEM] ",player["name"], " pediu pra pegar um item ", " item_id: ", item_id, " no round ", round_["round_id"])
 	
-	VALIDAÇÕES:
-	- Item ID é válido
-	- Player possui o item no inventário (futuro)
-	- Player está em rodada ativa (futuro)
-	"""
+	# Se for item equipável de knight
+	if ItemDatabase.get_items_by_owner("knight"):
+		# Dropar o item anterior se houver
+		var item_type = ItemDatabase.get_item_type(item["name"])
+		var item_ = player_registry.get_equipped_item_in_slot(round_["round_id"], player["id"], item_type)
+		if item_:
+			player_registry.unequip_item(round_["round_id"], player["id"], item_type)
+			player_registry.remove_item_from_inventory(round_["round_id"], player["id"], item_)
+			drop_item(round_["round_id"], player["id"], item_.id)
+			
+		# Equipar o item novo
+		player_registry.add_item_to_inventory(round_["round_id"], player["id"], item["name"])
+		player_registry.equip_item(round_["round_id"], player["id"], item["name"])
+		NetworkManager.rpc_id(requesting_player_id, "server_apply_picked_up_item", player["id"], item["id"])
+		
+		# Aplica na cena do servidor (atualizar visual)
+		var player_node = get_tree().root.get_node_or_null(str(requesting_player_id))
+		if player_node and player_node.has_method("apply_visual_equip_on_player_node"):
+			player_node.apply_visual_equip_on_player_node(player_node, item_id, false)
 	
-	# Valida item ID
-	var items_size: int = ItemDatabase.get_item_count()
+@rpc("any_peer", "call_remote", "reliable")
+func _server_validate_equip_item(requesting_player_id: int, item_id: int, from_test: bool):
+	"""Servidor recebe pedido de equipar item, valida e redistribui"""
 	
-	if item_id <= 0 or item_id > items_size:
-		push_warning("ServerManager: ID de item inválido recebido: %d" % item_id)
+	var player = player_registry.get_player(requesting_player_id)
+	var round_ = round_registry.get_round_by_player_id(player["id"])
+	var item = ItemDatabase.get_item_by_id(item_id)
+	var item_slot = item.get_slot()
+	print("[SERVER][ITEM] ",player["name"], " pediu pra equipar um item ", " item_id: ", item_id, " no round ", round_["round_id"])
+	# FAZER TODAS AS VALIDAÇÕES DE EQUIPAR ITEM NO CLIENTE
+	
+	# Verifica se o id do item é válido
+	if not ItemDatabase.get_item_by_id(item_id):
 		return
 	
-	# TODO: Validar se player possui item no inventário
-	# var round_id = player_registry.get_player_round(requesting_player_id)
-	# if round_id == -1:
-	#     return
-	# if not player_registry.has_item(round_id, requesting_player_id, item_name):
-	#     return
+	# Verificar se o player já tem o item no slot deste item, se não, equipar este item, se sim, eqipar o novo e dropar o anterior
+	if not player_registry.is_slot_empty(round_["round_id"], player['id'], item_slot):
+		pass
+		# Dropar o item anterior aqui
+	
+	# Add no inventário
+	player_registry.add_item_to_inventory(round_["round_id"], player['id'], item["name"])
+	
+	# Equipa o item
+	player_registry.equip_item(round_["round_id"], player['id'], item["name"])
 	
 	_log_debug("✓ Item equipado validado: Player %d equipou item %d" % [requesting_player_id, item_id])
-	
 	# Envia para todos os clientes (para atualizar visual)
 	for peer_id in multiplayer.get_peers():
 		if _is_peer_connected(peer_id):
-			NetworkManager.rpc_id(peer_id, "apply_visual_action", requesting_player_id, item_id)
+			NetworkManager.rpc_id(peer_id, "server_apply_equiped_item", requesting_player_id, item_id, from_test)
+	
+	# Aplica na cena do servidor (atualizar visual)
+	var player_node = get_tree().root.get_node_or_null(str(requesting_player_id))
+	if player_node and player_node.has_method("apply_visual_equip_on_player_node"):
+			player_node.apply_visual_equip_on_player_node(player_node, item_id, from_test)
+
+
+# Ajustar tudo isso, genreciar os pedidos dos cliente, pegar item, equipar item e dropar item
+
+
 
 @rpc("any_peer", "call_remote", "reliable")
-func server_validate_drop_item(requesting_player_id: int, item_id: int):
-	"""
-	Servidor recebe pedido de dropar item, valida e spawna no mundo
+func _server_validate_drop_item(requesting_player_id: int, item_id: int):
+	"""Servidor recebe pedido de drop, valida e spawna item executando drop_item()
+	IMPORTANTE: USA ESTADO DO SERVIDOR, não do cliente"""
+	var player = player_registry.get_player(requesting_player_id)
+	var round_ = round_registry.get_round_by_player_id(player["id"])
 	
-	VALIDAÇÕES:
-	- Item ID é válido
-	- Player possui o item no inventário (futuro)
-	- Player está em rodada ativa
-	"""
-	
-	# Valida item ID
-	var items_size: int = ItemDatabase.get_item_count()
-	
-	if item_id <= 0 or item_id > items_size:
+	if not ItemDatabase.get_item_by_id(item_id) and item_id != 0:
 		push_warning("ServerManager: ID de item inválido recebido: %d" % item_id)
 		return
 	
-	# Valida estado do player
 	if not player_states.has(requesting_player_id):
 		push_warning("ServerManager: Player %d não tem estado registrado" % requesting_player_id)
 		return
-	
-	# Calcula posição de drop (na frente e acima do player)
-	var pos = player_states[requesting_player_id]["pos"]
-	var rot = player_states[requesting_player_id]["rot"]
-	print(pos, rot)
-	var drop_position = _get_position_front_and_above(pos, rot)
-	
-	# Spawna item no mundo
-	var round_data = round_registry.get_round_by_player_id(requesting_player_id)
-	if not round_data.is_empty():
-		print("[SERVER]Dropar nesta posição: ", drop_position, "ID: ", item_id, "neste round: ", round_data["round_id"])
-		object_spawner.spawn_item_by_id(round_data["round_id"], item_id, drop_position)
-		_log_debug("✓ Item dropado: Player %d dropou item %d em %s" % [requesting_player_id, item_id, drop_position])
-	
-	# Envia para todos os clientes (para atualizar inventário visual)
-	for peer_id in multiplayer.get_peers():
-		if _is_peer_connected(peer_id):
-			NetworkManager.rpc_id(peer_id, "apply_drop_action", requesting_player_id, item_id)
+				
+	if round_registry.get_round_state(round_["round_id"]) != "playing":
+		push_warning("ServerManager: Round inválido, não está em partida")
+		return
+		
+	print("[SERVER][ITEM] ",player["name"], " pediu pra dropar um item ", " item_id: ", item_id, " no round ", round_["round_id"])
+	drop_item(round_["round_id"], player["id"], item_id)
 
-func _get_position_front_and_above(pos: Vector3, rot: Vector3, dist: float = -1.1, height: float = 1.6) -> Vector3:
-	"""
-	Calcula posição na frente e acima de um ponto baseado na rotação
-	Usado para dropar itens na frente do player
-	"""
-	var basis = Basis.from_euler(rot)
-	var forward: Vector3 = -basis.z  # -Z é frente no Godot
-	return pos + forward * dist + Vector3.UP * height
+func drop_item(round_id, player_id, item_id):
+	# Se item_id == 0, é pedido do player, pegar o item de menor valor do player, se não, é pedido do server, pegar item_id que veio
+	var item_ = null
+	if item_id == 0:
+		item_ = player_registry.get_first_equipped_item(round_id, player_id)
+		var item_type = ItemDatabase.get_item_type(item_)
+	
+		print("[SERVER][ITEM]get_first_equipped_item: ", item_)
+		# Valida estado do player NO SERVIDOR
+		print("[SERVER][ITEM]item_: ", item_)
+		if item_:
+			player_registry.unequip_item(round_id, player_id, item_type)
+			player_registry.remove_item_from_inventory(round_id, player_id, item_)
+			print("[SERVER][ITEM]Itens equipados no player: ", player_registry.get_equipped_items(round_id, player_id))
+			
+			# Continuar a partir daqui, já spawna, falta física, sincronia e coleta
+			object_manager.spawn_item_in_front_of_player(round_id, player_id, item_)
+			# Fazer função que spawna os itens no servidor e clientes aqui
+			# Se o item estava equipado, desequipar(atualizar modelo do player)
+			# Aplica na cena do servidor (atualizar visual)
+			var player_node = get_tree().root.get_node_or_null(str(player_id))
+			if player_node and player_node.has_method("execute_item_drop"):
+				player_node.execute_item_drop(player_node, item_)
+			
+		else:
+			print("[SERVER][ITEM] Não tem item no inventário do player")
+	else:
+		item_ = ItemDatabase.get_item_by_id(item_id)
+		object_manager.spawn_item_in_front_of_player(round_id, player_id, item_)
 
 # ===== UTILITÁRIOS =====
+
+func _get_position_front_and_above(pos: Vector3, rot: Vector3, dist: float = 1.5, height: float = 1.2) -> Vector3:
+	"""
+	Calcula posição na frente e acima do player
+	@param pos: Posição do player
+	@param rot: Rotação do player (Euler angles)
+	@param dist: Distância na frente (positivo = frente)
+	@param height: Altura acima do player
+	"""
+	var basis = Basis.from_euler(rot)
+	var forward: Vector3 = basis.z  # -Z é frente no Godot
+	return pos + forward * dist + Vector3.UP * height
 
 func shutdown_registry():
 	"""
@@ -1226,7 +1305,7 @@ func _is_peer_connected(peer_id: int) -> bool:
 func _log_debug(message: String):
 	"""Imprime mensagem de debug se habilitado"""
 	if debug_mode:
-		print("[ServerManager] " + message)
+		print("[SERVER] " + message)
 
 # ===== DEBUG =====
 

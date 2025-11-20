@@ -56,12 +56,9 @@ collision_layer = 4
 collision_mask = 7
 mass = 5.0
 physics_material_override = SubResource("PhysicsMaterial_fr844")
+can_sleep = false
 continuous_cd = true
 script = ExtResource("1_bwxcu")
-item_name = "iron_helmet"
-item_id = 5
-item_type = "head"
-item_side = "up"
 
 [node name="mesh" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, -2.209651e-22, -1.4210853e-14, 2.209651e-22, 1, 0, 1.4210853e-14, -3.1401024e-36, 1, 4.7683716e-07, -0.025534328, -1.0854231e-07)

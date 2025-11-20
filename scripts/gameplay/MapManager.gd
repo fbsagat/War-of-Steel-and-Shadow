@@ -68,13 +68,6 @@ func load_map(map_scene_path: String, settings: Dictionary = {}):
 	# Aguarda um frame para garantir que tudo foi adicionado à árvore
 	await get_tree().process_frame
 	
-	# Map settings exemplo: { "map_seed": 247178, 
-	#"map_preencher_etapas": [{ "nome": "Etapa 1", "tipo_relevo": "Semi-Flat", "percentual_distancia": 30 },
-	# { "nome": "Etapa 2", "tipo_relevo": "Gentle Hills", "percentual_distancia": 30 }, 
-	# { "nome": "Etapa 3", "tipo_relevo": "Rolling Hills", "percentual_distancia": 20 }, 
-	# { "nome": "Etapa 4", "tipo_relevo": "Valleys", "percentual_distancia": 20 }],
-	#  "map_size": (20, 20), "env_current_time": 12.0, "round_players_count": 1 }
-	
 	# Encontra os pontos de spawn
 	spawn_points = settings["spawn_points"]
 	spawn_points_ready.emit(spawn_points.size())

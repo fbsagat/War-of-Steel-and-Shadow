@@ -1,4 +1,5 @@
 extends Node
+class_name RoomRegistry
 ## RoomRegistry - Gerenciador de salas de lobby (SERVIDOR APENAS)
 ## Salas são locais onde jogadores aguardam antes de iniciar partidas (rodadas)
 ##
@@ -17,7 +18,7 @@ extends Node
 
 var player_registry = null  # Injetado
 var round_registry = null  # Injetado
-var object_spawner = null  # Injetado
+var object_manager = null  # Injetado
 
 # ===== VARIÁVEIS INTERNAS =====
 
@@ -650,4 +651,4 @@ func debug_print_all_rooms():
 func _log_debug(message: String):
 	"""Função padrão de debug"""
 	if debug_mode:
-		print("[RoomRegistry] %s" % message)
+		print("[Server][RoomRegistry] %s" % message)

@@ -1,4 +1,5 @@
 extends Node
+class_name RoundRegistry
 ## RoundRegistry - Gerenciador de rodadas/partidas (SERVIDOR APENAS)
 ## Rodadas são partidas ativas jogadas dentro de salas
 ##
@@ -28,7 +29,7 @@ extends Node
 
 var player_registry = null  # Injetado
 var room_registry = null  # Injetado
-var object_spawner = null  # Injetado
+var object_manager = null  # Injetado
 
 # ===== VARIÁVEIS INTERNAS =====
 
@@ -683,4 +684,4 @@ func debug_print_all_rounds():
 func _log_debug(message: String):
 	"""Função padrão de debug"""
 	if debug_mode:
-		print("[RoundRegistry] %s" % message)
+		print("[Server][RoundRegistry] %s" % message)

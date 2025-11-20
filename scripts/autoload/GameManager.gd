@@ -9,6 +9,10 @@ extends Node
 @export var server_port: int = 7777
 @export var connection_timeout: float = 10.0
 
+@export_category("Physics Settings")
+@export var drop_impulse_strength: float = 2.0
+@export var drop_impulse_variance: float = 1.0
+
 @export_category("Debug")
 @export var debug_mode: bool = true
 
@@ -24,7 +28,9 @@ var current_round: Dictionary = {}
 var connection_start_time: float = 0.0
 var is_connecting: bool = false
 var _is_server: bool = false
-
+## Objetos spawnados organizados por rodada
+## {round_id: {object_id: {node: Node, item_name: String, owner_id: int}}}
+var spawned_objects: Dictionary = {}
 
 ## Referências da rodada atual
 var client_map_manager: Node = null
@@ -63,6 +69,7 @@ func _ready():	# Verifica se é servidor
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
 	multiplayer.connection_failed.connect(_on_connection_failed)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
+
 
 func _process(_delta):
 	"""Verifica timeout de conexão"""
@@ -131,7 +138,7 @@ func _on_connected_to_server():
 	
 	if main_menu:
 		main_menu.show_name_input_menu()
-		
+	
 	connected_to_server.emit()
 
 func _on_connection_failed():
@@ -626,6 +633,85 @@ func _show_error(message: String):
 			main_menu.show_error_manual_join(message)
 		elif main_menu.create_match_menu and main_menu.create_match_menu.visible:
 			main_menu.show_error_create_match(message)
+
+# ===== SPAWN DE OBJETOS =====
+
+func _spawn_on_client(object_id: int, round_id: int, item_name: String, position: Vector3, rotation: Vector3, owner_id: int):
+	"""
+	Spawna objeto no cliente (chamado via RPC)
+	"""
+	
+	if multiplayer.is_server():
+		return  # Servidor já spawnou na função principal
+	
+	# Valida ItemDatabase
+	if not ItemDatabase or not ItemDatabase.is_loaded:
+		push_error("ObjectManager[Cliente]: ItemDatabase não disponível")
+		return
+	
+	# Obtém scene_path
+	var scene_path = ItemDatabase.get_item_scene_path(item_name)
+	
+	if scene_path.is_empty():
+		push_error("ObjectManager[Cliente]: Scene path vazio para '%s'" % item_name)
+		return
+	
+	# Carrega cena
+	var item_scene = load(scene_path)
+	
+	if not item_scene:
+		push_error("ObjectManager[Cliente]: Falha ao carregar: %s" % scene_path)
+		return
+	
+	# Instancia
+	var item_node = item_scene.instantiate()
+	
+	if not item_node:
+		push_error("ObjectManager[Cliente]: Falha ao instanciar")
+		return
+	
+	# Configura nome (igual ao servidor para consistência)
+	item_node.name = "Object_%d_%s_%d" % [object_id, item_name, round_id]
+	
+	# Adiciona à árvore
+	get_tree().root.add_child(item_node, true)
+	
+	await get_tree().process_frame
+	
+	# Configura transformação
+	if item_node is Node3D:
+		item_node.global_position = position
+		item_node.global_rotation = rotation
+	
+	# Inicializa item
+	if item_node.has_method("initialize"):
+		var item_full_data = ItemDatabase.get_item_full_info(item_name)
+		var drop_velocity = _calculate_drop_impulse(rotation)
+		item_node.initialize(object_id, round_id, item_name, item_full_data, owner_id, drop_velocity)
+	
+	# Registra localmente no cliente
+	if not spawned_objects.has(round_id):
+		spawned_objects[round_id] = {}
+	
+	spawned_objects[round_id][object_id] = {
+		"node": item_node,
+		"item_name": item_name,
+		"owner_id": owner_id,
+		"spawn_time": Time.get_unix_time_from_system()
+	}
+	
+func _calculate_drop_impulse(player_rot: Vector3) -> Vector3:
+	"""Calcula vetor de impulso para dropar item"""
+	
+	var basis = Basis.from_euler(player_rot)
+	var forward = -basis.z
+	
+	var impulse = forward * drop_impulse_strength
+	impulse.x += randf_range(-drop_impulse_variance, drop_impulse_variance)
+	impulse.y += drop_impulse_strength * 0.5  # Para cima
+	impulse.z += randf_range(-drop_impulse_variance, drop_impulse_variance)
+	
+	return impulse
 
 # ===== UTILITÁRIOS =====
 

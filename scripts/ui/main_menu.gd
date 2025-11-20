@@ -689,7 +689,7 @@ func load_options():
 		_log_debug(" Configurações carregadas com sucesso")
 	
 	# Aplica configurações carregadas
-	_apply_video_settings()
+	#_apply_video_settings() # Ativar depois de corrigir
 	_apply_audio_settings()
 	_load_ui_from_settings()
 
@@ -878,7 +878,7 @@ func get_available_resolutions() -> Array[Vector2i]:
 	var current_screen = DisplayServer.window_get_current_screen()
 	var screen_size = DisplayServer.screen_get_size(current_screen)
 	
-	var resolutions: Array[Vector2i] = [
+	var resolutions_: Array[Vector2i] = [
 		Vector2i(1280, 720),   # HD
 		Vector2i(1600, 900),   # HD+
 		Vector2i(1920, 1080),  # Full HD
@@ -888,7 +888,7 @@ func get_available_resolutions() -> Array[Vector2i]:
 	
 	var valid_resolutions: Array[Vector2i] = []
 	
-	for res in resolutions:
+	for res in resolutions_:
 		if res.x <= screen_size.x and res.y <= screen_size.y:
 			valid_resolutions.append(res)
 	
