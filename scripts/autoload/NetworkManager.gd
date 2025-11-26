@@ -398,10 +398,7 @@ func _rpc_spawn_on_clients(active_players, object_id: int, round_id: int, item_n
 	_log_debug("🔄 RPC recebido: spawn_on_client (ID: %d, Item: %s)" % [object_id, item_name])
 	
 	# Cliente spawna localmente
-	for player_id in active_players:
-		if player_id == 1:  # Ignora servidor
-			continue
-		rpc_id(player_id, "_rpc_receive_spawn_on_clients", object_id, round_id, item_name, position, rotation, owner_id)
+	rpc_id(0, "_rpc_receive_spawn_on_clients", object_id, round_id, item_name, position, rotation, owner_id)
 	
 	_log_debug("✓ Item spawnado: %s (ID: %d)" % [item_name, object_id])
 
@@ -409,7 +406,7 @@ func _rpc_spawn_on_clients(active_players, object_id: int, round_id: int, item_n
 func _rpc_receive_spawn_on_clients(object_id: int, round_id: int, item_name: String, position: Vector3, rotation: Vector3, owner_id: int):
 	if GameManager.has_method("_spawn_on_client"):
 		GameManager._spawn_on_client(object_id, round_id, item_name, position, rotation, owner_id)
-
+		
 @rpc("authority", "call_remote", "reliable")
 func _rpc_client_despawn_item(object_id: int, round_id: int):
 	"""
@@ -473,7 +470,6 @@ func _server_drop_player_item(player_id, item_id):
 
 @rpc("authority", "call_remote", "reliable")
 func server_apply_picked_up_item(player_id, change_data):
-	
 	# Encontra o player e executa a mudança de item equipado
 	var player_node = get_tree().root.get_node_or_null(str(player_id))
 	if player_node and player_node.has_method("apply_visual_equip_on_player_node"):
@@ -492,18 +488,18 @@ func server_apply_equiped_item(player_id: int, change_data: int, from_test):
 		player_node.apply_visual_equip_on_player_node(player_node, change_data, from_test)
 
 @rpc("authority", "call_remote", "reliable")
-func server_apply_drop_item(player_id: int, item_id: int):
+func server_apply_drop_item(player_id: int, item: String):
 	"""Cliente recebe comando de drop"""
 	
 	if multiplayer.is_server():
 		return
 	
-	_log_debug("📥 Dropando equipamento: Player %d, Item %d" % [player_id, item_id])
+	_log_debug("📥 Dropando equipamento: Player %d, Item %s" % [player_id, item])
 	
 	# ENCONTRA O PLAYER E EXECUTA
 	var player_node = get_tree().root.get_node_or_null(str(player_id))
 	if player_node and player_node.has_method("execute_item_drop"):
-		player_node.execute_item_drop(player_node, item_id)
+		player_node.execute_item_drop(player_node, item)
 
 # ===== ATUALIZAÇÕES DE ESTADOS DE CLIENTES =====
 
@@ -647,42 +643,6 @@ func _client_player_action(p_id: int, action_type: String, anim_name: String):
 	var player = get_tree().root.get_node_or_null(str(p_id))
 	if player and player.has_method("_client_receive_action"):
 		player._client_receive_action(action_type, anim_name)
-
-# ===== SINCRONIZAÇÃO DE ITENS =====
-
-func _rpc_sync_dropped_item(player_ids: Array, object_id: int, round_id: int, pos: Vector3, rot: Vector3, lin_vel: Vector3, ang_vel: Vector3):
-	"""
-	Envia sincronização de item dropado para clientes
-	Chamado pelo DroppedItem._send_sync_to_clients()
-	"""
-	
-	if not multiplayer.is_server():
-		return
-	
-	# Envia RPC para cada cliente
-	for player_id in player_ids:
-		if player_id != 1:  # Ignora servidor
-			NetworkManager._rpc_client_sync_item.rpc_id(object_id, round_id, pos, rot, lin_vel, ang_vel)
-
-@rpc("authority", "call_remote", "unreliable")
-func _rpc_client_sync_item(object_id: int, round_id: int, pos: Vector3, rot: Vector3, lin_vel: Vector3, ang_vel: Vector3):
-	"""
-	RPC: Cliente recebe sincronização de item
-	Nota: unreliable para performance (pacotes podem se perder)
-	"""
-	
-	if multiplayer.is_server():
-		return
-	
-	# Encontra o item no ObjectManager
-	print("[OBJECT]: ", round_id, object_id)
-	var item_node = object_manager.get_object_node(round_id, object_id)
-	
-	if not item_node or not item_node.has_method("receive_sync"):
-		return
-	
-	# Chama método de sincronização do item
-	item_node.receive_sync(pos, rot, lin_vel, ang_vel)
 
 # ===== TRATAMENTO DE ERROS =====
 

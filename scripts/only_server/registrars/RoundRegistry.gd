@@ -423,6 +423,22 @@ func get_active_players(round_id: int) -> Array:
 	
 	return active
 
+func get_active_players_ids(round_id: int) -> Array:
+	"""
+	Retorna lista de PlayerData dos jogadores ATIVOS (não desconectados)
+	"""
+	if not rounds.has(round_id):
+		return []
+	
+	var round_data = rounds[round_id]
+	var active = []
+	
+	for player_data in round_data["players"]:
+		if player_data["id"] not in round_data["disconnected_players"]:
+			active.append(player_data["id"])
+	
+	return active
+
 func get_active_player_count(round_id: int) -> int:
 	"""Retorna quantidade de jogadores ativos (não desconectados)"""
 	return get_active_players(round_id).size()

@@ -115,6 +115,8 @@ func spawn_item(round_id: int, item_name: String, position: Vector3, rotation: V
 	var object_id = _get_next_object_id()
 	
 	# Spawna no servidor
+	print("[SERVER][ITEMSPAWN] _spawn_on_server: ")
+	print("[SERVER][ITEMSPAWN] object_id: ", object_id," round_id: ", round_id," item_name: ", item_name," position: ", position," rotation: ", rotation," owner_id: ", owner_id)
 	var item_node = await _spawn_on_server(object_id, round_id, item_name, position, rotation, owner_id)
 	
 	if not item_node:
@@ -154,6 +156,7 @@ func spawn_item_in_front_of_player(round_id: int, player_id: int, item_name: Str
 	
 	@return: object_id ou -1 se falhar
 	"""
+	print("[SERVER][ITEMSPAWN] spawn_item_in_front_of_player")
 	
 	if not multiplayer.is_server():
 		return -1

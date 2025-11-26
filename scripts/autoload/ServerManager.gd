@@ -1094,6 +1094,7 @@ func _server_validate_pick_up_item(requesting_player_id: int, item_id: int):
 	
 @rpc("any_peer", "call_remote", "reliable")
 func _server_validate_equip_item(requesting_player_id: int, item_id: int, from_test: bool):
+	print("[SERVER][ITEM] _server_validate_equip_item")
 	"""Servidor recebe pedido de equipar item, valida e redistribui"""
 	
 	var player = player_registry.get_player(requesting_player_id)
@@ -1138,6 +1139,7 @@ func _server_validate_equip_item(requesting_player_id: int, item_id: int, from_t
 func _server_validate_drop_item(requesting_player_id: int, item_id: int):
 	"""Servidor recebe pedido de drop, valida e spawna item executando drop_item()
 	IMPORTANTE: USA ESTADO DO SERVIDOR, não do cliente"""
+	print("[SERVER][ITEM] _server_validate_drop_item")
 	var player = player_registry.get_player(requesting_player_id)
 	var round_ = round_registry.get_round_by_player_id(player["id"])
 	
@@ -1158,33 +1160,39 @@ func _server_validate_drop_item(requesting_player_id: int, item_id: int):
 
 func drop_item(round_id, player_id, item_id):
 	# Se item_id == 0, é pedido do player, pegar o item de menor valor do player, se não, é pedido do server, pegar item_id que veio
-	var item_ = null
+	var item_name = null
 	if item_id == 0:
-		item_ = player_registry.get_first_equipped_item(round_id, player_id)
-		var item_type = ItemDatabase.get_item_type(item_)
+		item_name = player_registry.get_first_equipped_item(round_id, player_id)
 	
-		print("[SERVER][ITEM]get_first_equipped_item: ", item_)
 		# Valida estado do player NO SERVIDOR
-		print("[SERVER][ITEM]item_: ", item_)
-		if item_:
+		if item_name:
+			var item_type = ItemDatabase.get_item_type(item_name)
+			var first_item = ItemDatabase.get_item(item_name).to_dictionary()
 			player_registry.unequip_item(round_id, player_id, item_type)
-			player_registry.remove_item_from_inventory(round_id, player_id, item_)
-			print("[SERVER][ITEM]Itens equipados no player: ", player_registry.get_equipped_items(round_id, player_id))
+			player_registry.remove_item_from_inventory(round_id, player_id, item_name)
+			print("[SERVER][ITEM] Itens equipados no player: ", player_registry.get_equipped_items(round_id, player_id))
 			
 			# Continuar a partir daqui, já spawna, falta física, sincronia e coleta
-			object_manager.spawn_item_in_front_of_player(round_id, player_id, item_)
+			object_manager.spawn_item_in_front_of_player(round_id, player_id, item_name)
 			# Fazer função que spawna os itens no servidor e clientes aqui
 			# Se o item estava equipado, desequipar(atualizar modelo do player)
 			# Aplica na cena do servidor (atualizar visual)
+			
 			var player_node = get_tree().root.get_node_or_null(str(player_id))
 			if player_node and player_node.has_method("execute_item_drop"):
-				player_node.execute_item_drop(player_node, item_)
+				player_node.execute_item_drop(player_node, item_name)
+				
+			# Aplica na cena dos clientes no round (atualizar visual)
+			var players_ids_round = round_registry.get_active_players_ids(round_id)
+			for peer_id in multiplayer.get_peers(): # futuramente aplicar um filtro aqui tbm(p/ ficar mais leve)
+				if _is_peer_connected(peer_id) and peer_id in players_ids_round:
+					NetworkManager.rpc_id(peer_id, "server_apply_drop_item", player_id, first_item['name'])
 			
 		else:
 			print("[SERVER][ITEM] Não tem item no inventário do player")
 	else:
-		item_ = ItemDatabase.get_item_by_id(item_id)
-		object_manager.spawn_item_in_front_of_player(round_id, player_id, item_)
+		item_id = ItemDatabase.get_item_by_id(item_id)
+		object_manager.spawn_item_in_front_of_player(round_id, player_id, item_id)
 
 # ===== UTILITÁRIOS =====
 

@@ -121,34 +121,38 @@ func _ready():
 	
 # Física geral
 func _physics_process(delta: float) -> void:
+	"""
+	Versão final: clara, sem erros, com fallback para singleplayer
+	"""
 	var move_dir: Vector3 = Vector3.ZERO
 	
 	_handle_gravity(delta)
 	
-	# CASO 1: JOGADOR LOCAL (apenas no CLIENTE)
+	# ✅ Verificação de segurança
+	var has_network = multiplayer and multiplayer.has_multiplayer_peer()
+	
+	# === PROCESSAMENTO DE MOVIMENTO ===
 	if is_local_player:
+		# Jogador controlado pelo usuário
 		move_dir = _handle_movement_input(delta)
 		move_and_slide()
-		_send_state_to_server(delta)
-		_send_animation_state(delta)
+		
+		# Sincronização de rede (se aplicável)
+		if has_network:
+			_send_state_to_server(delta)
+			_send_animation_state(delta)
+		
+		# Input de teste
 		handle_test_equip_inputs_call()
 	
-	# CASO 2: JOGADOR REMOTO NO CLIENTE (interpolação visual)
-	elif multiplayer:
-		if multiplayer.has_multiplayer_peer() and not multiplayer.is_server():
-			# Só interpola se estiver rodando como CLIENTE
+	elif has_network and multiplayer.has_multiplayer_peer():
+		if not multiplayer.is_server():
+			# Jogador remoto no cliente
 			_interpolate_remote_player(delta)
-			move_dir = Vector3.ZERO
 	
-	# CASO 3: JOGADOR NO SERVIDOR (não faz nada aqui!)
-	# - Movimento é aplicado diretamente por _apply_player_state_on_server()
-	# - Nenhuma interpolação, input ou física de movimento
-	else:
-		# Servidor: não faz nada de movimento ou interpolação
-		# A posição já foi definida por RPC validado
-		move_dir = Vector3.ZERO
-
-	# ANIMAÇÕES: aplicáveis em todos os contextos (local, remoto, servidor)
+	# Servidor não processa movimento aqui (definido por RPC)
+	
+	# === ANIMAÇÕES (sempre) ===
 	_handle_animations(move_dir)
 		
 func _process(delta: float) -> void:
@@ -1391,7 +1395,6 @@ func _item_model_change_visibility(player_node, node_link: String, visible_ : bo
 		Se visible=true, TODOS os filhos de "handslot_l" serão escondidos,
 		EXCETO "shield_2" que será mostrado
 		"""
-	
 	# VALIDAÇÃO: Verifica se node é válido
 	if not player_node or not is_instance_valid(player_node):
 		push_error("apply_item_visibility: node inválido ou null")
