@@ -602,13 +602,24 @@ func _cleanup_local_round():
 	
 	local_player = null
 	
+	# ✅ CORRIGIDO: Limpa objetos spawnados
+	for round_id in spawned_objects.keys():
+		for object_id in spawned_objects[round_id].keys():
+			var obj_data = spawned_objects[round_id][object_id]
+			var item_node = obj_data.get("node")
+			
+			if item_node and is_instance_valid(item_node) and item_node.is_inside_tree():
+				item_node.queue_free()
+	
+	spawned_objects.clear()
+	
 	# Remove mapa
 	if client_map_manager:
 		client_map_manager.unload_map()
 		client_map_manager.queue_free()
 		client_map_manager = null
 	
-	_log_debug(" Limpeza completa")
+	_log_debug("✓ Limpeza completa")
 
 # ===== TRATAMENTO DE ERROS =====
 
@@ -646,32 +657,35 @@ func _spawn_on_client(object_id: int, round_id: int, item_name: String, position
 	
 	# Valida ItemDatabase
 	if not ItemDatabase or not ItemDatabase.is_loaded:
-		push_error("ObjectManager[Cliente]: ItemDatabase não disponível")
+		push_error("GameManager[Cliente]: ItemDatabase não disponível")
 		return
 	
 	# Obtém scene_path
 	var scene_path = ItemDatabase.get_item_scene_path(item_name)
 	
 	if scene_path.is_empty():
-		push_error("ObjectManager[Cliente]: Scene path vazio para '%s'" % item_name)
+		push_error("GameManager[Cliente]: Scene path vazio para '%s'" % item_name)
 		return
 	
 	# Carrega cena
 	var item_scene = load(scene_path)
 	
 	if not item_scene:
-		push_error("ObjectManager[Cliente]: Falha ao carregar: %s" % scene_path)
+		push_error("GameManager[Cliente]: Falha ao carregar: %s" % scene_path)
 		return
 	
 	# Instancia
 	var item_node = item_scene.instantiate()
 	
 	if not item_node:
-		push_error("ObjectManager[Cliente]: Falha ao instanciar")
+		push_error("GameManager[Cliente]: Falha ao instanciar")
 		return
 	
-	# Configura nome (igual ao servidor para consistência)
+	# ✅ CORRIGIDO: Nome consistente com servidor
 	item_node.name = "Object_%d_%s_%d" % [object_id, item_name, round_id]
+	print("✅ [CLIENT] Nome do node: %s" % item_node.name)
+	
+	_log_debug("📦 Spawnando no cliente: %s" % item_node.name)
 	
 	# Adiciona à árvore
 	get_tree().root.add_child(item_node, true)
@@ -689,7 +703,7 @@ func _spawn_on_client(object_id: int, round_id: int, item_name: String, position
 		var drop_velocity = _calculate_drop_impulse(rotation)
 		item_node.initialize(object_id, round_id, item_name, item_full_data, owner_id, drop_velocity)
 	
-	# Registra localmente no cliente
+	# ✅ CORRIGIDO: Registra com estrutura correta
 	if not spawned_objects.has(round_id):
 		spawned_objects[round_id] = {}
 	
@@ -700,6 +714,41 @@ func _spawn_on_client(object_id: int, round_id: int, item_name: String, position
 		"spawn_time": Time.get_unix_time_from_system()
 	}
 	
+	_log_debug("✓ Objeto spawnado no cliente: ID=%d, Item=%s" % [object_id, item_name])
+
+func _despawn_on_client(object_id: int, round_id: int):
+	"""
+	✅ NOVO MÉTODO: Despawna objeto no cliente
+	Chamado via RPC pelo servidor
+	"""
+	
+	if multiplayer.is_server():
+		return
+	
+	_log_debug("🗑️  Despawnando objeto: ID=%d, Round=%d" % [object_id, round_id])
+	
+	# Valida existência
+	if not spawned_objects.has(round_id):
+		_log_debug("⚠️  Round %d não existe no registro" % round_id)
+		return
+	
+	if not spawned_objects[round_id].has(object_id):
+		_log_debug("⚠️  Objeto %d não existe no round %d" % [object_id, round_id])
+		return
+	
+	var obj_data = spawned_objects[round_id][object_id]
+	var item_node = obj_data.get("node")
+	
+	# Remove da cena
+	if item_node and is_instance_valid(item_node) and item_node.is_inside_tree():
+		item_node.queue_free()
+		_log_debug("  Node removido da cena")
+	
+	# Remove do registro local
+	spawned_objects[round_id].erase(object_id)
+	
+	_log_debug("✓ Objeto despawnado no cliente: ID=%d" % object_id)
+
 func _calculate_drop_impulse(player_rot: Vector3) -> Vector3:
 	"""Calcula vetor de impulso para dropar item"""
 	

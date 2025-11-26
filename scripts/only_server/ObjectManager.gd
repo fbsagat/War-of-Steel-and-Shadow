@@ -114,9 +114,9 @@ func spawn_item(round_id: int, item_name: String, position: Vector3, rotation: V
 	# Gera ID único
 	var object_id = _get_next_object_id()
 	
+	_log_debug("🔨 Spawnando item no servidor: %s (ID: %d)" % [item_name, object_id])
+	
 	# Spawna no servidor
-	print("[SERVER][ITEMSPAWN] _spawn_on_server: ")
-	print("[SERVER][ITEMSPAWN] object_id: ", object_id," round_id: ", round_id," item_name: ", item_name," position: ", position," rotation: ", rotation," owner_id: ", owner_id)
 	var item_node = await _spawn_on_server(object_id, round_id, item_name, position, rotation, owner_id)
 	
 	if not item_node:
@@ -133,21 +133,65 @@ func spawn_item(round_id: int, item_name: String, position: Vector3, rotation: V
 		"owner_id": owner_id,
 		"spawn_time": Time.get_unix_time_from_system()
 	}
-	var active_players = []
-	var players = round_registry.get_all_spawned_players(round_id)
-	for player in players:
-		active_players.append(player.player_id)
 	
-	# Replica para TODOS os clientes
-	NetworkManager._rpc_spawn_on_clients(active_players, round_id, object_id, item_name, position, rotation, owner_id)
+	# ✅ CORRIGIDO: Envia RPC individual para cada cliente ativo
+	_send_spawn_to_clients(round_id, object_id, item_name, position, rotation, owner_id)
 	
-	_log_debug("✓ Item spawnado: %s (ID: %d, Round: %d) em %s" % [
-		item_name, object_id, round_id, position
-	])
+	_log_debug("✓ Item spawnado: %s (ID: %d, Round: %d)" % [item_name, object_id, round_id])
 	
 	object_spawned.emit(round_id, object_id, item_name)
 	
 	return object_id
+
+func _send_spawn_to_clients(round_id: int, object_id: int, item_name: String, position: Vector3, rotation: Vector3, owner_id: int):
+	"""
+	✅ NOVA FUNÇÃO: Envia spawn para clientes ativos na rodada
+	Chama RPC individual para cada peer conectado
+	"""
+	
+	if not multiplayer.is_server():
+		return
+	
+	# Obtém players ativos da rodada
+	var active_players = round_registry.get_all_spawned_players(round_id)
+	
+	if active_players.is_empty():
+		_log_debug("⚠️  Nenhum player ativo na rodada %d" % round_id)
+		return
+	
+	var clients_sent = 0
+	
+	# Envia para cada cliente individualmente
+	for player_node in active_players:
+		if not player_node or not is_instance_valid(player_node):
+			continue
+		
+		var player_id = player_node.player_id
+		
+		print("📤 Enviando spawn para peer %d: ID=%d, Item=%s" % [player_id, object_id, item_name])
+		
+		# Ignora servidor (ID 1)
+		if player_id == 1:
+			continue
+		
+		# Verifica se peer está conectado
+		#if not _is_peer_connected(player_id):
+			#continue
+		
+		# ✅ Envia RPC individual via NetworkManager
+		NetworkManager._rpc_receive_spawn_on_clients.rpc_id(
+			player_id,
+			object_id,
+			round_id,
+			item_name,
+			position,
+			rotation,
+			owner_id
+		)
+		
+		clients_sent += 1
+	
+	_log_debug("📤 Spawn enviado para %d cliente(s)" % clients_sent)
 
 func spawn_item_in_front_of_player(round_id: int, player_id: int, item_name: String) -> int:
 	"""
@@ -224,14 +268,44 @@ func despawn_object(round_id: int, object_id: int) -> bool:
 	# Remove do registro
 	spawned_objects[round_id].erase(object_id)
 	
-	# Replica para clientes
-	_rpc_despawn_on_clients(object_id, round_id)
+	# ✅ CORRIGIDO: Envia despawn para clientes ativos
+	_send_despawn_to_clients(round_id, object_id)
 	
 	_log_debug("✓ Objeto despawnado: ID %d (Round: %d)" % [object_id, round_id])
 	
 	object_despawned.emit(round_id, object_id)
 	
 	return true
+
+func _send_despawn_to_clients(round_id: int, object_id: int):
+	"""
+	✅ NOVA FUNÇÃO: Envia despawn para clientes ativos na rodada
+	"""
+	
+	if not multiplayer.is_server():
+		return
+	
+	var active_players = round_registry.get_all_spawned_players(round_id)
+	
+	for player_node in active_players:
+		if not player_node or not is_instance_valid(player_node):
+			continue
+		
+		var player_id = player_node.player_id
+		
+		if player_id == 1 or not _is_peer_connected(player_id):
+			continue
+		
+		# ✅ Envia RPC individual
+		NetworkManager._rpc_client_despawn_item.rpc_id(player_id, object_id, round_id)
+
+func _is_peer_connected(peer_id: int) -> bool:
+	"""Verifica se um peer está conectado"""
+	if not multiplayer.has_multiplayer_peer():
+		return false
+	
+	var connected_peers = multiplayer.get_peers()
+	return peer_id in connected_peers
 
 func despawn_object_by_node(round_id: int, node: Node) -> bool:
 	"""Despawna objeto pela referência do node"""
@@ -300,8 +374,11 @@ func _spawn_on_server(object_id: int, round_id: int, item_name: String, position
 		push_error("ObjectManager: Falha ao instanciar cena")
 		return null
 	
-	# Configura nome único
+	# ✅ CORRIGIDO: Nome único sem underscore duplicado
 	item_node.name = "Object_%d_%s_%d" % [object_id, item_name, round_id]
+	print("✅ [SERVER] Nome do node: %s" % item_node.name)
+	
+	_log_debug("  Criando node: %s" % item_node.name)
 	
 	# Adiciona à árvore (raiz do servidor)
 	get_tree().root.add_child(item_node, true)

@@ -1172,27 +1172,28 @@ func drop_item(round_id, player_id, item_id):
 			player_registry.remove_item_from_inventory(round_id, player_id, item_name)
 			print("[SERVER][ITEM] Itens equipados no player: ", player_registry.get_equipped_items(round_id, player_id))
 			
-			# Continuar a partir daqui, já spawna, falta física, sincronia e coleta
+			# ✅ CORRIGIDO: ObjectManager cuida de spawnar E enviar RPC
+			# Não precisa chamar NetworkManager diretamente
 			object_manager.spawn_item_in_front_of_player(round_id, player_id, item_name)
-			# Fazer função que spawna os itens no servidor e clientes aqui
-			# Se o item estava equipado, desequipar(atualizar modelo do player)
-			# Aplica na cena do servidor (atualizar visual)
 			
+			# Aplica na cena do servidor (atualizar visual)
 			var player_node = get_tree().root.get_node_or_null(str(player_id))
 			if player_node and player_node.has_method("execute_item_drop"):
 				player_node.execute_item_drop(player_node, item_name)
 				
 			# Aplica na cena dos clientes no round (atualizar visual)
 			var players_ids_round = round_registry.get_active_players_ids(round_id)
-			for peer_id in multiplayer.get_peers(): # futuramente aplicar um filtro aqui tbm(p/ ficar mais leve)
+			for peer_id in multiplayer.get_peers():
 				if _is_peer_connected(peer_id) and peer_id in players_ids_round:
 					NetworkManager.rpc_id(peer_id, "server_apply_drop_item", player_id, first_item['name'])
 			
 		else:
 			print("[SERVER][ITEM] Não tem item no inventário do player")
 	else:
-		item_id = ItemDatabase.get_item_by_id(item_id)
-		object_manager.spawn_item_in_front_of_player(round_id, player_id, item_id)
+		# ✅ CORRIGIDO: Usa ItemData ao invés de ID
+		var item_data = ItemDatabase.get_item_by_id(item_id)
+		if item_data:
+			object_manager.spawn_item_in_front_of_player(round_id, player_id, item_data.name)
 
 # ===== UTILITÁRIOS =====
 

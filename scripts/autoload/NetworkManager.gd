@@ -391,21 +391,43 @@ func _client_remove_player(peer_id: int):
 @rpc("authority", "call_remote", "reliable")
 func _rpc_spawn_on_clients(active_players, object_id: int, round_id: int, item_name: String, position: Vector3, rotation: Vector3, owner_id: int):
 	"""
-	RPC chamado pelo servidor para spawnar objeto em todos os clientes
-	Cada cliente executa localmente baseado no ItemDatabase
+	✅ CORRIGIDO: Envia spawn para clientes ativos na rodada
 	"""
+	_log_debug("🔄 Spawning item for clients: ID=%d, Item=%s" % [object_id, item_name])
 	
-	_log_debug("🔄 RPC recebido: spawn_on_client (ID: %d, Item: %s)" % [object_id, item_name])
+	# ✅ CORRIGIDO: Itera pelos players ativos e envia RPC individual
+	for player_id in active_players:
+		if player_id == 1:  # Ignora servidor
+			continue
+		
+		if _is_peer_connected(player_id):
+			_rpc_receive_spawn_on_clients.rpc_id(player_id, object_id, round_id, item_name, position, rotation, owner_id)
 	
-	# Cliente spawna localmente
-	rpc_id(0, "_rpc_receive_spawn_on_clients", object_id, round_id, item_name, position, rotation, owner_id)
-	
-	_log_debug("✓ Item spawnado: %s (ID: %d)" % [item_name, object_id])
+	_log_debug("✓ Spawn enviado para %d clientes" % (active_players.size() - 1))
 
 @rpc("authority", "call_remote", "reliable")
 func _rpc_receive_spawn_on_clients(object_id: int, round_id: int, item_name: String, position: Vector3, rotation: Vector3, owner_id: int):
+	"""
+	RPC chamado APENAS pelo servidor para spawnar objeto em clientes
+	
+	FLUXO CORRETO:
+	1. Servidor chama ObjectManager.spawn_item()
+	2. ObjectManager spawna no servidor
+	3. ObjectManager chama este RPC para cada cliente via rpc_id()
+	4. Cada cliente recebe e spawna localmente
+	"""
+	
+	# ✅ Clientes processam, servidor ignora
+	if multiplayer.is_server():
+		return
+	
+	_log_debug("📥 RPC recebido: spawn item ID=%d, Item=%s" % [object_id, item_name])
+	
+	# Chama GameManager para spawnar localmente
 	if GameManager.has_method("_spawn_on_client"):
 		GameManager._spawn_on_client(object_id, round_id, item_name, position, rotation, owner_id)
+	else:
+		push_error("GameManager não tem método _spawn_on_client")
 		
 @rpc("authority", "call_remote", "reliable")
 func _rpc_client_despawn_item(object_id: int, round_id: int):
@@ -416,11 +438,11 @@ func _rpc_client_despawn_item(object_id: int, round_id: int):
 	if multiplayer.is_server():
 		return
 	
-	# Chama ObjectManager do cliente para despawnar
-	if ServerManager.object_manager:
-		ServerManager.object_manager._despawn_on_client(object_id, round_id)
+	_log_debug("📥 RPC recebido: despawn item ID=%d" % object_id)
 	
-	_log_debug("✓ Objeto despawnado no cliente: ID %d" % object_id)
+	# Chama despawn local no cliente
+	if GameManager.has_method("_despawn_on_client"):
+		GameManager._despawn_on_client(object_id, round_id)
 
 @rpc("authority", "call_remote", "reliable")
 func _client_clear_all_objects():
@@ -428,17 +450,23 @@ func _client_clear_all_objects():
 	RPC para limpar todos os objetos (chamado ao sair de rodada)
 	"""
 	
-	var count = client_spawned_objects.size()
+	if multiplayer.is_server():
+		return
 	
-	# Despawna todos os objetos
-	for object_id in client_spawned_objects.keys():
-		var item_instance = client_spawned_objects[object_id]
-		
-		if is_instance_valid(item_instance) and item_instance.is_inside_tree():
-			item_instance.queue_free()
+	var count = 0
+	
+	# Percorre todas as rodadas registradas
+	for round_id in GameManager.spawned_objects.keys():
+		for object_id in GameManager.spawned_objects[round_id].keys():
+			var obj_data = GameManager.spawned_objects[round_id][object_id]
+			var item_node = obj_data.get("node")
+			
+			if item_node and is_instance_valid(item_node) and item_node.is_inside_tree():
+				item_node.queue_free()
+				count += 1
 	
 	# Limpa dicionário
-	client_spawned_objects.clear()
+	GameManager.spawned_objects.clear()
 	
 	_log_debug("✓ Todos os objetos limpos no cliente (%d objetos)" % count)
 
