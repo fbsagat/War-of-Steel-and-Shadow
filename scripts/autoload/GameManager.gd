@@ -205,7 +205,7 @@ func set_player_name(p_name: String):
 func _client_name_accepted(accepted_name: String):
 	"""Callback quando o nome é aceito pelo servidor"""
 	player_name = accepted_name
-	_log_debug(" Nome aceito pelo servidor: " + player_name)
+	_log_debug("Nome aceito pelo servidor: " + player_name)
 	
 	if main_menu:
 		main_menu.show_main_menu()
@@ -347,7 +347,7 @@ func join_room_by_name(room_name: String, password: String = ""):
 func _client_joined_room(room_data: Dictionary):
 	"""Callback quando entra em uma sala com sucesso"""
 	current_room = room_data
-	_log_debug(" Entrou na sala com sucesso: %s (ID: %d)" % [room_data["name"], room_data["id"]])
+	_log_debug("Entrou na sala com sucesso: %s (ID: %d)" % [room_data["name"], room_data["id"]])
 	
 	if main_menu:
 		main_menu.show_room_menu(room_data)
@@ -419,7 +419,6 @@ func start_round(round_settings: Dictionary = {}):
 		_show_error("Apenas o host pode iniciar a rodada")
 		return
 	
-	print(configs.min_players_to_start)
 	if current_room.players.size() < configs.min_players_to_start:
 		_show_error("Pelo menos %d jogadores são necessários para iniciar uma rodada" % 1)
 		return
@@ -429,7 +428,7 @@ func start_round(round_settings: Dictionary = {}):
 
 func _client_round_started(match_data: Dictionary):
 	"""Callback quando a rodada inicia"""
-	_log_debug(" Rodada iniciada pelo servidor!")
+	_log_debug("Rodada iniciada pelo servidor!")
 	_start_round_locally(match_data)
 
 func _client_round_ended(end_data: Dictionary):
@@ -444,7 +443,7 @@ func _client_round_ended(end_data: Dictionary):
 	
 	_log_debug("Scores:")
 	for peer_id in end_data["scores"]:
-		_log_debug("  Peer %d: %d pontos" % [peer_id, end_data["scores"][peer_id]])
+		_log_debug("Peer %d: %d pontos" % [peer_id, end_data["scores"][peer_id]])
 	
 	_log_debug("========================================")
 	
@@ -472,7 +471,7 @@ func _start_round_locally(match_data: Dictionary):
 	for player in match_data["players"]:
 		var is_host = " [HOST]" if player["is_host"] else ""
 		var is_me = " [GUEST]" if player["id"] == local_peer_id else ""
-		_log_debug("  - %s (ID: %d)%s%s" % [player["name"], player["id"], is_host, is_me])
+		_log_debug("- %s (ID: %d)%s%s" % [player["name"], player["id"], is_host, is_me])
 	
 	_log_debug("========================================")
 	
@@ -498,7 +497,7 @@ func _start_round_locally(match_data: Dictionary):
 	
 	round_started.emit()
 	
-	_log_debug(" Rodada carregada no cliente")
+	_log_debug("Rodada carregada no cliente")
 
 func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bool, _match_data: Dictionary):
 	"""Spawna players para cada cliente, cada cliente recebe X execuções,
@@ -550,11 +549,11 @@ func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bo
 		player_instance.set_as_local_player()
 		camera_instance.set_as_active()
 		local_player = player_instance
-		_log_debug(" Jogador local spawnado: %s" % player_name_)
+		_log_debug("Jogador local spawnado: %s" % player_name_)
 	else:
 		# Jogador remoto: NÃO tem câmera atribuída
 		player_instance.camera_controller = null
-		_log_debug(" Jogador remoto spawnado: %s" % player_name_)
+		_log_debug("Jogador remoto spawnado: %s" % player_name_)
 
 func _client_return_to_room(room_data: Dictionary):
 	"""Callback quando deve retornar à sala"""
@@ -568,10 +567,6 @@ func _client_return_to_room(room_data: Dictionary):
 	
 	# Garante que tudo foi limpo
 	_cleanup_local_round()
-	
-	# Finaliza completamente a rodada
-	print("Vem arrumar RoundRegistry.complete_round_end() em GameManager")
-	#RoundRegistry.complete_round_end()
 	
 	# Volta para o menu da sala
 	if main_menu:
@@ -683,9 +678,7 @@ func _spawn_on_client(object_id: int, round_id: int, item_name: String, position
 	
 	# ✅ CORRIGIDO: Nome consistente com servidor
 	item_node.name = "Object_%d_%s_%d" % [object_id, item_name, round_id]
-	print("✅ [CLIENT] Nome do node: %s" % item_node.name)
-	
-	_log_debug("📦 Spawnando no cliente: %s" % item_node.name)
+	_log_debug("[ITEM]📦 Spawnando no cliente: %s - %s" % [owner_id, item_node.name])
 	
 	# Adiciona à árvore
 	get_tree().root.add_child(item_node, true)
@@ -742,7 +735,7 @@ func _despawn_on_client(object_id: int, round_id: int):
 	# Remove da cena
 	if item_node and is_instance_valid(item_node) and item_node.is_inside_tree():
 		item_node.queue_free()
-		_log_debug("  Node removido da cena")
+		_log_debug("Node removido da cena")
 	
 	# Remove do registro local
 	spawned_objects[round_id].erase(object_id)
@@ -769,7 +762,12 @@ func set_main_menu(menu: Control):
 	main_menu = menu
 	_log_debug("UI principal registrada")
 
+func has_network() -> bool:
+	return multiplayer != null and multiplayer.has_multiplayer_peer()
+
 func _log_debug(message: String):
 	if debug_mode:
-		var prefix = "[SERVER]" if _is_server else "[CLIENT]"
-		print("%s[GameManager] %s" % [prefix, message])
+		var unique_id = 0
+		if has_network:
+			unique_id = multiplayer.get_unique_id()
+		print("[CLIENT][GameManager]ClientID: %s: Message: %s" % [unique_id, message])

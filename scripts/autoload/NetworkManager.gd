@@ -718,4 +718,4 @@ func _log_debug(message: String):
 	"""Imprime mensagem de debug se habilitado"""
 	if debug_mode:
 		var prefix = "[SERVER]" if _is_server else "[CLIENT]"
-		print("%s[NetworkManager] %s" % [prefix, message])
+		print("%s[NetworkManager]%s" % [prefix, message])

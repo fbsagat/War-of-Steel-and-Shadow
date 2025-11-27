@@ -17,6 +17,10 @@ extends Node
 @export_category("Debug")
 @export var debug_mode: bool = true
 
+
+# ===== VARIÁVEIS INTERNAS =====
+var _is_server: bool = false
+
 # ===== ESTRUTURA DE DADOS =====
 
 ## Classe interna para representar um item
@@ -107,6 +111,10 @@ var is_loaded: bool = false
 # ===== INICIALIZAÇÃO =====
 
 func _ready():
+	# Detecta se é servidor dedicado
+	var args = OS.get_cmdline_args()
+	_is_server = "--server" in args or "--dedicated" in args
+	
 	if auto_load_on_ready:
 		load_database()
 
@@ -503,5 +511,6 @@ func print_database_stats():
 	print("===================================\n")
 
 func _log_debug(message: String):
+	var prefix = "[SERVER]" if _is_server else "[CLIENT]"
 	if debug_mode:
-		print("[ItemDatabase] %s" % message)
+		print("%s[ItemDatabase]%s" % [prefix, message])

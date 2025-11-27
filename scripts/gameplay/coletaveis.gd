@@ -36,7 +36,6 @@ var lifetime_timer: Timer = null
 var is_collected: bool = false
 var spawn_time: float = 0.0
 var can_be_collected: bool = false
-var accumulated_time: float = 0.0
 
 # ===== VARIÁVEIS DE SINCRONIZAÇÃO =====
 var sync_timer: float = 0.0
@@ -89,8 +88,7 @@ func _ready():
 	add_to_group("item")
 	body_entered.connect(_on_body_entered)
 	_setup_authority_settings()
-	print("[DroppedItem] Criado: ID=%d, Sync=%s, IsServer=%s" % [object_id, sync_enabled, is_server_authority()])
-
+	
 func _setup_authority_settings():
 	"""
 	Configura RigidBody com base na autoridade:
@@ -125,15 +123,6 @@ func has_network() -> bool:
 func _physics_process(delta: float):
 	if is_collected:
 		return
-	
-	# ✅ DEBUG: Imprime estado a cada segundo
-	if int(accumulated_time) != int(accumulated_time + delta):
-		print("[DroppedItem:%d] Pos=%s, Sync=%s, HasFirstSync=%s" % [
-			object_id, 
-			global_position, 
-			sync_enabled,
-			has_received_first_sync
-		])
 	
 	# Sincronização de rede
 	if sync_enabled and has_network():
@@ -355,4 +344,4 @@ func _on_body_entered(body: Node):
 func _log_debug(message: String):
 	if debug_mode:
 		var prefix = "[SERVER]" if is_server_authority() else "[CLIENT]"
-		print("%s [DroppedItem:%d] %s" % [prefix, object_id, message])
+		print("%s[DroppedItem:%d]%s" % [prefix, object_id, message])

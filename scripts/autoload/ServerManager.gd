@@ -234,11 +234,11 @@ func _on_peer_disconnected(peer_id: int):
 		var player_node = round_registry.get_spawned_player(round_id, peer_id)
 		if player_node and is_instance_valid(player_node) and player_node.is_inside_tree():
 			player_node.queue_free()
-			_log_debug("  Nó do player removido da cena")
+			_log_debug("Nó do player removido da cena")
 		
 		# Verifica se todos desconectaram (auto-end)
 		if round_registry.get_active_player_count(round_id) == 0:
-			_log_debug("  Todos os players desconectaram - finalizando rodada")
+			_log_debug("Todos os players desconectaram - finalizando rodada")
 			round_registry.end_round(round_id, "all_disconnected")
 	
 	# 2. LIMPA SALA (se estiver em uma)
@@ -246,14 +246,13 @@ func _on_peer_disconnected(peer_id: int):
 	var room = room_registry.get_player_room(peer_id)
 	
 	if not player_data.is_empty() and player_data["name"] != "":
-		_log_debug("  Jogador: %s" % player_data["name"])
 		
 		if not room.is_empty():
 			var room_id = room["id"]
 			
 			# Remove da sala (pode deletá-la se ficar vazia)
 			room_registry.remove_player_from_room(room_id, peer_id)
-			_log_debug("  Removido da sala: %s" % room["name"])
+			_log_debug("%s Removido da sala: %s" % [peer_id, room["name"]])
 			
 			# Verifica se sala ainda existe antes de notificar
 			if room_registry.room_exists(room_id):
@@ -265,7 +264,7 @@ func _on_peer_disconnected(peer_id: int):
 					if player["id"] != peer_id and _is_peer_connected(player["id"]):
 						NetworkManager.rpc_id(player["id"], "_client_remove_player", peer_id)
 			else:
-				_log_debug("  Sala foi deletada (ficou vazia)")
+				_log_debug("Sala foi deletada (ficou vazia)")
 				_send_rooms_list_to_all()
 	
 	# 3. LIMPA ESTADO DE VALIDAÇÃO
@@ -984,10 +983,10 @@ func _validate_player_movement(p_id: int, pos: Vector3, vel: Vector3, rot: Vecto
 	
 	if distance > max_distance:
 		_log_debug("⚠️ ANTI-CHEAT: Distância suspeita")
-		_log_debug("  Player: %d" % p_id)
-		_log_debug("  Distância: %.2f m em %.3f s" % [distance, time_diff])
-		_log_debug("  Máximo: %.2f m" % max_distance)
-		_log_debug("  Velocidade: %.2f m/s (máx: %.2f m/s)" % [distance/time_diff, max_player_speed * speed_tolerance])
+		_log_debug("Player: %d" % p_id)
+		_log_debug("Distância: %.2f m em %.3f s" % [distance, time_diff])
+		_log_debug("Máximo: %.2f m" % max_distance)
+		_log_debug("Velocidade: %.2f m/s (máx: %.2f m/s)" % [distance/time_diff, max_player_speed * speed_tolerance])
 		return false
 	
 	# VALIDAÇÃO 2: Velocidade reportada vs máxima
@@ -995,9 +994,9 @@ func _validate_player_movement(p_id: int, pos: Vector3, vel: Vector3, rot: Vecto
 	
 	if reported_speed > max_player_speed * speed_tolerance:
 		_log_debug("⚠️ ANTI-CHEAT: Velocidade reportada suspeita")
-		_log_debug("  Player: %d" % p_id)
-		_log_debug("  Reportada: %.2f m/s" % reported_speed)
-		_log_debug("  Máximo: %.2f m/s" % (max_player_speed * speed_tolerance))
+		_log_debug("Player: %d" % p_id)
+		_log_debug("Reportada: %.2f m/s" % reported_speed)
+		_log_debug("Máximo: %.2f m/s" % (max_player_speed * speed_tolerance))
 		return false
 	
 	# VALIDAÇÃO 3: Discrepância entre velocidade real e reportada
@@ -1005,9 +1004,9 @@ func _validate_player_movement(p_id: int, pos: Vector3, vel: Vector3, rot: Vecto
 	
 	if abs(actual_speed - reported_speed) > max_player_speed * 0.5:
 		_log_debug("⚠️ ANTI-CHEAT: Discrepância entre velocidade real e reportada")
-		_log_debug("  Player: %d" % p_id)
-		_log_debug("  Real: %.2f m/s" % actual_speed)
-		_log_debug("  Reportada: %.2f m/s" % reported_speed)
+		_log_debug("Player: %d" % p_id)
+		_log_debug("Real: %.2f m/s" % actual_speed)
+		_log_debug("Reportada: %.2f m/s" % reported_speed)
 		# Nota: Não retorna false aqui, pois pode ser lag legítimo
 	
 	# ATUALIZA ESTADO PARA PRÓXIMA VALIDAÇÃO
@@ -1066,11 +1065,10 @@ func _rpc_despawn_on_clients(player_ids: Array, round_id: int, object_id: int):
 @rpc("any_peer", "call_remote", "reliable")
 func _server_validate_pick_up_item(requesting_player_id: int, item_id: int):
 	"""Servidor recebe pedido de pegar item, equipa automaticamente se for equipável, valida e redistribui"""
-	print("[SERVER][ITEM] _server_validate_pick_up_item")
 	var player = player_registry.get_player(requesting_player_id)
 	var round_ = round_registry.get_round_by_player_id(player["id"])
 	var item = ItemDatabase.get_item_by_id(item_id)
-	print("[SERVER][ITEM] ",player["name"], " pediu pra pegar um item ", " item_id: ", item_id, " no round ", round_["round_id"])
+	_log_debug("[ITEM] Player %s pediu para pegar item %d, no round %d" % [player["name"], item_id, round_["round_id"]])
 	
 	# Se for item equipável de knight
 	if ItemDatabase.get_items_by_owner("knight"):
@@ -1094,14 +1092,13 @@ func _server_validate_pick_up_item(requesting_player_id: int, item_id: int):
 	
 @rpc("any_peer", "call_remote", "reliable")
 func _server_validate_equip_item(requesting_player_id: int, item_id: int, from_test: bool):
-	print("[SERVER][ITEM] _server_validate_equip_item")
 	"""Servidor recebe pedido de equipar item, valida e redistribui"""
 	
 	var player = player_registry.get_player(requesting_player_id)
 	var round_ = round_registry.get_round_by_player_id(player["id"])
 	var item = ItemDatabase.get_item_by_id(item_id)
 	var item_slot = item.get_slot()
-	print("[SERVER][ITEM] ",player["name"], " pediu pra equipar um item ", " item_id: ", item_id, " no round ", round_["round_id"])
+	_log_debug("[ITEM]📦 Player %s pediu para equipar item %d, no round %d" % [player["name"], item_id, round_["round_id"]])
 	# FAZER TODAS AS VALIDAÇÕES DE EQUIPAR ITEM NO CLIENTE
 	
 	# Verifica se o id do item é válido
@@ -1119,7 +1116,9 @@ func _server_validate_equip_item(requesting_player_id: int, item_id: int, from_t
 	# Equipa o item
 	player_registry.equip_item(round_["round_id"], player['id'], item["name"])
 	
-	_log_debug("✓ Item equipado validado: Player %d equipou item %d" % [requesting_player_id, item_id])
+	_log_debug("[ITEM]📦 Item equipado validado: Player %d equipou item %d" % [requesting_player_id, item_id])
+	_log_debug("[ITEM]📦 Itens equipados no player: %s" % str(player_registry.get_equipped_items(round_["round_id"], player['id'])))
+	
 	# Envia para todos os clientes (para atualizar visual)
 	for peer_id in multiplayer.get_peers():
 		if _is_peer_connected(peer_id):
@@ -1139,7 +1138,7 @@ func _server_validate_equip_item(requesting_player_id: int, item_id: int, from_t
 func _server_validate_drop_item(requesting_player_id: int, item_id: int):
 	"""Servidor recebe pedido de drop, valida e spawna item executando drop_item()
 	IMPORTANTE: USA ESTADO DO SERVIDOR, não do cliente"""
-	print("[SERVER][ITEM] _server_validate_drop_item")
+	_log_debug("[ITEM]📦 Servidor vai validar pedido de drop de item %d do player ID %s" % [item_id, requesting_player_id])
 	var player = player_registry.get_player(requesting_player_id)
 	var round_ = round_registry.get_round_by_player_id(player["id"])
 	
@@ -1155,7 +1154,7 @@ func _server_validate_drop_item(requesting_player_id: int, item_id: int):
 		push_warning("ServerManager: Round inválido, não está em partida")
 		return
 		
-	print("[SERVER][ITEM] ",player["name"], " pediu pra dropar um item ", " item_id: ", item_id, " no round ", round_["round_id"])
+	_log_debug("[ITEM]📦 Player %s pediu para dropar item %d, no round %d" % [player["name"], item_id, round_["round_id"]])
 	drop_item(round_["round_id"], player["id"], item_id)
 
 func drop_item(round_id, player_id, item_id):
@@ -1170,7 +1169,7 @@ func drop_item(round_id, player_id, item_id):
 			var first_item = ItemDatabase.get_item(item_name).to_dictionary()
 			player_registry.unequip_item(round_id, player_id, item_type)
 			player_registry.remove_item_from_inventory(round_id, player_id, item_name)
-			print("[SERVER][ITEM] Itens equipados no player: ", player_registry.get_equipped_items(round_id, player_id))
+			_log_debug("[ITEM]📦 Itens equipados no player: %s" % str(player_registry.get_equipped_items(round_id, player_id)))
 			
 			# ✅ CORRIGIDO: ObjectManager cuida de spawnar E enviar RPC
 			# Não precisa chamar NetworkManager diretamente
@@ -1188,9 +1187,8 @@ func drop_item(round_id, player_id, item_id):
 					NetworkManager.rpc_id(peer_id, "server_apply_drop_item", player_id, first_item['name'])
 			
 		else:
-			print("[SERVER][ITEM] Não tem item no inventário do player")
+			_log_debug("[ITEM]📦 Não tem item no inventário do player")
 	else:
-		# ✅ CORRIGIDO: Usa ItemData ao invés de ID
 		var item_data = ItemDatabase.get_item_by_id(item_id)
 		if item_data:
 			object_manager.spawn_item_in_front_of_player(round_id, player_id, item_data.name)
@@ -1253,7 +1251,7 @@ func _cleanup_player_state(peer_id: int):
 	"""
 	if player_states.has(peer_id):
 		player_states.erase(peer_id)
-		_log_debug("  Estado de validação removido")
+		_log_debug("Estado de validação removido")
 
 func _kick_player(peer_id: int, reason: String):
 	"""
@@ -1314,7 +1312,7 @@ func _is_peer_connected(peer_id: int) -> bool:
 func _log_debug(message: String):
 	"""Imprime mensagem de debug se habilitado"""
 	if debug_mode:
-		print("[SERVER] " + message)
+		print("[SERVERMANAGER]" + message)
 
 # ===== DEBUG =====
 
@@ -1328,10 +1326,10 @@ func _print_player_states():
 		var state = player_states[p_id]
 		var age = (Time.get_ticks_msec() - state["timestamp"]) / 1000.0
 		
-		_log_debug("  Player %d:" % p_id)
-		_log_debug("    Pos: %s" % str(state["pos"]))
-		_log_debug("    Vel: %s (%.2f m/s)" % [str(state["vel"]), state["vel"].length()])
-		_log_debug("    Rot: %s" % str(state["rot"]))
-		_log_debug("    Última atualização: %.2f s atrás" % age)
+		_log_debug("Player %d:" % p_id)
+		_log_debug("Pos: %s" % str(state["pos"]))
+		_log_debug("Vel: %s (%.2f m/s)" % [str(state["vel"]), state["vel"].length()])
+		_log_debug("Rot: %s" % str(state["rot"]))
+		_log_debug("Última atualização: %.2f s atrás" % age)
 	
 	_log_debug("========================================")

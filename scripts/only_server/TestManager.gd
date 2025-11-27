@@ -362,7 +362,7 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 		if registered_path.is_empty():
 			push_warning("TestManager: node_path vazio após registro (player %d)" % p_id)
 		else:
-			_log_debug("    Player node registrado: %d → %s" % [p_id, registered_path])
+			_log_debug("Player node registrado: %d → %s" % [p_id, registered_path])
 	
 	# 8. Calcula posição de spawn
 	var spawn_pos = Vector3.ZERO
@@ -370,7 +370,7 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 	if test_map_manager and test_map_manager.has_method("get_spawn_position"):
 		var spawn_index = spawn_data.get("spawn_index", 0)
 		spawn_pos = test_map_manager.get_spawn_position(spawn_index)
-		_log_debug("    Spawn position: %s (index: %d)" % [spawn_pos, spawn_index])
+		_log_debug("Spawn position: %s (index: %d)" % [spawn_pos, spawn_index])
 	else:
 		push_warning("TestManager: MapManager não disponível, usando posição (0,0,0)")
 	
@@ -395,7 +395,7 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 			"timestamp": Time.get_ticks_msec()
 		}
 	
-	_log_debug("    ✓ Player spawnado: %s (ID: %d)" % [p_name, p_id])
+	_log_debug("✓ Player spawnado: %s (ID: %d)" % [p_name, p_id])
 
 # ===== UTILITÁRIOS =====
 

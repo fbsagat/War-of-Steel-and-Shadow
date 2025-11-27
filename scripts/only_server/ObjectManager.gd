@@ -114,7 +114,7 @@ func spawn_item(round_id: int, item_name: String, position: Vector3, rotation: V
 	# Gera ID único
 	var object_id = _get_next_object_id()
 	
-	_log_debug("🔨 Spawnando item no servidor: %s (ID: %d)" % [item_name, object_id])
+	_log_debug("🔨 Spawnando item no servidor, round %s: %s (ID: %d)" % [round_id, item_name, object_id])
 	
 	# Spawna no servidor
 	var item_node = await _spawn_on_server(object_id, round_id, item_name, position, rotation, owner_id)
@@ -168,15 +168,15 @@ func _send_spawn_to_clients(round_id: int, object_id: int, item_name: String, po
 		
 		var player_id = player_node.player_id
 		
-		print("📤 Enviando spawn para peer %d: ID=%d, Item=%s" % [player_id, object_id, item_name])
+		_log_debug("📤 Enviando spawn para peer %d: ID=%d, Item=%s" % [player_id, object_id, item_name])
 		
 		# Ignora servidor (ID 1)
 		if player_id == 1:
 			continue
 		
 		# Verifica se peer está conectado
-		#if not _is_peer_connected(player_id):
-			#continue
+		if not _is_peer_connected(player_id):
+			continue
 		
 		# ✅ Envia RPC individual via NetworkManager
 		NetworkManager._rpc_receive_spawn_on_clients.rpc_id(
@@ -200,7 +200,6 @@ func spawn_item_in_front_of_player(round_id: int, player_id: int, item_name: Str
 	
 	@return: object_id ou -1 se falhar
 	"""
-	print("[SERVER][ITEMSPAWN] spawn_item_in_front_of_player")
 	
 	if not multiplayer.is_server():
 		return -1
@@ -218,7 +217,7 @@ func spawn_item_in_front_of_player(round_id: int, player_id: int, item_name: Str
 	var spawn_pos = _calculate_front_position(player_pos, player_rot)
 	var spawn_rot = Vector3.ZERO  # Rotação padrão
 	
-	_log_debug("  Spawn na frente do player %d: pos=%s" % [player_id, spawn_pos])
+	_log_debug("Spawn na frente do player %d: pos=%s" % [player_id, spawn_pos])
 	
 	return await spawn_item(round_id, item_name, spawn_pos, spawn_rot, player_id)
 
@@ -374,11 +373,10 @@ func _spawn_on_server(object_id: int, round_id: int, item_name: String, position
 		push_error("ObjectManager: Falha ao instanciar cena")
 		return null
 	
-	# ✅ CORRIGIDO: Nome único sem underscore duplicado
+	# ✅ Nome único sem underscore duplicado
 	item_node.name = "Object_%d_%s_%d" % [object_id, item_name, round_id]
-	print("✅ [SERVER] Nome do node: %s" % item_node.name)
 	
-	_log_debug("  Criando node: %s" % item_node.name)
+	_log_debug("Criando node: %s" % item_node.name)
 	
 	# Adiciona à árvore (raiz do servidor)
 	get_tree().root.add_child(item_node, true)
@@ -403,7 +401,7 @@ func _spawn_on_server(object_id: int, round_id: int, item_name: String, position
 		var drop_velocity = _calculate_drop_impulse(rotation)
 		item_node.initialize(object_id, round_id, item_name, item_full_data, owner_id, drop_velocity)
 	
-	_log_debug("  Node criado no servidor: %s" % item_node.name)
+	_log_debug("Node criado no servidor: %s" % item_node.name)
 	
 	return item_node
 
@@ -586,4 +584,4 @@ func print_round_objects(round_id: int):
 func _log_debug(message: String):
 	if debug_mode:
 		var prefix = "[SERVER]" if multiplayer.is_server() else "[CLIENT]"
-		print("%s[ObjectManager] %s" % [prefix, message])
+		print("%s[ObjectManager]%s" % [prefix, message])
