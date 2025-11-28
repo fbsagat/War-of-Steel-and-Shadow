@@ -37,13 +37,6 @@ var is_collected: bool = false
 var spawn_time: float = 0.0
 var can_be_collected: bool = false
 
-# ===== VARIÁVEIS DE SINCRONIZAÇÃO =====
-var sync_timer: float = 0.0
-var network_position: Vector3 = Vector3.ZERO
-var network_rotation: Vector3 = Vector3.ZERO
-var last_received_time: float = 0.0
-var has_received_first_sync: bool = false
-
 # ===== SINAIS =====
 signal despawned(object_id: int)
 
@@ -81,6 +74,26 @@ func initialize(
 		_setup_lifetime_timer()
 	
 	_setup_visual()
+	
+	# ✅ Registra no NetworkManager se sync_enabled
+	if sync_enabled and is_server_authority():
+		# Servidor registra imediatamente
+		NetworkManager.register_syncable_object(
+			object_id,
+			self,
+			{
+				"sync_rate": sync_rate,
+				"interpolation_speed": interpolation_speed,
+				"teleport_threshold": teleport_threshold,
+				"sync_rotation": sync_rotation
+			}
+		)
+		
+	elif sync_enabled and !is_server_authority():
+		pass
+		# Cliente: espera o primeiro sync para registrar
+		# (opcional: pode registrar aqui também, mas sem enviar)
+		#NetworkManager.register_syncable_object(...)
 	
 	_log_debug("✓ Item inicializado: %s (ID: %d, Sync: %s)" % [item_name, object_id, sync_enabled])
 
@@ -120,117 +133,13 @@ func has_network() -> bool:
 	return multiplayer != null and multiplayer.has_multiplayer_peer()
 
 # ===== PROCESSAMENTO PRINCIPAL =====
-func _physics_process(delta: float):
+func _physics_process(_delta: float):
 	if is_collected:
 		return
-	
-	# Sincronização de rede
-	if sync_enabled and has_network():
-		if is_server_authority():
-			_server_sync_update(delta)
-		else:
-			_client_interpolate(delta)
 	
 	# Sistema de coleta (apenas servidor)
 	if is_server_authority() and can_be_collected and !is_collected:
 		_check_nearby_players()
-
-# ===== SINCRONIZAÇÃO DE REDE =====
-func _server_sync_update(delta: float):
-	"""
-	Servidor: Envia atualizações periódicas de estado para clientes
-	"""
-	if !sync_enabled or !has_network():
-		return
-	
-	sync_timer += delta
-	if sync_timer < sync_rate:
-		return
-	
-	sync_timer = 0.0
-	_send_sync_to_clients()
-
-func _send_sync_to_clients():
-	"""
-	✅ CORRIGIDO: Envia estado via RPC broadcast
-	"""
-	if !has_network() or !is_server_authority():
-		return
-	
-	var pos = global_position
-	var rot = global_rotation if sync_rotation else Vector3.ZERO
-	
-	# ✅ CORRIGIDO: Usa rpc() sem ID para broadcast
-	_receive_sync.rpc(object_id, pos, rot)
-	
-	if debug_show_sync:
-		_log_debug("📤 Sync enviado: pos=%s, id=%d" % [pos, object_id])
-
-# ✅ CORRIGIDO: Configuração correta do RPC
-@rpc("authority", "call_remote", "unreliable")
-func _receive_sync(item_id: int, pos: Vector3, rot: Vector3):
-	"""
-	Clientes: Recebem atualizações de sincronização do servidor
-	"""
-	# ✅ VALIDAÇÃO: Ignora se for o servidor ou ID diferente
-	if is_server_authority():
-		return
-	
-	if item_id != object_id:
-		_log_debug("⚠️  ID incorreto recebido: esperado %d, recebido %d" % [object_id, item_id])
-		return
-	
-	# Atualiza estado de rede
-	network_position = pos
-	network_rotation = rot
-	last_received_time = Time.get_unix_time_from_system()
-	
-	# Primeiro sync: inicializa posição
-	if !has_received_first_sync:
-		has_received_first_sync = true
-		global_position = network_position
-		if sync_rotation:
-			global_rotation = network_rotation
-		_log_debug("📥 Primeiro sync recebido: pos=%s" % pos)
-	
-	if debug_show_sync:
-		_log_debug("📥 Sync recebido: pos=%s, id=%d" % [pos, item_id])
-
-func _client_interpolate(delta: float):
-	"""
-	Cliente: Interpola suavemente até a posição do servidor
-	"""
-	if !has_received_first_sync or !sync_enabled:
-		return
-	
-	# Calcula tempo desde última atualização
-	var time_since_last_update = Time.get_unix_time_from_system() - last_received_time
-	
-	# Se passou muito tempo (>1s), considera desconexão
-	if time_since_last_update > 1.0:
-		return
-	
-	var effective_delta = min(delta + time_since_last_update * 0.1, 0.1)
-	
-	# Verifica se precisa teleportar
-	var distance = global_position.distance_to(network_position)
-	if distance > teleport_threshold:
-		global_position = network_position
-		if sync_rotation:
-			global_rotation = network_rotation
-		if debug_show_sync:
-			_log_debug("⚡ Teleportado: dist=%.2f" % distance)
-	elif distance > 0.01:
-		global_position = global_position.lerp(
-			network_position, 
-			interpolation_speed * effective_delta
-		)
-		
-		if sync_rotation:
-			global_rotation = global_rotation.slerp(
-				network_rotation, 
-				interpolation_speed * effective_delta
-			)
 
 # ===== SISTEMA DE COLETA =====
 func _start_collection_delay():
@@ -288,30 +197,34 @@ func _notify_collected(collector_id: int):
 	ServerManager.player_registry.add_item_to_inventory(round_id, collector_id, item_name)
 	_log_debug("✓ Item coletado por player %d" % collector_id)
 	
-	# Notifica clientes
-	_despawn_visual.rpc()
-	
 	# Remove do servidor
 	despawn()
-
-@rpc("authority", "call_remote", "reliable")
-func _despawn_visual():
-	if is_server_authority():
-		return
-	
-	queue_free()
-	emit_signal("despawned", object_id)
 
 func despawn():
 	if !is_server_authority():
 		return
 	
-	if lifetime_timer:
-		lifetime_timer.stop()
+	# Notifica clientes para despawn
+	NetworkManager.rpc("_rpc_client_despawn_item", object_id, round_id)
+	
+	# Remove do servidor
+	if sync_enabled:
+		NetworkManager.unregister_syncable_object(object_id)  # opcional, mas seguro
 	
 	ServerManager.object_manager.despawn_object(round_id, object_id)
 	queue_free()
 	emit_signal("despawned", object_id)
+
+func get_sync_config() -> Dictionary:
+	"""
+	Retorna configuração de sincronização para o NetworkManager.
+	"""
+	return {
+		"sync_rate": sync_rate,
+		"interpolation_speed": interpolation_speed,
+		"teleport_threshold": teleport_threshold,
+		"sync_rotation": sync_rotation
+	}
 
 # ===== LIFETIME =====
 func _setup_lifetime_timer():
@@ -339,7 +252,7 @@ func try_collect_from_client():
 func _setup_visual():
 	pass
 
-func _on_body_entered(body: Node):
+func _on_body_entered(_body: Node):
 	pass
 
 func _log_debug(message: String):

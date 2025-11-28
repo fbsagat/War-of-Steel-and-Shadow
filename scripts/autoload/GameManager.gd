@@ -707,6 +707,19 @@ func _spawn_on_client(object_id: int, round_id: int, item_name: String, position
 		"spawn_time": Time.get_unix_time_from_system()
 	}
 	
+	# ✅ REGISTRA NO NETWORKMANAGER (cliente-side)
+	if item_node.has_method("get_sync_config") and item_node.sync_enabled:
+		NetworkManager.register_syncable_object(
+			object_id,
+			item_node,
+			item_node.get_sync_config()
+		)
+	
+	# Armazena localmente (se necessário)
+	if not spawned_objects.has(round_id):
+		spawned_objects[round_id] = {}
+	spawned_objects[round_id][object_id] = {"node": item_node}
+	
 	_log_debug("✓ Objeto spawnado no cliente: ID=%d, Item=%s" % [object_id, item_name])
 
 func _despawn_on_client(object_id: int, round_id: int):
@@ -739,6 +752,9 @@ func _despawn_on_client(object_id: int, round_id: int):
 	
 	# Remove do registro local
 	spawned_objects[round_id].erase(object_id)
+	
+	# ✅ Desregistra primeiro
+	NetworkManager.unregister_syncable_object(object_id)
 	
 	_log_debug("✓ Objeto despawnado no cliente: ID=%d" % object_id)
 

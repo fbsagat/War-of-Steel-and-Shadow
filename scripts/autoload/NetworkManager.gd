@@ -28,6 +28,18 @@ var is_connected_: bool = false
 var _is_server: bool = false
 var server_is_headless: bool = false
 
+# --- SINCRONIZAÇÃO DE OBJETOS ---
+## { object_id: { node: Node, config: Dictionary } }
+var syncable_objects: Dictionary = {}
+
+## Timers de sync no servidor (contagem regressiva até próximo envio)
+## { object_id: float }
+var sync_timers: Dictionary = {}
+
+## Buffer de interpolação no cliente
+## { object_id: { last_update: float, target_pos: Vector3, target_rot: Vector3, has_first: bool } }
+var client_sync_buffer: Dictionary = {}
+
 # ===== FUNÇÕES DE INICIALIZAÇÃO =====
 
 func _ready():
@@ -71,6 +83,12 @@ func _on_connection_failed():
 	"""Callback quando falha ao conectar"""
 	is_connected_ = false
 	_log_debug("❌ Falha ao conectar ao servidor")
+
+func _process(delta: float):
+	if _is_server:
+		_server_update_sync_timers(delta)
+	elif !multiplayer.is_server():  # cliente
+		_client_interpolate_all(delta)
 
 # ===== REGISTRO DE JOGADOR =====
 
@@ -431,16 +449,15 @@ func _rpc_receive_spawn_on_clients(object_id: int, round_id: int, item_name: Str
 		
 @rpc("authority", "call_remote", "reliable")
 func _rpc_client_despawn_item(object_id: int, round_id: int):
-	"""
-	RPC: Cliente recebe comando para despawnar item
-	"""
-	
 	if multiplayer.is_server():
 		return
 	
 	_log_debug("📥 RPC recebido: despawn item ID=%d" % object_id)
 	
-	# Chama despawn local no cliente
+	# Primeiro: remove do sistema de sync
+	unregister_syncable_object(object_id)
+	
+	# Depois: chama despawn no GameManager
 	if GameManager.has_method("_despawn_on_client"):
 		GameManager._despawn_on_client(object_id, round_id)
 
@@ -634,6 +651,166 @@ func _client_player_animation_state(p_id: int, speed: float, attacking: bool, de
 	if player and player.has_method("_client_receive_animation_state"):
 		player._client_receive_animation_state(speed, attacking, defending, jumping, 
 											   aiming, running, block_attacking, on_floor)
+
+# ===== REGISTRO DE OBJETOS SINCRONIZÁVEIS =====
+
+func _server_update_sync_timers(delta: float) -> void:
+	"""
+	Servidor: atualiza timers e envia snapshots periódicos.
+	"""
+	var to_remove = []
+	for object_id in sync_timers.keys():
+		if !syncable_objects.has(object_id):
+			to_remove.append(object_id)
+			continue
+		
+		var entry = syncable_objects[object_id]
+		var node = entry.node
+		if !is_instance_valid(node) or !node.is_inside_tree():
+			to_remove.append(object_id)
+			continue
+		
+		var config = entry.config
+		var rate = config.get("sync_rate", 0.03)
+		sync_timers[object_id] += delta
+		
+		if sync_timers[object_id] >= rate:
+			sync_timers[object_id] = 0.0
+			_send_sync_for_object(object_id)
+	
+	# Limpa objetos inválidos
+	for oid in to_remove:
+		unregister_syncable_object(oid)
+
+func _send_sync_for_object(object_id: int) -> void:
+	"""
+	Envia estado do objeto para todos os clientes.
+	"""
+	var entry = syncable_objects.get(object_id)
+	if !entry:
+		return
+	
+	var node = entry.node
+	if !is_instance_valid(node) or !node.is_inside_tree():
+		return
+	
+	var config = entry.config
+	var pos = node.global_position
+	var rot = node.global_rotation if config.get("sync_rotation", true) else Vector3.ZERO
+	
+	# ✅ RPC centralizado para todos os clientes
+	_on_client_sync_object.rpc(object_id, pos, rot)
+
+@rpc("authority", "call_remote", "unreliable")
+func _on_client_sync_object(object_id: int, pos: Vector3, rot: Vector3) -> void:
+	"""
+	Cliente: recebe atualização de estado de objeto.
+	"""
+	if _is_server:
+		return
+	
+	var buffer = client_sync_buffer.get(object_id)
+	if !buffer:
+		return  # objeto não registrado ou já removido
+	
+	var now = Time.get_unix_time_from_system()
+	buffer.last_update = now
+	buffer.target_pos = pos
+	buffer.target_rot = rot
+	
+	if !buffer.has_first:
+		buffer.has_first = true
+		# Aplica imediatamente no primeiro sync
+		var entry = syncable_objects.get(object_id)
+		if entry and is_instance_valid(entry.node):
+			entry.node.global_position = pos
+			if syncable_objects[object_id].config.get("sync_rotation", true):
+				entry.node.global_rotation = rot
+
+func _client_interpolate_all(delta: float) -> void:
+	"""
+	Cliente: interpola todos os objetos registrados.
+	"""
+	var now = Time.get_unix_time_from_system()
+	var to_remove = []
+	
+	for object_id in client_sync_buffer.keys():
+		var buffer = client_sync_buffer[object_id]
+		var entry = syncable_objects.get(object_id)
+		
+		if !entry or !buffer.has_first:
+			continue
+		
+		var node = entry.node
+		if !is_instance_valid(node):
+			to_remove.append(object_id)
+			continue
+		
+		var time_since = now - buffer.last_update
+		if time_since > 1.0:
+			continue  # stale update
+		
+		var config = entry.config
+		var threshold = config.get("teleport_threshold", 0.01)
+		var speed = config.get("interpolation_speed", 22.0)
+		var sync_rot = config.get("sync_rotation", true)
+		
+		var dist = node.global_position.distance_to(buffer.target_pos)
+		if dist > threshold:
+			node.global_position = buffer.target_pos
+			if sync_rot:
+				node.global_rotation = buffer.target_rot
+		elif dist > 0.01:
+			node.global_position = node.global_position.lerp(buffer.target_pos, speed * delta)
+			if sync_rot:
+				node.global_rotation = node.global_rotation.slerp(buffer.target_rot, speed * delta)
+	
+	# Limpa objetos inválidos
+	for oid in to_remove:
+		unregister_syncable_object(oid)
+
+func register_syncable_object(object_id: int, node: Node, config: Dictionary) -> void:
+	"""
+	Registra um objeto para sincronização contínua.
+	Deve ser chamado após o objeto estar na árvore e ter object_id válido.
+	"""
+	if syncable_objects.has(object_id):
+		push_warning("Tentativa de registrar objeto sincronizável duplicado: %d" % object_id)
+		return
+	
+	if !node.is_inside_tree():
+		push_error("Não é possível registrar nó fora da árvore: %d" % object_id)
+		return
+	
+	syncable_objects[object_id] = {
+		"node" = node,
+		"config" = config
+	}
+	
+	if _is_server:
+		sync_timers[object_id] = 0.0
+	else:
+		client_sync_buffer[object_id] = {
+			"last_update" = 0.0,
+			"target_pos" = node.global_position,
+			"target_rot" = node.global_rotation,
+			"has_first" = false
+		}
+	
+	_log_debug("✅ Objeto registrado para sync: %d" % object_id)
+
+func unregister_syncable_object(object_id: int) -> void:
+	"""
+	Remove um objeto do sistema de sincronização.
+	"""
+	if syncable_objects.has(object_id):
+		syncable_objects.erase(object_id)
+	if sync_timers.has(object_id):
+		sync_timers.erase(object_id)
+	if client_sync_buffer.has(object_id):
+		client_sync_buffer.erase(object_id)
+	
+	_log_debug("🗑️ Objeto removido do sync: %d" % object_id)
 
 # ===== SINCRONIZAÇÃO DE AÇÕES (ATAQUES, DEFESA) =====
 

@@ -264,6 +264,10 @@ func despawn_object(round_id: int, object_id: int) -> bool:
 	if item_node and is_instance_valid(item_node) and item_node.is_inside_tree():
 		item_node.queue_free()
 	
+	# ✅ Desregistra do NetworkManager
+	if item_node and item_node.has_method("get_sync_config") and item_node.sync_enabled:
+		NetworkManager.unregister_syncable_object(object_id)
+	
 	# Remove do registro
 	spawned_objects[round_id].erase(object_id)
 	
