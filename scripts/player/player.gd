@@ -22,11 +22,14 @@ extends CharacterBody3D
 
 @export_category("Player actions")
 @export var hide_itens_on_start: bool = true
-@export var pickup_radius: float = 1.2
-@export var pickup_collision_mask: int = 1 << 2
 @export var max_pick_results: int = 8
 @export var drop_distance: float = 1.2
 @export var drop_force: float = 4.0
+
+@export_category("Item Detection")
+@export var pickup_radius: float = 1.2
+@export var pickup_collision_mask: int = 1 << 2  # Layer 3
+@export var max_pickup_results: int = 10
 
 @export_category("Enemy detection")
 @export var detection_radius_fov: float = 14.0      # Raio para detecção no FOV
@@ -42,6 +45,7 @@ extends CharacterBody3D
 @export var interpolation_speed: float = 12.0 # Interpolação mais rápida
 @export var position_threshold: float = 0.01 # Distância mínima para sincronizar
 @export var rotation_threshold: float = 0.01 # Rotação mínima para sincronizar
+@export var anim_sync_rate: float = 0.1  # 10 updates/segundo (menos que posição)
 
 # Estados de sincronização
 var target_position: Vector3 = Vector3.ZERO
@@ -50,7 +54,6 @@ var sync_timer: float = 0.0
 
 # Estados de animação (para sincronização)
 var anim_sync_timer: float = 0.0
-@export var anim_sync_rate: float = 0.1  # 10 updates/segundo (menos que posição)
 var last_anim_state: Dictionary = {}
 
 # Identificação multiplayer
@@ -283,9 +286,6 @@ func _get_all_item_nodes(list: Array = []) -> Array:
 		else:
 			push_warning("Nó não encontrado para ID: %s" % str(id))
 	
-	if debug:
-		print("get_all_item_nodes: %d nós encontrados: %s" % [len(nodes), nodes])
-	
 	return nodes
 
 # 1.6. Retorna o item_name correspondente a um ID (ou lista de IDs)
@@ -344,35 +344,61 @@ func _get_id_by_node(p_node: Node) -> int:
 	return -1
 
 # Retorna item mais próximos do player
-func _get_nearby_items(radius: float = pickup_radius, _collision_mask: int = pickup_collision_mask, max_results: int = max_pick_results) -> Array:
+func get_nearby_items(
+	radius: float = pickup_radius,
+	_collision_mask: int = pickup_collision_mask,
+	max_results: int = max_pickup_results,
+	sort_by_distance: bool = true
+) -> Array:
+	"""
+	Retorna itens próximos do player usando PhysicsShapeQuery
+	
+	@param radius: Raio de detecção
+	@param _collision_mask: Máscara de colisão (default: layer 3)
+	@param max_results: Número máximo de itens
+	@param sort_by_distance: Ordenar do mais próximo ao mais distante
+	@return: Array de nodes (itens detectados)
+	"""
+	
 	var space_state = get_world_3d().direct_space_state
+	
+	# Cria shape esférico
 	var shape = SphereShape3D.new()
 	shape.radius = radius
+	
+	# Configura parâmetros da query
 	var params = PhysicsShapeQueryParameters3D.new()
 	params.shape = shape
-	params.transform = Transform3D.IDENTITY.translated(global_transform.origin)
+	params.transform = Transform3D.IDENTITY.translated(global_position)
 	params.collision_mask = _collision_mask
 	params.collide_with_bodies = true
 	params.collide_with_areas = true
+	
+	# Executa query
 	var results: Array = space_state.intersect_shape(params, max_results)
+	
+	# Filtra apenas itens válidos
 	var items: Array = []
-	if debug:
-		print("--- intersect_shape results:", results.size())
-	for r in results:
-		var body = r.collider
-		if body == null: continue
-		if body == self: continue
-		if debug:
-			print(" -> collider:", body.name, " type:", body.get_class())
-		if body.is_in_group("item"):
-			items.append(body); continue
-		if body.has_method("collect"):
-			items.append(body); continue
-		var maybe_name = body.get("name")
-		if maybe_name != null:
-			items.append(body); continue
-	items.sort_custom(Callable(self, "_sort_by_distance"))
-	if debug: print(" -> items filtrados:", items.size())
+	for result in results:
+		var body = result.collider
+		
+		if not body or body == self:
+			continue
+		
+		# Verifica se é item (qualquer um desses critérios)
+		if body.is_in_group("item") or \
+		   body.has_method("collect") or \
+		   "item_name" in body:
+			items.append(body)
+	
+	# Ordena por distância (opcional)
+	if sort_by_distance and items.size() > 1:
+		items.sort_custom(func(a, b):
+			var dist_a = global_position.distance_to(a.global_position)
+			var dist_b = global_position.distance_to(b.global_position)
+			return dist_a < dist_b
+		)
+	
 	return items
 
 # Funções da câmera livre
@@ -387,8 +413,7 @@ func _get_movement_direction_free_cam() -> Vector3:
 		if input_vec.length() > 0.1:
 			return (cam_forward * input_vec.y + cam_right * input_vec.x).normalized()
 	else:
-		if debug:
-			print("[Player] Câmera não disponível. Usando eixos fixos.")
+		_log_debug("Câmera não disponível. Usando eixos fixos")
 		var world_input := Input.get_vector("move_left", "move_right", "move_forward", "move_backward")
 		if world_input.length() > 0.1:
 			return Vector3(-world_input.x, 0.0, world_input.y).normalized()
@@ -479,18 +504,15 @@ func get_nearest_enemy() -> CharacterBody3D:
 
 	# --- Prioridade: FOV primeiro ---
 	if closest_in_fov != null:
-		if debug:
-			print("Inimigo mais próximo (FOV): ", closest_in_fov)
+		_log_debug("Inimigo mais próximo (FOV): %s" % closest_in_fov)
 		return closest_in_fov
 
 	# --- Fallback: 360° (se ativado e dentro do raio menor) ---
 	if use_360_vision_as_backup and closest_in_360 != null:
-		if debug:
-			print("Inimigo mais próximo (360° fallback): ", closest_in_360)
+		_log_debug("Inimigo mais próximo (360° fallback): %s" % closest_in_360)
 		return closest_in_360
 
-	if debug:
-		print("Nenhum inimigo detectado.")
+	_log_debug("Nenhum inimigo detectado.")
 	return null
 
 func _update_nearest_enemy() -> void:
@@ -571,8 +593,8 @@ func _apply_movement(move_dir: Vector3, delta: float) -> void:
 					velocity.x *= 0.7
 					velocity.z *= 0.7
 			
-			if debug:
-				print("[Player] Pulando com velocidade XZ: (%.2f, %.2f)" % [velocity.x, velocity.z])
+			_log_debug("Pulando com velocidade XZ: (%.2f, %.2f)" % [velocity.x, velocity.z])
+			
 			return  # ←←← PRESERVA a velocidade; não recalcula movimento neste frame
 
 		elif is_on_floor():
@@ -655,7 +677,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		if event.is_action_pressed("ui_cancel"):
 			_toggle_mouse_mode()
 		elif event.is_action_pressed("interact"):
-			action_pick_up_item()
+			action_pick_up_item_call()
 		elif event.is_action_pressed("attack"):
 			action_sword_attack()
 		elif event.is_action_pressed("lock"):
@@ -671,8 +693,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func _toggle_mouse_mode():
 	mouse_mode = not mouse_mode
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if not mouse_mode else Input.MOUSE_MODE_CAPTURED
-	if debug:
-		print("[Player] Mouse %s." % ("liberado" if not mouse_mode else "capturado"))
+	_log_debug("Mouse %s." % ["liberado" if not mouse_mode else "capturado"])
 		
 # Visual
 func _hide_all_model_items():
@@ -824,8 +845,7 @@ func _on_hitbox_body_entered(body: Node, hitbox_area: Area3D) -> void:
 		if body.is_in_group("enemies"):
 			hit_targets.append(body)
 			body.take_damage(10)
-			if debug:
-				print(body.name, " foi acertado por ", hitbox_area.get_parent().name)
+			_log_debug("%s foi acertado por %s" % [body.name, hitbox_area.get_parent().name])
 
 # Ações do player (Trancar visão no inimigo)
 func _on_block_attack_timer_timeout(duration):
@@ -833,9 +853,8 @@ func _on_block_attack_timer_timeout(duration):
 	is_block_attacking = false
 		
 func _on_impact_detected(impulse: float):
-	if debug:
-		print("FUI ATINGIDO! Impulso: ", impulse)
-	# Reduzir vida, ative efeito de hit, etc.
+	_log_debug("FUI ATINGIDO! Impulso: %d" % impulse)
+	# Reduzir vida, ativar efeito de hit, etc.
 	
 	if is_defending:
 		animation_tree.set("parameters/Blocking/blend_amount", 0.0)	
@@ -862,14 +881,6 @@ func teleport_to(new_position: Vector3):
 	"""Teleporta o player (apenas servidor)"""
 	if multiplayer.is_server():
 		global_position = new_position
-
-# Usado por get_nearby_items
-func _sort_by_distance(a, b) -> int:
-	var da = a.global_transform.origin.distance_to(global_transform.origin)
-	var db = b.global_transform.origin.distance_to(global_transform.origin)
-	if da < db: return -1
-	if da > db: return 1
-	return 0
 
 # ===== FUNÇÕES DE REDE =====
 # ===== ENVIO DE ESTADO PARA SERVIDOR (APENAS LOCAL) =====
@@ -1231,19 +1242,13 @@ func setup_name_label():
 	else:
 		name_label.visible = true
 
+func _log_debug(message: String):
+	"""Imprime mensagem de debug se habilitado"""
+	if debug:
+		var prefix = "[SERVER]" if not is_local_player else "[CLIENT]"
+		print("%s[PLAYER]%s" % [prefix, message])
 
-
-
-
-
-
-
-
-
-
-
-
-# FUNÇÕES DE ITENS
+# FUNÇÕES DE ITENS =-=-=-=-=-=-=-=-=-=-
 
 func handle_test_equip_inputs_call():
 	var mapped_id: int
@@ -1323,49 +1328,30 @@ func apply_visual_equip_on_player_node(player_node, item_mapped_id, from_test):
 		#
 	#_item_model_change_visibility(self, node_link)
 
-# Ações do player (Pegar item) FAZER!!!!
-func action_pick_up_item():
-	print("action_pick_up_item")
-	var found = _get_nearby_items()
+# Ações do player (Pegar item)
+func action_pick_up_item_call():
+	# Servidor não pede, só local pede, servidor recebe pedido e processa usando
+	# node do player remoto do servidor
+	_log_debug("action_pick_up_item_call")
+	if not is_local_player:
+		return
+		
+	var found = get_nearby_items()
 	if found.size() == 0:
 		if debug:
-			print("Nenhum item por perto")
+			_log_debug("Nenhum item por perto")
 		return
 	var item = found[0]
+	_log_debug("Player %d pediu para pegar o item %d" % [player_id, item.object_id])
 	if NetworkManager and NetworkManager.is_connected and item:
-		NetworkManager.request_pick_up_item(player_id, item["object_id"])
+		NetworkManager.request_pick_up_item(player_id, item.object_id)
 		
 # Ações do player (Dropar item) *por enquanto dropa tudo sequencialmente
 func action_drop_item_call() -> void:
+	if not is_local_player:
+		return
 	if NetworkManager and NetworkManager.is_connected:
 		NetworkManager.request_drop_item(player_id)
-	#var items = [
-		#current_cape_item_id,
-		#current_helmet_item_id,
-		#current_item_left_id,
-		#current_item_right_id
-	#]
-	#var items_tt = []
-	#for item_id in items:
-		#if item_id == 0:
-			#continue
-		#else:
-			#items_tt.append(item_id)
-			#
-	#if len(items_tt) > 0:
-		#if NetworkManager and NetworkManager.is_connected:
-			#NetworkManager.request_drop_item(player_id, items_tt[0])
-	#
-	## Atualiza o item atual em sua variável correspondente
-		#var item_id = ItemDatabase.get_item_by_id(items_tt[0]).id
-		#if item_id == current_cape_item_id:
-			#current_cape_item_id = 0
-		#elif item_id == current_helmet_item_id:
-			#current_helmet_item_id = 0
-		#elif item_id == current_item_left_id:
-			#current_item_left_id = 0
-		#elif item_id == current_item_right_id:
-			#current_item_right_id = 0
 		
 func execute_item_drop(player_node, item):
 	# Executa o drop do node do item
@@ -1407,9 +1393,7 @@ func _item_model_change_visibility(player_node, node_link: String, visible_ : bo
 	
 	if not item_node:
 		push_error("apply_item_visibility: nó não encontrado no caminho '%s'" % node_link)
-		if debug:
-			print("  Caminho base: %s" % player_node.get_path())
-			print("  Caminho completo: %s/%s" % [player_node.get_path(), node_link])
+		_log_debug("Caminho base: %s, caminho completo: %s/%s" % [player_node.get_path(), player_node.get_path(), node_link])
 		return false
 	
 	# SE VISIBLE = TRUE, ESCONDE TODOS OS IRMÃOS (outros itens no mesmo slot)
@@ -1432,9 +1416,7 @@ func _item_model_change_visibility(player_node, node_link: String, visible_ : bo
 				elif "visible" in sibling:
 					sibling.visible = false
 				
-				# Debug
-				if debug:
-					print("  🚫 Escondendo irmão: %s" % sibling.name)
+				_log_debug("🚫 Escondendo irmão: %s" % sibling.name)
 	
 	# APLICA VISIBILIDADE NO ITEM ALVO
 	# Suporta Node3D, VisualInstance3D, MeshInstance3D, etc

@@ -264,6 +264,7 @@ func collect(collector_id: int) -> bool:
 	"""
 	Coleta o item - Autoridade exclusiva do servidor
 	"""
+
 	if !is_server_authority() or is_collected:
 		return false
 	

@@ -581,7 +581,7 @@ func _server_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, r
 @rpc("authority", "call_remote", "unreliable")
 func _client_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
 	"""RPC: Cliente recebe estado de OUTRO jogador"""
-	# Só processa se NÃO for servidor
+	# Só processa se NÃO for servidor VERIFICAR
 	#if multiplayer.has_multiplayer_peer() and multiplayer.get_unique_id() == 1:
 		#return
 	

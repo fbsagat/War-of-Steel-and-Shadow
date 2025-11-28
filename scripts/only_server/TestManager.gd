@@ -17,10 +17,10 @@ class_name TestManager
 
 # ===== REGISTROS (Injetados pelo ServerManager) =====
 
-var player_registry = null
-var room_registry = null
-var round_registry = null
-var object_manager = null
+var player_registry: PlayerRegistry = null
+var room_registry: RoomRegistry = null
+var round_registry: RoundRegistry = null
+var object_manager: ObjectManager = null
 
 # ===== VARIÁVEIS INTERNAS =====
 
@@ -238,6 +238,10 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 	
 	# PASSO 10: Inicia rodada (ativa timers)
 	round_registry.start_round(round_data["round_id"])
+	
+	# PASSO 11: Spawna alguns objetos
+	object_manager.spawn_item(round_data["round_id"], "torch", Vector3(0, 2, 0), Vector3(0, 0, 0))
+	object_manager.spawn_item(round_data["round_id"], "torch", Vector3(0, 4, 0), Vector3(0, 0, 0))
 	
 	# Atualiza lista de salas
 	ServerManager._send_rooms_list_to_all()
