@@ -1094,6 +1094,11 @@ func _server_validate_pick_up_item(requesting_player_id: int, item_id: int):
 func _server_validate_equip_item(requesting_player_id: int, item_id: int, from_test: bool):
 	"""Servidor recebe pedido de equipar item, valida e redistribui"""
 	
+	# Verifica se pode aplicar pelo handle_test_equip_inputs_call, 
+	# se simulador_ativado, sim:
+	if from_test and not simulador_ativado:
+		return
+	
 	var player = player_registry.get_player(requesting_player_id)
 	var round_ = round_registry.get_round_by_player_id(player["id"])
 	var item = ItemDatabase.get_item_by_id(item_id)
