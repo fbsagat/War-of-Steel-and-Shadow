@@ -700,4 +700,4 @@ func debug_print_all_rounds():
 func _log_debug(message: String):
 	"""Função padrão de debug"""
 	if debug_mode:
-		print("[Server][RoundRegistry] %s" % message)
+		print("[SERVER][RoundRegistry] %s" % message)

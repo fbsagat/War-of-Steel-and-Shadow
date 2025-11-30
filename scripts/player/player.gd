@@ -2,7 +2,7 @@ extends CharacterBody3D
 
 # Configs
 @export_category("Debug")
-@export var debug: bool = false
+@export var debug: bool = true
 
 @export_category("Movement")
 @export var max_speed: float = 5
@@ -1332,7 +1332,7 @@ func apply_visual_equip_on_player_node(player_node, item_mapped_id, from_test):
 func action_pick_up_item_call():
 	# Servidor não pede, só local pede, servidor recebe pedido e processa usando
 	# node do player remoto do servidor
-	_log_debug("action_pick_up_item_call")
+
 	if not is_local_player:
 		return
 		
@@ -1341,10 +1341,10 @@ func action_pick_up_item_call():
 		if debug:
 			_log_debug("Nenhum item por perto")
 		return
-	var item = found[0]
-	_log_debug("Player %d pediu para pegar o item %d" % [player_id, item.object_id])
-	if NetworkManager and NetworkManager.is_connected and item:
-		NetworkManager.request_pick_up_item(player_id, item.object_id)
+	var object = found[0]
+	_log_debug("Player %d pediu para pegar o item %d" % [player_id, object.object_id])
+	if NetworkManager and NetworkManager.is_connected and object:
+		NetworkManager.request_pick_up_item(player_id, object.object_id)
 		
 # Ações do player (Dropar item) *por enquanto dropa tudo sequencialmente
 func action_drop_item_call() -> void:

@@ -1063,12 +1063,23 @@ func _rpc_despawn_on_clients(player_ids: Array, round_id: int, object_id: int):
 # ===== VALIDAÇÃO DE ITENS =====
 
 @rpc("any_peer", "call_remote", "reliable")
-func _server_validate_pick_up_item(requesting_player_id: int, item_id: int):
+func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 	"""Servidor recebe pedido de pegar item, equipa automaticamente se for equipável, valida e redistribui"""
+	
+	var player_node = get_tree().root.get_node_or_null(str(requesting_player_id))
+	var object = object_manager.spawned_objects[1][object_id]
+	var server_nearby = player_node.get_nearby_items()
 	var player = player_registry.get_player(requesting_player_id)
 	var round_ = round_registry.get_round_by_player_id(player["id"])
-	var item = ItemDatabase.get_item_by_id(item_id)
-	_log_debug("[ITEM] Player %s pediu para pegar item %d, no round %d" % [player["name"], item_id, round_["round_id"]])
+	var item = ItemDatabase.get_item(object["item_name"]).to_dictionary()
+	var round_players = round_registry.get_active_players_ids(round_["round_id"])
+	
+	# Verificação se o item está perto do player no servidor também
+	if not server_nearby.has(object["node"]):
+		_log_debug("O nó deste player no servidor não tem este item por perto para pickup, recusar!")
+		return
+	
+	_log_debug("[ITEM] Player %s pediu para pegar item %d, no round %d" % [player["name"], object_id, round_["round_id"]])
 	
 	# Se for item equipável de knight
 	if ItemDatabase.get_items_by_owner("knight"):
@@ -1083,12 +1094,27 @@ func _server_validate_pick_up_item(requesting_player_id: int, item_id: int):
 		# Equipar o item novo
 		player_registry.add_item_to_inventory(round_["round_id"], player["id"], item["name"])
 		player_registry.equip_item(round_["round_id"], player["id"], item["name"])
+		
+		# Aplica nas cebas dos clientes para o player requerente
 		NetworkManager.rpc_id(requesting_player_id, "server_apply_picked_up_item", player["id"], item["id"])
 		
 		# Aplica na cena do servidor (atualizar visual)
-		var player_node = get_tree().root.get_node_or_null(str(requesting_player_id))
 		if player_node and player_node.has_method("apply_visual_equip_on_player_node"):
-			player_node.apply_visual_equip_on_player_node(player_node, item_id, false)
+			player_node.apply_visual_equip_on_player_node(player_node, item["id"], false)
+		
+		# Despawn do objeto no mapa dos clientes
+		_rpc_despawn_on_clients(round_players, round_["round_id"], object_id)
+		
+		# Despawn do objeto no mapa do servidor
+		var item_node = object.get("node")
+	
+		# Remove da cena
+		if item_node and is_instance_valid(item_node) and item_node.is_inside_tree():
+			item_node.queue_free()
+			_log_debug("Node removido da cena")
+		
+		# Remove do registro local
+		object_manager.spawned_objects[round_["round_id"]].erase(object_id)
 	
 @rpc("any_peer", "call_remote", "reliable")
 func _server_validate_equip_item(requesting_player_id: int, item_id: int, from_test: bool):

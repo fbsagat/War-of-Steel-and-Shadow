@@ -784,6 +784,6 @@ func has_network() -> bool:
 func _log_debug(message: String):
 	if debug_mode:
 		var unique_id = 0
-		if has_network:
+		if is_connected_to_server and has_network:
 			unique_id = multiplayer.get_unique_id()
 		print("[CLIENT][GameManager]ClientID: %s: Message: %s" % [unique_id, message])

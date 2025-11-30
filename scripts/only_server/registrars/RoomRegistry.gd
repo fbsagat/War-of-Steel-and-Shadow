@@ -651,4 +651,4 @@ func debug_print_all_rooms():
 func _log_debug(message: String):
 	"""Função padrão de debug"""
 	if debug_mode:
-		print("[Server][RoomRegistry] %s" % message)
+		print("[SERVER][RoomRegistry] %s" % message)

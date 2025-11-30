@@ -489,9 +489,9 @@ func _client_clear_all_objects():
 
 # ===== REQUISIÇÕES DE CLIENTES =====
 
-func request_pick_up_item(player_id: int, item_id: int) -> void:
+func request_pick_up_item(player_id: int, object_id: int) -> void:
 	"""Requisição do player: Chama RPC no servidor para pedir para equipar um item"""
-	rpc_id(1, "_server_pick_up_player_item", player_id, item_id)
+	rpc_id(1, "_server_pick_up_player_item", player_id, object_id)
 
 func request_equip_item(player_id: int, item_id: int, from_test: bool) -> void:
 	"""Requisição do player: Chama RPC no servidor para pedir para equipar um item"""
@@ -502,8 +502,8 @@ func request_drop_item(player_id, item_id=0):
 	rpc_id(1, "_server_drop_player_item", player_id, item_id)
 
 @rpc("any_peer", "call_remote", "unreliable")
-func _server_pick_up_player_item(player_id, item_id):
-	ServerManager._server_validate_pick_up_item(player_id, item_id)
+func _server_pick_up_player_item(player_id, object_id):
+	ServerManager._server_validate_pick_up_item(player_id, object_id)
 
 @rpc("any_peer", "call_remote", "unreliable")
 func _server_equip_player_item(player_id, item_id, from_test):
