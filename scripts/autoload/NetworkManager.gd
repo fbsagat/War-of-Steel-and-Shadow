@@ -652,6 +652,80 @@ func _client_player_animation_state(p_id: int, speed: float, attacking: bool, de
 		player._client_receive_animation_state(speed, attacking, defending, jumping, 
 											   aiming, running, block_attacking, on_floor)
 
+# ===== ATUALIZADORES DE INVENTÁRIO DE PLAYERS =====
+
+@rpc("authority", "call_remote", "reliable")
+func local_add_item_to_inventory(peer_id, item_name):
+	_log_debug("local_add_item_to_inventory")
+	if multiplayer.is_server():
+		return
+		
+	var player = get_tree().root.get_node_or_null(str(peer_id))
+	if not player:
+		_log_debug("Não encontrado player para atualizar inventário")
+	if player and player.has_method("add_item_to_inventory"):
+		player.add_item_to_inventory(item_name)
+
+@rpc("authority", "call_remote", "reliable")
+func local_remove_item_from_inventory(peer_id, item_name):
+	_log_debug("local_remove_item_from_inventory")
+	if multiplayer.is_server():
+		return
+		
+	var player = get_tree().root.get_node_or_null(str(peer_id))
+	if not player:
+		_log_debug("Não encontrado player para atualizar inventário")
+	if player and player.has_method("remove_item_from_inventory"):
+		player.remove_item_from_inventory(item_name)
+
+@rpc("authority", "call_remote", "reliable")
+func local_equip_item(peer_id, item_name, slot):
+	_log_debug("local_equip_item")
+	if multiplayer.is_server():
+		return
+		
+	var player = get_tree().root.get_node_or_null(str(peer_id))
+	if not player:
+		_log_debug("Não encontrado player para atualizar inventário")
+	if player and player.has_method("equip_item"):
+		player.equip_item(item_name, slot)
+
+@rpc("authority", "call_remote", "reliable")
+func local_unequip_item(peer_id, slot):
+	_log_debug("local_unequip_item")
+	if multiplayer.is_server():
+		return
+		
+	var player = get_tree().root.get_node_or_null(str(peer_id))
+	if not player:
+		_log_debug("Não encontrado player para atualizar inventário")
+	if player and player.has_method("unequip_item"):
+		player.unequip_item(slot)
+
+@rpc("authority", "call_remote", "reliable")
+func local_swap_equipped_item(player_id, new_item, slot):
+	_log_debug("local_swap_equipped_item")
+	if multiplayer.is_server():
+		return
+		
+	var player = get_tree().root.get_node_or_null(str(player_id))
+	if not player:
+		_log_debug("Não encontrado player para atualizar inventário")
+	if player and player.has_method("swap_equipped_item"):
+		player.swap_equipped_item(new_item, slot)
+
+@rpc("authority", "call_remote", "reliable")
+func local_drop_item(player_id, item_name):
+	_log_debug("local_drop_item")
+	if multiplayer.is_server():
+		return
+		
+	var player = get_tree().root.get_node_or_null(str(player_id))
+	if not player:
+		_log_debug("Não encontrado player para atualizar inventário")
+	if player and player.has_method("drop_item"):
+		player.drop_item(item_name)
+
 # ===== REGISTRO DE OBJETOS SINCRONIZÁVEIS =====
 
 func _server_update_sync_timers(delta: float) -> void:
@@ -825,9 +899,12 @@ func send_player_action(p_id: int, action_type: String, anim_name: String):
 @rpc("any_peer", "call_remote", "reliable")
 func _server_player_action(p_id: int, action_type: String, anim_name: String):
 	"""RPC: Servidor recebe ação do jogador e redistribui"""
+	
+	# Ignora pedidos do servidor (redundancia)
 	if not (multiplayer.has_multiplayer_peer() and multiplayer.get_unique_id() == 1):
 		return
 	
+	# Ignora o próprio player
 	var sender_id = multiplayer.get_remote_sender_id()
 	if sender_id != p_id:
 		return

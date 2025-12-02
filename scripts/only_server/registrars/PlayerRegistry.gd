@@ -372,6 +372,9 @@ func add_item_to_inventory(round_id: int, player_id: int, item_name: String) -> 
 	_log_debug("✓ Item adicionado: %s → Player %d (Rodada %d)" % [item_name, player_id, round_id])
 	item_added_to_inventory.emit(round_id, player_id, item_name)
 	
+	# Atualizar o do player local também via rpc
+	NetworkManager.rpc_id(player_id, "local_add_item_to_inventory", player_id, item_name)
+	
 	return true
 
 func remove_item_from_inventory(round_id: int, player_id: int, item_name: String) -> bool:
@@ -390,6 +393,9 @@ func remove_item_from_inventory(round_id: int, player_id: int, item_name: String
 	
 	_log_debug("✓ Item removido: %s de Player %d (Rodada %d)" % [item_name, player_id, round_id])
 	item_removed_from_inventory.emit(round_id, player_id, item_name)
+	
+	# Atualizar o do player local também via rpc
+	NetworkManager.rpc_id(player_id, "local_remove_item_from_inventory", player_id, item_name)
 	
 	return true
 
@@ -436,6 +442,9 @@ func equip_item(round_id: int, player_id: int, item_name: String, slot: String =
 	
 	_log_debug("✓ Item equipado: %s em %s (Player %d, Rodada %d)" % [item_name, slot, player_id, round_id])
 	item_equipped.emit(round_id, player_id, item_name, slot)
+		
+	# Atualizar o do player local também via rpc
+	NetworkManager.rpc_id(player_id, "local_equip_item", player_id, item_name, slot)
 	
 	return true
 
@@ -457,6 +466,9 @@ func unequip_item(round_id: int, player_id: int, slot: String) -> bool:
 	
 	_log_debug("✓ Item desequipado: %s de %s (Player %d, Rodada %d)" % [item_name, slot, player_id, round_id])
 	item_unequipped.emit(round_id, player_id, item_name, slot)
+		
+	# Atualizar o do player local também via rpc
+	NetworkManager.rpc_id(player_id, "local_unequip_item", player_id, slot)
 	
 	return true
 
@@ -487,6 +499,9 @@ func swap_equipped_item(round_id: int, player_id: int, new_item: String, slot: S
 		if not old_item.is_empty():
 			item_swapped.emit(round_id, player_id, old_item, new_item, slot)
 		return true
+		
+	# Atualizar o do player local também via rpc
+	NetworkManager.rpc_id(player_id, "local_swap_equipped_item", player_id, new_item, slot)
 	
 	return false
 
@@ -527,9 +542,12 @@ func drop_item(round_id: int, player_id: int, item_name: String) -> bool:
 		var inventory = _get_player_inventory(round_id, player_id)
 		if not inventory.is_empty():
 			inventory["stats"]["items_dropped"] += 1
+		
+		# Atualizar o do player local também via rpc
+		NetworkManager.rpc_id(player_id, "local_drop_item", player_id, item_name)
 		_log_debug("✓ Item dropado: %s por Player %d" % [item_name, player_id])
 		return true
-	
+		
 	return false
 
 func clear_player_inventory(round_id: int, player_id: int):

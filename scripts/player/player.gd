@@ -9,8 +9,8 @@ extends CharacterBody3D
 @export var walking_speed: float = 2.0
 @export var run_multiplier: float = 1.5
 @export var jump_velocity: float = 8.0
-@export var acceleration: float = 8.0   # Quão rápido acelera
-@export var deceleration: float = 8.0  # Quão rápido para ao soltar o input
+@export var acceleration: float = 8.0
+@export var deceleration: float = 8.0
 @export var bobbing_intensity: float = 0.6
 @export var turn_speed: float = 8.0
 @export var air_control: float = 1.2
@@ -22,26 +22,23 @@ extends CharacterBody3D
 
 @export_category("Player actions")
 @export var hide_itens_on_start: bool = true
-@export var max_pick_results: int = 8
-@export var drop_distance: float = 1.2
-@export var drop_force: float = 4.0
 
 @export_category("Item Detection")
 @export var pickup_radius: float = 1.2
-@export var pickup_collision_mask: int = 1 << 2  # Layer 3
+@export var pickup_collision_mask: int = 1 << 2 # Layer 3
 @export var max_pickup_results: int = 10
 
 @export_category("Enemy detection")
-@export var detection_radius_fov: float = 14.0      # Raio para detecção no FOV
-@export var detection_radius_360: float = 6.0       # Raio menor (ou maior) para fallback 360°
+@export var detection_radius_fov: float = 14.0 # Raio para detecção no FOV
+@export var detection_radius_360: float = 6.0 # Raio menor (ou maior) para fallback 360°
 @export_range(0, 360) var field_of_view_degrees: float = 120.0
-@export var use_360_vision_as_backup: bool = true  # Ativa a visão 360° como fallback
-@export var update_interval: float = 0.5  # atualização a cada X segundos (0 = cada frame)
+@export var use_360_vision_as_backup: bool = true # Ativa a visão 360° como fallback
+@export var update_interval: float = 0.5 # atualização a cada X segundos (0 = cada frame)
 
 # ===== CONFIGURAÇÕES DE REDE (no topo do arquivo) =====
 
 @export_category("Network Sync")
-@export var sync_rate: float = 0.03          # 33 updates/segundo (melhor que 0.05)
+@export var sync_rate: float = 0.03 # 33 updates/segundo (melhor que 0.05)
 @export var interpolation_speed: float = 12.0 # Interpolação mais rápida
 @export var position_threshold: float = 0.01 # Distância mínima para sincronizar
 @export var rotation_threshold: float = 0.01 # Rotação mínima para sincronizar
@@ -60,6 +57,7 @@ var last_anim_state: Dictionary = {}
 var player_id: int = 0
 var player_name: String = ""
 var is_local_player: bool = false
+
 # Sincronização multiplayer
 var last_update_time: float = 0.0
 var anim_speed: float = 0.0
@@ -71,11 +69,11 @@ var is_defending: bool = false
 var is_jumping: bool = false
 var is_aiming: bool = false
 var is_running: bool = false
-var current_item_right_id: int
-var current_item_left_id: int
-var current_helmet_item_id: int
-var current_cape_item_id: int
-var current_attack_item_id: int
+var current_item_right_id: int # substituir pela variável atualizada pelo server
+var current_item_left_id: int # substituir pela variável atualizada pelo server
+var current_helmet_item_id: int # substituir pela variável atualizada pelo server
+var current_cape_item_id: int # substituir pela variável atualizada pelo server
+var current_attack_item_id: int # substituir pela variável atualizada pelo server
 var mouse_mode: bool = true
 var run_on_jump: bool = false
 var nearest_enemy: CharacterBody3D = null
@@ -83,6 +81,7 @@ var _detection_timer: Timer = null
 var last_simple_directions: Array = []
 var is_block_attacking: bool = false
 var sword_areas: Array[Area3D] = []
+var local_inventory: Dictionary = {} # Inventário(de itens e equipamentos) local do player.
 const MAX_DIRECTION_HISTORY = 2
 
 # referências
@@ -98,7 +97,7 @@ var camera_controller: Node3D
 var damaged_entities = []
 var aiming_forward_direction: Vector3 = Vector3.FORWARD
 var defense_target_angle: float = 0.0
-var _item_data: Array[Dictionary] = []
+var _item_data: Array[Dictionary] = [] # Futuramente substituir pelo ItemDatabase
 var hit_targets: Array = []
 var cair: bool = false
 
@@ -679,7 +678,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif event.is_action_pressed("interact"):
 			action_pick_up_item_call()
 		elif event.is_action_pressed("attack"):
-			action_sword_attack()
+			action_sword_attack_call()
 		elif event.is_action_pressed("lock"):
 			action_lock()
 		elif event.is_action_released("lock"):
@@ -1087,11 +1086,29 @@ func _client_receive_action(action_type: String, anim_name: String):
 			is_attacking = false
 			animation_tree.set("parameters/Blocking/blend_amount", 0.0)
 
-# ===== AÇÕES DO JOGADOR (CORRIGIDAS PARA SINCRONIZAR) =====
+# ===== AÇÕES DO JOGADOR =====
+
+func action_sword_attack_call():
+	_log_debug("action_sword_attack_call")
+	
+	# Jogador local pede para atacar
+	if not is_local_player:
+		return
+	
+	# SINCRONIZA ATAQUE PELA REDE (RELIABLE = GARANTIDO)
+	if NetworkManager and NetworkManager.is_connected:
+		var anim_name = _determine_attack_from_input()
+		NetworkManager.send_player_action(player_id, "attack", anim_name)
 
 func action_sword_attack():
 	"""Versão modificada que sincroniza o ataque"""
 	
+	# ANTES DE CONTINUAR AQUI, FAZER O SISTEMA QUE ATUALIZA O PLAYER LOCAL COM
+	# SUAS INFORMAÇÕES DE INVENTÁRIO, SALA E RODADA, PARA VERIFICAÇÕES LOCAIS, 
+	# MESMO QUE O SERVIDOR SEJA AUTORIDADE, PARA DIMINUIR PESO NA REDE
+	# PRONTO, INVENTÁRIO ATUALIZADO NO LOCAL, AGORA CONTINUAR DAQUI
+	
+	_log_debug("action_sword_attack")
 	# APENAS JOGADOR LOCAL PODE ATACAR
 	if not is_local_player:
 		return
@@ -1108,10 +1125,6 @@ func action_sword_attack():
 			"parameters/Attack/request")
 		
 		_on_attack_timer_timeout(anim_time * 0.4, current_item_right_id)
-		
-		# SINCRONIZA ATAQUE PELA REDE (RELIABLE = GARANTIDO)
-		if NetworkManager and NetworkManager.is_connected:
-			NetworkManager.send_player_action(player_id, "attack", anim_name)
 
 func action_lock():
 	"""Versão modificada que sincroniza defesa"""
@@ -1210,6 +1223,9 @@ func initialize(p_id: int, p_name: String, spawn_pos: Vector3):
 	# Ativa processos
 	set_physics_process(true)
 	set_process(true)
+	
+	# Inicializa o inventário
+	init_player_inventory()
 
 # ===== CONFIGURAÇÃO DE NOME LABEL =====
 
@@ -1440,3 +1456,192 @@ func _item_model_change_visibility(player_node, node_link: String, visible_ : bo
 	
 	if not applied:
 		return false
+		
+# ===== SISTEMA DE INVENTÁRIO POR RODADA =====
+
+func init_player_inventory() -> bool:
+	"""Inicializa inventário do jogador em uma rodada específica"""
+
+	local_inventory = {
+		"inventory": [],
+		"equipped": {
+			"hand-right": "",
+			"hand-left": "",
+			"head": "",
+			"body": "",
+			"back": ""
+		},
+		"stats": {
+			"items_collected": 0,
+			"items_used": 0,
+			"items_dropped": 0,
+			"items_equipped": 0
+		}
+	}
+	
+	_log_debug("✓ Inventário inicializado: Player %d" % player_id)
+	return true
+		
+func add_item_to_inventory(item_name: String) -> bool:
+	"""Adiciona item ao inventário do jogador"""
+	# Valida item no ItemDatabase se disponível
+	if ItemDatabase and not ItemDatabase.item_exists(item_name):
+		push_error("PlayerRegistry: Item inválido: %s" % item_name)
+		return false
+	
+	local_inventory["inventory"].append(item_name)
+	local_inventory["stats"]["items_collected"] += 1
+	
+	_log_debug("✓ Item adicionado: %s → Player %s" % [item_name, player_name])
+	
+	return true
+
+func remove_item_from_inventory(item_name: String) -> bool:
+	"""Remove item do inventário do jogador"""
+	
+	if local_inventory.is_empty():
+		return false
+	
+	var idx = local_inventory["inventory"].find(item_name)
+	if idx == -1:
+		_log_debug("⚠ Item não encontrado no inventário: %s" % item_name)
+		return false
+	
+	local_inventory["inventory"].remove_at(idx)
+	local_inventory["stats"]["items_used"] += 1
+	
+	_log_debug("✓ Item removido: %s de Player %d" % [item_name, player_id])
+	
+	return true
+
+func equip_item(item_name: String, slot: String = "") -> bool:
+	"""
+	Equipa item em um slot (detecta automaticamente se não especificado)
+	Slots válidos: hand-right, hand-left, head, body, back
+	"""
+	
+	if local_inventory.is_empty():
+		return false
+	
+	# Verifica se item está no inventário
+	if item_name not in local_inventory["inventory"]:
+		_log_debug("⚠ Item não está no inventário: %s" % item_name)
+		return false
+	
+	# Detecta slot automaticamente se não especificado
+	if slot.is_empty():
+		if ItemDatabase:
+			slot = ItemDatabase.get_item_slot(item_name)
+		if slot.is_empty():
+			push_error("PlayerRegistry: Não foi possível detectar slot para item: %s" % item_name)
+			return false
+	
+	# Valida slot
+	if not local_inventory["equipped"].has(slot):
+		push_error("PlayerRegistry: Slot inválido: %s" % slot)
+		return false
+	
+	# Valida se item pode ser equipado neste slot
+	if ItemDatabase and not ItemDatabase.can_equip_in_slot(item_name, slot):
+		push_error("PlayerRegistry: Item %s não pode ser equipado em %s" % [item_name, slot])
+		return false
+	
+	# Desequipa item atual se houver
+	var current_item = local_inventory["equipped"][slot]
+	if not current_item.is_empty():
+		unequip_item(slot)
+	
+	# Equipa novo item
+	local_inventory["equipped"][slot] = item_name
+	local_inventory["stats"]["items_equipped"] += 1
+	
+	_log_debug("✓ Item equipado: %s em %d" % [item_name, player_id])
+		
+	return true
+
+func unequip_item(slot: String) -> bool:
+	"""Desequipa item de um slot"""
+
+	if local_inventory.is_empty():
+		return false
+	
+	if not local_inventory["equipped"].has(slot):
+		push_error("PlayerRegistry: Slot inválido: %s" % slot)
+		return false
+	
+	var item_name = local_inventory["equipped"][slot]
+	if item_name.is_empty():
+		return false
+	
+	local_inventory["equipped"][slot] = ""
+	
+	_log_debug("✓ Item desequipado: %s de %s (Player %d)" % [item_name, slot, player_id])
+	
+	return true
+
+func swap_equipped_item(new_item: String, slot: String = "") -> bool:
+	"""
+	Troca item equipado diretamente (desequipa antigo, equipa novo)
+	Útil para trocas rápidas de armas/equipamentos
+	"""
+
+	if local_inventory.is_empty():
+		return false
+	
+	# Detecta slot se não especificado
+	if slot.is_empty():
+		if ItemDatabase:
+			slot = ItemDatabase.get_item_slot(new_item)
+		if slot.is_empty():
+			return false
+	
+	var old_item = local_inventory["equipped"][slot]
+	
+	# Desequipa item atual (se houver)
+	if not old_item.is_empty():
+		unequip_item(slot)
+	
+	# Equipa novo item
+	if equip_item(new_item, slot):
+		return true
+	
+	return false
+
+func drop_item(item_name: String) -> bool:
+	"""
+	Remove item do inventário (simula drop)
+	Se equipado, desequipa primeiro
+	"""
+	# Verifica se está equipado e desequipa
+	var slot = get_equipped_slot(item_name)
+	if not slot.is_empty():
+		unequip_item(slot)
+	
+	# Remove do inventário
+	print("Remove do inventário")
+	if remove_item_from_inventory(item_name):
+		if not local_inventory.is_empty():
+			print("aquiiii")
+			local_inventory["stats"]["items_dropped"] += 1
+		_log_debug("✓ Item dropado: %s por Player %d" % [item_name, player_id])
+		return true
+	
+	return false
+
+func get_equipped_slot(item_name: String) -> String:
+	"""Retorna slot onde item está equipado (ou "" se não equipado)"""
+	
+	if local_inventory.is_empty():
+		return ""
+	
+	for slot in local_inventory["equipped"]:
+		if local_inventory["equipped"][slot] == item_name:
+			return slot
+	
+	return ""
+
+func clear_player_inventory():
+	"""Limpa inventário do jogador em uma rodada"""
+	
+	local_inventory.clear()
+	_log_debug("✓ Inventário limpo: Player %d" % player_id)

@@ -129,6 +129,13 @@ func _start_server():
 	object_manager = load("res://scripts/only_server/ObjectManager.gd").new()
 	test_manager = load("res://scripts/only_server/TestManager.gd").new()
 	
+	# Nomeia para facilitar visualização
+	player_registry.name = "PlayerRegistry"
+	room_registry.name = "RoomRegistry"
+	round_registry.name = "RoundRegistry"
+	object_manager.name = "ObjectManager"
+	test_manager.name = "TestManager"
+	
 	# Adiciona à árvore
 	add_child(player_registry)
 	add_child(room_registry)
@@ -1138,8 +1145,10 @@ func _server_validate_equip_item(requesting_player_id: int, item_id: int, from_t
 	
 	# Verificar se o player já tem o item no slot deste item, se não, equipar este item, se sim, eqipar o novo e dropar o anterior
 	if not player_registry.is_slot_empty(round_["round_id"], player['id'], item_slot):
-		pass
-		# Dropar o item anterior aqui
+		# Dropar o item anterior
+		var item_anterior = player_registry.get_equipped_item_in_slot(round_["round_id"], player['id'], item_slot)
+		var item_ant_id = ItemDatabase.get_item(item_anterior)["id"]
+		drop_item(round_["round_id"], player['id'], item_ant_id)
 	
 	# Add no inventário
 	player_registry.add_item_to_inventory(round_["round_id"], player['id'], item["name"])
@@ -1159,12 +1168,7 @@ func _server_validate_equip_item(requesting_player_id: int, item_id: int, from_t
 	var player_node = get_tree().root.get_node_or_null(str(requesting_player_id))
 	if player_node and player_node.has_method("apply_visual_equip_on_player_node"):
 			player_node.apply_visual_equip_on_player_node(player_node, item_id, from_test)
-
-
-# Ajustar tudo isso, genreciar os pedidos dos cliente, pegar item, equipar item e dropar item
-
-
-
+			
 @rpc("any_peer", "call_remote", "reliable")
 func _server_validate_drop_item(requesting_player_id: int, item_id: int):
 	"""Servidor recebe pedido de drop, valida e spawna item executando drop_item()
@@ -1189,7 +1193,8 @@ func _server_validate_drop_item(requesting_player_id: int, item_id: int):
 	drop_item(round_["round_id"], player["id"], item_id)
 
 func drop_item(round_id, player_id, item_id):
-	# Se item_id == 0, é pedido do player, pegar o item de menor valor do player, se não, é pedido do server, pegar item_id que veio
+	# Se item_id == 0, é pedido do player, pegar o item de menor valor do player
+	# Se não, é pedido do server, pegar item_id que veio e dropar
 	var item_name = null
 	if item_id == 0:
 		item_name = player_registry.get_first_equipped_item(round_id, player_id)
@@ -1202,9 +1207,12 @@ func drop_item(round_id, player_id, item_id):
 			player_registry.remove_item_from_inventory(round_id, player_id, item_name)
 			_log_debug("[ITEM]📦 Itens equipados no player: %s" % str(player_registry.get_equipped_items(round_id, player_id)))
 			
-			# ✅ CORRIGIDO: ObjectManager cuida de spawnar E enviar RPC
+			# ObjectManager cuida de spawnar E enviar RPC
 			# Não precisa chamar NetworkManager diretamente
 			object_manager.spawn_item_in_front_of_player(round_id, player_id, item_name)
+			
+			# Atualiza o inventário do player
+			player_registry.drop_item(round_id, player_id, item_name)
 			
 			# Aplica na cena do servidor (atualizar visual)
 			var player_node = get_tree().root.get_node_or_null(str(player_id))
@@ -1216,12 +1224,12 @@ func drop_item(round_id, player_id, item_id):
 			for peer_id in multiplayer.get_peers():
 				if _is_peer_connected(peer_id) and peer_id in players_ids_round:
 					NetworkManager.rpc_id(peer_id, "server_apply_drop_item", player_id, first_item['name'])
-			
 		else:
 			_log_debug("[ITEM]📦 Não tem item no inventário do player")
 	else:
 		var item_data = ItemDatabase.get_item_by_id(item_id)
 		if item_data:
+			player_registry.drop_item(round_id, player_id, item_data.name)
 			object_manager.spawn_item_in_front_of_player(round_id, player_id, item_data.name)
 
 # ===== UTILITÁRIOS =====
