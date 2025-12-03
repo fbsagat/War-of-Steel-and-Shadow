@@ -415,6 +415,7 @@ func show_room_menu(room_data: Dictionary):
 	_update_room_display(room_data)
 
 func show_loading_menu(message: String = "Carregando..."):
+	get_node("CanvasLayer").show()
 	previous_menu = get_current_visible_menu()
 	hide_all_menus()
 	loading_menu.visible = true

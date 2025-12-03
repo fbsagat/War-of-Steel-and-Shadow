@@ -38,6 +38,16 @@ var client_map_manager: Node = null
 var local_player: Node = null
 var is_in_round: bool = false
 
+# ===== VARIÁVEIS DE RECONEXÃO =====
+var reconnect_attempts: int = 0
+var max_reconnect_attempts: int = 5  # Tentativas máximas antes do reset
+var reconnect_delay: float = 2.0    # Segundos entre tentativas
+var reconnect_start_time: float = 0.0
+var max_reconnect_duration: float = 15.0  # Tempo máximo total para reconexão
+var is_reconnecting: bool = false
+var reconnect_timer: Timer = null
+var is_disconnecting_intentionally = false
+
 # ===== SINAIS =====
 
 signal connected_to_server()
@@ -63,6 +73,12 @@ func _ready():	# Verifica se é servidor
 	if _is_server:
 		_log_debug("Servidor - NÃO inicializando GameManager")
 		return
+	# Configuração do timer de reconexão (só para clientes)
+	if not _is_server:
+		reconnect_timer = Timer.new()
+		add_child(reconnect_timer)
+		reconnect_timer.one_shot = true
+		reconnect_timer.timeout.connect(_attempt_reconnection)
 		
 	_log_debug("Inicializando GameManager como cliente")
 	
@@ -79,6 +95,11 @@ func _process(_delta):
 			_log_debug("Timeout de conexão excedido")
 			is_connecting = false
 			_handle_connection_error("Tempo de conexão esgotado")
+			
+	# Interrompe reconexão se usuário cancelar
+	if is_reconnecting and Input.is_action_just_pressed("ui_cancel"):
+		_reset_client_state()
+		is_reconnecting = false
 
 # ===== CONEXÃO COM O SERVIDOR =====
 
@@ -113,6 +134,9 @@ func connect_to_server():
 
 func disconnect_from_server():
 	"""Desconecta do servidor"""
+	# Marca desconexão intencional
+	is_disconnecting_intentionally = true
+	
 	if multiplayer.multiplayer_peer:
 		_log_debug("Desconectando do servidor...")
 		multiplayer.multiplayer_peer.close()
@@ -149,34 +173,118 @@ func _on_connected_to_server():
 	connected_to_server.emit()
 
 func _on_connection_failed():
-	"""Callback quando falha ao conectar"""
 	is_connecting = false
 	_log_debug("Falha ao conectar ao servidor")
-	_handle_connection_error("Não foi possível conectar ao servidor")
+	
+	# Não mostra erro durante reconexão automática
+	if not is_reconnecting:
+		_handle_connection_error("Não foi possível conectar ao servidor")
 
 func _on_server_disconnected():
-	"""Callback quando o servidor desconecta"""
 	_log_debug("Desconectado do servidor")
-	# limpa imediatamente para evitar leituras inválidas
 	cached_unique_id = 0
-	
 	is_connected_to_server = false
 	local_peer_id = 0
 	current_room = {}
 	player_name = ""
 	is_in_round = false
-	
+
+	# Verifica se foi desconexão intencional
+	if is_disconnecting_intentionally:
+		is_disconnecting_intentionally = false
+		if main_menu:
+			main_menu.show_connecting_menu()
+			main_menu.show_error_connecting("Desconectado manualmente.")
+		disconnected_from_server.emit()
+		return
+
+	# Inicia processo de reconexão
 	if main_menu:
 		main_menu.show_connecting_menu()
 		main_menu.show_error_connecting("Conexão perdida. Tentando reconectar...")
 	
 	disconnected_from_server.emit()
+	_start_reconnection_process()
 	
-	# Tenta reconectar após 3 segundos
-	await get_tree().create_timer(3.0).timeout
-	if not is_connected_to_server:
-		connect_to_server()
-		
+func _start_reconnection_process():
+	# Reseta contadores de reconexão
+	reconnect_attempts = 0
+	reconnect_start_time = Time.get_ticks_msec() / 1000.0
+	is_reconnecting = true
+	
+	_log_debug("Iniciando processo de reconexão")
+	_attempt_reconnection()
+
+func _attempt_reconnection():
+	# Verifica limite de tempo total
+	# Adicionar um botão "Cancelar" nesta tela de reconexão?
+	
+	var current_time = Time.get_ticks_msec() / 1000.0
+	if (current_time - reconnect_start_time) > max_reconnect_duration:
+		_log_debug("Limite de tempo de reconexão excedido. Resetando estado.")
+		_reset_client_state()
+		return
+
+	# Verifica limite de tentativas
+	if reconnect_attempts >= max_reconnect_attempts:
+		_log_debug("Máximo de tentativas de reconexão excedido. Resetando estado.")
+		_reset_client_state()
+		return
+
+	reconnect_attempts += 1
+	_log_debug("Tentativa de reconexão #%d" % reconnect_attempts)
+	
+	if main_menu:
+		main_menu.show_loading_menu("Tentando reconectar (%d/%d)..." % [reconnect_attempts, max_reconnect_attempts])
+	
+	connect_to_server()
+	
+	# Agenda próxima tentativa se falhar
+	await get_tree().create_timer(connection_timeout + 0.5).timeout
+	if not is_connected_to_server and is_reconnecting:
+		reconnect_timer.start(reconnect_delay)
+
+func _reset_client_state():
+	# Interrompe processos de reconexão
+	is_reconnecting = false
+	if reconnect_timer:
+		reconnect_timer.stop()
+	
+	# Limpa todos os objetos spawnados
+	for round_id in spawned_objects.keys():
+		for object_data in spawned_objects[round_id].values():
+			if object_data.node and object_data.node.is_inside_tree():
+				object_data.node.queue_free()
+	spawned_objects.clear()
+	
+	# Reset completo do estado
+	is_connected_to_server = false
+	is_connecting = false
+	local_peer_id = 0
+	player_name = ""
+	configs = {}
+	current_room = {}
+	current_round = {}
+	client_map_manager = null
+	local_player = null
+	is_in_round = false
+	reconnect_attempts = 0
+	
+	# Limpa referências persistentes
+	current_room = {}
+	current_round = {}
+	
+	# Volta para tela inicial de conexão
+	if main_menu:
+		main_menu.show_loading_menu("Conectando ao servidor...")
+	
+	# Tenta nova conexão após pequeno delay
+	await get_tree().create_timer(1.0).timeout
+	reconnect_start_time = Time.get_ticks_msec() / 1000.0
+	connect_to_server()
+	
+	
+
 func _handle_connection_error(message: String):
 	"""Trata erro de conexão"""
 	if main_menu:
@@ -587,7 +695,6 @@ func _client_return_to_room(room_data: Dictionary):
 	# Volta para o menu da sala
 	if main_menu:
 		main_menu.show()
-		main_menu.get_node("CanvasLayer").show()
 		main_menu.show_room_menu(room_data)
 	
 	returned_to_room.emit(room_data)

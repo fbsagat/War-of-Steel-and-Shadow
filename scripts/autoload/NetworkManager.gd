@@ -79,7 +79,7 @@ func _on_server_disconnected():
 	"""Callback quando desconecta do servidor"""
 	is_connected_ = false
 	
-	# FUTURAMENTE: Resetar tudo e jogar pro menu de espera de conexão com o servidor
+	# Futuramente: Resetar tudo e jogar pro menu de espera de conexão com o servidor
 	
 	_log_debug("❌ Conexão de rede perdida")
 
