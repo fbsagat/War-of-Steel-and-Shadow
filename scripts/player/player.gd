@@ -1215,11 +1215,12 @@ func handle_test_equip_inputs_call():
 		if NetworkManager and NetworkManager.is_connected:
 			NetworkManager.request_equip_item(player_id, mapped_id, true)
 	
-func apply_visual_equip_on_player_node(player_node, item_mapped_id, from_test):
-	if not from_test:
-		animation_tree.set("PickUp", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+func apply_visual_equip_on_player_node(player_node, item_mapped_id):
+	
+	animation_tree.set("PickUp", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 	
 	var item_node_link = ItemDatabase.get_item_by_id(item_mapped_id).model_node_link
+	
 	_item_model_change_visibility(player_node, item_node_link)
 
 # Ações do player (Pegar item)
@@ -1239,6 +1240,13 @@ func action_pick_up_item_call():
 	_log_debug("Player %d pediu para pegar o item %d" % [player_id, object.object_id])
 	if NetworkManager and NetworkManager.is_connected and object:
 		NetworkManager.request_pick_up_item(player_id, object.object_id)
+		
+func action_pick_up_item():
+	#_execute_animation("Interact", "parameters/Interact/transition_request", "parameters/Interact_shot/request")
+	_execute_animation("PickUp", "parameters/PickUp/transition_request", "parameters/Pickup_shot/request")
+	
+	#animation_tree.set("PickUp", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+	
 		
 # Ações do player (Dropar item) *por enquanto dropa tudo sequencialmente
 func action_drop_item_call() -> void:

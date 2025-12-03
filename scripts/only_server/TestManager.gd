@@ -114,7 +114,7 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 				player_registry.add_peer(peer_id)
 			
 			# Registra com nome padrão
-			var player_name = "TestPlayer%d" % (i + 1)
+			var player_name = "TestPlayer%d - %d" % [i + 1, peer_id]
 			var success = player_registry.register_player(peer_id, player_name)
 			
 			if not success:

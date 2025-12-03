@@ -1105,19 +1105,22 @@ func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 		player_registry.equip_item(round_["round_id"], player["id"], item["name"])
 		
 		# Aplica nas cenas dos clientes para o player requerente
-		NetworkManager.rpc_id(requesting_player_id, "server_apply_picked_up_item", player["id"], item["id"])
+		for peer_id in multiplayer.get_peers():
+			if _is_peer_connected(peer_id):
+				print("[222]: ", item["id"])
+				NetworkManager.rpc_id(peer_id, "server_apply_equiped_item", requesting_player_id, item["id"])
+				NetworkManager.rpc_id(peer_id, "server_apply_picked_up_item", requesting_player_id)
 		
 		# Aplica na cena do servidor (atualizar visual)
 		if player_node and player_node.has_method("apply_visual_equip_on_player_node"):
-			player_node.apply_visual_equip_on_player_node(player_node, item["id"], false)
+			player_node.apply_visual_equip_on_player_node(player_node, item["id"])
+			player_node.action_pick_up_item()
 		
 		# Despawn do objeto no mapa dos clientes
 		_rpc_despawn_on_clients(round_players, round_["round_id"], object_id)
 		
 		# Despawn do objeto no mapa do servidor
 		var item_node = object.get("node")
-	
-		# Remove da cena
 		if item_node and is_instance_valid(item_node) and item_node.is_inside_tree():
 			item_node.queue_free()
 			_log_debug("Node removido da cena")
@@ -1161,15 +1164,19 @@ func _server_validate_equip_item(requesting_player_id: int, item_id: int, from_t
 	_log_debug("[ITEM]📦 Item equipado validado: Player %d equipou item %d" % [requesting_player_id, item_id])
 	_log_debug("[ITEM]📦 Itens equipados no player: %s" % str(player_registry.get_equipped_items(round_["round_id"], player['id'])))
 	
-	# Envia para todos os clientes (para atualizar visual)
+	# Envia para todos os clientes do round (para atualizar visual)
+	
+	# FALTA APLICAR À APENAS O PLAYERS DO ROUND REFERENTE \/\/\/
+
 	for peer_id in multiplayer.get_peers():
 		if _is_peer_connected(peer_id):
-			NetworkManager.rpc_id(peer_id, "server_apply_equiped_item", requesting_player_id, item_id, from_test)
+			print("[222]: ", item_id)
+			NetworkManager.rpc_id(peer_id, "server_apply_equiped_item", requesting_player_id, item_id)
 	
 	# Aplica na cena do servidor (atualizar visual)
 	var player_node = get_tree().root.get_node_or_null(str(requesting_player_id))
 	if player_node and player_node.has_method("apply_visual_equip_on_player_node"):
-			player_node.apply_visual_equip_on_player_node(player_node, item_id, from_test)
+			player_node.apply_visual_equip_on_player_node(player_node, item_id)
 			
 @rpc("any_peer", "call_remote", "reliable")
 func _server_validate_drop_item(requesting_player_id: int, item_id: int):

@@ -28,6 +28,7 @@ var current_round: Dictionary = {}
 var connection_start_time: float = 0.0
 var is_connecting: bool = false
 var _is_server: bool = false
+var cached_unique_id: int = 0
 ## Objetos spawnados organizados por rodada
 ## {round_id: {object_id: {node: Node, item_name: String, owner_id: int}}}
 var spawned_objects: Dictionary = {}
@@ -130,6 +131,12 @@ func disconnect_from_server():
 
 func _on_connected_to_server():
 	"""Callback quando conecta com sucesso ao servidor"""
+	# Só leia get_unique_id() quando o peer estiver ativo
+	if has_network():
+		# garante que o peer foi realmente configurado
+		if multiplayer.has_multiplayer_peer():
+			cached_unique_id = multiplayer.get_unique_id()
+	
 	is_connecting = false
 	is_connected_to_server = true
 	local_peer_id = multiplayer.get_unique_id()
@@ -150,6 +157,9 @@ func _on_connection_failed():
 func _on_server_disconnected():
 	"""Callback quando o servidor desconecta"""
 	_log_debug("Desconectado do servidor")
+	# limpa imediatamente para evitar leituras inválidas
+	cached_unique_id = 0
+	
 	is_connected_to_server = false
 	local_peer_id = 0
 	current_room = {}
@@ -796,9 +806,15 @@ func has_network() -> bool:
 	return multiplayer != null and multiplayer.has_multiplayer_peer()
 
 func _log_debug(message: String):
-	if debug_mode:
-		var unique_id = 0
-		if has_network:
-			if is_connected_to_server:
-				unique_id = multiplayer.get_unique_id()
-		print("[CLIENT][GameManager]ClientID: %s: Message: %s" % [unique_id, message])
+	if not debug_mode:
+		return
+
+	var unique_id := cached_unique_id
+
+	# Se não temos cache, só então tentamos atualizar — e apenas se for seguro
+	if unique_id == 0 and has_network() and multiplayer.has_multiplayer_peer():
+		# aqui a chamada é segura porque verificamos has_multiplayer_peer()
+		unique_id = multiplayer.get_unique_id()
+		cached_unique_id = unique_id
+
+	print("[CLIENT][GameManager]ClientID: %s: Message: %s" % [unique_id, message])

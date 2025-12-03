@@ -83,7 +83,10 @@ func _on_connection_failed():
 func _process(delta: float):
 	if _is_server:
 		_server_update_sync_timers(delta)
-	elif !multiplayer.is_server():  # cliente
+		return
+
+	# cliente seguro
+	if multiplayer.has_multiplayer_peer() and !multiplayer.is_server():
 		_client_interpolate_all(delta)
 
 # ===== REGISTRO DE JOGADOR =====
@@ -510,14 +513,14 @@ func _server_drop_player_item(player_id, item_id):
 	ServerManager._server_validate_drop_item(player_id, item_id)
 
 @rpc("authority", "call_remote", "reliable")
-func server_apply_picked_up_item(player_id, change_data):
-	# Encontra o player e executa a mudança de item equipado
+func server_apply_picked_up_item(player_id):
+	# Encontra o player e executa a mudança de item pego
 	var player_node = get_tree().root.get_node_or_null(str(player_id))
-	if player_node and player_node.has_method("apply_visual_equip_on_player_node"):
-		player_node.apply_visual_equip_on_player_node(player_node, change_data, false)
+	if player_node and player_node.has_method("action_pick_up_item"):
+		player_node.action_pick_up_item()
 
 @rpc("authority", "call_remote", "reliable")
-func server_apply_equiped_item(player_id: int, change_data: int, from_test):
+func server_apply_equiped_item(player_id: int, change_data: int):
 	"""Cliente recebe comando de equipamento"""
 	
 	if multiplayer.is_server():
@@ -526,7 +529,7 @@ func server_apply_equiped_item(player_id: int, change_data: int, from_test):
 	# Encontra o player e executa a mudança de item equipado
 	var player_node = get_tree().root.get_node_or_null(str(player_id))
 	if player_node and player_node.has_method("apply_visual_equip_on_player_node"):
-		player_node.apply_visual_equip_on_player_node(player_node, change_data, from_test)
+		player_node.apply_visual_equip_on_player_node(player_node, change_data)
 
 @rpc("authority", "call_remote", "reliable")
 func server_apply_drop_item(player_id: int, item: String):
