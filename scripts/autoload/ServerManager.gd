@@ -1105,11 +1105,11 @@ func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 		player_registry.equip_item(round_["round_id"], player["id"], item["name"])
 		
 		# Aplica nas cenas dos clientes para o player requerente
-		for peer_id in multiplayer.get_peers():
+		for peer in round_["players"]:
+			var peer_id = peer["id"]
 			if _is_peer_connected(peer_id):
-				print("[222]: ", item["id"])
-				NetworkManager.rpc_id(peer_id, "server_apply_equiped_item", requesting_player_id, item["id"])
-				NetworkManager.rpc_id(peer_id, "server_apply_picked_up_item", requesting_player_id)
+					NetworkManager.rpc_id(peer_id, "server_apply_equiped_item", requesting_player_id, item["id"])
+					NetworkManager.rpc_id(peer_id, "server_apply_picked_up_item", requesting_player_id)
 		
 		# Aplica na cena do servidor (atualizar visual)
 		if player_node and player_node.has_method("apply_visual_equip_on_player_node"):
@@ -1166,11 +1166,9 @@ func _server_validate_equip_item(requesting_player_id: int, item_id: int, from_t
 	
 	# Envia para todos os clientes do round (para atualizar visual)
 	
-	# FALTA APLICAR À APENAS O PLAYERS DO ROUND REFERENTE \/\/\/
-
-	for peer_id in multiplayer.get_peers():
+	for peer in round_["players"]:
+		var peer_id = peer["id"]
 		if _is_peer_connected(peer_id):
-			print("[222]: ", item_id)
 			NetworkManager.rpc_id(peer_id, "server_apply_equiped_item", requesting_player_id, item_id)
 	
 	# Aplica na cena do servidor (atualizar visual)
