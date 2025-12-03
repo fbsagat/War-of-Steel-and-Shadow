@@ -243,7 +243,7 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 	object_manager.spawn_item(round_data["round_id"], "torch", Vector3(0, 2, 0), Vector3(0, 0, 0))
 	object_manager.spawn_item(round_data["round_id"], "torch", Vector3(0, 4, 0), Vector3(0, 0, 0))
 	
-	# Atualiza lista de salas
+	# PASSO 12: Atualiza lista de salas para os players no menu
 	ServerManager._send_rooms_list_to_all()
 	
 	_log_debug("========================================")

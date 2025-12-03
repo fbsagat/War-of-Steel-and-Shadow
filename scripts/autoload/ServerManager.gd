@@ -207,6 +207,8 @@ func _on_peer_connected(peer_id: int):
 		"max_players_per_room": max_players_per_room,
 		"min_players_to_start": min_players_to_start,
 	}
+	
+	# Atualiza max_players_per_room e min_players_to_start para clientes
 	NetworkManager.rpc_id(peer_id, "update_client_info", configs)
 	
 	# Sistema de teste automático (se ativado)
@@ -1102,7 +1104,7 @@ func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 		player_registry.add_item_to_inventory(round_["round_id"], player["id"], item["name"])
 		player_registry.equip_item(round_["round_id"], player["id"], item["name"])
 		
-		# Aplica nas cebas dos clientes para o player requerente
+		# Aplica nas cenas dos clientes para o player requerente
 		NetworkManager.rpc_id(requesting_player_id, "server_apply_picked_up_item", player["id"], item["id"])
 		
 		# Aplica na cena do servidor (atualizar visual)

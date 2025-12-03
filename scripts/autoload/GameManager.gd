@@ -166,7 +166,7 @@ func _on_server_disconnected():
 	await get_tree().create_timer(3.0).timeout
 	if not is_connected_to_server:
 		connect_to_server()
-
+		
 func _handle_connection_error(message: String):
 	"""Trata erro de conexão"""
 	if main_menu:
@@ -174,13 +174,13 @@ func _handle_connection_error(message: String):
 		main_menu.show_error_connecting(message)
 	
 	connection_failed.emit(message)
-
+	
 func update_client_info(info: Dictionary):
 	_log_debug("Atualizando configurações do servidor:")
-
+	
 	for key in info.keys():
 		var new_value = info[key]
-
+		
 		# Se não existe ou se mudou, atualiza
 		if not configs.has(key) or configs[key] != new_value:
 			configs[key] = new_value
@@ -497,6 +497,11 @@ func _start_round_locally(match_data: Dictionary):
 	
 	round_started.emit()
 	
+	# Filtrar uns itens e deixar numa variável(current_round) para uso durante a partida
+	# Modifique em filtrar_dict_invertido a lista de itens que devem retornar do dicionário match_data
+	var filtered_round_data = filtrar_dict_invertido(match_data)
+	current_round = filtered_round_data
+	
 	_log_debug("Rodada carregada no cliente")
 
 func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bool, _match_data: Dictionary):
@@ -563,6 +568,7 @@ func _client_return_to_room(room_data: Dictionary):
 	_log_debug("========================================")
 	
 	current_room = room_data
+	current_round = {}
 	is_in_round = false
 	
 	# Garante que tudo foi limpo
@@ -772,6 +778,14 @@ func _calculate_drop_impulse(player_rot: Vector3) -> Vector3:
 	return impulse
 
 # ===== UTILITÁRIOS =====
+
+func filtrar_dict_invertido(original: Dictionary) -> Dictionary:
+	var comando: Array = ["round_id", "room_id", "room_name", "players"]
+	var copia := original.duplicate(true)  # cópia profunda
+	for chave in copia.keys():
+		if not comando.has(chave):
+			copia.erase(chave)
+	return copia
 
 func set_main_menu(menu: Control):
 	"""Registra referência do menu principal"""

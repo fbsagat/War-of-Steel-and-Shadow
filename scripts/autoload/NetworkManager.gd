@@ -15,10 +15,6 @@ var room_registry: RoomRegistry = null
 var round_registry: RoundRegistry = null
 var object_manager: ObjectManager = null
 
-## Objetos spawnados no cliente, organizados por object_id
-## Estrutura: {object_id: Node}
-var client_spawned_objects: Dictionary = {}
-
 ## Referência ao ItemDatabase (autoload)
 var item_database = null
 

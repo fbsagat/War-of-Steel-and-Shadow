@@ -1,6 +1,7 @@
 extends CharacterBody3D
 
-# Configs
+# ===== CONFIGURAÇÕES GERAIS =====
+
 @export_category("Debug")
 @export var debug: bool = true
 
@@ -17,7 +18,6 @@ extends CharacterBody3D
 @export var air_friction: float = 0.01
 @export var preserve_run_on_jump: bool = true
 @export var gravity: float = 20.0
-@export var enemy_tracking_turn_speed: float = 2.0
 @export var aiming_jump_multiplyer: float = 4.2
 
 @export_category("Player actions")
@@ -35,7 +35,7 @@ extends CharacterBody3D
 @export var use_360_vision_as_backup: bool = true # Ativa a visão 360° como fallback
 @export var update_interval: float = 0.5 # atualização a cada X segundos (0 = cada frame)
 
-# ===== CONFIGURAÇÕES DE REDE (no topo do arquivo) =====
+# ===== CONFIGURAÇÕES DE REDE =====
 
 @export_category("Network Sync")
 @export var sync_rate: float = 0.03 # 33 updates/segundo (melhor que 0.05)
@@ -43,6 +43,12 @@ extends CharacterBody3D
 @export var position_threshold: float = 0.01 # Distância mínima para sincronizar
 @export var rotation_threshold: float = 0.01 # Rotação mínima para sincronizar
 @export var anim_sync_rate: float = 0.1  # 10 updates/segundo (menos que posição)
+
+# referências
+@onready var animation_player: AnimationPlayer = $AnimationPlayer
+@onready var animation_tree: AnimationTree = $AnimationTree
+@onready var attack_timer: Timer = $attack_timer
+@onready var name_label: Label3D = $NameLabel
 
 # Estados de sincronização
 var target_position: Vector3 = Vector3.ZERO
@@ -57,11 +63,6 @@ var last_anim_state: Dictionary = {}
 var player_id: int = 0
 var player_name: String = ""
 var is_local_player: bool = false
-
-# Sincronização multiplayer
-var last_update_time: float = 0.0
-var anim_speed: float = 0.0
-var anim_blend_position: float = 0.0
 
 # Estados
 var is_attacking: bool = false
@@ -80,21 +81,13 @@ var nearest_enemy: CharacterBody3D = null
 var _detection_timer: Timer = null
 var last_simple_directions: Array = []
 var is_block_attacking: bool = false
-var sword_areas: Array[Area3D] = []
 var local_inventory: Dictionary = {} # Inventário(de itens e equipamentos) local do player.
 const MAX_DIRECTION_HISTORY = 2
-
-# referências
-@onready var animation_player: AnimationPlayer = $AnimationPlayer
-@onready var animation_tree: AnimationTree = $AnimationTree
-@onready var attack_timer: Timer = $attack_timer
-@onready var name_label: Label3D = $NameLabel
 
 # Dinâmicas
 var model: Node3D = null
 var skeleton: Skeleton3D = null
 var camera_controller: Node3D
-var damaged_entities = []
 var aiming_forward_direction: Vector3 = Vector3.FORWARD
 var defense_target_angle: float = 0.0
 var _item_data: Array[Dictionary] = [] # Futuramente substituir pelo ItemDatabase
@@ -133,7 +126,8 @@ func _physics_process(delta: float) -> void:
 	# ✅ Verificação de segurança
 	var has_network = multiplayer and multiplayer.has_multiplayer_peer()
 	
-	# === PROCESSAMENTO DE MOVIMENTO ===
+	# Processamento de movimento
+	# Servidor não processa movimento aqui (definido por RPC)
 	if is_local_player:
 		# Jogador controlado pelo usuário
 		move_dir = _handle_movement_input(delta)
@@ -152,9 +146,7 @@ func _physics_process(delta: float) -> void:
 			# Jogador remoto no cliente
 			_interpolate_remote_player(delta)
 	
-	# Servidor não processa movimento aqui (definido por RPC)
-	
-	# === ANIMAÇÕES (sempre) ===
+	# Animações (sempre server/client)
 	_handle_animations(move_dir)
 		
 func _process(delta: float) -> void:
@@ -220,14 +212,14 @@ func _load_item_data():
 			push_error("Erro ao fazer parse do model_map.json: " + str(json.get_error_line()))
 	else:
 		push_error("Não foi possível abrir item_database.json")
-
+		
 # 1.1. Retorna o item completo pelo ID
 func _get_item_by_id(p_id: int) -> Dictionary:
 	for item in _item_data:  # Corrigido: _item_data
 		if item.has("id") and item["id"] == p_id:
 			return item.duplicate()
 	return {}
-
+	
 # 1.2. Retorna uma lista de IDs com base em um filtro
 func _get_item_ids_by_filter(p_key: String, p_value) -> Array[int]:
 	var ids: Array[int] = []
@@ -235,19 +227,19 @@ func _get_item_ids_by_filter(p_key: String, p_value) -> Array[int]:
 		if item.has(p_key) and item[p_key] == p_value:
 			ids.append(item["id"])
 	return ids
-
+	
 # 1.3. Retorna o Node referenciado por ID
 func _get_node_by_id(p_id: int) -> Node:
 	var item = _get_item_by_id(p_id)
 	if item.is_empty():
 		push_error("Item com ID %d não encontrado." % p_id)
 		return null
-
+		
 	var node_path = item["node_link"]
 	if node_path.is_empty():
 		push_error("node_link vazio para ID %d." % p_id)
 		return null
-
+		
 	var current_scene = $"."
 	if current_scene:
 		var node = current_scene.get_node_or_null(node_path)
@@ -259,14 +251,14 @@ func _get_node_by_id(p_id: int) -> Node:
 	else:
 		push_error("Cena atual não disponível.")
 		return null
-
+		
 # 1.4. Retorna todos os itens IDs do player
 func _get_all_item_ids():
 	var ids: Array[int] = []
 	for item in _item_data:
 		ids.append(item["id"])
 	return ids
-
+	
 # 1.5. Retorna todos os nodes do player
 func _get_all_item_nodes(list: Array = []) -> Array:
 	var nodes: Array = []
@@ -286,7 +278,7 @@ func _get_all_item_nodes(list: Array = []) -> Array:
 			push_warning("Nó não encontrado para ID: %s" % str(id))
 	
 	return nodes
-
+	
 # 1.6. Retorna o item_name correspondente a um ID (ou lista de IDs)
 func _get_item_name_by_id(p_id) -> Variant:
 	# caso único: ID individual
@@ -296,7 +288,7 @@ func _get_item_name_by_id(p_id) -> Variant:
 				return item.get("item_name", "")
 		push_error("get_item_name_by_id: ID %d não encontrado." % p_id)
 		return null
-
+		
 	# caso lista: retornar lista de nomes
 	if typeof(p_id) == TYPE_ARRAY:
 		var names: Array = []
@@ -319,13 +311,13 @@ func _get_item_name_by_id(p_id) -> Variant:
 	# tipo inválido
 	push_error("get_item_name_by_id: tipo inválido para p_id: %s (esperado int ou Array)" % str(typeof(p_id)))
 	return null
-
+	
 # 1.6. Retorna o Id pelo node
 func _get_id_by_node(p_node: Node) -> int:
 	if p_node == null:
 		push_error("Node fornecido é nulo.")
 		return -1  # retorna -1 para indicar "não encontrado"
-
+		
 	for item in _item_data:
 		if item.has("node_link"):
 			var node_path = item["node_link"]
@@ -341,7 +333,7 @@ func _get_id_by_node(p_node: Node) -> int:
 	# Se nenhum item corresponde ao node
 	push_error("Nenhum item corresponde ao Node fornecido: %s" % p_node.name)
 	return -1
-
+	
 # Retorna item mais próximos do player
 func get_nearby_items(
 	radius: float = pickup_radius,
@@ -386,8 +378,8 @@ func get_nearby_items(
 		
 		# Verifica se é item (qualquer um desses critérios)
 		if body.is_in_group("item") or \
-		   body.has_method("collect") or \
-		   "item_name" in body:
+			body.has_method("collect") or \
+			"item_name" in body:
 			items.append(body)
 	
 	# Ordena por distância (opcional)
@@ -399,7 +391,7 @@ func get_nearby_items(
 		)
 	
 	return items
-
+	
 # Funções da câmera livre
 func _get_movement_direction_free_cam() -> Vector3:
 	var camera := camera_controller
@@ -423,8 +415,8 @@ func _get_movement_direction_locked() -> Vector3:
 	var input_vec := Input.get_vector("move_left", "move_right", "move_forward", "move_backward")
 	if input_vec.length() <= 0.1:
 		return Vector3.ZERO
-
-	# Usa a FRENTE ATUAL DO CORPO (não aiming_forward_direction)
+		
+	# Usa a frente atual do corpo
 	var forward = Vector3(-global_transform.basis.z.x, 0, -global_transform.basis.z.z).normalized()
 	var right = Vector3.UP.cross(forward).normalized()
 
@@ -444,6 +436,7 @@ func enemy_detection_timer():
 		# Atualiza a cada frame via _process/_physics_process
 		pass
 
+# Detectar inimigo mais próximo
 func get_nearest_enemy() -> CharacterBody3D:
 	var space_state = get_world_3d().direct_space_state
 	var closest_in_fov: CharacterBody3D = null
@@ -467,7 +460,7 @@ func get_nearest_enemy() -> CharacterBody3D:
 		var to_enemy = enemy_pos - player_pos
 		var dist_sq = to_enemy.length_squared()
 
-		# --- Verificação de linha de visão (raycast) ---
+		# Verificação de linha de visão (raycast)
 		var query = PhysicsRayQueryParameters3D.new()
 		query.from = player_pos
 		query.to = enemy_pos
@@ -478,7 +471,7 @@ func get_nearest_enemy() -> CharacterBody3D:
 		if result and result.collider != enemy:
 			continue  # Obstáculo bloqueando
 
-		# --- Verificação para FOV ---
+		# Verificação para FOV
 		var in_fov = false
 		if field_of_view_degrees >= 360.0:
 			in_fov = true
@@ -488,7 +481,7 @@ func get_nearest_enemy() -> CharacterBody3D:
 				var angle_to_enemy = player_forward.angle_to(to_enemy_flat)
 				if angle_to_enemy <= deg_to_rad(field_of_view_degrees / 2.0):
 					in_fov = true
-
+					
 		# --- Atualiza candidato no FOV (se dentro do raio FOV) ---
 		if in_fov and dist_sq <= detection_radius_fov * detection_radius_fov:
 			if dist_sq < closest_in_fov_dist_sq:
@@ -500,23 +493,23 @@ func get_nearest_enemy() -> CharacterBody3D:
 			if dist_sq < closest_in_360_dist_sq:
 				closest_in_360_dist_sq = dist_sq
 				closest_in_360 = enemy
-
+				
 	# --- Prioridade: FOV primeiro ---
 	if closest_in_fov != null:
 		_log_debug("Inimigo mais próximo (FOV): %s" % closest_in_fov)
 		return closest_in_fov
-
+		
 	# --- Fallback: 360° (se ativado e dentro do raio menor) ---
 	if use_360_vision_as_backup and closest_in_360 != null:
 		_log_debug("Inimigo mais próximo (360° fallback): %s" % closest_in_360)
 		return closest_in_360
-
+		
 	_log_debug("Nenhum inimigo detectado.")
 	return null
-
+	
 func _update_nearest_enemy() -> void:
 	nearest_enemy = get_nearest_enemy()
-
+	
 func _on_node_visibility_changed() -> void:
 	cair = true
 	
@@ -529,7 +522,7 @@ func _handle_gravity(delta: float) -> void:
 			velocity.y = 0
 		if is_jumping:
 			is_jumping = false
-
+			
 # Animações
 func _handle_animations(move_dir):
 	var speed = Vector2(velocity.x, velocity.z).length()
@@ -556,14 +549,14 @@ func _handle_movement_input(delta: float):
 		move_dir = _get_movement_direction_free_cam()
 	_apply_movement(move_dir, delta)
 	return move_dir
-
+	
 # Movimentos para a função de escoher o movimento da espada
 func _get_current_direction() -> String:
 	var f = Input.is_action_pressed("move_forward")
 	var b = Input.is_action_pressed("move_backward")
 	var l = Input.is_action_pressed("move_left")
 	var r = Input.is_action_pressed("move_right")
-
+	
 	# Diagonais têm prioridade
 	if f and r: return "forward_right"
 	if f and l: return "forward_left"
@@ -574,10 +567,10 @@ func _get_current_direction() -> String:
 	if l: return "left"
 	if r: return "right"
 	return ""
-
+	
 # movimentos: Pulo e corrida
 func _apply_movement(move_dir: Vector3, delta: float) -> void:
-	# === PULO: preserva velocidade horizontal EXATA do chão ===
+	# Pulo: Preserva velocidade horizontal EXATA do chão
 	if not is_aiming:
 		if Input.is_action_just_pressed("jump") and is_on_floor():
 			velocity.y = jump_velocity
@@ -594,8 +587,8 @@ func _apply_movement(move_dir: Vector3, delta: float) -> void:
 			
 			_log_debug("Pulando com velocidade XZ: (%.2f, %.2f)" % [velocity.x, velocity.z])
 			
-			return  # ←←← PRESERVA a velocidade; não recalcula movimento neste frame
-
+			return
+			
 		elif is_on_floor():
 			is_jumping = false
 			run_on_jump = false
@@ -607,7 +600,7 @@ func _apply_movement(move_dir: Vector3, delta: float) -> void:
 			velocity.y = jump_velocity / 2.2
 			is_jumping = true
 		
-	# === MOVIMENTO NO CHÃO ===
+	# Movimento no chão
 	if is_on_floor():
 		var speed: float = max_speed
 		if Input.is_action_pressed("run") and not is_aiming:
@@ -626,13 +619,13 @@ func _apply_movement(move_dir: Vector3, delta: float) -> void:
 		else:
 			velocity.x = lerp(velocity.x, 0.0, deceleration * delta)
 			velocity.z = lerp(velocity.z, 0.0, deceleration * delta)
-
-	# === MOVIMENTO NO AR (após o frame do pulo) ===
+			
+	# Movimento no ar (após o frame do pulo)
 	else:
 		# 1. Aplica atrito no ar (desaceleração suave)
 		velocity.x = lerp(velocity.x, 0.0, air_friction)
 		velocity.z = lerp(velocity.z, 0.0, air_friction)
-
+		
 		# 2. Aplica controle aéreo (se houver input)
 		if move_dir.length() > 0.1 and air_control > 0.0:
 			var air_speed = max_speed * air_control
@@ -670,7 +663,7 @@ func _strafe_mode(ativar: bool = true, com_camera_lock = true):
 		is_aiming = false
 		if camera_controller and camera_controller.has_method("release_to_free_look"):
 			camera_controller.release_to_free_look()
-
+			
 func _unhandled_input(event: InputEvent) -> void:
 	if is_local_player:
 		if event.is_action_pressed("ui_cancel"):
@@ -687,7 +680,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			action_block_attack()
 		elif event.is_action_pressed("drop"):
 			action_drop_item_call()
-
+			
 # Mouse
 func _toggle_mouse_mode():
 	mouse_mode = not mouse_mode
@@ -701,76 +694,7 @@ func _hide_all_model_items():
 		if item.owner:
 			var target = get_node_or_null(item.model_node_link)
 			target.visible = false
-	
-# Dropar item na frente do player (visual apenas, modelo do item / chamado por action_drop_item)
-# função antiga, apagar depois
-#func _item_drop(item_ids: Array) -> Array:
-	#var dropped: Array = []
-	#if typeof(item_ids) != TYPE_ARRAY:
-		#push_error("item_drop: esperado Array para item_ids.")
-		#return dropped
-	#
-	#for id in item_ids:
-		#var item_name = _get_item_name_by_id(id)
-		#if not item_name:
-			#push_warning("_item_drop: nome do item não fornecido para ID %s. Pulei." % str(id))
-			#dropped.append(null)
-			#continue
-		#
-		## Obtém cena PRÉ-CARREGADA do ItemDatabase
-		#var item_scene = ItemDatabase.get_item_scene(item_name)
-		#if not item_scene:
-			#push_error("_item_drop: cena '%s' não encontrada no ItemDatabase!" % item_name)
-			#dropped.append(null)
-			#continue
-		#
-		#var inst = item_scene.instantiate()
-		#if not inst:
-			#push_error("_item_drop: falha ao instanciar %s" % item_name)
-			#dropped.append(null)
-			#continue
-		#
-		## Garantir que o nó instanciado seja (ou contenha) um RigidBody3D
-		#var rigid: RigidBody3D = null
-		#if inst is RigidBody3D:
-			#rigid = inst
-		#else:
-			#rigid = inst.get_node_or_null("RigidBody3D")
-			#if not rigid:
-				#for child in inst.get_children():
-					#if child is RigidBody3D:
-						#rigid = child
-						#break
-		#
-		#if not rigid:
-			#push_error("_item_drop: instância %s não contém RigidBody3D." % item_name)
-			#dropped.append(null)
-			#continue
-		#
-		## Calcular posição de drop (CORRIGIDO: global_transform, não global_path)
-		#var forward_dir: Vector3 = global_transform.basis.z
-		#var drop_origin: Vector3 = global_transform.origin + forward_dir * drop_distance + Vector3.UP * 0.4
-		#
-		## Adicionar à cena raiz
-		#get_tree().root.add_child(inst)
-		#
-		## Definir posição de drop
-		#inst.global_transform.origin = drop_origin
-		#
-		## Aplicar velocidade inicial ao rigidbody
-		#if rigid is RigidBody3D:
-			#rigid.linear_velocity = forward_dir.normalized() * drop_force
-			#rigid.angular_velocity = Vector3(randf(), randf(), randf()) * 1.2
-		#else:
-			#push_warning("_item_drop: nó encontrado não é RigidBody3D apesar das checagens.")
-#
-		#dropped.append(rigid)
-	#
-	#if debug:
-		#print("_item_drop: dropped %d / %d" % [dropped.count(null), item_ids.size()])
-	#
-	#return dropped
-
+			
 # Executa uma animação one-shot e retorna sua duração
 func _execute_animation(anim_name: String, anim_param_path: String, oneshot_request_path: String = "") -> float:
 	# Verifica existência da animação no AnimationPlayer
@@ -781,15 +705,15 @@ func _execute_animation(anim_name: String, anim_param_path: String, oneshot_requ
 	# Atribui o nome da animação apenas ao caminho apropriado (String)
 	if anim_param_path != "":
 		animation_tree.set(anim_param_path, anim_name)
-
+		
 	# Dispara o request (int) no caminho apropriado
 	if oneshot_request_path != "":
 		animation_tree.set(oneshot_request_path, AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
-
+		
 	# Retorna duração da animação (segundos)
 	var anim = animation_player.get_animation(anim_name)
 	return anim.length if anim else 0.0
-
+	
 # Movimentos da espada de acordo com o input
 func _determine_attack_from_input() -> String:
 	var current_dir = _get_current_direction()
@@ -821,9 +745,7 @@ func _determine_attack_from_input() -> String:
 			return "1H_Melee_Attack_Stab"
 	# Fallback
 	return "1H_Melee_Attack_Slice_Horizontal"
-
-# Ações do player (Espadada)
-
+	
 # Função acionada pelas animações(AnimationPlayer), habilita hitbox na hora
 # exata do golpe; Pega current_item_right_id para saber qual foi a espada usada
 func _enable_attack_area():
@@ -832,7 +754,7 @@ func _enable_attack_area():
 		var hitbox = node.get_node("hitbox")
 		if hitbox is Area3D:
 			hitbox.monitoring = true
-
+			
 # Para o contato das hitboxes das espadas(no momento ativo) com inimigos (área3D)
 func _on_hitbox_body_entered(body: Node, hitbox_area: Area3D) -> void:
 	if body.is_in_group("enemies") and (is_attacking or is_block_attacking):
@@ -845,7 +767,7 @@ func _on_hitbox_body_entered(body: Node, hitbox_area: Area3D) -> void:
 			hit_targets.append(body)
 			body.take_damage(10)
 			_log_debug("%s foi acertado por %s" % [body.name, hitbox_area.get_parent().name])
-
+			
 # Ações do player (Trancar visão no inimigo)
 func _on_block_attack_timer_timeout(duration):
 	await get_tree().create_timer(duration).timeout
@@ -856,7 +778,7 @@ func _on_impact_detected(impulse: float):
 	# Reduzir vida, ativar efeito de hit, etc.
 	
 	if is_defending:
-		animation_tree.set("parameters/Blocking/blend_amount", 0.0)	
+		animation_tree.set("parameters/Blocking/blend_amount", 0.0)
 	var random_hit = ["parameters/Hit_B/request", "parameters/Hit_A/request"].pick_random()
 	animation_tree.set(random_hit, AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 
@@ -876,12 +798,13 @@ func _on_attack_timer_timeout(duration, current_id):
 		is_block_attacking = false
 	
 # ===== UTILS =====
+
 func teleport_to(new_position: Vector3):
 	"""Teleporta o player (apenas servidor)"""
 	if multiplayer.is_server():
 		global_position = new_position
-
-# ===== FUNÇÕES DE REDE =====
+		
+# ===== FUNÇÕES DE REDE ====================
 # ===== ENVIO DE ESTADO PARA SERVIDOR (APENAS LOCAL) =====
 
 func _send_state_to_server(delta: float):
@@ -911,7 +834,7 @@ func _send_state_to_server(delta: float):
 					is_running,
 					is_jumping
 				)
-
+				
 # ===== ENVIO DE ANIMAÇÕES (MENOS FREQUENTE) =====
 
 func _send_animation_state(delta: float):
@@ -950,7 +873,7 @@ func _send_animation_state(delta: float):
 					current_state["is_block_attacking"],
 					current_state["is_on_floor"]
 				)
-
+				
 func _animation_state_changed(new_state: Dictionary) -> bool:
 	"""Verifica se o estado de animação mudou significativamente"""
 	if last_anim_state.is_empty():
@@ -967,7 +890,7 @@ func _animation_state_changed(new_state: Dictionary) -> bool:
 		return true
 	
 	return false
-
+	
 # ===== INTERPOLAÇÃO DE JOGADORES REMOTOS =====
 
 func _interpolate_remote_player(delta: float):
@@ -987,7 +910,7 @@ func _interpolate_remote_player(delta: float):
 	
 	# Move para aplicar física/colisões
 	move_and_slide()
-
+	
 # ===== RECEPÇÃO DE ESTADO (REMOTOS) =====
 
 @rpc("authority", "call_remote", "unreliable")
@@ -1009,8 +932,8 @@ func _client_receive_state(pos: Vector3, rot: Vector3, vel: Vector3, running: bo
 # ===== RECEPÇÃO DE ANIMAÇÕES (REMOTOS) =====
 
 @rpc("authority", "call_remote", "unreliable")
-func _client_receive_animation_state(speed: float, attacking: bool, defending: bool, jumping: bool, 
-									 aiming: bool, running: bool, block_attacking: bool, on_floor: bool):
+func _client_receive_animation_state(speed: float, attacking: bool, defending: bool,
+ jumping: bool, aiming: bool, running: bool, block_attacking: bool, on_floor: bool):
 	"""Recebe e aplica estado de animação de outros jogadores"""
 	
 	if is_local_player:
@@ -1047,7 +970,7 @@ func _client_receive_animation_state(speed: float, attacking: bool, defending: b
 			animation_tree["parameters/bobbing/add_amount"] = bobbing_intensity * speed
 		else:
 			animation_tree["parameters/bobbing/add_amount"] = 0
-
+			
 # ===== RECEPÇÃO DE AÇÕES (ATAQUES, DEFESA) =====
 
 @rpc("authority", "call_remote", "reliable")
@@ -1085,7 +1008,7 @@ func _client_receive_action(action_type: String, anim_name: String):
 			is_defending = false
 			is_attacking = false
 			animation_tree.set("parameters/Blocking/blend_amount", 0.0)
-
+			
 # ===== AÇÕES DO JOGADOR =====
 
 func action_sword_attack_call():
@@ -1099,14 +1022,18 @@ func action_sword_attack_call():
 	if NetworkManager and NetworkManager.is_connected:
 		var anim_name = _determine_attack_from_input()
 		NetworkManager.send_player_action(player_id, "attack", anim_name)
-
+		
 func action_sword_attack():
 	"""Versão modificada que sincroniza o ataque"""
+	
+	
 	
 	# ANTES DE CONTINUAR AQUI, FAZER O SISTEMA QUE ATUALIZA O PLAYER LOCAL COM
 	# SUAS INFORMAÇÕES DE INVENTÁRIO, SALA E RODADA, PARA VERIFICAÇÕES LOCAIS, 
 	# MESMO QUE O SERVIDOR SEJA AUTORIDADE, PARA DIMINUIR PESO NA REDE
 	# PRONTO, INVENTÁRIO ATUALIZADO NO LOCAL, AGORA CONTINUAR DAQUI
+	
+	
 	
 	_log_debug("action_sword_attack")
 	# APENAS JOGADOR LOCAL PODE ATACAR
@@ -1157,8 +1084,8 @@ func action_block_attack():
 		current_attack_item_id = current_item_left_id
 		
 		var anim_time = _execute_animation("Block_Attack",
-				"parameters/sword_attacks/transition_request",
-				"parameters/Attack/request")
+			"parameters/sword_attacks/transition_request",
+			"parameters/Attack/request")
 		
 		_on_block_attack_timer_timeout(anim_time * 0.85)
 		
@@ -1239,7 +1166,7 @@ func setup_name_label():
 	# COR BASEADA NO ID (consistente)
 	var colors = [
 		Color(1, 0.2, 0.2),    # Vermelho
-		Color(0.2, 1, 0.2),    # Verde  
+		Color(0.2, 1, 0.2),    # Verde
 		Color(0.2, 0.2, 1),    # Azul
 		Color(1, 1, 0.2),      # Amarelo
 		Color(1, 0.2, 1),      # Magenta
@@ -1264,7 +1191,7 @@ func _log_debug(message: String):
 		var prefix = "[SERVER]" if not is_local_player else "[CLIENT]"
 		print("%s[PLAYER]%s" % [prefix, message])
 
-# FUNÇÕES DE ITENS =-=-=-=-=-=-=-=-=-=-
+# ===== FUNÇÕES DE ITENS ===============
 
 func handle_test_equip_inputs_call():
 	var mapped_id: int
@@ -1294,55 +1221,6 @@ func apply_visual_equip_on_player_node(player_node, item_mapped_id, from_test):
 	
 	var item_node_link = ItemDatabase.get_item_by_id(item_mapped_id).model_node_link
 	_item_model_change_visibility(player_node, item_node_link)
-
-# \/ função que atualiza o player com o item de acordo, fazer isso no servidor 
-# agora, aqui só visual
-# Equipar item pelo ID
-#func equip_item_by_id(item_id: int, _drop_last_item: bool):
-	## Encontra o item correspondente pelo ID na lista global de itens
-	#var item_data = null
-	#for data in _item_data:
-		#if data["id"] == item_id:
-			#item_data = data
-			#break
-			#
-	#if item_data == null:
-		#if debug:
-			#print("equip_item_by_id: item_id não encontrado -> ", item_id)
-		#return
-#
-	## Extrai os campos do item
-	#var id: int = item_data["id"]
-	#var node_link: String = item_data["node_link"]
-	#var item_name: String = item_data["item_name"]
-	#var item_type: String = item_data["item_type"]
-	#var item_side: String = item_data["item_side"]
-	#
-	## Define a variável de controle correta com base no tipo e lado
-	#match [item_type, item_side]:
-		#["hand", "right"]:
-			##if drop_last_item and current_item_right_id != 0:
-				##_item_drop([current_item_right_id])
-			#current_item_right_id = id
-		#["hand", "left"]:
-			##if drop_last_item and current_item_left_id != 0:
-				##_item_drop([current_item_left_id])
-			#current_item_left_id = id
-		#["head", "up"]:
-			##if drop_last_item and current_helmet_item_id != 0:
-				##_item_drop([current_helmet_item_id])
-			#current_helmet_item_id = id
-		#["body", "down"]:
-			##if drop_last_item and current_cape_item_id != 0:
-				##_item_drop([current_cape_item_id])
-			#current_cape_item_id = id
-		#_:
-			#if debug:
-				#print("equip_item_by_id: combinação tipo/lado desconhecida -> ", item_type, "/", item_side)
-	#if debug:
-		#print("equip_item_by_id: equipado ->", item_name, " em ", node_link)
-		#
-	#_item_model_change_visibility(self, node_link)
 
 # Ações do player (Pegar item)
 func action_pick_up_item_call():
@@ -1578,13 +1456,13 @@ func unequip_item(slot: String) -> bool:
 	_log_debug("✓ Item desequipado: %s de %s (Player %d)" % [item_name, slot, player_id])
 	
 	return true
-
+	
 func swap_equipped_item(new_item: String, slot: String = "") -> bool:
 	"""
 	Troca item equipado diretamente (desequipa antigo, equipa novo)
 	Útil para trocas rápidas de armas/equipamentos
 	"""
-
+	
 	if local_inventory.is_empty():
 		return false
 	
@@ -1606,7 +1484,7 @@ func swap_equipped_item(new_item: String, slot: String = "") -> bool:
 		return true
 	
 	return false
-
+	
 func drop_item(item_name: String) -> bool:
 	"""
 	Remove item do inventário (simula drop)
