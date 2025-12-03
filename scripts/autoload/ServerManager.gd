@@ -272,6 +272,12 @@ func _on_peer_disconnected(peer_id: int):
 				for player in updated_room["players"]:
 					if player["id"] != peer_id and _is_peer_connected(player["id"]):
 						NetworkManager.rpc_id(player["id"], "_client_remove_player", peer_id)
+						
+				# Remove nó do player do servidor
+				var player_node = get_tree().root.get_node_or_null(str(peer_id))
+				if player_node:
+					player_node.queue_free()
+				
 			else:
 				_log_debug("Sala foi deletada (ficou vazia)")
 				_send_rooms_list_to_all()

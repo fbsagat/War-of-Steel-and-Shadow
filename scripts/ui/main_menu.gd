@@ -348,7 +348,7 @@ func show_connecting_menu():
 	hide_all_menus()
 	connecting_menu.visible = true
 	if connecting_label:
-		connecting_label.text = "Conectando ao servidor..."
+		connecting_label.text = "Conectando ao servidor"
 	if connecting_error_label:
 		connecting_error_label.text = ""
 		connecting_error_label.visible = false

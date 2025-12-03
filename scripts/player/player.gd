@@ -1531,12 +1531,6 @@ func setup_name_label():
 		name_label.visible = false
 	else:
 		name_label.visible = true
-
-#func _log_debug(message: String):
-	#"""Imprime mensagem de debug se habilitado"""
-	#if debug:
-		#var prefix = "[SERVER]" if not is_local_player else "[CLIENT]"
-		#print("%s[PLAYER]%s" % [prefix, message])
 		
 func _log_debug(message: String):
 	"""Imprime mensagem de debug se habilitado"""
