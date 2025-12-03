@@ -127,7 +127,10 @@ func _setup_authority_settings():
 
 # ===== VERIFICAÇÕES DE REDE =====
 func is_server_authority() -> bool:
-	return !has_network() or (multiplayer.has_multiplayer_peer() and multiplayer.is_server())
+	var peer = multiplayer.multiplayer_peer
+	if peer != null and peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED:
+		return !has_network() or (multiplayer.has_multiplayer_peer() and multiplayer.is_server())
+	return false
 
 func has_network() -> bool:
 	return multiplayer != null and multiplayer.has_multiplayer_peer()

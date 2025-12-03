@@ -23,6 +23,7 @@ var item_database = null
 var is_connected_: bool = false
 var _is_server: bool = false
 var server_is_headless: bool = false
+var cached_unique_id: int = 0
 
 # --- SINCRONIZAÇÃO DE OBJETOS ---
 ## { object_id: { node: Node, config: Dictionary } }
@@ -68,11 +69,18 @@ func _ready():
 func _on_connected_to_server():
 	"""Callback quando conecta ao servidor"""
 	is_connected_ = true
+	var unique_id := cached_unique_id
+	if unique_id == 0 and verificar_rede() and multiplayer.has_multiplayer_peer():
+		unique_id = multiplayer.get_unique_id()
+		cached_unique_id = unique_id
 	_log_debug("Conexão de rede estabelecida")
 
 func _on_server_disconnected():
 	"""Callback quando desconecta do servidor"""
 	is_connected_ = false
+	
+	# FUTURAMENTE: Resetar tudo e jogar pro menu de espera de conexão com o servidor
+	
 	_log_debug("❌ Conexão de rede perdida")
 
 func _on_connection_failed():
@@ -86,14 +94,14 @@ func _process(delta: float):
 		return
 
 	# cliente seguro
-	if multiplayer.has_multiplayer_peer() and !multiplayer.is_server():
+	if verificar_rede() and multiplayer.has_multiplayer_peer() and !multiplayer.is_server():
 		_client_interpolate_all(delta)
 
 # ===== REGISTRO DE JOGADOR =====
 
 func register_player(player_name: String):
 	"""Envia requisição de registro de jogador ao servidor"""
-	if not is_connected:
+	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
 	
@@ -139,7 +147,7 @@ func _client_name_rejected(reason: String):
 
 func request_rooms_list():
 	"""Solicita lista de salas ao servidor"""
-	if not is_connected:
+	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
 	
@@ -175,7 +183,7 @@ func _client_receive_rooms_list_update(rooms: Array):
 
 func create_room(room_name: String, password: String = ""):
 	"""Solicita criação de sala ao servidor"""
-	if not is_connected:
+	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
 	
@@ -202,7 +210,7 @@ func _client_room_created(room_data: Dictionary):
 
 func join_room(room_id: int, password: String = ""):
 	"""Solicita entrada em sala por ID"""
-	if not is_connected:
+	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
 	
@@ -220,7 +228,7 @@ func _server_join_room(room_id: int, password: String):
 
 func join_room_by_name(room_name: String, password: String = ""):
 	"""Solicita entrada em sala por nome"""
-	if not is_connected:
+	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
 	
@@ -283,7 +291,7 @@ func _client_room_not_found():
 
 func leave_room():
 	"""Solicita saída da sala atual"""
-	if not is_connected:
+	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
 	
@@ -301,7 +309,7 @@ func _server_leave_room():
 
 func close_room():
 	"""Solicita fechamento da sala (apenas host)"""
-	if not is_connected:
+	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
 	
@@ -339,7 +347,7 @@ func _client_room_updated(room_data: Dictionary):
 
 func start_round(round_settings: Dictionary = {}):
 	"""Solicita início de rodada (apenas host é respondido)"""
-	if not is_connected:
+	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
 	
@@ -549,7 +557,8 @@ func server_apply_drop_item(player_id: int, item: String):
 
 func send_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
 	"""Envia estado do jogador para o servidor (UNRELIABLE - rápido)"""
-	if not is_connected:
+	
+	if not is_connected_:
 		return
 	
 	# RPC do NetworkManager → válido, pois NetworkManager é autoload
@@ -616,7 +625,7 @@ func _client_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, r
 func send_player_animation_state(p_id: int, speed: float, attacking: bool, defending: bool, 
 								 jumping: bool, aiming: bool, running: bool, block_attacking: bool, on_floor: bool):
 	"""Envia estado de animação do jogador para o servidor (UNRELIABLE - menos frequente)"""
-	if not is_connected:
+	if not is_connected_:
 		return
 	
 	rpc_id(1, "_server_player_animation_state", p_id, speed, attacking, defending, 
@@ -667,7 +676,6 @@ func local_add_item_to_inventory(peer_id, item_name):
 
 @rpc("authority", "call_remote", "reliable")
 func local_remove_item_from_inventory(peer_id, item_name):
-	_log_debug("local_remove_item_from_inventory")
 	if multiplayer.is_server():
 		return
 		
@@ -889,7 +897,7 @@ func unregister_syncable_object(object_id: int) -> void:
 
 func send_player_action(p_id: int, action_type: String, anim_name: String):
 	"""Envia ação do jogador (ataque, defesa) - RELIABLE (garantido)"""
-	if not is_connected:
+	if not is_connected_:
 		return
 	
 	_log_debug("⚔️ Enviando ação: %s (%s)" % [action_type, anim_name])
@@ -967,8 +975,19 @@ func _is_peer_connected(peer_id: int) -> bool:
 
 # ===== UTILITÁRIOS =====
 
+func verificar_rede():
+	var peer = multiplayer.multiplayer_peer
+	if peer != null and peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED:
+		return true
+	is_connected_ = false
+	return false
+
 func _log_debug(message: String):
 	"""Imprime mensagem de debug se habilitado"""
-	if debug_mode:
-		var prefix = "[SERVER]" if _is_server else "[CLIENT]"
-		print("%s[NetworkManager]%s" % [prefix, message])
+	if not debug_mode:
+		return
+	
+	if _is_server:
+		print("[SERVER][NetworkManager]%s" % [message])
+	else:
+		print("[CLIENT][NetworkManager][ClientID: %d]%s" % [cached_unique_id, message])

@@ -63,6 +63,7 @@ var last_anim_state: Dictionary = {}
 var player_id: int = 0
 var player_name: String = ""
 var is_local_player: bool = false
+var _is_server: bool = false
 
 # Estados
 var is_attacking: bool = false
@@ -96,6 +97,10 @@ var cair: bool = false
 
 # Ready
 func _ready():
+	# Detecta se é servidor dedicado
+	var args = OS.get_cmdline_args()
+	_is_server = "--server" in args or "--dedicated" in args
+	
 	# Carrega dados de itens na memória
 	_load_item_data()
 	
@@ -113,7 +118,7 @@ func _ready():
 	# visibilidade inicial (modelo)
 	if hide_itens_on_start:
 		_hide_all_model_items()
-	
+
 # Física geral
 func _physics_process(delta: float) -> void:
 	"""
@@ -141,7 +146,7 @@ func _physics_process(delta: float) -> void:
 		# Input de teste
 		handle_test_equip_inputs_call()
 	
-	elif has_network and multiplayer.has_multiplayer_peer():
+	elif verificar_rede() and has_network and multiplayer.has_multiplayer_peer():
 		if not multiplayer.is_server():
 			# Jogador remoto no cliente
 			_interpolate_remote_player(delta)
@@ -1012,7 +1017,6 @@ func _client_receive_action(action_type: String, anim_name: String):
 # ===== AÇÕES DO JOGADOR =====
 
 func action_sword_attack_call():
-	_log_debug("action_sword_attack_call")
 	
 	# Jogador local pede para atacar
 	if not is_local_player:
@@ -1120,6 +1124,10 @@ func set_as_local_player():
 	# APENAS JOGADOR LOCAL PROCESSA INPUT
 	set_process_input(true)
 	set_process_unhandled_input(true)
+	
+	# Inicializa o inventário
+	if not _is_server:
+		init_player_inventory()
 
 func initialize(p_id: int, p_name: String, spawn_pos: Vector3):
 	"""Inicializa o player com dados multiplayer"""
@@ -1151,46 +1159,7 @@ func initialize(p_id: int, p_name: String, spawn_pos: Vector3):
 	set_physics_process(true)
 	set_process(true)
 	
-	# Inicializa o inventário
-	init_player_inventory()
-
-# ===== CONFIGURAÇÃO DE NOME LABEL =====
-
-func setup_name_label():
-	"""Configura label de nome para multiplayer"""
-	if not name_label:
-		return
 	
-	name_label.visible = true
-	
-	# COR BASEADA NO ID (consistente)
-	var colors = [
-		Color(1, 0.2, 0.2),    # Vermelho
-		Color(0.2, 1, 0.2),    # Verde
-		Color(0.2, 0.2, 1),    # Azul
-		Color(1, 1, 0.2),      # Amarelo
-		Color(1, 0.2, 1),      # Magenta
-		Color(0.2, 1, 1)       # Ciano
-	]
-	var color_index = player_id % colors.size()
-	name_label.modulate = colors[color_index]
-	
-	# CONFIGURAÇÃO DE BILLBOARD
-	name_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	name_label.pixel_size = 0.01
-	
-	# ESCONDE NOME DO JOGADOR LOCAL (OPCIONAL)
-	if is_local_player:
-		name_label.visible = false
-	else:
-		name_label.visible = true
-
-func _log_debug(message: String):
-	"""Imprime mensagem de debug se habilitado"""
-	if debug:
-		var prefix = "[SERVER]" if not is_local_player else "[CLIENT]"
-		print("%s[PLAYER]%s" % [prefix, message])
-
 # ===== FUNÇÕES DE ITENS ===============
 
 func handle_test_equip_inputs_call():
@@ -1531,3 +1500,57 @@ func clear_player_inventory():
 	
 	local_inventory.clear()
 	_log_debug("✓ Inventário limpo: Player %d" % player_id)
+
+# ===== UTILS =====
+
+func setup_name_label():
+	"""Configura label de nome para multiplayer"""
+	if not name_label:
+		return
+	
+	name_label.visible = true
+	
+	# COR BASEADA NO ID (consistente)
+	var colors = [
+		Color(1, 0.2, 0.2),    # Vermelho
+		Color(0.2, 1, 0.2),    # Verde
+		Color(0.2, 0.2, 1),    # Azul
+		Color(1, 1, 0.2),      # Amarelo
+		Color(1, 0.2, 1),      # Magenta
+		Color(0.2, 1, 1)       # Ciano
+	]
+	var color_index = player_id % colors.size()
+	name_label.modulate = colors[color_index]
+	
+	# CONFIGURAÇÃO DE BILLBOARD
+	name_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	name_label.pixel_size = 0.01
+	
+	# ESCONDE NOME DO JOGADOR LOCAL (OPCIONAL)
+	if is_local_player:
+		name_label.visible = false
+	else:
+		name_label.visible = true
+
+#func _log_debug(message: String):
+	#"""Imprime mensagem de debug se habilitado"""
+	#if debug:
+		#var prefix = "[SERVER]" if not is_local_player else "[CLIENT]"
+		#print("%s[PLAYER]%s" % [prefix, message])
+		
+func _log_debug(message: String):
+	"""Imprime mensagem de debug se habilitado"""
+	if not debug:
+		return
+	
+	if _is_server:
+		print("[SERVER][PLAYER][ClientID: %d]%s" % [player_id, message])
+	else:
+		print("[CLIENT][PLAYER][ClientID: %d]%s" % [player_id, message])
+		
+func verificar_rede():
+	var peer = multiplayer.multiplayer_peer
+	if peer != null and peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED:
+		return true
+	return false
+	

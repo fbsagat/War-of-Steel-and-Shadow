@@ -132,7 +132,7 @@ func disconnect_from_server():
 func _on_connected_to_server():
 	"""Callback quando conecta com sucesso ao servidor"""
 	# Só leia get_unique_id() quando o peer estiver ativo
-	if has_network():
+	if verificar_rede():
 		# garante que o peer foi realmente configurado
 		if multiplayer.has_multiplayer_peer():
 			cached_unique_id = multiplayer.get_unique_id()
@@ -736,7 +736,7 @@ func _spawn_on_client(object_id: int, round_id: int, item_name: String, position
 		spawned_objects[round_id] = {}
 	spawned_objects[round_id][object_id] = {"node": item_node}
 	
-	_log_debug("✓ Objeto spawnado no cliente: ID=%d, Item=%s" % [object_id, item_name])
+	_log_debug("✓ Objeto spawnado no cliente: Obj_ID=%d, Item=%s" % [object_id, item_name])
 
 func _despawn_on_client(object_id: int, round_id: int):
 	"""
@@ -801,20 +801,18 @@ func set_main_menu(menu: Control):
 	"""Registra referência do menu principal"""
 	main_menu = menu
 	_log_debug("UI principal registrada")
-
-func has_network() -> bool:
-	return multiplayer != null and multiplayer.has_multiplayer_peer()
+	
+func verificar_rede() -> bool:
+	var peer = multiplayer.multiplayer_peer
+	return peer != null and peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED and multiplayer != null and multiplayer.has_multiplayer_peer()
 
 func _log_debug(message: String):
 	if not debug_mode:
 		return
 
 	var unique_id := cached_unique_id
-
-	# Se não temos cache, só então tentamos atualizar — e apenas se for seguro
-	if unique_id == 0 and has_network() and multiplayer.has_multiplayer_peer():
-		# aqui a chamada é segura porque verificamos has_multiplayer_peer()
+	if unique_id == 0 and verificar_rede() and multiplayer.has_multiplayer_peer():
 		unique_id = multiplayer.get_unique_id()
 		cached_unique_id = unique_id
 
-	print("[CLIENT][GameManager]ClientID: %s: Message: %s" % [unique_id, message])
+	print("[CLIENT][GameManager][ClientID: %s]: Message: %s" % [unique_id, message])
