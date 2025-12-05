@@ -277,7 +277,7 @@ func _on_peer_disconnected(peer_id: int):
 						NetworkManager.rpc_id(player["id"], "_client_remove_player", peer_id)
 						
 				# Remove nó do player do servidor
-				var player_node = player_data.get_player_node()
+				var player_node = round_registry.get_spawned_player(p_round["round_id"], peer_id)
 				if player_node:
 					player_node.queue_free()
 				
@@ -285,10 +285,10 @@ func _on_peer_disconnected(peer_id: int):
 				_log_debug("Sala foi deletada (ficou vazia)")
 				_send_rooms_list_to_all()
 	
-	# 3. LIMPA ESTADO DE VALIDAÇÃO
+	# 3. Limpa estado de validação
 	_cleanup_player_state(peer_id)
 	
-	# 4. REMOVE DO PLAYER REGISTRY (limpeza final)
+	# 4. Remove do player registry (limpeza final)
 	player_registry.remove_peer(peer_id)
 
 # ===== HANDLERS DE JOGADOR =====
@@ -1115,7 +1115,7 @@ func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 	# Se for item equipável de knight
 	if ItemDatabase.get_items_by_owner("knight"):
 		# Dropar o item anterior se houver
-		var item_type = ItemDatabase.get_item_type(item["name"])
+		var item_type = ItemDatabase.get_type(item["name"])
 		var item_ = player_registry.get_equipped_item_in_slot(round_["round_id"], player["id"], item_type)
 		if item_:
 			player_registry.unequip_item(round_["round_id"], player["id"], item_type)
@@ -1236,7 +1236,7 @@ func drop_item(round_id, player_id, item_id):
 	
 		# Valida estado do player NO SERVIDOR
 		if item_name:
-			var item_type = ItemDatabase.get_item_type(item_name)
+			var item_type = ItemDatabase.get_type(item_name)
 			var first_item = ItemDatabase.get_item(item_name).to_dictionary()
 			player_registry.unequip_item(round_id, player_id, item_type)
 			player_registry.remove_item_from_inventory(round_id, player_id, item_name)

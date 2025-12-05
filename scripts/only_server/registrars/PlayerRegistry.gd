@@ -416,7 +416,7 @@ func equip_item(round_id: int, player_id: int, item_name: String, slot: String =
 	# Detecta slot automaticamente se não especificado
 	if slot.is_empty():
 		if item_database:
-			slot = item_database.get_item_slot(item_name)
+			slot = item_database.get_slot(item_name)
 		if slot.is_empty():
 			push_error("PlayerRegistry: Não foi possível detectar slot para item: %s" % item_name)
 			return false
@@ -484,7 +484,7 @@ func swap_equipped_item(round_id: int, player_id: int, new_item: String, slot: S
 	# Detecta slot se não especificado
 	if slot.is_empty():
 		if item_database:
-			slot = item_database.get_item_slot(new_item)
+			slot = item_database.get_slot(new_item)
 		if slot.is_empty():
 			return false
 	
@@ -754,7 +754,7 @@ func count_items_of_type(round_id: int, player_id: int, item_type: String) -> in
 	var count = 0
 	
 	for item_name in all_items:
-		if item_database.get_item_type(item_name) == item_type:
+		if item_database.get_type(item_name) == item_type:
 			count += 1
 	
 	return count

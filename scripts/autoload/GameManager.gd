@@ -787,7 +787,7 @@ func _spawn_on_client(object_id: int, round_id: int, item_name: String, position
 		return
 	
 	# Obtém scene_path
-	var scene_path = ItemDatabase.get_item_scene_path(item_name)
+	var scene_path = ItemDatabase.get_item(item_name)["scene_path"]
 	
 	if scene_path.is_empty():
 		push_error("GameManager[Cliente]: Scene path vazio para '%s'" % item_name)

@@ -357,7 +357,7 @@ func _spawn_on_server(objects_node, object_id: int, round_id: int, item_name: St
 	"""
 	
 	# Obtém scene_path do ItemDatabase
-	var scene_path = item_database.get_item_scene_path(item_name)
+	var scene_path = item_database.get_item(item_name)["scene_path"]
 	
 	if scene_path.is_empty():
 		push_error("ObjectManager: Scene path vazio para item '%s'" % item_name)

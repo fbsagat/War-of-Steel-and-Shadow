@@ -1022,6 +1022,9 @@ func action_sword_attack_call():
 	if not is_local_player:
 		return
 	
+	print("local_inventory: ", local_inventory)
+	# Apenas atacar se estiver usando um item de ataque
+	
 	# SINCRONIZA ATAQUE PELA REDE (RELIABLE = GARANTIDO)
 	if NetworkManager and NetworkManager.is_connected:
 		var anim_name = _determine_attack_from_input()
@@ -1040,9 +1043,12 @@ func action_sword_attack():
 	
 	
 	_log_debug("action_sword_attack")
-	# APENAS JOGADOR LOCAL PODE ATACAR
+		
+	# Apenas jogador local pode atacar
 	if not is_local_player:
 		return
+		
+
 	
 	hit_targets.clear()
 	
@@ -1226,7 +1232,7 @@ func action_drop_item_call() -> void:
 		
 func execute_item_drop(player_node, item):
 	# Executa o drop do node do item
-	var item_node_link = ItemDatabase.get_item_model_link(item)
+	var item_node_link = ItemDatabase.get_item(item)["model_node_link"]
 		
 	# Atualiza visibilidade do item no modelo (uma vez)
 	_item_model_change_visibility(player_node, item_node_link, false)
@@ -1386,7 +1392,7 @@ func equip_item(item_name: String, slot: String = "") -> bool:
 	# Detecta slot automaticamente se não especificado
 	if slot.is_empty():
 		if ItemDatabase:
-			slot = ItemDatabase.get_item_slot(item_name)
+			slot = ItemDatabase.get_slot(item_name)
 		if slot.is_empty():
 			push_error("PlayerRegistry: Não foi possível detectar slot para item: %s" % item_name)
 			return false
@@ -1446,7 +1452,7 @@ func swap_equipped_item(new_item: String, slot: String = "") -> bool:
 	# Detecta slot se não especificado
 	if slot.is_empty():
 		if ItemDatabase:
-			slot = ItemDatabase.get_item_slot(new_item)
+			slot = ItemDatabase.get_slot(new_item)
 		if slot.is_empty():
 			return false
 	
@@ -1473,10 +1479,8 @@ func drop_item(item_name: String) -> bool:
 		unequip_item(slot)
 	
 	# Remove do inventário
-	print("Remove do inventário")
 	if remove_item_from_inventory(item_name):
 		if not local_inventory.is_empty():
-			print("aquiiii")
 			local_inventory["stats"]["items_dropped"] += 1
 		_log_debug("✓ Item dropado: %s por Player %d" % [item_name, player_id])
 		return true
