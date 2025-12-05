@@ -249,6 +249,7 @@ func _reset_client_state():
 	spawned_objects.clear()
 	
 	# Limpa a partida(round) totalmente
+	round_node.queue_free()
 	
 	# Reset completo do estado
 	is_connected_to_server = false
@@ -727,7 +728,7 @@ func _cleanup_local_round():
 	
 	local_player = null
 	
-	# ✅ CORRIGIDO: Limpa objetos spawnados
+	# Limpa objetos spawnados
 	for round_id in spawned_objects.keys():
 		for object_id in spawned_objects[round_id].keys():
 			var obj_data = spawned_objects[round_id][object_id]

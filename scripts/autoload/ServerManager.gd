@@ -126,6 +126,7 @@ func _start_server():
 	player_registry = load("res://scripts/only_server/registrars/PlayerRegistry.gd").new()
 	room_registry = load("res://scripts/only_server/registrars/RoomRegistry.gd").new()
 	round_registry = load("res://scripts/only_server/registrars/RoundRegistry.gd").new()
+	server_map_manager = preload("res://scripts/gameplay/MapManager.gd").new()
 	object_manager = load("res://scripts/only_server/ObjectManager.gd").new()
 	test_manager = load("res://scripts/only_server/TestManager.gd").new()
 	
@@ -133,6 +134,7 @@ func _start_server():
 	player_registry.name = "PlayerRegistry"
 	room_registry.name = "RoomRegistry"
 	round_registry.name = "RoundRegistry"
+	server_map_manager.name = "MapManager"
 	object_manager.name = "ObjectManager"
 	test_manager.name = "TestManager"
 	
@@ -140,6 +142,7 @@ func _start_server():
 	add_child(player_registry)
 	add_child(room_registry)
 	add_child(round_registry)
+	add_child(server_map_manager)
 	add_child(object_manager)
 	add_child(test_manager)
 	
@@ -798,10 +801,6 @@ func _server_instantiate_round(match_data: Dictionary, players_node):
 	"""
 	_log_debug("Instanciando rodada no servidor...")
 	
-	# Cria MapManager
-	server_map_manager = preload("res://scripts/gameplay/MapManager.gd").new()
-	get_tree().root.add_child(server_map_manager)
-	
 	# Carrega o mapa
 	await server_map_manager.load_map(match_data["map_scene"], match_data["settings"])
 	
@@ -967,7 +966,6 @@ func _cleanup_round_objects(round_id: int):
 	# Remove mapa
 	if server_map_manager and is_instance_valid(server_map_manager):
 		server_map_manager.unload_map()
-		server_map_manager.queue_free()
 		server_map_manager = null
 	
 	_log_debug("✓ Limpeza completa")

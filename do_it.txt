@@ -34,8 +34,9 @@ criar rodadas quando o host inicia uma rodada, apagar rodada e registrar resulta
 39. 	Ok. Implementar validação de inventário nos RPCs de item(Verificar se player possui item antes de equipar/dropar)
 40. Ajustar sistema de conexão de rede, quando servidor cair, clientes deve resetar tudo e voltar pra tela de conexão.
 	Quando um cliente cair, resetar tudo dele na partida(no servidor(nos registros tbm) e nos cliente) e garantir que
-	quando voltar, virá como novo peer, com novos registros e etc... Entender todo o funcionamento.
-41. Abrir o map manager logo na inicialização do servidor, não no inicio de uma rodada, 
+	quando voltar, virá como novo peer, com novos registros e etc... Entender todo o funcionamento. O mesmo para o servidor.
+	Fica ok a partir do momento em que o cliente reinicia normalmente após uma queda de conexão e o servidor também.
+41. 	Ok. Abrir o map manager logo na inicialização do servidor, não no inicio de uma rodada, 
 	matar o game manager no servidor para não sobrecarregar pois é inútil.
 
 Adicionar no modelo do player:
