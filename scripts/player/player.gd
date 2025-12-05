@@ -703,6 +703,8 @@ func _hide_all_model_items():
 # Executa uma animação one-shot e retorna sua duração
 func _execute_animation(anim_name: String, anim_param_path: String, oneshot_request_path: String = "") -> float:
 	# Verifica existência da animação no AnimationPlayer
+	
+	print("_execute_animation", anim_name, " ", anim_param_path, " ", oneshot_request_path)
 	if not animation_player.has_animation(anim_name):
 		push_error("Animação não encontrada no AnimationPlayer: %s" % anim_name)
 		return 0.0
@@ -989,6 +991,7 @@ func _client_receive_action(action_type: String, anim_name: String):
 		"attack":
 			if not is_attacking:
 				is_attacking = true
+
 				_execute_animation(anim_name,
 					"parameters/sword_attacks/transition_request",
 					"parameters/Attack/request")
@@ -1018,51 +1021,39 @@ func _client_receive_action(action_type: String, anim_name: String):
 
 func action_sword_attack_call():
 	
-	# Jogador local pede para atacar
+	# Apenas jogador local pede para atacar
 	if not is_local_player:
 		return
 	
-	print("local_inventory: ", local_inventory)
 	# Apenas atacar se estiver usando um item de ataque
+	var item_equipado_nome = local_inventory["equipped"]["hand-right"]
 	
-	# SINCRONIZA ATAQUE PELA REDE (RELIABLE = GARANTIDO)
+	# Apenas atacar se estiver com algo na mão direita
+	if not item_equipado_nome:
+		return
+		
+	# apenas atacar se for uma arma
+	if ItemDatabase.get_item(item_equipado_nome)["category"] != "weapon":
+		return
+	
+	# Sincroniza ataque pela rede (Reliable = Garantido)
 	if NetworkManager and NetworkManager.is_connected:
 		var anim_name = _determine_attack_from_input()
 		NetworkManager.send_player_action(player_id, "attack", anim_name)
 		
-func action_sword_attack():
-	"""Versão modificada que sincroniza o ataque"""
-	
-	
-	
-	# ANTES DE CONTINUAR AQUI, FAZER O SISTEMA QUE ATUALIZA O PLAYER LOCAL COM
-	# SUAS INFORMAÇÕES DE INVENTÁRIO, SALA E RODADA, PARA VERIFICAÇÕES LOCAIS, 
-	# MESMO QUE O SERVIDOR SEJA AUTORIDADE, PARA DIMINUIR PESO NA REDE
-	# PRONTO, INVENTÁRIO ATUALIZADO NO LOCAL, AGORA CONTINUAR DAQUI
-	
-	
-	
-	_log_debug("action_sword_attack")
+		# executa localmente
+		_execute_animation(anim_name,"parameters/sword_attacks/transition_request",
+		"parameters/Attack/request")
 		
-	# Apenas jogador local pode atacar
-	if not is_local_player:
-		return
-		
+	# hitbox
+	# hit_targets.clear()
+	#var anim_time: float = _execute_animation(anim_name,
+		#"parameters/sword_attacks/transition_request",
+		#"parameters/Attack/request")
+		#_on_attack_timer_timeout(anim_time * 0.4, current_item_right_id)
 
-	
-	hit_targets.clear()
-	
-	if current_item_right_id != 0 and not is_attacking:
-		is_attacking = true
-		current_attack_item_id = current_item_right_id
-		
-		var anim_name = _determine_attack_from_input()
-		var anim_time: float = _execute_animation(anim_name,
-			"parameters/sword_attacks/transition_request",
-			"parameters/Attack/request")
-		
-		_on_attack_timer_timeout(anim_time * 0.4, current_item_right_id)
 
+# PAREI AQUI, FAZER O ACTION_LOCK CALL!
 func action_lock():
 	"""Versão modificada que sincroniza defesa"""
 	
