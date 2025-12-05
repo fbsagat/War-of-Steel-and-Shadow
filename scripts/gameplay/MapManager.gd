@@ -35,7 +35,7 @@ func _ready():
 # ===== CARREGAMENTO DE MAPA =====
 
 ## Carrega um mapa a partir do caminho da cena
-func load_map(map_scene_path: String, settings: Dictionary = {}):
+func load_map(map_scene_path: String, round_node, settings: Dictionary = {}):
 	"""Carrega um mapa a partir do caminho da cena. 
 	_handle_start_round no ServerManager é quem envia informações(settings) para cá"""
 	if current_map != null:
@@ -63,7 +63,7 @@ func load_map(map_scene_path: String, settings: Dictionary = {}):
 	current_map.get_node("Sky3D").current_time = settings.get("env_current_time")
 	
 	# Adiciona o mapa à cena
-	get_tree().root.add_child(current_map)
+	round_node.add_child(current_map)
 	
 	# Aguarda um frame para garantir que tudo foi adicionado à árvore
 	await get_tree().process_frame

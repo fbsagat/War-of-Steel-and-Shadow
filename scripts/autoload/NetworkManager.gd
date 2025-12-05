@@ -413,22 +413,22 @@ func _client_remove_player(peer_id: int):
 
 # ===== SPAWN DE OBJETOS (ObjectSpawner) =====
 
-@rpc("authority", "call_remote", "reliable")
-func _rpc_spawn_on_clients(active_players, object_id: int, round_id: int, item_name: String, position: Vector3, rotation: Vector3, owner_id: int):
-	"""
-	✅ CORRIGIDO: Envia spawn para clientes ativos na rodada
-	"""
-	_log_debug("🔄 Spawning item for clients: ID=%d, Item=%s" % [object_id, item_name])
-	
-	# ✅ CORRIGIDO: Itera pelos players ativos e envia RPC individual
-	for player_id in active_players:
-		if player_id == 1:  # Ignora servidor
-			continue
-		
-		if _is_peer_connected(player_id):
-			_rpc_receive_spawn_on_clients.rpc_id(player_id, object_id, round_id, item_name, position, rotation, owner_id)
-	
-	_log_debug("✓ Spawn enviado para %d clientes" % (active_players.size() - 1))
+#@rpc("authority", "call_remote", "reliable")
+#func _rpc_spawn_on_clients(objects_node, active_players, object_id: int, round_id: int, item_name: String, position: Vector3, rotation: Vector3, owner_id: int):
+	#"""
+	#✅ CORRIGIDO: Envia spawn para clientes ativos na rodada
+	#"""
+	#_log_debug("🔄 Spawning item for clients: ID=%d, Item=%s" % [object_id, item_name])
+	#
+	## ✅ CORRIGIDO: Itera pelos players ativos e envia RPC individual
+	#for player_id in active_players:
+		#if player_id == 1:  # Ignora servidor
+			#continue
+		#
+		#if _is_peer_connected(player_id):
+			#_rpc_receive_spawn_on_clients.rpc_id(objects_node, player_id, object_id, round_id, item_name, position, rotation, owner_id)
+	#
+	#_log_debug("✓ Spawn enviado para %d clientes" % (active_players.size() - 1))
 
 @rpc("authority", "call_remote", "reliable")
 func _rpc_receive_spawn_on_clients(object_id: int, round_id: int, item_name: String, position: Vector3, rotation: Vector3, owner_id: int):
@@ -523,7 +523,7 @@ func _server_drop_player_item(player_id, item_id):
 @rpc("authority", "call_remote", "reliable")
 func server_apply_picked_up_item(player_id):
 	# Encontra o player e executa a mudança de item pego
-	var player_node = get_tree().root.get_node_or_null(str(player_id))
+	var player_node = GameManager.players_node.get_node_or_null(str(player_id))
 	if player_node and player_node.has_method("action_pick_up_item"):
 		player_node.action_pick_up_item()
 
@@ -535,7 +535,7 @@ func server_apply_equiped_item(player_id: int, change_data: int):
 		return
 	
 	# Encontra o player e executa a mudança de item equipado
-	var player_node = get_tree().root.get_node_or_null(str(player_id))
+	var player_node = GameManager.players_node.get_node_or_null(str(player_id))
 	if player_node and player_node.has_method("apply_visual_equip_on_player_node"):
 		player_node.apply_visual_equip_on_player_node(player_node, change_data)
 
@@ -549,7 +549,7 @@ func server_apply_drop_item(player_id: int, item: String):
 	_log_debug("📥 Dropando equipamento: Player %d, Item %s" % [player_id, item])
 	
 	# ENCONTRA O PLAYER E EXECUTA
-	var player_node = get_tree().root.get_node_or_null(str(player_id))
+	var player_node = GameManager.players_node.get_node_or_null(str(player_id))
 	if player_node and player_node.has_method("execute_item_drop"):
 		player_node.execute_item_drop(player_node, item)
 
@@ -611,7 +611,7 @@ func _client_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, r
 		#return
 	
 	# ENCONTRA O PLAYER NA CENA (nome = player_id)
-	var player = get_tree().root.get_node_or_null(str(p_id))
+	var player = GameManager.players_node.get_node_or_null(str(p_id))
 	
 	if not player:
 		return
@@ -655,7 +655,7 @@ func _client_player_animation_state(p_id: int, speed: float, attacking: bool, de
 	if multiplayer.has_multiplayer_peer() and multiplayer.get_unique_id() == 1:
 		return
 	
-	var player = get_tree().root.get_node_or_null(str(p_id))
+	var player = GameManager.players_node.get_node_or_null(str(p_id))
 	if player and player.has_method("_client_receive_animation_state"):
 		player._client_receive_animation_state(speed, attacking, defending, jumping, 
 											   aiming, running, block_attacking, on_floor)
@@ -667,8 +667,7 @@ func local_add_item_to_inventory(peer_id, item_name):
 	_log_debug("local_add_item_to_inventory")
 	if multiplayer.is_server():
 		return
-		
-	var player = get_tree().root.get_node_or_null(str(peer_id))
+	var player = GameManager.players_node.get_node_or_null(str(peer_id))
 	if not player:
 		_log_debug("Não encontrado player para atualizar inventário")
 	if player and player.has_method("add_item_to_inventory"):
@@ -679,7 +678,7 @@ func local_remove_item_from_inventory(peer_id, item_name):
 	if multiplayer.is_server():
 		return
 		
-	var player = get_tree().root.get_node_or_null(str(peer_id))
+	var player = GameManager.players_node.get_node_or_null(str(peer_id))
 	if not player:
 		_log_debug("Não encontrado player para atualizar inventário")
 	if player and player.has_method("remove_item_from_inventory"):
@@ -691,7 +690,7 @@ func local_equip_item(peer_id, item_name, slot):
 	if multiplayer.is_server():
 		return
 		
-	var player = get_tree().root.get_node_or_null(str(peer_id))
+	var player = GameManager.players_node.get_node_or_null(str(peer_id))
 	if not player:
 		_log_debug("Não encontrado player para atualizar inventário")
 	if player and player.has_method("equip_item"):
@@ -703,7 +702,7 @@ func local_unequip_item(peer_id, slot):
 	if multiplayer.is_server():
 		return
 		
-	var player = get_tree().root.get_node_or_null(str(peer_id))
+	var player = GameManager.players_node.get_node_or_null(str(peer_id))
 	if not player:
 		_log_debug("Não encontrado player para atualizar inventário")
 	if player and player.has_method("unequip_item"):
@@ -715,7 +714,7 @@ func local_swap_equipped_item(player_id, new_item, slot):
 	if multiplayer.is_server():
 		return
 		
-	var player = get_tree().root.get_node_or_null(str(player_id))
+	var player = GameManager.players_node.get_node_or_null(str(player_id))
 	if not player:
 		_log_debug("Não encontrado player para atualizar inventário")
 	if player and player.has_method("swap_equipped_item"):
@@ -727,7 +726,7 @@ func local_drop_item(player_id, item_name):
 	if multiplayer.is_server():
 		return
 		
-	var player = get_tree().root.get_node_or_null(str(player_id))
+	var player = GameManager.players_node.get_node_or_null(str(player_id))
 	if not player:
 		_log_debug("Não encontrado player para atualizar inventário")
 	if player and player.has_method("drop_item"):
@@ -929,7 +928,7 @@ func _client_player_action(p_id: int, action_type: String, anim_name: String):
 	
 	_log_debug("⚔️ Recebendo ação: Player %d - %s" % [p_id, action_type])
 	
-	var player = get_tree().root.get_node_or_null(str(p_id))
+	var player = GameManager.players_node.get_node_or_null(str(p_id))
 	if player and player.has_method("_client_receive_action"):
 		player._client_receive_action(action_type, anim_name)
 

@@ -191,6 +191,24 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 		configuracoes_round
 	)
 	
+	# Criar cena de organização do round
+	var round_node = Node.new()
+	round_node.name = "Round_%d_%d" % [room_data["id"], round_data["round_id"]]
+	
+	# Adiciona à raiz
+	get_tree().root.add_child(round_node)
+	
+	round_registry.set_round_node(round_data["round_id"], round_node)
+	
+	# Cria nós organizacionais
+	var players_node = Node.new()
+	players_node.name = "Players"
+	round_node.add_child(players_node)
+
+	var objects_node = Node.new()
+	objects_node.name = "Objects"
+	round_node.add_child(objects_node)
+	
 	if round_data.is_empty():
 		_log_debug("❌ Erro ao criar rodada")
 		room_registry.set_room_in_game(room_id, false)
@@ -227,6 +245,7 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 		"spawn_data": spawn_data
 	}
 	
+	print("[111 get round]", round_registry.get_round(round_data["round_id"]))
 	_log_debug("  ✓ Enviando dados para clientes...")
 	
 	# Envia comando de início para todos os clientes
@@ -234,14 +253,14 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 		NetworkManager.rpc_id(room_player["id"], "_client_round_started", match_data)
 	
 	# PASSO 9: Instancia rodada no servidor
-	await _server_instantiate_round(match_data)
+	await _server_instantiate_round(match_data, players_node, round_node)
 	
 	# PASSO 10: Inicia rodada (ativa timers)
 	round_registry.start_round(round_data["round_id"])
 	
 	# PASSO 11: Spawna alguns objetos
-	object_manager.spawn_item(round_data["round_id"], "torch", Vector3(0, 2, 0), Vector3(0, 0, 0))
-	object_manager.spawn_item(round_data["round_id"], "torch", Vector3(0, 4, 0), Vector3(0, 0, 0))
+	object_manager.spawn_item(objects_node, round_data["round_id"], "torch", Vector3(0, 2, 0), Vector3(0, 0, 0))
+	object_manager.spawn_item(objects_node, round_data["round_id"], "torch", Vector3(0, 4, 0), Vector3(0, 0, 0))
 	
 	# PASSO 12: Atualiza lista de salas para os players no menu
 	ServerManager._send_rooms_list_to_all()
@@ -255,7 +274,7 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 
 # ===== INSTANCIAÇÃO NO SERVIDOR =====
 
-func _server_instantiate_round(match_data: Dictionary):
+func _server_instantiate_round(match_data: Dictionary, players_node, round_node):
 	"""
 	Instancia a rodada no servidor (mapa e players)
 	Similar ao ServerManager, mas com validações extras para testes
@@ -273,7 +292,7 @@ func _server_instantiate_round(match_data: Dictionary):
 	get_tree().root.add_child(test_map_manager)
 	
 	# Carrega o mapa
-	await test_map_manager.load_map(match_data["map_scene"], match_data["settings"])
+	await test_map_manager.load_map(match_data["map_scene"], round_node, match_data["settings"])
 	
 	# Salva referência no RoundRegistry
 	if round_registry.rounds.has(match_data["round_id"]):
@@ -282,12 +301,13 @@ func _server_instantiate_round(match_data: Dictionary):
 	# Spawna todos os jogadores
 	for player_data in match_data["players"]:
 		var spawn_data = match_data["spawn_data"][player_data["id"]]
-		_spawn_player_on_server(player_data, spawn_data, match_data["round_id"])
+		_spawn_player_on_server(player_data, spawn_data, match_data["round_id"], players_node)
 	
 	# Cria câmera livre se não estiver em modo headless
 	if not ServerManager.is_headless:
 		var debug_cam = preload("res://scenes/server_scenes/server_camera.tscn").instantiate()
-		get_tree().root.add_child(debug_cam)
+		
+		players_node.add_child(debug_cam)
 		debug_cam.global_position = Vector3(0, 3, 5)  # X=0, Y=10 (altura), Z=15 (distância)
 		var ui = get_tree().root.get_node_or_null("Control")
 		if ui:
@@ -297,7 +317,7 @@ func _server_instantiate_round(match_data: Dictionary):
 
 # ===== SPAWN DE JOGADORES =====
 
-func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, round_id: int):
+func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, round_id: int, players_node):
 	"""
 	Spawna um jogador no servidor (versão autoritativa)
 	
@@ -344,7 +364,7 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 	player_instance.is_local_player = false
 	
 	# 4. ADICIONA À ÁRVORE PRIMEIRO
-	get_tree().root.add_child(player_instance)
+	players_node.add_child(player_instance)
 	
 	# 5. AGUARDA PROCESSAMENTO COMPLETO
 	if not player_instance.is_node_ready():

@@ -72,6 +72,7 @@ signal player_despawned_from_round(round_id: int, peer_id: int)
 ##   "end_reason": String,  # "completed", "timeout", "all_disconnected"
 ##   "state": String,  # "loading", "playing", "ending", "results"
 ##   "map_manager": Node,  # Referência ao gerenciador de mapa
+##   "round_node": Node, # Referência ao node do round atual
 ##   "spawned_players": Dictionary,  # {peer_id: Node}
 ##   "round_timer": Timer  # Timer específico desta rodada
 ## }
@@ -160,6 +161,7 @@ func create_round(room_id: int, room_name: String, players: Array, settings: Dic
 		"disconnected_players": [],
 		"end_reason": "",
 		"state": "loading",  # Estados: loading -> playing -> ending -> results
+		"round_node": null,
 		"map_manager": null,
 		"spawned_players": {},
 		"round_timer": null
@@ -192,6 +194,16 @@ func create_round(room_id: int, room_name: String, players: Array, settings: Dic
 	round_created.emit(round_data.duplicate(true))
 	
 	return round_data.duplicate(true)
+
+# Em RoundRegistry.gd
+func set_round_node(round_id: int, node: Node):
+	"""Define o nó da cena para uma rodada existente"""
+	if not rounds.has(round_id):
+		push_error("RoundRegistry: Rodada %d não existe" % round_id)
+		return false
+	rounds[round_id]["round_node"] = node
+	_log_debug("Nó da rodada %d definido: %s" % [round_id, node.name])
+	return true
 
 func start_round(round_id: int):
 	"""
@@ -338,6 +350,7 @@ func _cleanup_round(round_id: int):
 		round_data["round_timer"].queue_free()
 	
 	# Limpa referências
+	round_data["map_manager"] = null
 	round_data["map_manager"] = null
 	round_data["spawned_players"].clear()
 	round_data["round_timer"] = null

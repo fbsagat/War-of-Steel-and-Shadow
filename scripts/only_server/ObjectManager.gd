@@ -81,7 +81,7 @@ func reset():
 
 # ===== SPAWN DE OBJETOS - API PRINCIPAL (SERVIDOR) =====
 
-func spawn_item(round_id: int, item_name: String, position: Vector3, rotation: Vector3 = Vector3.ZERO, owner_id: int = -1) -> int:
+func spawn_item(objects_node, round_id: int, item_name: String, position: Vector3, rotation: Vector3 = Vector3.ZERO, owner_id: int = -1) -> int:
 	"""
 	Spawna item no servidor e replica para clientes
 	
@@ -117,7 +117,7 @@ func spawn_item(round_id: int, item_name: String, position: Vector3, rotation: V
 	_log_debug("🔨 Spawnando item no servidor, round %s: %s (ID: %d)" % [round_id, item_name, object_id])
 	
 	# Spawna no servidor
-	var item_node = await _spawn_on_server(object_id, round_id, item_name, position, rotation, owner_id)
+	var item_node = await _spawn_on_server(objects_node, object_id, round_id, item_name, position, rotation, owner_id)
 	
 	if not item_node:
 		push_error("ObjectManager: Falha ao spawnar item '%s' no servidor" % item_name)
@@ -193,7 +193,7 @@ func _send_spawn_to_clients(round_id: int, object_id: int, item_name: String, po
 	
 	_log_debug("📤 Spawn enviado para %d cliente(s)" % clients_sent)
 
-func spawn_item_in_front_of_player(round_id: int, player_id: int, item_name: String) -> int:
+func spawn_item_in_front_of_player(objects_node, round_id: int, player_id: int, item_name: String) -> int:
 	"""
 	Spawna item na frente de um player
 	USA O ESTADO DO SERVIDOR (ServerManager.player_states)
@@ -219,9 +219,9 @@ func spawn_item_in_front_of_player(round_id: int, player_id: int, item_name: Str
 	
 	_log_debug("Spawn na frente do player %d: pos=%s" % [player_id, spawn_pos])
 	
-	return await spawn_item(round_id, item_name, spawn_pos, spawn_rot, player_id)
+	return await spawn_item(objects_node, round_id, item_name, spawn_pos, spawn_rot, player_id)
 
-func spawn_item_at_random_position(round_id: int, item_name: String, area_center: Vector3, area_radius: float, owner_id: int = -1) -> int:
+func spawn_item_at_random_position(objects_node, round_id: int, item_name: String, area_center: Vector3, area_radius: float, owner_id: int = -1) -> int:
 	"""Spawna item em posição aleatória dentro de uma área circular"""
 	
 	if not multiplayer.is_server():
@@ -237,7 +237,7 @@ func spawn_item_at_random_position(round_id: int, item_name: String, area_center
 		sin(angle) * distance
 	)
 	
-	return await spawn_item(round_id, item_name, spawn_pos, Vector3.ZERO, owner_id)
+	return await spawn_item(objects_node, round_id, item_name, spawn_pos, Vector3.ZERO, owner_id)
 
 # ===== DESPAWN DE OBJETOS (SERVIDOR) =====
 
@@ -349,7 +349,7 @@ func clear_round_objects(round_id: int):
 
 # ===== SPAWN INTERNO (SERVIDOR) =====
 
-func _spawn_on_server(object_id: int, round_id: int, item_name: String, position: Vector3, rotation: Vector3, owner_id: int) -> Node:
+func _spawn_on_server(objects_node, object_id: int, round_id: int, item_name: String, position: Vector3, rotation: Vector3, owner_id: int) -> Node:
 	"""
 	Spawna objeto no servidor usando ItemDatabase
 	
@@ -382,8 +382,8 @@ func _spawn_on_server(object_id: int, round_id: int, item_name: String, position
 	
 	_log_debug("Criando node: %s" % item_node.name)
 	
-	# Adiciona à árvore (raiz do servidor)
-	get_tree().root.add_child(item_node, true)
+	# Adiciona à árvore (raiz de objeto do round no servidor)
+	objects_node.add_child(item_node, true)
 	
 	# Aguarda processamento
 	await get_tree().process_frame

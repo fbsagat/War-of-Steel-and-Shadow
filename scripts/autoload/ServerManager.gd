@@ -274,7 +274,7 @@ func _on_peer_disconnected(peer_id: int):
 						NetworkManager.rpc_id(player["id"], "_client_remove_player", peer_id)
 						
 				# Remove nó do player do servidor
-				var player_node = get_tree().root.get_node_or_null(str(peer_id))
+				var player_node = player_data.get_player_node().get_node_or_null(str(peer_id))
 				if player_node:
 					player_node.queue_free()
 				
@@ -665,6 +665,24 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 		round_settings
 	)
 	
+	# Criar cena de organização do round
+	var round_node = Node.new()
+	round_node.name = "Round_%d_%d" % [room["id"], round_data["round_id"]]
+	
+	round_data["round_node"] = round_node
+	
+	# Adiciona à raiz
+	get_tree().root.add_child(round_node)
+	
+	# Cria nós organizacionais
+	var players_node = Node.new()
+	players_node.name = "Players"
+	round_node.add_child(players_node)
+
+	var objects_node = Node.new()
+	objects_node.name = "Objects"
+	round_node.add_child(objects_node)
+	
 	if round_data.is_empty():
 		_send_error(peer_id, "Erro ao criar rodada")
 		return
@@ -705,7 +723,7 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 		NetworkManager.rpc_id(room_player["id"], "_client_round_started", match_data)
 	
 	# Instancia mapa e players no servidor também
-	await _server_instantiate_round(match_data)
+	await _server_instantiate_round(match_data, players_node)
 	
 	# INICIA a rodada (ativa timers e verificações)
 	round_registry.start_round(round_data["round_id"])
@@ -773,7 +791,7 @@ func _create_spawn_points(match_players_count: int) -> Array:
 
 # ===== INSTANCIAÇÃO NO SERVIDOR =====
 
-func _server_instantiate_round(match_data: Dictionary):
+func _server_instantiate_round(match_data: Dictionary, players_node):
 	"""
 	Instancia a rodada no servidor (mapa e players)
 	Chamado após enviar comando para clientes carregarem
@@ -794,11 +812,11 @@ func _server_instantiate_round(match_data: Dictionary):
 	# Spawna todos os jogadores
 	for player_data in match_data["players"]:
 		var spawn_data = match_data["spawn_data"][player_data["id"]]
-		_spawn_player_on_server(player_data, spawn_data)
+		_spawn_player_on_server(player_data, spawn_data, players_node)
 	
 	_log_debug("✓ Rodada instanciada no servidor")
 
-func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary):
+func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, players_node):
 	"""
 	Spawna um jogador no servidor (versão autoritativa)
 	Registra node e inicializa estado para validação
@@ -815,7 +833,7 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary):
 	player_instance.is_local_player = false
 	
 	# Adiciona à cena
-	get_tree().root.add_child(player_instance)
+	players_node.add_child(player_instance)
 	
 	# Registra node no PlayerRegistry
 	player_registry.register_player_node(player_data["id"], player_instance)
@@ -1081,7 +1099,7 @@ func _rpc_despawn_on_clients(player_ids: Array, round_id: int, object_id: int):
 func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 	"""Servidor recebe pedido de pegar item, equipa automaticamente se for equipável, valida e redistribui"""
 	
-	var player_node = get_tree().root.get_node_or_null(str(requesting_player_id))
+	var player_node = player_registry.get_player_node(requesting_player_id)
 	var object = object_manager.spawned_objects[1][object_id]
 	var server_nearby = player_node.get_nearby_items()
 	var player = player_registry.get_player(requesting_player_id)
@@ -1145,6 +1163,7 @@ func _server_validate_equip_item(requesting_player_id: int, item_id: int, from_t
 	
 	var player = player_registry.get_player(requesting_player_id)
 	var round_ = round_registry.get_round_by_player_id(player["id"])
+	var players_node = round_["round_node"].get_node_or_null("Players")
 	var item = ItemDatabase.get_item_by_id(item_id)
 	var item_slot = item.get_slot()
 	_log_debug("[ITEM]📦 Player %s pediu para equipar item %d, no round %d" % [player["name"], item_id, round_["round_id"]])
@@ -1178,7 +1197,7 @@ func _server_validate_equip_item(requesting_player_id: int, item_id: int, from_t
 			NetworkManager.rpc_id(peer_id, "server_apply_equiped_item", requesting_player_id, item_id)
 	
 	# Aplica na cena do servidor (atualizar visual)
-	var player_node = get_tree().root.get_node_or_null(str(requesting_player_id))
+	var player_node = players_node.get_node_or_null(str(requesting_player_id))
 	if player_node and player_node.has_method("apply_visual_equip_on_player_node"):
 			player_node.apply_visual_equip_on_player_node(player_node, item_id)
 			
@@ -1208,7 +1227,12 @@ func _server_validate_drop_item(requesting_player_id: int, item_id: int):
 func drop_item(round_id, player_id, item_id):
 	# Se item_id == 0, é pedido do player, pegar o item de menor valor do player
 	# Se não, é pedido do server, pegar item_id que veio e dropar
+	
+	var round_ = round_registry.get_round(round_id)
+	var players_node = round_["round_node"].get_node_or_null("Players")
+	var objects_node = round_["round_node"].get_node_or_null("Objects")
 	var item_name = null
+	
 	if item_id == 0:
 		item_name = player_registry.get_first_equipped_item(round_id, player_id)
 	
@@ -1222,13 +1246,13 @@ func drop_item(round_id, player_id, item_id):
 			
 			# ObjectManager cuida de spawnar E enviar RPC
 			# Não precisa chamar NetworkManager diretamente
-			object_manager.spawn_item_in_front_of_player(round_id, player_id, item_name)
+			object_manager.spawn_item_in_front_of_player(objects_node, round_id, player_id, item_name)
 			
 			# Atualiza o inventário do player
 			player_registry.drop_item(round_id, player_id, item_name)
 			
 			# Aplica na cena do servidor (atualizar visual)
-			var player_node = get_tree().root.get_node_or_null(str(player_id))
+			var player_node = players_node.get_node_or_null(str(player_id))
 			if player_node and player_node.has_method("execute_item_drop"):
 				player_node.execute_item_drop(player_node, item_name)
 				
@@ -1243,7 +1267,7 @@ func drop_item(round_id, player_id, item_id):
 		var item_data = ItemDatabase.get_item_by_id(item_id)
 		if item_data:
 			player_registry.drop_item(round_id, player_id, item_data.name)
-			object_manager.spawn_item_in_front_of_player(round_id, player_id, item_data.name)
+			object_manager.spawn_item_in_front_of_player(objects_node, round_id, player_id, item_data.name)
 
 # ===== UTILITÁRIOS =====
 

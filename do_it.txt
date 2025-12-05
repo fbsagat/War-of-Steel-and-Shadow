@@ -35,6 +35,8 @@ criar rodadas quando o host inicia uma rodada, apagar rodada e registrar resulta
 40. Ajustar sistema de conexão de rede, quando servidor cair, clientes deve resetar tudo e voltar pra tela de conexão.
 	Quando um cliente cair, resetar tudo dele na partida(no servidor(nos registros tbm) e nos cliente) e garantir que
 	quando voltar, virá como novo peer, com novos registros e etc... Entender todo o funcionamento.
+41. Abrir o map manager logo na inicialização do servidor, não no inicio de uma rodada, 
+	matar o game manager no servidor para não sobrecarregar pois é inútil.
 
 Adicionar no modelo do player:
 	1. Anim interact com a outra mão.

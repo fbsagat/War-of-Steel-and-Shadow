@@ -37,6 +37,9 @@ var spawned_objects: Dictionary = {}
 var client_map_manager: Node = null
 var local_player: Node = null
 var is_in_round: bool = false
+var round_node: Node = null
+var players_node: Node = null
+var objects_node: Node = null
 
 # ===== VARIÁVEIS DE RECONEXÃO =====
 var reconnect_attempts: int = 0
@@ -182,21 +185,9 @@ func _on_connection_failed():
 
 func _on_server_disconnected():
 	_log_debug("Desconectado do servidor")
-	cached_unique_id = 0
+	
 	is_connected_to_server = false
-	local_peer_id = 0
-	current_room = {}
-	player_name = ""
 	is_in_round = false
-
-	# Verifica se foi desconexão intencional
-	if is_disconnecting_intentionally:
-		is_disconnecting_intentionally = false
-		if main_menu:
-			main_menu.show_connecting_menu()
-			main_menu.show_error_connecting("Desconectado manualmente.")
-		disconnected_from_server.emit()
-		return
 
 	# Inicia processo de reconexão
 	if main_menu:
@@ -257,6 +248,8 @@ func _reset_client_state():
 				object_data.node.queue_free()
 	spawned_objects.clear()
 	
+	# Limpa a partida(round) totalmente
+	
 	# Reset completo do estado
 	is_connected_to_server = false
 	is_connecting = false
@@ -283,8 +276,6 @@ func _reset_client_state():
 	reconnect_start_time = Time.get_ticks_msec() / 1000.0
 	connect_to_server()
 	
-	
-
 func _handle_connection_error(message: String):
 	"""Trata erro de conexão"""
 	if main_menu:
@@ -600,12 +591,28 @@ func _start_round_locally(match_data: Dictionary):
 		main_menu.hide()
 		main_menu.get_node("CanvasLayer").hide()
 	
+	# Criar cena de organização do round
+	round_node = Node.new()
+	round_node.name = "Round"
+	
+	# Adiciona à raiz
+	get_tree().root.add_child(round_node)
+	
+	# Cria nós organizacionais
+	players_node = Node.new()
+	players_node.name = "Players"
+	round_node.add_child(players_node)
+
+	objects_node = Node.new()
+	objects_node.name = "Objects"
+	round_node.add_child(objects_node)
+	
 	# Instancia MapManager
 	client_map_manager = preload("res://scripts/gameplay/MapManager.gd").new()
 	get_tree().root.add_child(client_map_manager)
 	
 	# Carrega o mapa
-	await client_map_manager.load_map(match_data["map_scene"], match_data["settings"])
+	await client_map_manager.load_map(match_data["map_scene"], round_node, match_data["settings"])
 
 	# Spawna todos os jogadores
 	for player_data in match_data["players"]:
@@ -629,11 +636,11 @@ func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bo
 	var player_name_ = str(player_data["id"])
 	var camera_name = player_name_ + "_Camera"
 	
-	if get_tree().root.has_node(player_name_):
+	if players_node.has_node(player_name_):
 		_log_debug("⚠ Player já existe: %s" % player_name_)
 		return
 		
-	if get_tree().root.has_node(camera_name):
+	if players_node.has_node(camera_name):
 		_log_debug("⚠ Câmera já existe: %s" % camera_name)
 		return
 
@@ -646,7 +653,7 @@ func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bo
 	player_instance.player_name = player_data["name"]
 	
 	# Adiciona player à cena PRIMEIRO
-	get_tree().root.add_child(player_instance)
+	players_node.add_child(player_instance)
 	
 	# Inicializa jogador
 	var spawn_info = client_map_manager.get_spawn_data(spawn_data["spawn_index"])
@@ -666,7 +673,7 @@ func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bo
 		player_instance.camera_controller = camera_instance
 		
 		# Adiciona câmera à cena
-		get_tree().root.add_child(camera_instance)
+		players_node.add_child(camera_instance)
 		
 		# Ativa controle
 		player_instance.set_as_local_player()
@@ -705,7 +712,7 @@ func _client_remove_player(peer_id : int):
 	"""Limpa o nó do cliente que se desconectou, esta função é para os outros 
 	que estão conectados"""
 	if local_peer_id != peer_id:
-		var player_node = get_tree().root.get_node_or_null(str(peer_id))
+		var player_node = players_node.get_node_or_null(str(peer_id))
 		if player_node:
 			player_node.queue_free()
 
@@ -714,7 +721,7 @@ func _cleanup_local_round():
 	_log_debug("Limpando objetos da rodada...")
 	
 	# Remove players
-	for child in get_tree().root.get_children():
+	for child in players_node.get_children():
 		if child.is_in_group("player") or child.is_in_group("camera_controller"):
 			child.queue_free()
 	
@@ -804,7 +811,15 @@ func _spawn_on_client(object_id: int, round_id: int, item_name: String, position
 	_log_debug("[ITEM]📦 Spawnando no cliente: %s - %s" % [owner_id, item_node.name])
 	
 	# Adiciona à árvore
-	get_tree().root.add_child(item_node, true)
+	var round_scene = get_tree().root.get_node_or_null("Round")
+	if round_scene:
+		var obj_scene = round_scene.get_node_or_null("Objects")
+		if obj_scene:
+			obj_scene.add_child(item_node, true)
+		else:
+			push_error("Objects node not found in Round!")
+	else:
+		push_error("Round node not found!")
 	
 	await get_tree().process_frame
 	
