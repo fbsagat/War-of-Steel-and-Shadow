@@ -277,7 +277,7 @@ func _on_peer_disconnected(peer_id: int):
 						NetworkManager.rpc_id(player["id"], "_client_remove_player", peer_id)
 						
 				# Remove nó do player do servidor
-				var player_node = player_data.get_player_node().get_node_or_null(str(peer_id))
+				var player_node = player_data.get_player_node()
 				if player_node:
 					player_node.queue_free()
 				
