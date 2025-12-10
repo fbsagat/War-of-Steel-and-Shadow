@@ -132,7 +132,6 @@ func _physics_process(delta: float) -> void:
 	var has_network = multiplayer and multiplayer.has_multiplayer_peer()
 	
 	# Processamento de movimento
-	# Servidor não processa movimento aqui (definido por RPC)
 	if is_local_player:
 		# Jogador controlado pelo usuário
 		move_dir = _handle_movement_input(delta)
@@ -151,39 +150,49 @@ func _physics_process(delta: float) -> void:
 			# Jogador remoto no cliente
 			_interpolate_remote_player(delta)
 	
-	# Animações (sempre server/client)
-	_handle_animations(move_dir)
-		
-func _process(delta: float) -> void:
-	if is_aiming and nearest_enemy:
-		# 1. Vetor do jogador para o inimigo
-		var to_enemy = nearest_enemy.global_transform.origin - global_transform.origin
-		# 2. Projeta no plano horizontal (ignora Y)
-		var flat_dir = Vector3(to_enemy.x, 0, to_enemy.z)
-		# 3. Calcula o ângulo Y (em radianos) dessa direção
-		var target_angle = atan2(flat_dir.x, flat_dir.z)  # ← isso é o "45 graus" dinâmico
-		# 4. Gira suavemente para esse ângulo
-		rotation.y = lerp_angle(rotation.y, target_angle, turn_speed * delta)
-		# 5. Atualiza aiming_forward_direction para uso no movimento
-		aiming_forward_direction = Vector3(cos(target_angle), 0, sin(target_angle)).normalized()
+	# Lógica de rotação e mira
+	if is_aiming:
+		if nearest_enemy:
+			var to_enemy = nearest_enemy.global_transform.origin - global_transform.origin
+			var flat_dir = Vector3(to_enemy.x, 0, to_enemy.z)
+			var target_angle = atan2(flat_dir.x, flat_dir.z)
+			rotation.y = lerp_angle(rotation.y, target_angle, turn_speed * delta)
+			aiming_forward_direction = Vector3(cos(target_angle), 0, sin(target_angle)).normalized()
+		else:
+			if camera_controller:
+				var camera_yaw = camera_controller.rotation.y
+				rotation.y = lerp_angle(rotation.y, camera_yaw, turn_speed * delta)
+				aiming_forward_direction = Vector3(cos(camera_yaw), 0, sin(camera_yaw)).normalized()
+				
+				# Forçar câmera atrás ao defender, após alinhamento
+				if is_defending and camera_controller.has_method("force_behind_player"):
+					var angle_diff = abs(angle_difference(rotation.y, camera_yaw))
+			#  Diferença de ângulo para forçar \/
+					if angle_diff < deg_to_rad(8.0):
+						camera_controller.force_behind_player()
+			else:
+				aiming_forward_direction = Vector3(-global_transform.basis.z.x, 0, -global_transform.basis.z.z).normalized()
 	else:
-		if not is_aiming:
-			aiming_forward_direction = Vector3(-global_transform.basis.z.x, 0, -global_transform.basis.z.z).normalized()
+		aiming_forward_direction = Vector3(-global_transform.basis.z.x, 0, -global_transform.basis.z.z).normalized()
 
-	# Atualiza detecção contínua de inimigos (se aplicável)
+	# Atualiza detecção contínua de inimigos
 	if update_interval <= 0.0:
 		_update_nearest_enemy()
 	
-	# Armazena a direção atual para o modo mira
+	# Armazena direção para modo mira
 	if is_aiming:
 		var dir = _get_current_direction()
-		# Se for uma direção simples (não diagonal), atualiza o histórico
 		if dir in ["forward", "backward", "left", "right"]:
 			if last_simple_directions.is_empty() or last_simple_directions[-1] != dir:
 				last_simple_directions.append(dir)
 				if last_simple_directions.size() > MAX_DIRECTION_HISTORY:
 					last_simple_directions.pop_front()
-		# Diagonais NÃO entram no histórico (são usadas imediatamente no ataque)
+
+	# Animações (sempre server/client)
+	_handle_animations(move_dir)
+
+func _process(delta: float) -> void:
+	pass
 
 func hitboxes_manager():
 	# Conecta todos os hitboxes de ataque
@@ -573,7 +582,7 @@ func _get_current_direction() -> String:
 	if r: return "right"
 	return ""
 	
-# movimentos: Pulo e corrida
+# Movimentos: Pulo e corrida
 func _apply_movement(move_dir: Vector3, delta: float) -> void:
 	# Pulo: Preserva velocidade horizontal EXATA do chão
 	if not is_aiming:
@@ -640,7 +649,7 @@ func _apply_movement(move_dir: Vector3, delta: float) -> void:
 	is_running = Input.is_action_pressed("run") and is_on_floor()
 	
 # Chama a câmera lockada e transiciona p/ movimentação strafe
-func _strafe_mode(ativar: bool = true, com_camera_lock = true):
+func camera_strafe_mode(ativar: bool = true):
 	# Só o jogador local pode ativar/desativar modo de mira
 	if not is_local_player:
 		return
@@ -661,8 +670,6 @@ func _strafe_mode(ativar: bool = true, com_camera_lock = true):
 			player_forward = player_forward.normalized()
 			defense_target_angle = atan2(-player_forward.x, -player_forward.z)
 		
-		if com_camera_lock and camera_controller and camera_controller.has_method("force_behind_player"):
-			camera_controller.force_behind_player()
 		# Se não tem câmera, não faz nada (jogador remoto não chega aqui)
 	else:
 		is_aiming = false
@@ -678,11 +685,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif event.is_action_pressed("attack"):
 			action_sword_attack_call()
 		elif event.is_action_pressed("lock"):
-			action_lock()
+			action_lock_call()
 		elif event.is_action_released("lock"):
-			action_stop_locking()
+			action_stop_locking_call()
 		elif event.is_action_pressed("block_attack"):
-			action_block_attack()
+			action_block_attack_call()
 		elif event.is_action_pressed("drop"):
 			action_drop_item_call()
 			
@@ -1020,19 +1027,18 @@ func _client_receive_action(action_type: String, anim_name: String):
 # ===== AÇÕES DO JOGADOR =====
 
 func action_sword_attack_call():
+	"""Executa e sincroniza ataque"""
 	
 	# Apenas jogador local pede para atacar
 	if not is_local_player:
 		return
 	
-	# Apenas atacar se estiver usando um item de ataque
+	# Verificação local: Apenas atacar se estiver com uma arma na mão direita
 	var item_equipado_nome = local_inventory["equipped"]["hand-right"]
-	
-	# Apenas atacar se estiver com algo na mão direita
 	if not item_equipado_nome:
 		return
 		
-	# apenas atacar se for uma arma
+	# Verificação local: Apenas atacar se for uma arma
 	if ItemDatabase.get_item(item_equipado_nome)["category"] != "weapon":
 		return
 	
@@ -1041,7 +1047,7 @@ func action_sword_attack_call():
 		var anim_name = _determine_attack_from_input()
 		NetworkManager.send_player_action(player_id, "attack", anim_name)
 		
-		# executa localmente
+		# executa animação localmente
 		_execute_animation(anim_name,"parameters/sword_attacks/transition_request",
 		"parameters/Attack/request")
 		
@@ -1052,33 +1058,22 @@ func action_sword_attack_call():
 		#"parameters/Attack/request")
 		#_on_attack_timer_timeout(anim_time * 0.4, current_item_right_id)
 
-
-# PAREI AQUI, FAZER O ACTION_LOCK CALL!
-func action_lock():
-	"""Versão modificada que sincroniza defesa"""
+func action_block_attack_call():
+	"""Executa e sincroniza ataque com escudo"""
 	
-	# APENAS JOGADOR LOCAL
+	# Apenas jogador local pede para atacar com escudo
 	if not is_local_player:
 		return
-	
-	if current_item_left_id != 10:
-		_strafe_mode(true, true)
-	
-	if current_item_left_id != 0:
-		is_defending = true
-		animation_tree.set("parameters/Blocking/blend_amount", 1.0)
 		
-		# SINCRONIZA DEFESA (RELIABLE)
-		if NetworkManager and NetworkManager.is_connected:
-			NetworkManager.send_player_action(player_id, "defend_start", "")
-
-func action_block_attack():
-	"""Versão modificada que sincroniza block attack"""
-	
-	# APENAS JOGADOR LOCAL
-	if not is_local_player:
+	var item_equipado_nome = local_inventory["equipped"]["hand-left"]
+	# Verificação local: Apenas atacar se estiver com um escudo na mão esquerda
+	if not item_equipado_nome:
 		return
-	
+		
+	# Verificação local: Apenas atacar se for um escudo
+	if ItemDatabase.get_item(item_equipado_nome)["function"] != "defense":
+		return
+		
 	if not is_block_attacking and is_defending:
 		hit_targets.clear()
 		is_block_attacking = true
@@ -1090,27 +1085,53 @@ func action_block_attack():
 		
 		_on_block_attack_timer_timeout(anim_time * 0.85)
 		
-		# SINCRONIZA BLOCK ATTACK (RELIABLE)
+		# Sincroniza defesa (Reliable)
 		if NetworkManager and NetworkManager.is_connected:
 			NetworkManager.send_player_action(player_id, "block_attack", "Block_Attack")
 
-func action_stop_locking():
-	"""Versão modificada que sincroniza fim da defesa"""
+func action_lock_call():
+	"""Executa e sincroniza defesa"""
 	
-	# APENAS JOGADOR LOCAL
+	# Apenas jogador local pede para defender
 	if not is_local_player:
 		return
 	
-	_strafe_mode(false, true)
+	# Ativa o modo strafe sempre
+	camera_strafe_mode(true)
 	
-	if current_item_left_id != 0:
-		is_defending = false
-		is_attacking = false
-		animation_tree.set("parameters/Blocking/blend_amount", 0.0)
+	# Local: Apenas defender se tem um escudo
+	var item_equipado_nome = local_inventory["equipped"]["hand-left"]
+	if item_equipado_nome and ItemDatabase.get_item(item_equipado_nome)["function"] == "defense":
 		
-		# SINCRONIZA FIM DE DEFESA (RELIABLE)
+		# Animação de defesa com escudo
+		animation_tree.set("parameters/Blocking/blend_amount", 1.0)
+		# Ativa variável de defesa
+		is_defending = true
+		
+		# Sincroniza defesa (Reliable)
 		if NetworkManager and NetworkManager.is_connected:
-			NetworkManager.send_player_action(player_id, "defend_stop", "")
+			NetworkManager.send_player_action(player_id, "defend_start", "")
+
+func action_stop_locking_call():
+	"""Executa e sincroniza fim da defesa"""
+	
+	# Apenas jogador local
+	if not is_local_player:
+		return
+	
+	# Apenas se estiver lockado
+	if not is_aiming:
+		return 
+		
+	camera_strafe_mode(false)
+	
+	is_defending = false
+	is_attacking = false
+	animation_tree.set("parameters/Blocking/blend_amount", 0.0)
+		
+	# Sincroniza fim da defesa (Reliable)
+	if NetworkManager and NetworkManager.is_connected:
+		NetworkManager.send_player_action(player_id, "defend_stop", "")
 
 # ===== INICIALIZAÇÃO MULTIPLAYER =====
 

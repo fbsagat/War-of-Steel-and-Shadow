@@ -17,10 +17,10 @@ class_name PlayerRegistry
 
 # ===== REGISTROS (Injetados pelo ServerManager) =====
 
-var room_registry = null  # Injetado
-var round_registry = null  # Injetado
-var object_manager = null  # Injetado
-var item_database = null  # Referência ao ItemDatabase
+var room_registry: RoomRegistry = null  # Injetado
+var round_registry: RoundRegistry = null  # Injetado
+var object_manager: ObjectManager = null  # Injetado
+var item_database: ItemDatabase = null  # Referência ao ItemDatabase
 
 # ===== VARIÁVEIS INTERNAS =====
 
@@ -744,7 +744,13 @@ func has_armor_equipped(round_id: int, player_id: int) -> bool:
 	var head = get_equipped_item_in_slot(round_id, player_id, "head")
 	var body = get_equipped_item_in_slot(round_id, player_id, "body")
 	return not head.is_empty() or not body.is_empty()
-
+	
+func has_shield_equipped(round_id: int, player_id: int) -> bool:
+	"""Verifica se tem escudo equipado"""
+	var hand_left = get_equipped_item_in_slot(round_id, player_id, "hand-left")
+	var item = item_database.get_item(hand_left).to_dictionary()
+	return item["function"] == "defense"
+	
 func count_items_of_type(round_id: int, player_id: int, item_type: String) -> int:
 	"""Conta quantos itens de um tipo específico o jogador possui"""
 	if not item_database:

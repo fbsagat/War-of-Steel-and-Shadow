@@ -1120,7 +1120,7 @@ func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 		if item_:
 			player_registry.unequip_item(round_["round_id"], player["id"], item_type)
 			player_registry.remove_item_from_inventory(round_["round_id"], player["id"], item_)
-			drop_item(round_["round_id"], player["id"], item_.id)
+			drop_item(round_["round_id"], player["id"], item.id)
 			
 		# Equipar o item novo
 		player_registry.add_item_to_inventory(round_["round_id"], player["id"], item["name"])
@@ -1266,6 +1266,51 @@ func drop_item(round_id, player_id, item_id):
 		if item_data:
 			player_registry.drop_item(round_id, player_id, item_data.name)
 			object_manager.spawn_item_in_front_of_player(objects_node, round_id, player_id, item_data.name)
+
+# ===== VALIDAÇÕES DE AÇÕES DO PLAYER =====
+
+@rpc("any_peer", "call_remote", "reliable")
+func _server_player_action(p_id: int, action_type: String, anim_name: String):
+	"""RPC: Servidor recebe ação do jogador e redistribui"""
+	
+	_log_debug("_server_player_action: %s" % action_type)
+	var player = player_registry.get_player_round(p_id)
+	
+	# Ignora pedidos do servidor (redundancia)
+	if not (multiplayer.has_multiplayer_peer() and multiplayer.get_unique_id() == 1):
+		return
+	
+	# Ignora o próprio player
+	var sender_id = multiplayer.get_remote_sender_id()
+	if sender_id != p_id:
+		return
+	
+	# Se for um ataque
+	if action_type == "attack":
+		# Servidor verifica se o player tem uma arma equipada
+		if not player_registry.has_weapon_equipped(player, p_id):
+			return
+		_log_debug("%s tem uma arma equipada: %s" % [player, player_registry.has_weapon_equipped(player, p_id)])
+			
+	# Se for um ataque com escudo:
+	elif action_type == "block_attack":
+		# Servidor verifica se o player tem uma escudo equipado
+		if not player_registry.has_shield_equipped(player, p_id):
+			return
+		_log_debug("%s tem um escudo equipado: %s" % [player, player_registry.has_shield_equipped(player, p_id)])
+	
+	# Propaga pra todos os outros clientes (Reliable = Garantido)
+	for peer_id in multiplayer.get_peers():
+		if peer_id != p_id:
+			NetworkManager._client_player_action.rpc_id(peer_id, p_id, action_type, anim_name)
+			# Dica: Outra forma de chamar rpc(quando está inacessível p o server mas existe no pc remoto):
+			# if has_method("_client_player_action"):
+				# rpc_id(peer_id, "_client_player_action", p_id, action_type, anim_name)
+	
+	# Aplica no nó do servidor
+	var player_node = player_registry.get_player_node(p_id)
+	if player_node and player_node.has_method("_client_receive_action"):
+		player_node._client_receive_action(action_type, anim_name)
 
 # ===== UTILITÁRIOS =====
 

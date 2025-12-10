@@ -907,24 +907,8 @@ func _server_player_action(p_id: int, action_type: String, anim_name: String):
 	"""RPC: Servidor recebe ação do jogador e redistribui"""
 	
 	_log_debug("_server_player_action")
-	# Ignora pedidos do servidor (redundancia)
-	if not (multiplayer.has_multiplayer_peer() and multiplayer.get_unique_id() == 1):
-		return
-	
-	# Ignora o próprio player
-	var sender_id = multiplayer.get_remote_sender_id()
-	if sender_id != p_id:
-		return
-	
-	# Propaga pra todos os outros clientes (Reliable = Garantido)
-	for peer_id in multiplayer.get_peers():
-		if peer_id != p_id:
-			rpc_id(peer_id, "_client_player_action", p_id, action_type, anim_name)
-	
-	# Aplica no nó do servidor
-	var player = player_registry.get_player_node(p_id)
-	if player and player.has_method("_client_receive_action"):
-		player._client_receive_action(action_type, anim_name)
+	if ServerManager.has_method("_server_player_action"):
+		ServerManager._server_player_action(p_id, action_type, anim_name)
 
 @rpc("authority", "call_remote", "reliable")
 func _client_player_action(p_id: int, action_type: String, anim_name: String):
