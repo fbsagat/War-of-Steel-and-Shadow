@@ -1299,6 +1299,12 @@ func _server_player_action(p_id: int, action_type: String, anim_name: String):
 			return
 		_log_debug("%s tem um escudo equipado: %s" % [player, player_registry.has_shield_equipped(player, p_id)])
 	
+	# Se for um pedido de iniciar defesa com escudo
+	elif action_type == "defend_start":
+		# Servidor verifica se o player tem uma escudo equipado
+		if not player_registry.has_shield_equipped(player, p_id):
+			return
+	
 	# Propaga pra todos os outros clientes (Reliable = Garantido)
 	for peer_id in multiplayer.get_peers():
 		if peer_id != p_id:
@@ -1307,6 +1313,7 @@ func _server_player_action(p_id: int, action_type: String, anim_name: String):
 			# if has_method("_client_player_action"):
 				# rpc_id(peer_id, "_client_player_action", p_id, action_type, anim_name)
 	
+	# Para defend_stop o servidor aplica sem verificações
 	# Aplica no nó do servidor
 	var player_node = player_registry.get_player_node(p_id)
 	if player_node and player_node.has_method("_client_receive_action"):

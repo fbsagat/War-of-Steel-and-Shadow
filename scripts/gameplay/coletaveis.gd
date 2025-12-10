@@ -18,8 +18,8 @@ var initial_velocity: Vector3 = Vector3.ZERO
 
 @export_category("Network Sync")
 @export var sync_enabled: bool = true
-@export var sync_rate: float = 0.03
-@export var interpolation_speed: float = 22.0
+@export var sync_rate: float = 0.05
+@export var interpolation_speed: float = 50.0
 @export var teleport_threshold: float = 0.01
 @export var sync_rotation: bool = true
 
