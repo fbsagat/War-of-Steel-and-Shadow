@@ -281,18 +281,8 @@ func _server_instantiate_round(match_data: Dictionary, players_node, round_node)
 	"""
 	_log_debug("  Instanciando rodada no servidor...")
 	
-	# Limpa MapManager anterior se existir
-	if test_map_manager and is_instance_valid(test_map_manager):
-		test_map_manager.unload_map()
-		test_map_manager.queue_free()
-		test_map_manager = null
-	
-	# Cria MapManager
-	test_map_manager = preload("res://scripts/gameplay/MapManager.gd").new()
-	get_tree().root.add_child(test_map_manager)
-	
 	# Carrega o mapa
-	await test_map_manager.load_map(match_data["map_scene"], round_node, match_data["settings"])
+	await ServerManager.server_map_manager.load_map(match_data["map_scene"], round_node, match_data["settings"])
 	
 	# Salva referência no RoundRegistry
 	if round_registry.rounds.has(match_data["round_id"]):
