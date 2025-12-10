@@ -191,7 +191,7 @@ func _physics_process(delta: float) -> void:
 	# Animações (sempre server/client)
 	_handle_animations(move_dir)
 
-func _process(delta: float) -> void:
+func _process(_delta: float) -> void:
 	pass
 
 func hitboxes_manager():

@@ -285,7 +285,7 @@ func _server_instantiate_round(match_data: Dictionary, players_node, round_node)
 	
 	# Salva referência no RoundRegistry
 	if round_registry.rounds.has(match_data["round_id"]):
-		round_registry.rounds[match_data["round_id"]]["map_manager"] = test_map_manager
+		round_registry.rounds[match_data["round_id"]]["map_manager"] = ServerManager.server_map_manager
 	
 	# Spawna todos os jogadores
 	for player_data in match_data["players"]:
@@ -380,9 +380,9 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 	# 8. Calcula posição de spawn
 	var spawn_pos = Vector3.ZERO
 	
-	if test_map_manager and test_map_manager.has_method("get_spawn_position"):
+	if ServerManager.server_map_manager and ServerManager.server_map_manager.has_method("get_spawn_position"):
 		var spawn_index = spawn_data.get("spawn_index", 0)
-		spawn_pos = test_map_manager.get_spawn_position(spawn_index)
+		spawn_pos = ServerManager.server_map_manager.get_spawn_position(spawn_index)
 		_log_debug("Spawn position: %s (index: %d)" % [spawn_pos, spawn_index])
 	else:
 		push_warning("TestManager: MapManager não disponível, usando posição (0,0,0)")
