@@ -1197,7 +1197,7 @@ func obter_estatisticas() -> Dictionary:
 
 [node name="WorldGenerator" type="Node3D"]
 script = SubResource("GDScript_om72s")
-tamanho_mapa = Vector2i(80, 80)
+tamanho_mapa = Vector2i(150, 80)
 tamanho_chunk = 0.2
 amplitude_base = 10.0
 frequencia_montanhas = 0.008
@@ -1216,5 +1216,5 @@ simular_erosao_hidraulica = true
 distancia_suavizacao_borda = 0.3
 
 [node name="Sky3D" parent="." instance=ExtResource("1_mvrc1")]
-current_time = 7.5029733330373265
+current_time = 15.890773333042036
 minutes_per_day = 10.0

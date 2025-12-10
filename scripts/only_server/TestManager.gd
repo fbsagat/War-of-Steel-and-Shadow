@@ -245,7 +245,6 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 		"spawn_data": spawn_data
 	}
 	
-	print("[111 get round]", round_registry.get_round(round_data["round_id"]))
 	_log_debug("  ✓ Enviando dados para clientes...")
 	
 	# Envia comando de início para todos os clientes

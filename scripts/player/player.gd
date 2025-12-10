@@ -711,7 +711,6 @@ func _hide_all_model_items():
 func _execute_animation(anim_name: String, anim_param_path: String, oneshot_request_path: String = "") -> float:
 	# Verifica existência da animação no AnimationPlayer
 	
-	print("_execute_animation", anim_name, " ", anim_param_path, " ", oneshot_request_path)
 	if not animation_player.has_animation(anim_name):
 		push_error("Animação não encontrada no AnimationPlayer: %s" % anim_name)
 		return 0.0
