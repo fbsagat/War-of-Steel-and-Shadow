@@ -554,7 +554,8 @@ func _handle_animations(move_dir):
 		animation_tree["parameters/bobbing/add_amount"] = bobbing_intensity * speed
 	else:
 		animation_tree["parameters/bobbing/add_amount"] = 0
-	
+
+# Movimentos: Aplica conforme o modo ativado no momento: free_cam ou locked
 func _handle_movement_input(delta: float):
 	var move_dir: Vector3
 	if is_aiming:
@@ -563,24 +564,6 @@ func _handle_movement_input(delta: float):
 		move_dir = _get_movement_direction_free_cam()
 	_apply_movement(move_dir, delta)
 	return move_dir
-	
-# Movimentos para a função de escoher o movimento da espada
-func _get_current_direction() -> String:
-	var f = Input.is_action_pressed("move_forward")
-	var b = Input.is_action_pressed("move_backward")
-	var l = Input.is_action_pressed("move_left")
-	var r = Input.is_action_pressed("move_right")
-	
-	# Diagonais têm prioridade
-	if f and r: return "forward_right"
-	if f and l: return "forward_left"
-	if b and r: return "backward_right"
-	if b and l: return "backward_left"
-	if f: return "forward"
-	if b: return "backward"
-	if l: return "left"
-	if r: return "right"
-	return ""
 	
 # Movimentos: Pulo e corrida
 func _apply_movement(move_dir: Vector3, delta: float) -> void:
@@ -727,7 +710,25 @@ func _execute_animation(anim_name: String, anim_param_path: String, oneshot_requ
 	var anim = animation_player.get_animation(anim_name)
 	return anim.length if anim else 0.0
 	
-# Movimentos da espada de acordo com o input
+# Movimentos para a função de escoher o movimento da espada
+func _get_current_direction() -> String:
+	var f = Input.is_action_pressed("move_forward")
+	var b = Input.is_action_pressed("move_backward")
+	var l = Input.is_action_pressed("move_left")
+	var r = Input.is_action_pressed("move_right")
+	
+	# Diagonais têm prioridade
+	if f and r: return "forward_right"
+	if f and l: return "forward_left"
+	if b and r: return "backward_right"
+	if b and l: return "backward_left"
+	if f: return "forward"
+	if b: return "backward"
+	if l: return "left"
+	if r: return "right"
+	return ""
+	
+# Movimentos da espada conforme com o input
 func _determine_attack_from_input() -> String:
 	var current_dir = _get_current_direction()
 	# 1. PRIORIDADE: inputs diagonais simultâneos
@@ -789,7 +790,7 @@ func _on_block_attack_timer_timeout(duration):
 func _on_impact_detected(impulse: float):
 	_log_debug("FUI ATINGIDO! Impulso: %d" % impulse)
 	# Reduzir vida, ativar efeito de hit, etc.
-	
+
 	if is_defending:
 		animation_tree.set("parameters/Blocking/blend_amount", 0.0)
 	var random_hit = ["parameters/Hit_B/request", "parameters/Hit_A/request"].pick_random()
@@ -1142,7 +1143,7 @@ func set_as_local_player():
 	set_process_input(true)
 	set_process_unhandled_input(true)
 	
-	# Inicializa o inventário
+	# Inicializa o inventário para os clientes
 	if not _is_server:
 		init_player_inventory()
 
@@ -1151,19 +1152,19 @@ func initialize(p_id: int, p_name: String, spawn_pos: Vector3):
 	player_id = p_id
 	player_name = p_name
 	
-	# NOME DO NÓ = ID DO PLAYER (IMPORTANTE!)
+	# Nome do nó recebe ID do player
 	name = str(player_id)
 	
 	# Posiciona no spawn
 	global_position = spawn_pos
-	target_position = spawn_pos  # Inicializa target também
+	target_position = spawn_pos
 	
 	# Atualiza label de nome
 	if name_label:
 		name_label.text = player_name
 		setup_name_label()
 	
-	# CONFIGURAÇÃO DE PROCESSOS
+	# Configuração de processos
 	if not is_local_player:
 		# Remotos não processam input
 		set_process_input(false)
@@ -1179,6 +1180,7 @@ func initialize(p_id: int, p_name: String, spawn_pos: Vector3):
 	
 # ===== FUNÇÕES DE ITENS ===============
 
+# Função para equipar itens magicamente (Trainer de testes / Remover em produção)
 func handle_test_equip_inputs_call():
 	var mapped_id: int
 	var test_equip_map: Dictionary = {}
@@ -1200,7 +1202,8 @@ func handle_test_equip_inputs_call():
 		# envia para o servidor (se conectado)
 		if NetworkManager and NetworkManager.is_connected:
 			NetworkManager.request_equip_item(player_id, mapped_id, true)
-	
+
+# Executa quando o player equipa algum item / muda visual do modelo
 func apply_visual_equip_on_player_node(player_node, item_mapped_id):
 	
 	animation_tree.set("PickUp", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)

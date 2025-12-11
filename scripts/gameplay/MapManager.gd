@@ -57,9 +57,9 @@ func load_map(map_scene_path: String, round_node, settings: Dictionary = {}):
 		push_error("Falha ao instanciar mapa")
 		return false
 		
-	current_map.seed_geracao = settings.get("map_seed")
-	current_map.preencher_etapas(settings.get("preencher_etapas", []))
-	current_map.tamanho_mapa = settings.get("map_size")
+	#current_map.seed_geracao = settings.get("map_seed")
+	#current_map.preencher_etapas(settings.get("preencher_etapas", []))
+	#current_map.tamanho_mapa = settings.get("map_size")
 	current_map.get_node("Sky3D").current_time = settings.get("env_current_time")
 	
 	# Adiciona o mapa à cena

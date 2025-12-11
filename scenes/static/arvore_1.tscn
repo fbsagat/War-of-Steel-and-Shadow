@@ -73,7 +73,15 @@ data = PackedVector3Array(3.2916, 15.7427, 0.51919997, 1.5099, 16.309599, 0.6987
 
 [node name="Arvore_1" type="StaticBody3D"]
 
-[node name="Park tree big green f" type="MeshInstance3D" parent="."]
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+mesh = SubResource("ArrayMesh_8cv03")
+skeleton = NodePath("")
+
+[node name="lod1" type="MeshInstance3D" parent="."]
+mesh = SubResource("ArrayMesh_8cv03")
+skeleton = NodePath("")
+
+[node name="lod2" type="MeshInstance3D" parent="."]
 mesh = SubResource("ArrayMesh_8cv03")
 skeleton = NodePath("")
 

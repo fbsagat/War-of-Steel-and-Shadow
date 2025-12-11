@@ -233,7 +233,7 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 	var round_settings = round_data.get("settings", {})
 	round_settings["round_players_count"] = players_qtd
 	round_settings["spawn_points"] = spawn_points
-	var map_scene = round_settings.get("map_scene", "res://scenes/system/WorldGenerator.tscn")
+	var map_scene = round_settings.get("map_scene", "res://scenes/system/terrain_3d.tscn")
 	
 	# PASSO 8: Prepara dados para clientes
 	var match_data = {

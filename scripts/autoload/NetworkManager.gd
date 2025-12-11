@@ -664,7 +664,6 @@ func _client_player_animation_state(p_id: int, speed: float, attacking: bool, de
 
 @rpc("authority", "call_remote", "reliable")
 func local_add_item_to_inventory(peer_id, item_name):
-	_log_debug("local_add_item_to_inventory")
 	if multiplayer.is_server():
 		return
 	var player = GameManager.players_node.get_node_or_null(str(peer_id))
@@ -686,7 +685,6 @@ func local_remove_item_from_inventory(peer_id, item_name):
 
 @rpc("authority", "call_remote", "reliable")
 func local_equip_item(peer_id, item_name, slot):
-	_log_debug("local_equip_item")
 	if multiplayer.is_server():
 		return
 		

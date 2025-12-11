@@ -1215,5 +1215,5 @@ simular_erosao_hidraulica = true
 distancia_suavizacao_borda = 0.3
 
 [node name="Sky3D" parent="." instance=ExtResource("1_mvrc1")]
-current_time = 16.997493333042833
+current_time = 11.334253333043213
 minutes_per_day = 10.0

@@ -171,6 +171,7 @@ func create_round(room_id: int, room_name: String, players: Array, settings: Dic
 	for player in players:
 		round_data["scores"][player["id"]] = 0
 	
+	# Configurações de mapa e ambiente
 	# Aplica configurações padrão de mapa se não especificadas
 	if not round_data["settings"].has("map_seed"):
 		round_data["settings"]["map_seed"] = randi_range(100000, 999999)

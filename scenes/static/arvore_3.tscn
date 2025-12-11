@@ -100,9 +100,17 @@ data = PackedVector3Array(-1.4161999, 7.4487, -1.6847, -0.9647, 6.8533998, -1.21
 
 [node name="arvore_3" type="StaticBody3D"]
 
-[node name="Birch big green f" type="MeshInstance3D" parent="."]
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
 mesh = SubResource("ArrayMesh_j1ilo")
 skeleton = NodePath("")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 shape = SubResource("ConcavePolygonShape3D_k4ed2")
+
+[node name="lod1" type="MeshInstance3D" parent="."]
+mesh = SubResource("ArrayMesh_j1ilo")
+skeleton = NodePath("")
+
+[node name="lod2" type="MeshInstance3D" parent="."]
+mesh = SubResource("ArrayMesh_j1ilo")
+skeleton = NodePath("")
