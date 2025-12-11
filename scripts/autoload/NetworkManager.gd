@@ -662,62 +662,56 @@ func _client_player_animation_state(p_id: int, speed: float, attacking: bool, de
 
 # ===== ATUALIZADORES DE INVENTÁRIO DE PLAYERS =====
 
+# Adiciona item no inventário do player
 @rpc("authority", "call_remote", "reliable")
-func local_add_item_to_inventory(peer_id, item_name):
+func local_add_item_to_inventory(item_name):
+	
+	# Ignorar se for servidor
 	if multiplayer.is_server():
 		return
-	var player = GameManager.players_node.get_node_or_null(str(peer_id))
-	if not player:
-		_log_debug("Não encontrado player para atualizar inventário")
-	if player and player.has_method("add_item_to_inventory"):
-		player.add_item_to_inventory(item_name)
 
-@rpc("authority", "call_remote", "reliable")
-func local_remove_item_from_inventory(peer_id, item_name):
-	if multiplayer.is_server():
-		return
-		
-	var player = GameManager.players_node.get_node_or_null(str(peer_id))
-	if not player:
-		_log_debug("Não encontrado player para atualizar inventário")
-	if player and player.has_method("remove_item_from_inventory"):
-		player.remove_item_from_inventory(item_name)
+	if GameManager and GameManager.has_method("add_item_to_inventory"):
+		GameManager.add_item_to_inventory(item_name)
 
+# Remove item do inventário do player
 @rpc("authority", "call_remote", "reliable")
-func local_equip_item(peer_id, item_name, slot):
+func local_remove_item_from_inventory(item_name):
 	if multiplayer.is_server():
 		return
 		
-	var player = GameManager.players_node.get_node_or_null(str(peer_id))
-	if not player:
-		_log_debug("Não encontrado player para atualizar inventário")
-	if player and player.has_method("equip_item"):
-		player.equip_item(item_name, slot)
+	if GameManager and GameManager.has_method("remove_item_from_inventory"):
+		GameManager.remove_item_from_inventory(item_name)
 
+# Equipa item no inventário do player
 @rpc("authority", "call_remote", "reliable")
-func local_unequip_item(peer_id, slot):
-	_log_debug("local_unequip_item")
+func local_equip_item(item_name, slot):
 	if multiplayer.is_server():
 		return
 		
-	var player = GameManager.players_node.get_node_or_null(str(peer_id))
-	if not player:
-		_log_debug("Não encontrado player para atualizar inventário")
-	if player and player.has_method("unequip_item"):
-		player.unequip_item(slot)
+	if GameManager and GameManager.has_method("equip_item"):
+		GameManager.equip_item(item_name, slot)
 
+# Desequipa item no inventário do player
 @rpc("authority", "call_remote", "reliable")
-func local_swap_equipped_item(player_id, new_item, slot):
-	_log_debug("local_swap_equipped_item")
+func local_unequip_item(slot):
+
 	if multiplayer.is_server():
 		return
 		
-	var player = GameManager.players_node.get_node_or_null(str(player_id))
-	if not player:
-		_log_debug("Não encontrado player para atualizar inventário")
-	if player and player.has_method("swap_equipped_item"):
-		player.swap_equipped_item(new_item, slot)
+	if GameManager and GameManager.has_method("unequip_item"):
+		GameManager.unequip_item(slot)
 
+# Troca item no inventário do player
+@rpc("authority", "call_remote", "reliable")
+func local_swap_equipped_item(new_item, slot):
+
+	if multiplayer.is_server():
+		return
+		
+	if GameManager and GameManager.has_method("swap_equipped_item"):
+		GameManager.swap_equipped_item(new_item, slot)
+
+# Dropa item do inventário do player
 @rpc("authority", "call_remote", "reliable")
 func local_drop_item(player_id, item_name):
 	_log_debug("local_drop_item")

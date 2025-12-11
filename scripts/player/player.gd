@@ -82,7 +82,6 @@ var nearest_enemy: CharacterBody3D = null
 var _detection_timer: Timer = null
 var last_simple_directions: Array = []
 var is_block_attacking: bool = false
-var local_inventory: Dictionary = {} # Inventário(de itens e equipamentos) local do player.
 const MAX_DIRECTION_HISTORY = 2
 
 # Dinâmicas
@@ -1034,7 +1033,7 @@ func action_sword_attack_call():
 		return
 	
 	# Verificação local: Apenas atacar se estiver com uma arma na mão direita
-	var item_equipado_nome = local_inventory["equipped"]["hand-right"]
+	var item_equipado_nome = GameManager.local_inventory["equipped"]["hand-right"]
 	if not item_equipado_nome:
 		return
 		
@@ -1065,7 +1064,7 @@ func action_block_attack_call():
 	if not is_local_player:
 		return
 		
-	var item_equipado_nome = local_inventory["equipped"]["hand-left"]
+	var item_equipado_nome = GameManager.local_inventory["equipped"]["hand-left"]
 	# Verificação local: Apenas atacar se estiver com um escudo na mão esquerda
 	if not item_equipado_nome:
 		return
@@ -1100,7 +1099,7 @@ func action_lock_call():
 	camera_strafe_mode(true)
 	
 	# Local: Apenas defender se tem um escudo
-	var item_equipado_nome = local_inventory["equipped"]["hand-left"]
+	var item_equipado_nome = GameManager.local_inventory["equipped"]["hand-left"]
 	if item_equipado_nome and ItemDatabase.get_item(item_equipado_nome)["function"] == "defense":
 		
 		# Animação de defesa com escudo
@@ -1142,10 +1141,6 @@ func set_as_local_player():
 	# APENAS JOGADOR LOCAL PROCESSA INPUT
 	set_process_input(true)
 	set_process_unhandled_input(true)
-	
-	# Inicializa o inventário para os clientes
-	if not _is_server:
-		init_player_inventory()
 
 func initialize(p_id: int, p_name: String, spawn_pos: Vector3):
 	"""Inicializa o player com dados multiplayer"""
@@ -1331,193 +1326,6 @@ func _item_model_change_visibility(player_node, node_link: String, visible_ : bo
 	
 	if not applied:
 		return false
-		
-# ===== SISTEMA DE INVENTÁRIO POR RODADA =====
-
-func init_player_inventory() -> bool:
-	"""Inicializa inventário do jogador em uma rodada específica"""
-
-	local_inventory = {
-		"inventory": [],
-		"equipped": {
-			"hand-right": "",
-			"hand-left": "",
-			"head": "",
-			"body": "",
-			"back": ""
-		},
-		"stats": {
-			"items_collected": 0,
-			"items_used": 0,
-			"items_dropped": 0,
-			"items_equipped": 0
-		}
-	}
-	
-	_log_debug("✓ Inventário inicializado: Player %d" % player_id)
-	return true
-		
-func add_item_to_inventory(item_name: String) -> bool:
-	"""Adiciona item ao inventário do jogador"""
-	# Valida item no ItemDatabase se disponível
-	if ItemDatabase and not ItemDatabase.item_exists(item_name):
-		push_error("PlayerRegistry: Item inválido: %s" % item_name)
-		return false
-	
-	local_inventory["inventory"].append(item_name)
-	local_inventory["stats"]["items_collected"] += 1
-	
-	_log_debug("✓ Item adicionado: %s → Player %s" % [item_name, player_name])
-	
-	return true
-
-func remove_item_from_inventory(item_name: String) -> bool:
-	"""Remove item do inventário do jogador"""
-	
-	if local_inventory.is_empty():
-		return false
-	
-	var idx = local_inventory["inventory"].find(item_name)
-	if idx == -1:
-		_log_debug("⚠ Item não encontrado no inventário: %s" % item_name)
-		return false
-	
-	local_inventory["inventory"].remove_at(idx)
-	local_inventory["stats"]["items_used"] += 1
-	
-	_log_debug("✓ Item removido: %s de Player %d" % [item_name, player_id])
-	
-	return true
-
-func equip_item(item_name: String, slot: String = "") -> bool:
-	"""
-	Equipa item em um slot (detecta automaticamente se não especificado)
-	Slots válidos: hand-right, hand-left, head, body, back
-	"""
-	
-	if local_inventory.is_empty():
-		return false
-	
-	# Verifica se item está no inventário
-	if item_name not in local_inventory["inventory"]:
-		_log_debug("⚠ Item não está no inventário: %s" % item_name)
-		return false
-	
-	# Detecta slot automaticamente se não especificado
-	if slot.is_empty():
-		if ItemDatabase:
-			slot = ItemDatabase.get_slot(item_name)
-		if slot.is_empty():
-			push_error("PlayerRegistry: Não foi possível detectar slot para item: %s" % item_name)
-			return false
-	
-	# Valida slot
-	if not local_inventory["equipped"].has(slot):
-		push_error("PlayerRegistry: Slot inválido: %s" % slot)
-		return false
-	
-	# Valida se item pode ser equipado neste slot
-	if ItemDatabase and not ItemDatabase.can_equip_in_slot(item_name, slot):
-		push_error("PlayerRegistry: Item %s não pode ser equipado em %s" % [item_name, slot])
-		return false
-	
-	# Desequipa item atual se houver
-	var current_item = local_inventory["equipped"][slot]
-	if not current_item.is_empty():
-		unequip_item(slot)
-	
-	# Equipa novo item
-	local_inventory["equipped"][slot] = item_name
-	local_inventory["stats"]["items_equipped"] += 1
-	
-	_log_debug("✓ Item equipado: %s em %d" % [item_name, player_id])
-		
-	return true
-
-func unequip_item(slot: String) -> bool:
-	"""Desequipa item de um slot"""
-
-	if local_inventory.is_empty():
-		return false
-	
-	if not local_inventory["equipped"].has(slot):
-		push_error("PlayerRegistry: Slot inválido: %s" % slot)
-		return false
-	
-	var item_name = local_inventory["equipped"][slot]
-	if item_name.is_empty():
-		return false
-	
-	local_inventory["equipped"][slot] = ""
-	
-	_log_debug("✓ Item desequipado: %s de %s (Player %d)" % [item_name, slot, player_id])
-	
-	return true
-	
-func swap_equipped_item(new_item: String, slot: String = "") -> bool:
-	"""
-	Troca item equipado diretamente (desequipa antigo, equipa novo)
-	Útil para trocas rápidas de armas/equipamentos
-	"""
-	
-	if local_inventory.is_empty():
-		return false
-	
-	# Detecta slot se não especificado
-	if slot.is_empty():
-		if ItemDatabase:
-			slot = ItemDatabase.get_slot(new_item)
-		if slot.is_empty():
-			return false
-	
-	var old_item = local_inventory["equipped"][slot]
-	
-	# Desequipa item atual (se houver)
-	if not old_item.is_empty():
-		unequip_item(slot)
-	
-	# Equipa novo item
-	if equip_item(new_item, slot):
-		return true
-	
-	return false
-	
-func drop_item(item_name: String) -> bool:
-	"""
-	Remove item do inventário (simula drop)
-	Se equipado, desequipa primeiro
-	"""
-	# Verifica se está equipado e desequipa
-	var slot = get_equipped_slot(item_name)
-	if not slot.is_empty():
-		unequip_item(slot)
-	
-	# Remove do inventário
-	if remove_item_from_inventory(item_name):
-		if not local_inventory.is_empty():
-			local_inventory["stats"]["items_dropped"] += 1
-		_log_debug("✓ Item dropado: %s por Player %d" % [item_name, player_id])
-		return true
-	
-	return false
-
-func get_equipped_slot(item_name: String) -> String:
-	"""Retorna slot onde item está equipado (ou "" se não equipado)"""
-	
-	if local_inventory.is_empty():
-		return ""
-	
-	for slot in local_inventory["equipped"]:
-		if local_inventory["equipped"][slot] == item_name:
-			return slot
-	
-	return ""
-
-func clear_player_inventory():
-	"""Limpa inventário do jogador em uma rodada"""
-	
-	local_inventory.clear()
-	_log_debug("✓ Inventário limpo: Player %d" % player_id)
 
 # ===== UTILS =====
 

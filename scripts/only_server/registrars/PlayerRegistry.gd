@@ -373,7 +373,7 @@ func add_item_to_inventory(round_id: int, player_id: int, item_name: String) -> 
 	item_added_to_inventory.emit(round_id, player_id, item_name)
 	
 	# Atualizar o do player local também via rpc
-	NetworkManager.rpc_id(player_id, "local_add_item_to_inventory", player_id, item_name)
+	NetworkManager.rpc_id(player_id, "local_add_item_to_inventory", item_name)
 	
 	return true
 
@@ -395,7 +395,7 @@ func remove_item_from_inventory(round_id: int, player_id: int, item_name: String
 	item_removed_from_inventory.emit(round_id, player_id, item_name)
 	
 	# Atualizar o do player local também via rpc
-	NetworkManager.rpc_id(player_id, "local_remove_item_from_inventory", player_id, item_name)
+	NetworkManager.rpc_id(player_id, "local_remove_item_from_inventory", item_name)
 	
 	return true
 
@@ -444,7 +444,7 @@ func equip_item(round_id: int, player_id: int, item_name: String, slot: String =
 	item_equipped.emit(round_id, player_id, item_name, slot)
 		
 	# Atualizar o do player local também via rpc
-	NetworkManager.rpc_id(player_id, "local_equip_item", player_id, item_name, slot)
+	NetworkManager.rpc_id(player_id, "local_equip_item", item_name, slot)
 	
 	return true
 
@@ -468,7 +468,7 @@ func unequip_item(round_id: int, player_id: int, slot: String) -> bool:
 	item_unequipped.emit(round_id, player_id, item_name, slot)
 		
 	# Atualizar o do player local também via rpc
-	NetworkManager.rpc_id(player_id, "local_unequip_item", player_id, slot)
+	NetworkManager.rpc_id(player_id, "local_unequip_item", slot)
 	
 	return true
 
@@ -501,7 +501,7 @@ func swap_equipped_item(round_id: int, player_id: int, new_item: String, slot: S
 		return true
 		
 	# Atualizar o do player local também via rpc
-	NetworkManager.rpc_id(player_id, "local_swap_equipped_item", player_id, new_item, slot)
+	NetworkManager.rpc_id(player_id, "local_swap_equipped_item", new_item, slot)
 	
 	return false
 
