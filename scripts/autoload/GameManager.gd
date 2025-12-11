@@ -72,7 +72,7 @@ signal returned_to_room(room_data: Dictionary)
 
 func _ready():	# Verifica se é servidor
 	var args = OS.get_cmdline_args()
-	_is_server = "--server" in args or "--dedicated" in args
+	_is_server = "--server" in args
 	
 	if _is_server:
 		_log_debug("Servidor - NÃO inicializando GameManager")

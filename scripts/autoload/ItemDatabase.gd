@@ -406,9 +406,9 @@ var is_loaded: bool = false
 # ═══════════════════════════════════════════════════════════════════════════
 
 func _ready():
-	# Detecta se é servidor dedicado através dos argumentos de linha de comando
+	# Detecta se é servidor
 	var args = OS.get_cmdline_args()
-	_is_server = "--server" in args or "--dedicated" in args
+	_is_server = "--server" in args
 	
 	# Carrega database automaticamente se configurado
 	if auto_load_on_ready:

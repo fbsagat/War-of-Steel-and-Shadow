@@ -40,9 +40,9 @@ var client_sync_buffer: Dictionary = {}
 # ===== FUNÇÕES DE INICIALIZAÇÃO =====
 
 func _ready():
-	# Detecta se é servidor dedicado
+	# Detecta se é servidor
 	var args = OS.get_cmdline_args()
-	_is_server = "--server" in args or "--dedicated" in args
+	_is_server = "--server" in args
 	
 	if _is_server:
 		server_is_headless = ServerManager.is_headless

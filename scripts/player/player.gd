@@ -96,9 +96,9 @@ var cair: bool = false
 
 # Ready
 func _ready():
-	# Detecta se é servidor dedicado
+	# Detecta se é servidor
 	var args = OS.get_cmdline_args()
-	_is_server = "--server" in args or "--dedicated" in args
+	_is_server = "--server" in args
 	
 	# Carrega dados de itens na memória
 	_load_item_data()
@@ -1272,11 +1272,10 @@ func _item_model_change_visibility(player_node, node_link: String, visible_ : bo
 		push_error("apply_item_visibility: node inválido ou null")
 		return false
 	
-	# VALIDAÇÃO: Verifica se item tem node_link
-	
 	# BUSCA O NÓ DO ITEM A PARTIR DO PLAYER
 	var item_node = player_node.get_node_or_null(node_link)
 	
+	# VALIDAÇÃO: Verifica se item tem node_link
 	if not item_node:
 		push_error("apply_item_visibility: nó não encontrado no caminho '%s'" % node_link)
 		_log_debug("Caminho base: %s, caminho completo: %s/%s" % [player_node.get_path(), player_node.get_path(), node_link])
@@ -1302,7 +1301,7 @@ func _item_model_change_visibility(player_node, node_link: String, visible_ : bo
 				elif "visible" in sibling:
 					sibling.visible = false
 				
-				_log_debug("🚫 Escondendo irmão: %s" % sibling.name)
+				_log_debug("🚫_item_model_change_visibility: Escondendo irmão: %s" % sibling.name)
 	
 	# APLICA VISIBILIDADE NO ITEM ALVO
 	# Suporta Node3D, VisualInstance3D, MeshInstance3D, etc
@@ -1326,7 +1325,8 @@ func _item_model_change_visibility(player_node, node_link: String, visible_ : bo
 	
 	if not applied:
 		return false
-
+	_log_debug("🚫_item_model_change_visibility: Monstrando: %s" % item_node.name)
+	
 # ===== UTILS =====
 
 func setup_name_label():
