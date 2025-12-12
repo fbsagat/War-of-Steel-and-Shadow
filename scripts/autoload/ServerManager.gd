@@ -1096,7 +1096,6 @@ func _rpc_despawn_on_clients(player_ids: Array, round_id: int, object_id: int):
 @rpc("any_peer", "call_remote", "reliable")
 func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 	"""Servidor recebe pedido de pegar item, equipa automaticamente se for equipável, valida e redistribui"""
-	
 	var player_node = player_registry.get_player_node(requesting_player_id)
 	var object = object_manager.spawned_objects[1][object_id]
 	var server_nearby = player_node.get_nearby_items()
@@ -1111,6 +1110,10 @@ func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 		return
 	
 	_log_debug("[ITEM] Player %s pediu para pegar item %d, no round %d" % [player["name"], object_id, round_["round_id"]])
+	
+	# Verifica se o item que o player enviou é o mesmo que o server detectou
+	if object_id != server_nearby[0].object_id:
+		return
 	
 	# Se for item equipável de knight
 	if ItemDatabase.get_items_by_owner("knight"):

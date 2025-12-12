@@ -849,7 +849,6 @@ current_time = 6.5
 minutes_per_day = 7.0
 
 [node name="Terrain3DParticles" parent="." node_paths=PackedStringArray("terrain") instance=ExtResource("2_t70ke")]
-visible = false
 terrain = NodePath("..")
 mesh = SubResource("RibbonTrailMesh_kf5nm")
 shadow_mode = 1

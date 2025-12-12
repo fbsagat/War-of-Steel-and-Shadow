@@ -97,7 +97,6 @@ var skeleton: Skeleton3D = null
 var camera_controller: Node3D
 var aiming_forward_direction: Vector3 = Vector3.FORWARD
 var defense_target_angle: float = 0.0
-var _item_data: Array[Dictionary] = [] # Futuramente substituir pelo ItemDatabase
 var hit_targets: Array = []
 var cair: bool = false
 var terrain : Terrain3D
@@ -107,9 +106,6 @@ func _ready():
 	# Detecta se é servidor
 	var args = OS.get_cmdline_args()
 	_is_server = "--server" in args
-	
-	# Carrega dados de itens na memória
-	_load_item_data()
 	
 	# Connect do Timer (attack_timer)
 	attack_timer.timeout.connect(Callable(self, "_on_attack_timer_timeout"))
@@ -212,148 +208,7 @@ func hitboxes_manager():
 			area.connect("body_entered", Callable(self, "_on_hitbox_body_entered").bind(area))
 			area.monitoring = false
 
-# 1. Funções para requisição de itens do modelo
-func _load_item_data():
-	var file = FileAccess.open("res://scripts/utils/item_database_regs.json", FileAccess.READ)
-	if file:
-		var json_text = file.get_as_text()
-		file.close()
-		var json = JSON.new()
-		var parse_result = json.parse(json_text)
-		if parse_result == OK:
-			var raw_data = json.get_data()
-			# Corrige os IDs para inteiros
-			_item_data.clear()
-			for entry in raw_data:
-				var fixed_entry = entry.duplicate(true)  # deep copy
-				if fixed_entry.has("id"):
-					fixed_entry["id"] = int(fixed_entry["id"])
-				_item_data.append(fixed_entry)
-		else:
-			push_error("Erro ao fazer parse do model_map.json: " + str(json.get_error_line()))
-	else:
-		push_error("Não foi possível abrir item_database.json")
-		
-# 1.1. Retorna o item completo pelo ID
-func _get_item_by_id(p_id: int) -> Dictionary:
-	for item in _item_data:  # Corrigido: _item_data
-		if item.has("id") and item["id"] == p_id:
-			return item.duplicate()
-	return {}
-	
-# 1.2. Retorna uma lista de IDs com base em um filtro
-func _get_item_ids_by_filter(p_key: String, p_value) -> Array[int]:
-	var ids: Array[int] = []
-	for item in _item_data:
-		if item.has(p_key) and item[p_key] == p_value:
-			ids.append(item["id"])
-	return ids
-	
-# 1.3. Retorna o Node referenciado por ID
-func _get_node_by_id(p_id: int) -> Node:
-	var item = _get_item_by_id(p_id)
-	if item.is_empty():
-		push_error("Item com ID %d não encontrado." % p_id)
-		return null
-		
-	var node_path = item["node_link"]
-	if node_path.is_empty():
-		push_error("node_link vazio para ID %d." % p_id)
-		return null
-		
-	var current_scene = $"."
-	if current_scene:
-		var node = current_scene.get_node_or_null(node_path)
-		if node:
-			return node
-		else:
-			push_error("Nó não encontrado no caminho: %s" % node_path)
-			return null
-	else:
-		push_error("Cena atual não disponível.")
-		return null
-		
-# 1.4. Retorna todos os itens IDs do player
-func _get_all_item_ids():
-	var ids: Array[int] = []
-	for item in _item_data:
-		ids.append(item["id"])
-	return ids
-	
-# 1.5. Retorna todos os nodes do player
-func _get_all_item_nodes(list: Array = []) -> Array:
-	var nodes: Array = []
-	var ids_to_use: Array
-	
-	# Se a lista vier vazia ou não for passada, pega todos os IDs
-	if list.is_empty():
-		ids_to_use = _get_all_item_ids()
-	else:
-		ids_to_use = list
-	
-	for id in ids_to_use:
-		var node = _get_node_by_id(id)
-		if node:
-			nodes.append(node)
-		else:
-			push_warning("Nó não encontrado para ID: %s" % str(id))
-	
-	return nodes
-	
-# 1.6. Retorna o item_name correspondente a um ID (ou lista de IDs)
-func _get_item_name_by_id(p_id) -> Variant:
-	# caso único: ID individual
-	if typeof(p_id) == TYPE_INT:
-		for item in _item_data:
-			if item.get("id", -1) == p_id:
-				return item.get("item_name", "")
-		push_error("get_item_name_by_id: ID %d não encontrado." % p_id)
-		return null
-		
-	# caso lista: retornar lista de nomes
-	if typeof(p_id) == TYPE_ARRAY:
-		var names: Array = []
-		for id in p_id:
-			if typeof(id) == TYPE_INT:
-				var found := false
-				for item in _item_data:
-					if item.get("id", -1) == id:
-						names.append(item.get("item_name", ""))
-						found = true
-						break
-				if not found:
-					push_warning("get_item_name_by_id: ID %s não encontrado." % str(id))
-					names.append(null)
-			else:
-				push_warning("get_item_name_by_id: tipo inválido na lista: %s" % str(id))
-				names.append(null)
-		return names
 
-	# tipo inválido
-	push_error("get_item_name_by_id: tipo inválido para p_id: %s (esperado int ou Array)" % str(typeof(p_id)))
-	return null
-	
-# 1.6. Retorna o Id pelo node
-func _get_id_by_node(p_node: Node) -> int:
-	if p_node == null:
-		push_error("Node fornecido é nulo.")
-		return -1  # retorna -1 para indicar "não encontrado"
-		
-	for item in _item_data:
-		if item.has("node_link"):
-			var node_path = item["node_link"]
-			if node_path != "":
-				var current_scene = $"."
-				if current_scene:
-					var node_in_scene = current_scene.get_node_or_null(node_path)
-					if node_in_scene == p_node:
-						return item.get("id", -1)  # retorna ID ou -1 se não tiver
-				else:
-					push_error("Cena atual não disponível.")
-					return -1
-	# Se nenhum item corresponde ao node
-	push_error("Nenhum item corresponde ao Node fornecido: %s" % p_node.name)
-	return -1
 	
 # Retorna item mais próximos do player
 func get_nearby_items(
@@ -978,9 +833,9 @@ func _get_terrain_height(x: float, z: float) -> float:
 	"""Versão melhorada com fallback para raycast"""
 	
 	# MÉTODO 1: Terrain3D direto
-	var terrain = get_tree().get_root().get_node_or_null("Round/Terrain3D")
-	if terrain and terrain.data:
-		var h = terrain.data.get_height(Vector3(x, 0, z))
+	var terrain_ = get_tree().get_root().get_node_or_null("Round/Terrain3D")
+	if terrain_ and terrain_.data:
+		var h = terrain_.data.get_height(Vector3(x, 0, z))
 		
 		# Se retornou valor válido (não zero em área não carregada)
 		if h != 0.0 or (abs(x) < 100 and abs(z) < 100):
