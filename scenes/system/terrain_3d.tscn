@@ -837,7 +837,6 @@ material = SubResource("Terrain3DMaterial_xuisu")
 assets = ExtResource("1_0rjur")
 collision_mask = 3
 collision_priority = 5.0
-mesh_lods = 6
 vertex_spacing = 0.55
 cast_shadows = 0
 top_level = true
@@ -845,10 +844,11 @@ metadata/_edit_lock_ = true
 
 [node name="Sky3D" parent="." instance=ExtResource("3_t70ke")]
 editor_time_enabled = false
-current_time = 6.5
+current_time = 14.3
 minutes_per_day = 7.0
 
 [node name="Terrain3DParticles" parent="." node_paths=PackedStringArray("terrain") instance=ExtResource("2_t70ke")]
+visible = false
 terrain = NodePath("..")
 mesh = SubResource("RibbonTrailMesh_kf5nm")
 shadow_mode = 1

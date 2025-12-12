@@ -926,7 +926,7 @@ func _interpolate_remote_player(delta: float):
 		else:
 			remote_is_on_floor = true  # Assume no chão se não detectar terreno
 		
-		_log_debug("🌐 Modo remoto distante: %.2fm (sem física, on_floor: %s)" % [distance_to_local, remote_is_on_floor])
+		#_log_debug("🌐 Modo remoto distante: %.2fm (sem física, on_floor: %s)" % [distance_to_local, remote_is_on_floor])
 	else:
 		# PRÓXIMO: Usa física normal
 		var new_x = lerp(global_position.x, target_position.x, interpolation_speed * delta)
@@ -983,8 +983,6 @@ func _client_receive_state(pos: Vector3, rot: Vector3, vel: Vector3, running: bo
 	is_running = running
 	is_jumping = jumping
 	velocity = vel  # Para gravidade
-	
-	print("terrain.y: ", _get_terrain_height(pos.x, pos.z))
 
 # ===== RECEPÇÃO DE ANIMAÇÕES (REMOTOS) =====
 

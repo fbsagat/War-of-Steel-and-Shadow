@@ -38,6 +38,7 @@ criar rodadas quando o host inicia uma rodada, apagar rodada e registrar resulta
 	fique ok a partir do momento em que o cliente reinicia normalmente após uma queda de conexão e o servidor também.
 41. 	Ok. Abrir o map manager logo na inicialização do servidor, não no inicio de uma rodada, 
 		matar o game manager no servidor para não sobrecarregar pois é inútil.
+42. Name label do player: Escolher cores no round e não aleatórias e adicionar transparência no distanciamento da camera.
 
 Adicionar no modelo do player:
 	1. Anim interact com a outra mão.

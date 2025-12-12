@@ -171,16 +171,11 @@ func create_round(room_id: int, room_name: String, players: Array, settings: Dic
 	for player in players:
 		round_data["scores"][player["id"]] = 0
 	
-	# Configurações de mapa e ambiente
-	# Aplica configurações padrão de mapa se não especificadas
-	if not round_data["settings"].has("map_seed"):
-		round_data["settings"]["map_seed"] = randi_range(100000, 999999)
+	# Gerar configurações do Terrain3D
+	# Falta criar função
 	
-	if not round_data["settings"].has("map_size"):
-		round_data["settings"]["map_size"] = Vector2i(20, 20)
-	
-	if not round_data["settings"].has("env_current_time"):
-		round_data["settings"]["env_current_time"] = 12.0
+	# Gerar configurações do Sky3D
+	round_data["settings"]["rand_configs"] = gerar_configuracoes_randomicas()
 	
 	# Armazena rodada
 	rounds[round_id] = round_data
@@ -720,6 +715,165 @@ func debug_print_all_rounds():
 			print("    %s: %d pts" % [entry["name"], entry["score"]])
 	
 	print("\n====================================\n")
+
+## Gera um dicionário com configurações randômicas para o Sky3D
+## @return Dictionary com todas as configurações geradas
+func gerar_configuracoes_randomicas() -> Dictionary:
+	var config = {}
+	
+	# Paletas de cores predefinidas para diferentes atmosferas
+	var paletas_cores = _gerar_paletas_cores()
+	var paleta = paletas_cores[randi() % paletas_cores.size()]
+	
+	# TEMPO (TimeOfDay)
+	config["time"] = {
+		"current_time": randf_range(0.0, 24.0),
+		"day_duration": randf_range(420.0, 600.0),
+		"auto_advance": true, # randi() % 2 == 0
+		"time_scale": 1.0 # randf_range(0.5, 2.0)
+	}
+	
+	# ATMOSFERA E CÉU (SkyDome)
+	config["sky"] = {
+		"sky_contribution": randf_range(0.5, 1.5),
+		"quality": "high", #["low", "medium", "high"][randi() % 3]
+		"rayleigh_coefficient": randf_range(0.5, 3.0),
+		"mie_coefficient": randf_range(0.005, 0.05),
+		"turbidity": randf_range(1.0, 8.0),
+		"sky_color": paleta["sky"],
+		"horizon_color": paleta["horizon"]
+	}
+	
+	# NÉVOA (Fog)
+	config["fog"] = {
+		"enabled": randi() % 2 == 0,
+		"density": randf_range(0.001, 0.05),
+		"color": paleta["fog"],
+		"height": randf_range(-10.0, 50.0),
+		"height_density": randf_range(0.0, 2.0)
+	}
+	
+	# NUVENS (Clouds)
+	config["clouds"] = {
+		"coverage": randf_range(0.2, 0.9),
+		"size": randf_range(0.5, 2.0),
+		"speed": randf_range(0.01, 0.5),
+		"wind_direction": randf_range(0.0, 360.0),
+		"opacity": randf_range(0.6, 1.0),
+		"brightness": randf_range(0.8, 1.5),
+		"color": paleta["clouds"]
+	}
+	
+	# EXPOSIÇÃO E TONEMAP
+	config["exposure"] = {
+		"exposure": randf_range(0.8, 1.5),
+		"white_point": randf_range(6.0, 12.0)
+	}
+	
+	# CORES AMBIENTE
+	config["ambient"] = {
+		"sky_color": paleta["ambient_sky"],
+		"ground_color": paleta["ambient_ground"]
+	}
+	
+	_log_debug("✓ Configurações randômicas geradas: %s" % paleta["nome"])
+	return config
+
+
+## Gera paletas de cores temáticas para diferentes atmosferas
+func _gerar_paletas_cores() -> Array:
+	return [
+		{
+			"nome": "Azul Clássico",
+			"sky": Color(0.4, 0.6, 0.9),
+			"horizon": Color(0.6, 0.7, 0.9),
+			"fog": Color(0.7, 0.8, 0.95),
+			"clouds": Color(0.95, 0.95, 1.0),
+			"ambient_sky": Color(0.5, 0.6, 0.8),
+			"ambient_ground": Color(0.3, 0.3, 0.3)
+		},
+		{
+			"nome": "Pôr do Sol Dourado",
+			"sky": Color(0.9, 0.5, 0.3),
+			"horizon": Color(1.0, 0.7, 0.4),
+			"fog": Color(0.95, 0.75, 0.6),
+			"clouds": Color(1.0, 0.8, 0.6),
+			"ambient_sky": Color(0.8, 0.5, 0.3),
+			"ambient_ground": Color(0.4, 0.3, 0.2)
+		},
+		{
+			"nome": "Aurora Roxa",
+			"sky": Color(0.6, 0.3, 0.8),
+			"horizon": Color(0.8, 0.4, 0.9),
+			"fog": Color(0.75, 0.6, 0.85),
+			"clouds": Color(0.9, 0.7, 0.95),
+			"ambient_sky": Color(0.5, 0.3, 0.6),
+			"ambient_ground": Color(0.3, 0.2, 0.4)
+		},
+		{
+			"nome": "Amanhecer Rosa",
+			"sky": Color(0.95, 0.6, 0.7),
+			"horizon": Color(1.0, 0.75, 0.8),
+			"fog": Color(0.95, 0.8, 0.85),
+			"clouds": Color(1.0, 0.85, 0.9),
+			"ambient_sky": Color(0.8, 0.5, 0.6),
+			"ambient_ground": Color(0.4, 0.3, 0.3)
+		},
+		{
+			"nome": "Tempestade Cinza",
+			"sky": Color(0.4, 0.4, 0.5),
+			"horizon": Color(0.5, 0.5, 0.55),
+			"fog": Color(0.6, 0.6, 0.65),
+			"clouds": Color(0.7, 0.7, 0.75),
+			"ambient_sky": Color(0.3, 0.3, 0.35),
+			"ambient_ground": Color(0.2, 0.2, 0.2)
+		},
+		{
+			"nome": "Deserto Âmbar",
+			"sky": Color(0.85, 0.7, 0.5),
+			"horizon": Color(0.95, 0.8, 0.6),
+			"fog": Color(0.9, 0.8, 0.7),
+			"clouds": Color(0.95, 0.9, 0.8),
+			"ambient_sky": Color(0.7, 0.6, 0.4),
+			"ambient_ground": Color(0.5, 0.4, 0.3)
+		},
+		{
+			"nome": "Noite Estrelada",
+			"sky": Color(0.1, 0.1, 0.3),
+			"horizon": Color(0.2, 0.2, 0.4),
+			"fog": Color(0.15, 0.15, 0.35),
+			"clouds": Color(0.3, 0.3, 0.5),
+			"ambient_sky": Color(0.1, 0.1, 0.2),
+			"ambient_ground": Color(0.05, 0.05, 0.1)
+		},
+		{
+			"nome": "Floresta Esmeralda",
+			"sky": Color(0.5, 0.8, 0.6),
+			"horizon": Color(0.6, 0.85, 0.7),
+			"fog": Color(0.7, 0.9, 0.75),
+			"clouds": Color(0.85, 0.95, 0.9),
+			"ambient_sky": Color(0.4, 0.6, 0.5),
+			"ambient_ground": Color(0.2, 0.4, 0.2)
+		},
+		{
+			"nome": "Inverno Gelado",
+			"sky": Color(0.7, 0.8, 0.95),
+			"horizon": Color(0.8, 0.85, 0.98),
+			"fog": Color(0.85, 0.9, 1.0),
+			"clouds": Color(0.95, 0.97, 1.0),
+			"ambient_sky": Color(0.6, 0.7, 0.8),
+			"ambient_ground": Color(0.4, 0.45, 0.5)
+		},
+		{
+			"nome": "Vulcão Laranja",
+			"sky": Color(0.8, 0.4, 0.2),
+			"horizon": Color(0.9, 0.5, 0.3),
+			"fog": Color(0.85, 0.5, 0.4),
+			"clouds": Color(0.9, 0.6, 0.5),
+			"ambient_sky": Color(0.6, 0.3, 0.2),
+			"ambient_ground": Color(0.3, 0.2, 0.1)
+		}
+	]
 
 func _log_debug(message: String):
 	"""Função padrão de debug"""
