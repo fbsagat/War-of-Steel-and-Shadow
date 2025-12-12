@@ -22,6 +22,7 @@ extends CharacterBody3D
 
 @export_category("Player actions")
 @export var hide_itens_on_start: bool = true
+@export var attack_time_tolerance: float = 0.5
 
 @export_category("Item Detection")
 @export var pickup_radius: float = 1.2
@@ -71,18 +72,15 @@ var is_defending: bool = false
 var is_jumping: bool = false
 var is_aiming: bool = false
 var is_running: bool = false
-var current_item_right_id: int # substituir pela variável atualizada pelo server
-var current_item_left_id: int # substituir pela variável atualizada pelo server
-var current_helmet_item_id: int # substituir pela variável atualizada pelo server
-var current_cape_item_id: int # substituir pela variável atualizada pelo server
-var current_attack_item_id: int # substituir pela variável atualizada pelo server
 var mouse_mode: bool = true
 var run_on_jump: bool = false
 var nearest_enemy: CharacterBody3D = null
 var _detection_timer: Timer = null
 var last_simple_directions: Array = []
 var is_block_attacking: bool = false
-const MAX_DIRECTION_HISTORY = 2
+var actual_weapon : Node3D = null
+var actual_enabled_hitbox: Area3D = null
+const max_direction_history = 2
 
 # Dinâmicas
 var model: Node3D = null
@@ -184,7 +182,7 @@ func _physics_process(delta: float) -> void:
 		if dir in ["forward", "backward", "left", "right"]:
 			if last_simple_directions.is_empty() or last_simple_directions[-1] != dir:
 				last_simple_directions.append(dir)
-				if last_simple_directions.size() > MAX_DIRECTION_HISTORY:
+				if last_simple_directions.size() > max_direction_history:
 					last_simple_directions.pop_front()
 
 	# Animações (sempre server/client)
@@ -194,7 +192,7 @@ func _process(_delta: float) -> void:
 	pass
 
 func hitboxes_manager():
-	# Conecta todos os hitboxes de ataque
+	# Conecta automaticamente todos os hitboxes de ataque presentes no modelo
 	var all_areas = find_children("*", "Area3D", true)
 	var hitboxes = all_areas.filter(func(n): return n.is_in_group("hitboxes"))
 	for area in hitboxes:
@@ -690,7 +688,7 @@ func _hide_all_model_items():
 			target.visible = false
 			
 # Executa uma animação one-shot e retorna sua duração
-func _execute_animation(anim_name: String, anim_param_path: String, oneshot_request_path: String = "") -> float:
+func _execute_animation(anim_name: String, anim_type: String, anim_param_path: String, oneshot_request_path: String = "") -> float:
 	# Verifica existência da animação no AnimationPlayer
 	
 	if not animation_player.has_animation(anim_name):
@@ -704,10 +702,19 @@ func _execute_animation(anim_name: String, anim_param_path: String, oneshot_requ
 	# Dispara o request (int) no caminho apropriado
 	if oneshot_request_path != "":
 		animation_tree.set(oneshot_request_path, AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
-		
-	# Retorna duração da animação (segundos)
+	
+	# Duração da animação (segundos)
 	var anim = animation_player.get_animation(anim_name)
-	return anim.length if anim else 0.0
+	var anim_length = anim.length if anim else 0.0
+	
+	if anim_type == "Attack":
+		is_attacking = true
+	
+	if _is_server:
+		# Timeout para o servidor também
+		_on_attack_timer_timeout(anim_length)
+	
+	return anim_length
 	
 # Movimentos para a função de escoher o movimento da espada
 func _get_current_direction() -> String:
@@ -758,15 +765,25 @@ func _determine_attack_from_input() -> String:
 			return "1H_Melee_Attack_Stab"
 	# Fallback
 	return "1H_Melee_Attack_Slice_Horizontal"
-	
+
 # Função acionada pelas animações(AnimationPlayer), habilita hitbox na hora
 # exata do golpe; Pega current_item_right_id para saber qual foi a espada usada
 func _enable_attack_area():
-	if current_attack_item_id > 0:
-		var node = _get_node_by_id(current_attack_item_id)
-		var hitbox = node.get_node("hitbox")
+	
+	# Apenas o servidor faz verificação de hitbox
+	if not _is_server:
+		return
+		
+	# No nó do player, pergar a hitbox do node do item que está sendo usado para atacar
+	if actual_weapon:
+		var hitbox = actual_weapon.get_node("hitbox")
+		# Ativa a hitbox
 		if hitbox is Area3D:
+			actual_enabled_hitbox = hitbox
 			hitbox.monitoring = true
+			_log_debug("Hitbox de %s ativado! (%s)" % [actual_weapon.name, actual_enabled_hitbox])
+	else:
+		_log_debug("_enable_attack_area: Não encontrado node de hitbox")
 			
 # Para o contato das hitboxes das espadas(no momento ativo) com inimigos (área3D)
 func _on_hitbox_body_entered(body: Node, hitbox_area: Area3D) -> void:
@@ -781,10 +798,21 @@ func _on_hitbox_body_entered(body: Node, hitbox_area: Area3D) -> void:
 			body.take_damage(10)
 			_log_debug("%s foi acertado por %s" % [body.name, hitbox_area.get_parent().name])
 			
-# Ações do player (Trancar visão no inimigo)
 func _on_block_attack_timer_timeout(duration):
 	await get_tree().create_timer(duration).timeout
 	is_block_attacking = false
+	
+func _on_attack_timer_timeout(duration):
+	await get_tree().create_timer(duration * attack_time_tolerance).timeout
+	# Os ataques acabam neste exato momento
+	is_attacking = false
+	is_block_attacking = false
+	
+	# Se for servidor desativa a hitbox no fim do ataque
+	# A ativação é feita no animation player, executando _enable_attack_area()
+	if _is_server:
+		# Determinar desativação da hitbox
+		_disable_attack_hitbox()
 		
 func _on_impact_detected(impulse: float):
 	_log_debug("FUI ATINGIDO! Impulso: %d" % impulse)
@@ -797,18 +825,18 @@ func _on_impact_detected(impulse: float):
 
 # Quando terminar o ataque desativar hitbox da espada, is_attacking false e 
 # timer para impedir repetição de golpe antes do final
-func _on_attack_timer_timeout(duration, current_id):
-	# APENAS JOGADOR LOCAL
-	if not is_local_player:
+func _disable_attack_hitbox():
+	
+	# Apenas para o nó do servidor (que é o único que ativa hitbox)
+	if not _is_server:
 		return
-		
-	await get_tree().create_timer(duration).timeout
-	var node = _get_node_by_id(current_id)
-	var hitbox = node.get_node("hitbox")
-	if hitbox is Area3D:
-		hitbox.monitoring = false
-		is_attacking = false
-		is_block_attacking = false
+	
+	# No nó do player, pegar a hitbox do node do item que está sendo usado para atacar
+	if actual_enabled_hitbox:
+		actual_enabled_hitbox.monitoring = false
+		_log_debug("Hitbox de %s desativado! (%s)" % [actual_weapon.name, actual_enabled_hitbox])
+	else:
+		_log_debug("_on_attack_timer_timeout: Não encontrado node de hitbox")
 	
 # ===== UTILS =====
 
@@ -991,28 +1019,23 @@ func _client_receive_action(action_type: String, anim_name: String):
 	"""Recebe e executa ações de outros jogadores (ataques, defesa, etc)"""
 	
 	if is_local_player:
-		return  # Ignora para si mesmo
+		return
 	
 	match action_type:
 		"attack":
 			if not is_attacking:
 				is_attacking = true
 
-				_execute_animation(anim_name,
+				_execute_animation(anim_name, "Attack",
 					"parameters/sword_attacks/transition_request",
 					"parameters/Attack/request")
-				# Timer para resetar is_attacking
-				await get_tree().create_timer(0.5).timeout
-				is_attacking = false
 		
 		"block_attack":
 			if not is_block_attacking:
 				is_block_attacking = true
-				_execute_animation(anim_name,
+				_execute_animation(anim_name, "Attack",
 					"parameters/sword_attacks/transition_request",
 					"parameters/Attack/request")
-				await get_tree().create_timer(0.5).timeout
-				is_block_attacking = false
 		
 		"defend_start":
 			is_defending = true
@@ -1032,6 +1055,9 @@ func action_sword_attack_call():
 	if not is_local_player:
 		return
 	
+	if is_attacking:
+		return
+	
 	# Verificação local: Apenas atacar se estiver com uma arma na mão direita
 	var item_equipado_nome = GameManager.local_inventory["equipped"]["hand-right"]
 	if not item_equipado_nome:
@@ -1047,15 +1073,11 @@ func action_sword_attack_call():
 		NetworkManager.send_player_action(player_id, "attack", anim_name)
 		
 		# executa animação localmente
-		_execute_animation(anim_name,"parameters/sword_attacks/transition_request",
+		var anim_length = _execute_animation(anim_name, "Attack", "parameters/sword_attacks/transition_request",
 		"parameters/Attack/request")
 		
-	# hitbox
-	# hit_targets.clear()
-	#var anim_time: float = _execute_animation(anim_name,
-		#"parameters/sword_attacks/transition_request",
-		#"parameters/Attack/request")
-		#_on_attack_timer_timeout(anim_time * 0.4, current_item_right_id)
+		# Só local aqui: Pode atacar novamente só depois que acaba o tempo do ataque atual
+		_on_attack_timer_timeout(anim_length)
 
 func action_block_attack_call():
 	"""Executa e sincroniza ataque com escudo"""
@@ -1076,11 +1098,10 @@ func action_block_attack_call():
 	if not is_block_attacking and is_defending:
 		hit_targets.clear()
 		is_block_attacking = true
-		current_attack_item_id = current_item_left_id
+		#current_attack_item_id = current_item_left_id antigo
 		
-		var anim_time = _execute_animation("Block_Attack",
-			"parameters/sword_attacks/transition_request",
-			"parameters/Attack/request")
+		var anim_time = _execute_animation("Block_Attack", "Attack", 
+		"parameters/sword_attacks/transition_request", "parameters/Attack/request")
 		
 		_on_block_attack_timer_timeout(anim_time * 0.85)
 		
@@ -1226,8 +1247,8 @@ func action_pick_up_item_call():
 		NetworkManager.request_pick_up_item(player_id, object.object_id)
 		
 func action_pick_up_item():
-	#_execute_animation("Interact", "parameters/Interact/transition_request", "parameters/Interact_shot/request")
-	_execute_animation("PickUp", "parameters/PickUp/transition_request", "parameters/Pickup_shot/request")
+	#_execute_animation("Interact", "Common", "parameters/Interact/transition_request", "parameters/Interact_shot/request")
+	_execute_animation("PickUp", "Common", "parameters/PickUp/transition_request", "parameters/Pickup_shot/request")
 	
 	#animation_tree.set("PickUp", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 	
@@ -1246,7 +1267,7 @@ func execute_item_drop(player_node, item):
 	# Atualiza visibilidade do item no modelo (uma vez)
 	_item_model_change_visibility(player_node, item_node_link, false)
 	# Animação de drop
-	_execute_animation("Interact", "parameters/Interact/transition_request", "parameters/Interact_shot/request")
+	_execute_animation("Interact", "Common", "parameters/Interact/transition_request", "parameters/Interact_shot/request")
 
 # Modifica a visibilidade do item na mão do modelo
 func _item_model_change_visibility(player_node, node_link: String, visible_ : bool = true):
@@ -1272,7 +1293,7 @@ func _item_model_change_visibility(player_node, node_link: String, visible_ : bo
 		push_error("apply_item_visibility: node inválido ou null")
 		return false
 	
-	# BUSCA O NÓ DO ITEM A PARTIR DO PLAYER
+	# Busca nó do item a partir do player
 	var item_node = player_node.get_node_or_null(node_link)
 	
 	# VALIDAÇÃO: Verifica se item tem node_link
@@ -1281,7 +1302,7 @@ func _item_model_change_visibility(player_node, node_link: String, visible_ : bo
 		_log_debug("Caminho base: %s, caminho completo: %s/%s" % [player_node.get_path(), player_node.get_path(), node_link])
 		return false
 	
-	# SE VISIBLE = TRUE, ESCONDE TODOS OS IRMÃOS (outros itens no mesmo slot)
+	# Se visible = True: esconde outros imãos (outros itens no mesmo slot)
 	if visible_:
 		var parent_node = item_node.get_parent()
 		
@@ -1325,6 +1346,10 @@ func _item_model_change_visibility(player_node, node_link: String, visible_ : bo
 	
 	if not applied:
 		return false
+	else:
+		# Atualiza referência do item atual
+		actual_weapon = item_node
+			
 	_log_debug("🚫_item_model_change_visibility: Monstrando: %s" % item_node.name)
 	
 # ===== UTILS =====

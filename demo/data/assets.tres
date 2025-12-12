@@ -39,6 +39,7 @@ last_shadow_lod = 3
 name = "Arvore_1"
 id = 2
 scene_file = ExtResource("2_adagb")
+density = 0.01
 last_lod = 1
 last_shadow_lod = 1
 lod1_range = 4096.0
@@ -52,6 +53,7 @@ density = 0.03372976
 last_lod = 1
 last_shadow_lod = 1
 lod1_range = 4096.0
+lod2_range = 128.0
 
 [sub_resource type="Terrain3DMeshAsset" id="Terrain3DMeshAsset_3wxcx"]
 name = "arvore_3"
@@ -61,6 +63,7 @@ density = 0.0338821
 last_lod = 1
 last_shadow_lod = 1
 lod1_range = 4096.0
+lod2_range = 128.0
 
 [sub_resource type="Terrain3DTextureAsset" id="Terrain3DTextureAsset_lha57"]
 name = "Cliff"

@@ -265,10 +265,6 @@ func _reset_client_state():
 	is_in_round = false
 	reconnect_attempts = 0
 	
-	# Limpa referências persistentes
-	current_room = {}
-	current_round = {}
-	
 	# Volta para tela inicial de conexão
 	if main_menu:
 		main_menu.show_loading_menu("Conectando ao servidor...")
@@ -649,7 +645,6 @@ func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bo
 	# Instancia player
 	var player_scene = preload("res://scenes/system/player_warrior.tscn")
 	var player_instance = player_scene.instantiate()
-	init_player_inventory()
 	
 	player_instance.name = player_name_
 	player_instance.player_id = player_data["id"]
@@ -671,6 +666,9 @@ func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bo
 		var camera_instance = camera_scene.instantiate()
 		camera_instance.name = camera_name
 		camera_instance.target = player_instance
+		
+		# Inicializa o inventário do player local (no game manager)
+		init_player_inventory()
 		
 		# Atribui referência DIRETA (só para local)
 		player_instance.camera_controller = camera_instance
