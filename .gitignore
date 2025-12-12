@@ -17,3 +17,5 @@ mono_crash.*.json
 
 # Do projeto
 /scenes/system/terrain_data/
+*.res
+*.res

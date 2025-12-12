@@ -82,6 +82,15 @@ var actual_weapon : Node3D = null
 var actual_enabled_hitbox: Area3D = null
 const max_direction_history = 2
 
+# Variáveis de sincronização com terreno
+var terrain_height_cache: float = -INF
+var terrain_cache_timer: float = 0.0
+var terrain_cache_duration: float = 0.2  # Cacheia por 200ms
+var last_terrain_correction: float = 0.0  # Timer para evitar correções constantes
+var disable_physics_distance: float = 30.0  # Desativa física se > 30m de distância
+var remote_anim_speed: float = 0.0
+var remote_is_on_floor: bool = true
+
 # Dinâmicas
 var model: Node3D = null
 var skeleton: Skeleton3D = null
@@ -91,6 +100,7 @@ var defense_target_angle: float = 0.0
 var _item_data: Array[Dictionary] = [] # Futuramente substituir pelo ItemDatabase
 var hit_targets: Array = []
 var cair: bool = false
+var terrain : Terrain3D
 
 # Ready
 func _ready():
@@ -536,21 +546,38 @@ func _handle_gravity(delta: float) -> void:
 			
 # Animações
 func _handle_animations(move_dir):
+	"""Atualiza animações (funciona para local e remotos)"""
+	
+	# Calcula velocidade para animação
 	var speed = Vector2(velocity.x, velocity.z).length()
-	#var input_dir = Vector2(velocity.x, velocity.z).normalized()
+	
+	# ✅ Para remotos distantes, usa velocidade da rede ao invés de física local
+	var local_player = get_tree().get_first_node_in_group("local_player")
+	var is_distant = false
+	
+	if not is_local_player and local_player:
+		var dist = global_position.distance_to(local_player.global_position)
+		is_distant = dist > disable_physics_distance
+	
 	if is_aiming:
-		pass
-		# Com strafe_mode (FALTA FAZER A ANIMAÇÃO) por enquanto essa \/
 		animation_tree["parameters/Locomotion/blend_position"] = speed
 	else:
-		# Sem strafe_mode
 		animation_tree["parameters/Locomotion/blend_position"] = speed
 	
 	# Bobbing
-	if move_dir.length() > 0.1:
+	if move_dir.length() > 0.1 or speed > 0.1:
 		animation_tree["parameters/bobbing/add_amount"] = bobbing_intensity * speed
 	else:
 		animation_tree["parameters/bobbing/add_amount"] = 0
+	
+	# ✅ Transições de pulo (usa remote_is_on_floor para remotos distantes)
+	var floor_state = remote_is_on_floor if is_distant else is_on_floor()
+	
+	if is_jumping and not floor_state:
+		animation_tree["parameters/final_transt/transition_request"] = "jump_start"
+	elif floor_state and not is_jumping:
+		animation_tree["parameters/final_transt/transition_request"] = "jump_land"
+		animation_tree["parameters/final_transt/transition_request"] = "walking_e_blends"
 
 # Movimentos: Aplica conforme o modo ativado no momento: free_cam ou locked
 func _handle_movement_input(delta: float):
@@ -849,27 +876,35 @@ func teleport_to(new_position: Vector3):
 # ===== ENVIO DE ESTADO PARA SERVIDOR (APENAS LOCAL) =====
 
 func _send_state_to_server(delta: float):
-	"""Envia estado do jogador local para o servidor"""
-	
 	sync_timer += delta
 	
 	if sync_timer >= sync_rate:
 		sync_timer = 0.0
 		
-		# Verifica se houve mudança significativa
 		var pos_changed = global_position.distance_to(target_position) > position_threshold
 		var rot_changed = abs(rotation.y - target_rotation_y) > rotation_threshold
 		
 		if pos_changed or rot_changed:
-			# Atualiza alvos para próxima comparação
 			target_position = global_position
 			target_rotation_y = rotation.y
 			
-			# ENVIA VIA NETWORKMANAGER (UNRELIABLE = RÁPIDO)
 			if NetworkManager and NetworkManager.is_connected:
+				# APENAS SINCRONIZA X e Z se estiver longe da câmera
+				var camera_pos = camera_controller.global_position if camera_controller else global_position
+				var dist_to_camera = global_position.distance_to(camera_pos)
+				
+				var sync_pos = global_position
+				
+				# Se longe (> 50m), envia Y do terreno ao invés de Y real
+				if dist_to_camera > 50.0:
+					var terrain_y = _get_terrain_height(global_position.x, global_position.z)
+					if terrain_y != -INF:
+						sync_pos.y = terrain_y + 0.1
+						_log_debug("📡 Enviando Y do terreno: %.2f (dist: %.2f)" % [sync_pos.y, dist_to_camera])
+				
 				NetworkManager.send_player_state(
 					player_id,
-					global_position,
+					sync_pos,  # ← Usa posição ajustada
 					rotation,
 					velocity,
 					is_running,
@@ -883,7 +918,12 @@ func _send_animation_state(delta: float):
 	
 	anim_sync_timer += delta
 	
-	if anim_sync_timer >= anim_sync_rate:
+	# ✅ Taxa dinâmica: mais frequente quando há ação
+	var dynamic_rate = anim_sync_rate
+	if is_attacking or is_jumping or not is_on_floor():
+		dynamic_rate = anim_sync_rate * 0.5  # 2x mais rápido durante ações
+	
+	if anim_sync_timer >= dynamic_rate:
 		anim_sync_timer = 0.0
 		
 		# Captura estado atual
@@ -934,24 +974,143 @@ func _animation_state_changed(new_state: Dictionary) -> bool:
 	
 # ===== INTERPOLAÇÃO DE JOGADORES REMOTOS =====
 
+func _get_terrain_height(x: float, z: float) -> float:
+	"""Versão melhorada com fallback para raycast"""
+	
+	# MÉTODO 1: Terrain3D direto
+	var terrain = get_tree().get_root().get_node_or_null("Round/Terrain3D")
+	if terrain and terrain.data:
+		var h = terrain.data.get_height(Vector3(x, 0, z))
+		
+		# Se retornou valor válido (não zero em área não carregada)
+		if h != 0.0 or (abs(x) < 100 and abs(z) < 100):
+			return h
+	
+	# MÉTODO 2: Raycast como fallback
+	var space_state = get_world_3d().direct_space_state
+	var query = PhysicsRayQueryParameters3D.new()
+	query.from = Vector3(x, 1000, z)
+	query.to = Vector3(x, -100, z)
+	query.collision_mask = 1  # Layer do terreno
+	query.exclude = [self]
+	
+	var result = space_state.intersect_ray(query)
+	if result:
+		return result.position.y
+	
+	# MÉTODO 3: Usa Y atual do player como fallback final
+	return global_position.y
+
 func _interpolate_remote_player(delta: float):
-	"""Interpola suavemente a posição de jogadores remotos"""
+	"""Interpola suavemente a posição de jogadores remotos COM VALIDAÇÃO DE TERRENO SUAVIZADA"""
 	
-	# INTERPOLAÇÃO SUAVE (evita teleporte)
-	global_position = global_position.lerp(target_position, interpolation_speed * delta)
+	# ===== CALCULA DISTÂNCIA ATÉ O JOGADOR LOCAL =====
+	var local_player = get_tree().get_first_node_in_group("local_player")
+	var distance_to_local = 9999.0
 	
-	# INTERPOLAÇÃO DE ROTAÇÃO (apenas Y)
+	if local_player:
+		distance_to_local = global_position.distance_to(local_player.global_position)
+	
+	var is_distant = distance_to_local > disable_physics_distance
+	
+	# ===== CACHE DE ALTURA DO TERRENO =====
+	terrain_cache_timer += delta
+	
+	if terrain_cache_timer >= terrain_cache_duration:
+		terrain_cache_timer = 0.0
+		terrain_height_cache = _get_terrain_height(target_position.x, target_position.z)
+	
+	# ===== CORREÇÃO DE ALTURA COM HYSTERESIS =====
+	var terrain_y = terrain_height_cache
+	
+	if terrain_y != -INF and is_distant:
+		var ground_offset = 0.0
+		var min_correction_threshold = 0.3
+		var severe_correction_threshold = 2.0
+		
+		var y_diff = target_position.y - (terrain_y + ground_offset)
+		
+		if y_diff < -severe_correction_threshold:
+			target_position.y = terrain_y + ground_offset
+			velocity.y = 0
+			_log_debug("🚨 Correção severa: player %.2fm abaixo do terreno" % abs(y_diff))
+		
+		elif y_diff < -min_correction_threshold:
+			last_terrain_correction += delta
+			
+			if last_terrain_correction > 0.15:
+				var correction_speed = 1.5
+				target_position.y += correction_speed * delta
+				target_position.y = min(target_position.y, terrain_y + ground_offset)
+				
+				last_terrain_correction = 0.0
+				_log_debug("🔧 Correção gradual Y: %.2f -> %.2f (diff: %.2f)" % [
+					global_position.y, 
+					target_position.y,
+					y_diff
+				])
+		else:
+			last_terrain_correction = 0.0
+	
+	# ===== INTERPOLAÇÃO SUAVE =====
+	if is_distant:
+		# DISTANTE: Interpolação direta SEM move_and_slide
+		var y_interp_speed = interpolation_speed * 0.3
+		
+		global_position.x = lerp(global_position.x, target_position.x, interpolation_speed * delta)
+		global_position.z = lerp(global_position.z, target_position.z, interpolation_speed * delta)
+		global_position.y = lerp(global_position.y, target_position.y, y_interp_speed * delta)
+		
+		# ✅ NÃO zera velocity - usa o valor recebido da rede para animações
+		# velocity já foi atualizado em _client_receive_state()
+		
+		# ✅ Simula is_on_floor() baseado na distância ao terreno
+		if terrain_y != -INF:
+			var distance_to_ground = abs(global_position.y - terrain_y)
+			remote_is_on_floor = distance_to_ground < 0.2  # Considera no chão se < 20cm
+		else:
+			remote_is_on_floor = true  # Assume no chão se não detectar terreno
+		
+		_log_debug("🌐 Modo remoto distante: %.2fm (sem física, on_floor: %s)" % [distance_to_local, remote_is_on_floor])
+	else:
+		# PRÓXIMO: Usa física normal
+		var new_x = lerp(global_position.x, target_position.x, interpolation_speed * delta)
+		var new_z = lerp(global_position.z, target_position.z, interpolation_speed * delta)
+		var y_interp_speed = interpolation_speed * 0.5
+		var new_y = lerp(global_position.y, target_position.y, y_interp_speed * delta)
+		
+		global_position = Vector3(new_x, new_y, new_z)
+		
+		# APLICA FÍSICA (gravidade + colisões)
+		if not is_on_floor():
+			velocity.y -= gravity * delta
+		else:
+			velocity.y = 0
+		
+		move_and_slide()
+		
+		remote_is_on_floor = is_on_floor()
+		
+		_log_debug("🎯 Modo remoto próximo: %.2fm (com física)" % distance_to_local)
+	
+	# ===== INTERPOLAÇÃO DE ROTAÇÃO =====
 	rotation.y = lerp_angle(rotation.y, target_rotation_y, interpolation_speed * delta)
 	
-	# OPCIONAL: Simula gravidade para remotos
-	if not is_on_floor():
-		velocity.y -= gravity * delta
-	else:
-		velocity.y = 0
-	
-	# Move para aplicar física/colisões
-	move_and_slide()
-	
+	# ===== SNAP FINAL (APENAS PARA DISTANTES) =====
+	if is_distant and terrain_y != -INF:
+		var final_diff = global_position.y - terrain_y
+		
+		if final_diff < -0.05:
+			global_position.y = terrain_y
+			velocity.y = 0
+			_log_debug("🔧 Snap final: %.2f -> %.2f" % [global_position.y + final_diff, terrain_y])
+
+
+# Parei nessa pergunta pro claudio:
+#Sobre a sincronização, prefiro a do script antigo, pois a sincronia é constante, não quero que os itens adormeçam, pois o mapa do jogo será pequeno, terá poucos itens e terá gráfico leve.
+#Os itens continuam, quando dropados longe da câmera do servidor, caindo pra baixo do chão, mas quando a câmera do servidor chega perto, eles aparecem para o cliente que dropou, no chão, caídos. A lógica é assim, o  servidor executa o drop, faz rpc pra dropar os modelos configurados nos clientes e cada item tem este script de sincronia. O servidor roda a cena do mapa também, com nós remotos de cada player sincronizados em tempo real, devemos aplicar a física do servidor nas áreas onde estes nós(remotos de clientes) estão? Mas e quando o servidor dropar um item longe de qualquer player?
+
+
 # ===== RECEPÇÃO DE ESTADO (REMOTOS) =====
 
 @rpc("authority", "call_remote", "unreliable")
@@ -969,6 +1128,8 @@ func _client_receive_state(pos: Vector3, rot: Vector3, vel: Vector3, running: bo
 	is_running = running
 	is_jumping = jumping
 	velocity = vel  # Para gravidade
+	
+	print("terrain.y: ", _get_terrain_height(pos.x, pos.z))
 
 # ===== RECEPÇÃO DE ANIMAÇÕES (REMOTOS) =====
 
@@ -978,7 +1139,10 @@ func _client_receive_animation_state(speed: float, attacking: bool, defending: b
 	"""Recebe e aplica estado de animação de outros jogadores"""
 	
 	if is_local_player:
-		return  # Ignora para si mesmo
+		return
+	
+	# ✅ Armazena velocidade recebida para usar nas animações
+	remote_anim_speed = speed
 	
 	# ATUALIZA ESTADOS
 	is_attacking = attacking
@@ -987,10 +1151,11 @@ func _client_receive_animation_state(speed: float, attacking: bool, defending: b
 	is_aiming = aiming
 	is_running = running
 	is_block_attacking = block_attacking
+	remote_is_on_floor = on_floor  # ✅ Usa estado recebido da rede
 	
 	# ATUALIZA ANIMATIONTREE
 	if animation_tree:
-		# Locomotion
+		# Locomotion - usa velocidade da rede
 		animation_tree["parameters/Locomotion/blend_position"] = speed
 		
 		# Blocking
@@ -999,14 +1164,14 @@ func _client_receive_animation_state(speed: float, attacking: bool, defending: b
 		else:
 			animation_tree.set("parameters/Blocking/blend_amount", 0.0)
 		
-		# Jump transitions
+		# Jump transitions - usa on_floor da rede
 		if jumping and not on_floor:
 			animation_tree["parameters/final_transt/transition_request"] = "jump_start"
 		elif on_floor and not jumping:
 			animation_tree["parameters/final_transt/transition_request"] = "jump_land"
 			animation_tree["parameters/final_transt/transition_request"] = "walking_e_blends"
 		
-		# Bobbing (baseado na velocidade)
+		# Bobbing - baseado na velocidade recebida
 		if speed > 0.1:
 			animation_tree["parameters/bobbing/add_amount"] = bobbing_intensity * speed
 		else:
@@ -1185,7 +1350,12 @@ func initialize(p_id: int, p_name: String, spawn_pos: Vector3):
 		# Remotos não processam input
 		set_process_input(false)
 		set_process_unhandled_input(false)
-	
+		
+		floor_stop_on_slope = true
+		floor_max_angle = deg_to_rad(45)
+		floor_snap_length = 0.8  # Aumenta snap (ajuda a grudar no chão)
+		platform_floor_layers = 1  # Certifica que detecta layer do terreno
+		
 	# Define autoridade multiplayer
 	set_multiplayer_authority(player_id)
 	
@@ -1193,6 +1363,8 @@ func initialize(p_id: int, p_name: String, spawn_pos: Vector3):
 	set_physics_process(true)
 	set_process(true)
 	
+	# Preenche o atalho de nó do terreno
+	terrain = get_tree().get_root().get_node_or_null("Round/Terrain3D")
 	
 # ===== FUNÇÕES DE ITENS ===============
 
