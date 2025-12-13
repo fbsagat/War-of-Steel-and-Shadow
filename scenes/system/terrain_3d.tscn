@@ -832,7 +832,7 @@ shader_override_enabled = true
 shader_override = SubResource("Shader_xuisu")
 
 [sub_resource type="RibbonTrailMesh" id="RibbonTrailMesh_kf5nm"]
-size = 0.6
+size = 0.25
 
 [node name="Terrain3D" type="Terrain3D"]
 data_directory = "res://scenes/system/terrain_data"
@@ -854,8 +854,12 @@ minutes_per_day = 7.0
 [node name="Terrain3DParticles" parent="." node_paths=PackedStringArray("terrain") instance=ExtResource("2_t70ke")]
 visible = false
 terrain = NodePath("..")
+grid_width = 11
+process_fixed_fps = 25
 mesh = SubResource("RibbonTrailMesh_kf5nm")
 shadow_mode = 1
+min_draw_distance = 132.0
+particle_count = 1115136
 
 [node name="arvore_3" parent="." instance=ExtResource("4_xuisu")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.2860007, 0, 0.29552233)
@@ -868,3 +872,15 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 17.910988, -1.9073486e-06, -1
 
 [node name="arvore_2" parent="." instance=ExtResource("6_1ice8")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.2621956, 1.4279499, -17.33369)
+
+[node name="Arvore_2" parent="." instance=ExtResource("5_prcf3")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -84.92362, 45.874172, -155.82713)
+
+[node name="arvore_5" parent="." instance=ExtResource("6_1ice8")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -56.999176, 43.422134, -140.42172)
+
+[node name="arvore_6" parent="." instance=ExtResource("4_xuisu")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -137.96248, 38.672333, -69.87256)
+
+[node name="arvore_7" parent="." instance=ExtResource("4_xuisu")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -155.1536, 45.152607, -114.08063)

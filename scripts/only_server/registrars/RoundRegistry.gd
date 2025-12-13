@@ -636,25 +636,6 @@ func get_round_duration(round_id: int) -> float:
 	else:
 		return round_data.get("duration", 0.0)
 
-func get_time_remaining(round_id: int) -> float:
-	"""
-	Retorna tempo restante da rodada em segundos
-	Retorna -1 se rodada não tem limite de tempo ou já terminou
-	"""
-	if not rounds.has(round_id):
-		return -1.0
-	
-	var round_data = rounds[round_id]
-	
-	if round_data["state"] != "playing":
-		return -1.0
-	
-	var round_timer = round_data["round_timer"]
-	if not round_timer or not is_instance_valid(round_timer):
-		return -1.0
-	
-	return round_timer.time_left
-
 func get_settings(round_id: int) -> Dictionary:
 	"""Retorna configurações da rodada (mapa, modo, etc)"""
 	if not rounds.has(round_id):
@@ -696,8 +677,8 @@ func sky3d_config_generator() -> Dictionary:
 	
 	# TEMPO (TimeOfDay)
 	config["time"] = {
-		"current_time": randf_range(6.0, 16.0),
-		"day_duration": randf_range(420.0, 600.0),
+		"current_time": randf_range(6.0, 14.0),
+		"day_duration": randf_range(840.0, 1200.0),
 		"auto_advance": true, # randi() % 2 == 0
 		"time_scale": 1.0 # randf_range(0.5, 2.0)
 	}

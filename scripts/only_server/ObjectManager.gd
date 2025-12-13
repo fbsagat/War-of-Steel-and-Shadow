@@ -14,12 +14,12 @@ class_name ObjectManager
 # ===== CONFIGURAÇÕES =====
 
 @export_category("Spawn Settings")
-@export var drop_distance: float = 1.5  # Distância na frente do player
+@export var drop_distance: float = 1.2  # Distância na frente do player
 @export var drop_height: float = 1.2    # Altura acima do chão
 @export var drop_variance: float = 0.3  # Variação aleatória
 
 @export_category("Physics Settings")
-@export var drop_impulse_strength: float = 2.0
+@export var drop_impulse_strength: float = 3.5
 @export var drop_impulse_variance: float = 1.0
 
 @export_category("Debug")
@@ -134,7 +134,7 @@ func spawn_item(objects_node, round_id: int, item_name: String, position: Vector
 		"spawn_time": Time.get_unix_time_from_system()
 	}
 	
-	# ✅ CORRIGIDO: Envia RPC individual para cada cliente ativo
+	# ✅ Envia RPC individual para cada cliente ativo
 	_send_spawn_to_clients(round_id, object_id, item_name, position, rotation, owner_id)
 	
 	_log_debug("✓ Item spawnado: %s (ID: %d, Round: %d)" % [item_name, object_id, round_id])
@@ -145,7 +145,7 @@ func spawn_item(objects_node, round_id: int, item_name: String, position: Vector
 
 func _send_spawn_to_clients(round_id: int, object_id: int, item_name: String, position: Vector3, rotation: Vector3, owner_id: int):
 	"""
-	✅ NOVA FUNÇÃO: Envia spawn para clientes ativos na rodada
+	✅ Envia spawn para clientes ativos na rodada
 	Chama RPC individual para cada peer conectado
 	"""
 	

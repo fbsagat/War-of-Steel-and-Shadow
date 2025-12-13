@@ -1,6 +1,6 @@
 1. 		OK. Animation tree (animação avançadas e realistas com mesh e etc)
 2. 		OK. Aplicar bobbing, pulinhos.
-3. Implementar animações do modo lockado, falta criar a animação (strafe)
+3. Implementar animações do modo lockado, falta criar a animação strafe.
 4. 		Ok. Implementar jogar armas fora.
 5. 		Ok.Ajeitar a animação de pulo.
 6. 		Ok.Adicionar hit, animação e dano, detecção de objeto batendo no player.
@@ -13,24 +13,24 @@
 13. 	Ok. Ajustar o bobbing de acordo com a velocidade.
 14. 	Ok. Ajeitar a animação de caminhada e corrida.
 15. Quando o player mira com a tocha ela ilumina um pouco mais.
-16. Quando o player não estiver lockando para um inimigo e clicar em lock(botão direito), 
-girar o player para a direção da câmera ao invés da câmera para trás do player.
-17. Mapa, próximo passo, adicionar sistema de texturização: https://chat.qwen.ai/c/371df7e0-378a-44d3-b8b7-25d5515aa1e5
+16. 	Ok. Quando o player não estiver lockando para um inimigo e clicar em lock(botão direito), 
+		girar o player para a direção da câmera ao invés da câmera para trás do player.
+17. 	Ok. Mapa, próximo passo, adicionar sistema de texturização: https://chat.qwen.ai/c/371df7e0-378a-44d3-b8b7-25d5515aa1e5
 18. 	Ok. Sincronizar configs de mapas entre clientes e server.
 19. 	Ok. Aplicar player(characterbody3d) warrior que fiz para o projeto.
 20. 	Ok. Ajustar servidor para definir configurações do sky3d.
-21. Ajustar PlayerRegistry, RoomRegistry, e RoundRegistry do cliente, inicializar corretamente, sincronizar dados
-	corretamente para o cliente usar.
+21. 	Ok. Ajustar PlayerRegistry, RoomRegistry, e RoundRegistry do cliente, inicializar corretamente, sincronizar dados
+		corretamente para o cliente usar.
 22. 	Ok. Server está sincronizando todos os players do servidor mutuamente, fazer as verificações
-		 necessárias, sincronizar apenas os da mesma rodada.
+		necessárias, sincronizar apenas os da mesma rodada.
 23. 	Ok. Ajustar geração automática de spawnpoints no map manager.
 34. 	Ok .Quando uma sala está com gameplay em andamento, não listar ela para os outros e fazer validação no servidor.
 35. Implementar o botão de fechar/trancar a sala?
 36. 	Ok. Implementar o modo teste rápido, que consiste em iniciar a play já no mapa gerado com players adicionados.
-37. Sincronizar objetos dos players.
-38. Verificar se todos os registros estão se comportando corretamente, criar jogadores quando logal,
-apagar jogadores quando logam, criar salas quando criadas pelos jogadores, apagar quando o host apaga ou ficam vazias,
-criar rodadas quando o host inicia uma rodada, apagar rodada e registrar resultados na sala quando termina, e etc...
+37. 	Ok. Sincronizar objetos dos players.
+38. 	Ok. Verificar se todos os registros estão se comportando corretamente, criar jogadores quando logal,
+		apagar jogadores quando logam, criar salas quando criadas pelos jogadores, apagar quando o host apaga ou ficam vazias,
+		criar rodadas quando o host inicia uma rodada, apagar rodada e registrar resultados na sala quando termina, e etc...
 39. 	Ok. Implementar validação de inventário nos RPCs de item(Verificar se player possui item antes de equipar/dropar)
 40. Ajustar sistema de conexão de rede, quando servidor cair, clientes deve resetar tudo e voltar pra tela de conexão.
 	Quando um cliente cair, resetar tudo dele na partida(no servidor(nos registros tbm) e nos cliente) e garantir que
@@ -39,6 +39,7 @@ criar rodadas quando o host inicia uma rodada, apagar rodada e registrar resulta
 41. 	Ok. Abrir o map manager logo na inicialização do servidor, não no inicio de uma rodada, 
 		matar o game manager no servidor para não sobrecarregar pois é inútil.
 42. Name label do player: Escolher cores no round e não aleatórias e adicionar transparência no distanciamento da camera.
+43. Fazer o spawn de inimigos.
 
 Adicionar no modelo do player:
 	1. Anim interact com a outra mão.
