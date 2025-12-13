@@ -58,10 +58,10 @@ func load_map(map_scene_path: String, round_node, settings: Dictionary = {}):
 		return false
 	
 	# Aplicar configurações do Terrain3D
-	# Falta criar função
+	# Gerar um terreno novo com as configurações compartilhadas
 	
 	# Aplicar configurações do Sky3D
-	aplicar_configuracoes(current_map.get_node("Sky3D"), settings.get("rand_configs"))
+	apply_sky_configs(current_map.get_node("Sky3D"), settings.get("sky_rand_configs"))
 	
 	# Adiciona o mapa à cena
 	round_node.add_child(current_map)
@@ -198,7 +198,7 @@ func find_map_nodes_in_group(group_name: String) -> Array:
 ## Aplica as configurações geradas no nó Sky3D
 ## @param sky_node: Referência ao nó Sky3D
 ## @param config: Dicionário de configurações (gerado por gerar_configuracoes_randomicas)
-func aplicar_configuracoes(sky_node: Node, config: Dictionary) -> void:
+func apply_sky_configs(sky_node: Node, config: Dictionary) -> void:
 	if sky_node == null or config.is_empty():
 		push_error("❌ Sky3D nulo ou configurações vazias!")
 		return

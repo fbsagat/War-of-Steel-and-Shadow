@@ -172,10 +172,9 @@ func create_round(room_id: int, room_name: String, players: Array, settings: Dic
 		round_data["scores"][player["id"]] = 0
 	
 	# Gerar configurações do Terrain3D
-	# Falta criar função
 	
 	# Gerar configurações do Sky3D
-	round_data["settings"]["rand_configs"] = gerar_configuracoes_randomicas()
+	round_data["settings"]["sky_rand_configs"] = sky3d_config_generator()
 	
 	# Armazena rodada
 	rounds[round_id] = round_data
@@ -686,39 +685,9 @@ func _get_next_round_id() -> int:
 			max_id = round_id
 	return max_id + 1
 
-func debug_print_all_rounds():
-	"""Imprime estado completo de todas as rodadas"""
-	print("\n========== ROUND REGISTRY ==========")
-	print("Rodadas ativas: %d" % rounds.size())
-	print("------------------------------------")
-	
-	for round_id in rounds:
-		var r = rounds[round_id]
-		print("\n[Rodada %d]" % round_id)
-		print("  Sala: %s (ID: %d)" % [r["room_name"], r["room_id"]])
-		print("  Estado: %s" % r["state"])
-		print("  Jogadores: %d (%d ativos)" % [r["players"].size(), get_active_player_count(round_id)])
-		print("  Duração: %.1fs" % get_round_duration(round_id))
-		
-		if r["state"] == "playing" and r["round_timer"]:
-			print("  Tempo restante: %.1fs" % r["round_timer"].time_left)
-		
-		print("  Spawnados: %d" % r["spawned_players"].size())
-		print("  Eventos: %d" % r["events"].size())
-		
-		if not r["disconnected_players"].is_empty():
-			print("  Desconectados: %s" % r["disconnected_players"])
-		
-		print("  Pontuações:")
-		var scores = get_leaderboard(round_id)
-		for entry in scores:
-			print("    %s: %d pts" % [entry["name"], entry["score"]])
-	
-	print("\n====================================\n")
-
 ## Gera um dicionário com configurações randômicas para o Sky3D
 ## @return Dictionary com todas as configurações geradas
-func gerar_configuracoes_randomicas() -> Dictionary:
+func sky3d_config_generator() -> Dictionary:
 	var config = {}
 	
 	# Paletas de cores predefinidas para diferentes atmosferas
@@ -727,7 +696,7 @@ func gerar_configuracoes_randomicas() -> Dictionary:
 	
 	# TEMPO (TimeOfDay)
 	config["time"] = {
-		"current_time": randf_range(0.0, 24.0),
+		"current_time": randf_range(6.0, 16.0),
 		"day_duration": randf_range(420.0, 600.0),
 		"auto_advance": true, # randi() % 2 == 0
 		"time_scale": 1.0 # randf_range(0.5, 2.0)
@@ -778,7 +747,6 @@ func gerar_configuracoes_randomicas() -> Dictionary:
 	
 	_log_debug("✓ Configurações randômicas geradas: %s" % paleta["nome"])
 	return config
-
 
 ## Gera paletas de cores temáticas para diferentes atmosferas
 func _gerar_paletas_cores() -> Array:
@@ -874,6 +842,36 @@ func _gerar_paletas_cores() -> Array:
 			"ambient_ground": Color(0.3, 0.2, 0.1)
 		}
 	]
+
+func debug_print_all_rounds():
+	"""Imprime estado completo de todas as rodadas"""
+	print("\n========== ROUND REGISTRY ==========")
+	print("Rodadas ativas: %d" % rounds.size())
+	print("------------------------------------")
+	
+	for round_id in rounds:
+		var r = rounds[round_id]
+		print("\n[Rodada %d]" % round_id)
+		print("  Sala: %s (ID: %d)" % [r["room_name"], r["room_id"]])
+		print("  Estado: %s" % r["state"])
+		print("  Jogadores: %d (%d ativos)" % [r["players"].size(), get_active_player_count(round_id)])
+		print("  Duração: %.1fs" % get_round_duration(round_id))
+		
+		if r["state"] == "playing" and r["round_timer"]:
+			print("  Tempo restante: %.1fs" % r["round_timer"].time_left)
+		
+		print("  Spawnados: %d" % r["spawned_players"].size())
+		print("  Eventos: %d" % r["events"].size())
+		
+		if not r["disconnected_players"].is_empty():
+			print("  Desconectados: %s" % r["disconnected_players"])
+		
+		print("  Pontuações:")
+		var scores = get_leaderboard(round_id)
+		for entry in scores:
+			print("    %s: %d pts" % [entry["name"], entry["score"]])
+	
+	print("\n====================================\n")
 
 func _log_debug(message: String):
 	"""Função padrão de debug"""
