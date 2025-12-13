@@ -886,27 +886,26 @@ func unregister_syncable_object(object_id: int) -> void:
 
 # ===== SINCRONIZAÇÃO DE AÇÕES (ATAQUES, DEFESA) =====
 
-func send_player_action(p_id: int, action_type: String, anim_name: String):
+func send_player_action(p_id: int, action_type: String, item_equipado_nome, anim_name: String):
 	"""Envia ação do jogador (ataque, defesa) - RELIABLE (garantido)"""
 	if not is_connected_:
 		return
 	
 	_log_debug("⚔️ Enviando ação: %s (%s)" % [action_type, anim_name])
-	rpc_id(1, "_server_player_action", p_id, action_type, anim_name)
+	rpc_id(1, "_server_player_action", p_id, action_type, item_equipado_nome, anim_name)
 
 @rpc("any_peer", "call_remote", "reliable")
-func _server_player_action(p_id: int, action_type: String, anim_name: String):
+func _server_player_action(p_id: int, action_type: String, item_equipado_nome, anim_name: String):
 	"""RPC: Servidor recebe ação do jogador e redistribui"""
 	
 	_log_debug("_server_player_action")
 	if ServerManager.has_method("_server_player_action"):
-		ServerManager._server_player_action(p_id, action_type, anim_name)
+		ServerManager._server_player_action(p_id, action_type, item_equipado_nome, anim_name)
 
 @rpc("authority", "call_remote", "reliable")
-func _client_player_action(p_id: int, action_type: String, anim_name: String):
+func _client_player_action(p_id: int, action_type: String, item_equipado_nome, anim_name: String):
 	"""RPC: Cliente recebe ação de outro jogador"""
 	
-	_log_debug("_client_player_action")
 	if multiplayer.has_multiplayer_peer() and multiplayer.get_unique_id() == 1:
 		return
 	
@@ -914,7 +913,17 @@ func _client_player_action(p_id: int, action_type: String, anim_name: String):
 	
 	var player = GameManager.players_node.get_node_or_null(str(p_id))
 	if player and player.has_method("_client_receive_action"):
-		player._client_receive_action(action_type, anim_name)
+		player._client_receive_action(action_type, item_equipado_nome, anim_name)
+
+@rpc("authority", "call_remote", "reliable")
+func _client_player_receive_attack(body_name):
+	
+	if multiplayer.has_multiplayer_peer() and multiplayer.get_unique_id() == 1:
+		return
+	
+	var player = GameManager.players_node.get_node_or_null(str(body_name))
+	if player and player.has_method("take_damage"):
+		player.take_damage()
 
 # ===== TRATAMENTO DE ERROS =====
 

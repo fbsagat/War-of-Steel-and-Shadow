@@ -29,6 +29,10 @@ extends CharacterBody3D
 @export var pickup_collision_mask: int = 1 << 2 # Layer 3
 @export var max_pickup_results: int = 10
 
+@export_category("Taking Hit")
+@onready var mesh: MeshInstance3D = $Knight/Rig/Skeleton3D/Knight_Head
+@onready var hit_flash_timer: Timer = $HitFlashTimer
+
 @export_category("Enemy detection")
 @export var detection_radius_fov: float = 14.0 # Raio para detecção no FOV
 @export var detection_radius_360: float = 6.0 # Raio menor (ou maior) para fallback 360°
@@ -113,8 +117,9 @@ func _ready():
 	# Aplicador de tempo de detecção do inimigo
 	enemy_detection_timer()
 	
+	if _is_server:
 	# Gerenciador de hitboxes
-	hitboxes_manager()
+		hitboxes_manager()
 	
 	add_to_group("player")
 	
@@ -199,6 +204,11 @@ func _process(_delta: float) -> void:
 
 func hitboxes_manager():
 	# Conecta automaticamente todos os hitboxes de ataque presentes no modelo
+	
+	# Só o nó dos players no servidor processam hitboxes
+	if not _is_server:
+		return
+
 	var all_areas = find_children("*", "Area3D", true)
 	var hitboxes = all_areas.filter(func(n): return n.is_in_group("hitboxes"))
 	for area in hitboxes:
@@ -207,8 +217,6 @@ func hitboxes_manager():
 		if not area.is_connected("body_entered", Callable(self, "_on_hitbox_body_entered")):
 			area.connect("body_entered", Callable(self, "_on_hitbox_body_entered").bind(area))
 			area.monitoring = false
-
-
 	
 # Retorna item mais próximos do player
 func get_nearby_items(
@@ -321,7 +329,7 @@ func get_nearest_enemy() -> CharacterBody3D:
 	var closest_in_360: CharacterBody3D = null
 	var closest_in_360_dist_sq: float = INF
 
-	var enemies = get_tree().get_nodes_in_group("enemies")
+	var enemies = get_tree().get_nodes_in_group("enemy")
 	if enemies.is_empty():
 		return null
 
@@ -663,32 +671,66 @@ func _enable_attack_area():
 		if hitbox is Area3D:
 			actual_enabled_hitbox = hitbox
 			hitbox.monitoring = true
-			_log_debug("Hitbox de %s ativado! (%s)" % [actual_weapon.name, actual_enabled_hitbox])
+			_log_debug("Hitbox de %s ativado! (%s %s)" % [actual_weapon.name, actual_enabled_hitbox, hitbox.monitoring])
+
 	else:
 		_log_debug("_enable_attack_area: Não encontrado node de hitbox")
 			
 # Para o contato das hitboxes das espadas(no momento ativo) com inimigos (área3D)
 func _on_hitbox_body_entered(body: Node, hitbox_area: Area3D) -> void:
-	if body.is_in_group("enemies") and (is_attacking or is_block_attacking):
+	
+	# Só o nó dos players no servidor processam hitboxes
+	if not _is_server:
+		return
+	
+	# Não acerta a sí próprio
+	if body.name == str(player_id):
+		return
+	
+	# Se for inimigo ou outro player
+	if body.is_in_group("enemy") or body.is_in_group("player") and (is_attacking or is_block_attacking):
+		
 		# evita bater várias vezes no mesmo alvo durante o mesmo swing
 		if body in hit_targets:
 			return
-			
+		
+		var group: String = ""
 		# apenas inimigos
-		if body.is_in_group("enemies"):
+		if body.is_in_group("enemy"):
 			hit_targets.append(body)
 			body.take_damage(10)
+			group = "enemy"
 			_log_debug("%s foi acertado por %s" % [body.name, hitbox_area.get_parent().name])
-			
+		
+		# apenas outros players
+		if body.is_in_group("player"):
+			hit_targets.append(body)
+			group = "player"
+			_log_debug("%s foi acertado por %s" % [body.name, hitbox_area.get_parent().name])
+		
+		if ServerManager and ServerManager.has_method("attack_validation"):
+			ServerManager.attack_validation(group, player_id, actual_weapon.name, int(body.name))
+
+@rpc("authority", "call_remote", "unreliable")
+func take_damage():
+	"""Jogador local ou remoto recebe dano de golpe"""
+	
+	# Animação de hit
+	var random_hit = ["parameters/Hit_B/request", "parameters/Hit_A/request"].pick_random()
+	animation_tree.set(random_hit, AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+
 func _on_block_attack_timer_timeout(duration):
 	await get_tree().create_timer(duration).timeout
 	is_block_attacking = false
+	is_attacking = false
+	hit_targets.clear()
 	
 func _on_attack_timer_timeout(duration):
 	await get_tree().create_timer(duration * attack_time_tolerance).timeout
 	# Os ataques acabam neste exato momento
 	is_attacking = false
 	is_block_attacking = false
+	hit_targets.clear()
 	
 	# Se for servidor desativa a hitbox no fim do ataque
 	# A ativação é feita no animation player, executando _enable_attack_area()
@@ -716,7 +758,7 @@ func _disable_attack_hitbox():
 	# No nó do player, pegar a hitbox do node do item que está sendo usado para atacar
 	if actual_enabled_hitbox:
 		actual_enabled_hitbox.monitoring = false
-		_log_debug("Hitbox de %s desativado! (%s)" % [actual_weapon.name, actual_enabled_hitbox])
+		_log_debug("Hitbox de %s desativado! (%s %s)" % [actual_weapon.name, actual_enabled_hitbox, actual_enabled_hitbox.monitoring])
 	else:
 		_log_debug("_on_attack_timer_timeout: Não encontrado node de hitbox")
 	
@@ -1033,7 +1075,7 @@ func _client_receive_animation_state(speed: float, attacking: bool, defending: b
 # ===== RECEPÇÃO DE AÇÕES (ATAQUES, DEFESA) =====
 
 @rpc("authority", "call_remote", "reliable")
-func _client_receive_action(action_type: String, anim_name: String):
+func _client_receive_action(action_type: String, item_equipado_nome, anim_name: String):
 	"""Recebe e executa ações de outros jogadores (ataques, defesa, etc)"""
 	
 	if is_local_player:
@@ -1041,16 +1083,31 @@ func _client_receive_action(action_type: String, anim_name: String):
 	
 	match action_type:
 		"attack":
+			# Atualiza is_attacking
 			if not is_attacking:
 				is_attacking = true
-
+				
+				# Atualiza actual_weapon
+				var weapon_node_path = ItemDatabase.get_item(item_equipado_nome)["model_node_link"]
+				actual_weapon = get_node(weapon_node_path)
+				var hitbox = actual_weapon.get_node("hitbox")
+				actual_enabled_hitbox = hitbox
+			
 				_execute_animation(anim_name, "Attack",
 					"parameters/sword_attacks/transition_request",
 					"parameters/Attack/request")
 		
 		"block_attack":
+			# Atualiza is_block_attacking
 			if not is_block_attacking:
 				is_block_attacking = true
+				
+				# Atualiza actual_weapon
+				var weapon_node_path = ItemDatabase.get_item(item_equipado_nome)["model_node_link"]
+				actual_weapon = get_node(weapon_node_path)
+				var hitbox = actual_weapon.get_node("hitbox")
+				actual_enabled_hitbox = hitbox
+				
 				_execute_animation(anim_name, "Attack",
 					"parameters/sword_attacks/transition_request",
 					"parameters/Attack/request")
@@ -1088,7 +1145,7 @@ func action_sword_attack_call():
 	# Sincroniza ataque pela rede (Reliable = Garantido)
 	if NetworkManager and NetworkManager.is_connected:
 		var anim_name = _determine_attack_from_input()
-		NetworkManager.send_player_action(player_id, "attack", anim_name)
+		NetworkManager.send_player_action(player_id, "attack", item_equipado_nome, anim_name)
 		
 		# executa animação localmente
 		var anim_length = _execute_animation(anim_name, "Attack", "parameters/sword_attacks/transition_request",
@@ -1114,18 +1171,16 @@ func action_block_attack_call():
 		return
 		
 	if not is_block_attacking and is_defending:
-		hit_targets.clear()
 		is_block_attacking = true
-		#current_attack_item_id = current_item_left_id antigo
 		
 		var anim_time = _execute_animation("Block_Attack", "Attack", 
 		"parameters/sword_attacks/transition_request", "parameters/Attack/request")
 		
 		_on_block_attack_timer_timeout(anim_time * 0.85)
-		
+	
 		# Sincroniza defesa (Reliable)
 		if NetworkManager and NetworkManager.is_connected:
-			NetworkManager.send_player_action(player_id, "block_attack", "Block_Attack")
+			NetworkManager.send_player_action(player_id, "block_attack", item_equipado_nome, "Block_Attack")
 
 func action_lock_call():
 	"""Executa e sincroniza defesa"""
@@ -1148,7 +1203,7 @@ func action_lock_call():
 		
 		# Sincroniza defesa (Reliable)
 		if NetworkManager and NetworkManager.is_connected:
-			NetworkManager.send_player_action(player_id, "defend_start", "")
+			NetworkManager.send_player_action(player_id, "defend_start", "", "")
 
 func action_stop_locking_call():
 	"""Executa e sincroniza fim da defesa"""
@@ -1169,7 +1224,7 @@ func action_stop_locking_call():
 		
 	# Sincroniza fim da defesa (Reliable)
 	if NetworkManager and NetworkManager.is_connected:
-		NetworkManager.send_player_action(player_id, "defend_stop", "")
+		NetworkManager.send_player_action(player_id, "defend_stop", "", "")
 
 # ===== INICIALIZAÇÃO MULTIPLAYER =====
 

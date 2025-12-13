@@ -40,7 +40,7 @@ extends Node
 ## Tempo mínimo entre validações (segundos)
 @export var validation_interval: float = 0.1
 ## Ativar validação anti-cheat
-@export var enable_anticheat: bool = true
+@export var enable_anticheat: bool = false
 
 @export_category("Spawn Settings")
 ## Raio do círculo de spawn
@@ -1272,8 +1272,24 @@ func drop_item(round_id, player_id, item_id):
 
 # ===== VALIDAÇÕES DE AÇÕES DO PLAYER =====
 
+func attack_validation(group: String, player_id: int, actual_weapon: String, body_name: int):
+	
+	if group == "player":
+		var round_ = round_registry.get_round_by_player_id(player_id)
+		var round_players = player_registry.get_players_in_round(round_["round_id"])
+		
+		for peer_id in round_players:
+			NetworkManager._client_player_receive_attack.rpc_id(peer_id, body_name)
+		
+		# Aplica no nó do servidor
+		var player_node = player_registry.get_player_node(body_name)
+		if player_node and player_node.has_method("take_damage"):
+			player_node.take_damage()
+		
+	_log_debug("Ataque executado!: %s, %d com um(a) %s em %d" % [group, player_id, actual_weapon,  body_name])
+
 @rpc("any_peer", "call_remote", "reliable")
-func _server_player_action(p_id: int, action_type: String, anim_name: String):
+func _server_player_action(p_id: int, action_type: String, item_equipado_nome, anim_name: String):
 	"""RPC: Servidor recebe ação do jogador e redistribui"""
 	
 	_log_debug("_server_player_action: %s" % action_type)
@@ -1311,7 +1327,7 @@ func _server_player_action(p_id: int, action_type: String, anim_name: String):
 	# Propaga pra todos os outros clientes (Reliable = Garantido)
 	for peer_id in multiplayer.get_peers():
 		if peer_id != p_id:
-			NetworkManager._client_player_action.rpc_id(peer_id, p_id, action_type, anim_name)
+			NetworkManager._client_player_action.rpc_id(peer_id, p_id, action_type, item_equipado_nome, anim_name)
 			# Dica: Outra forma de chamar rpc(quando está inacessível p o server mas existe no pc remoto):
 			# if has_method("_client_player_action"):
 				# rpc_id(peer_id, "_client_player_action", p_id, action_type, anim_name)
@@ -1320,7 +1336,7 @@ func _server_player_action(p_id: int, action_type: String, anim_name: String):
 	# Aplica no nó do servidor
 	var player_node = player_registry.get_player_node(p_id)
 	if player_node and player_node.has_method("_client_receive_action"):
-		player_node._client_receive_action(action_type, anim_name)
+		player_node._client_receive_action(action_type, item_equipado_nome, anim_name)
 
 # ===== UTILITÁRIOS =====
 

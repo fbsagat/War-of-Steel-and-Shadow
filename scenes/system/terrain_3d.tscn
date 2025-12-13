@@ -1,8 +1,11 @@
-[gd_scene load_steps=10 format=3 uid="uid://3m24sag7gx5w"]
+[gd_scene load_steps=13 format=3 uid="uid://3m24sag7gx5w"]
 
 [ext_resource type="Terrain3DAssets" uid="uid://dal3jhw6241qg" path="res://demo/data/assets.tres" id="1_0rjur"]
 [ext_resource type="PackedScene" uid="uid://d3sr0a7dxfkr8" path="res://addons/terrain_3d/extras/particle_example/Terrain3DParticles.tscn" id="2_t70ke"]
 [ext_resource type="PackedScene" uid="uid://cwu8t6cp4qo1c" path="res://sky/sky_3d.tscn" id="3_t70ke"]
+[ext_resource type="PackedScene" uid="uid://bbkexhq0m0ueo" path="res://scenes/static/arvore_3.tscn" id="4_xuisu"]
+[ext_resource type="PackedScene" uid="uid://4fhmps0as4yb" path="res://scenes/static/arvore_1.tscn" id="5_prcf3"]
+[ext_resource type="PackedScene" uid="uid://hgkaleqxeujo" path="res://scenes/static/arvore_2.tscn" id="6_1ice8"]
 
 [sub_resource type="Gradient" id="Gradient_xuisu"]
 offsets = PackedFloat32Array(0.2, 1)
@@ -789,9 +792,9 @@ void fragment() {
 [sub_resource type="Terrain3DMaterial" id="Terrain3DMaterial_xuisu"]
 _shader_parameters = {
 &"auto_base_texture": 0,
-&"auto_height_reduction": 0.1200000057,
+&"auto_height_reduction": 0.1,
 &"auto_overlay_texture": 1,
-&"auto_slope": 0.3330000158175,
+&"auto_slope": 1.0000000475,
 &"bias_distance": 512.0,
 &"blend_sharpness": 0.5,
 &"depth_blur": 0.0,
@@ -814,13 +817,13 @@ _shader_parameters = {
 &"projection_threshold": 0.8,
 &"tri_scale_reduction": 0.3,
 &"world_noise_fragment_normals": false,
-&"world_noise_height": 50.70000075549084,
-&"world_noise_lod_distance": 12567.0,
-&"world_noise_max_octaves": 4,
+&"world_noise_height": 22.0000003278264,
+&"world_noise_lod_distance": 7500.0,
+&"world_noise_max_octaves": 10,
 &"world_noise_min_octaves": 2,
 &"world_noise_offset": Vector3(0, 0, 0),
-&"world_noise_region_blend": 0.33,
-&"world_noise_scale": 5.12999989092224
+&"world_noise_region_blend": 0.7499999850986601,
+&"world_noise_scale": 5.749999877064
 }
 world_background = 2
 auto_shader = true
@@ -835,10 +838,11 @@ size = 0.6
 data_directory = "res://scenes/system/terrain_data"
 material = SubResource("Terrain3DMaterial_xuisu")
 assets = ExtResource("1_0rjur")
-collision_mask = 3
-collision_priority = 5.0
-vertex_spacing = 0.55
-cast_shadows = 0
+collision_mode = 3
+collision_shape_size = 24
+collision_priority = 2.0
+mesh_lods = 6
+vertex_spacing = 0.6
 top_level = true
 metadata/_edit_lock_ = true
 
@@ -852,3 +856,15 @@ visible = false
 terrain = NodePath("..")
 mesh = SubResource("RibbonTrailMesh_kf5nm")
 shadow_mode = 1
+
+[node name="arvore_3" parent="." instance=ExtResource("4_xuisu")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.2860007, 0, 0.29552233)
+
+[node name="Arvore_1" parent="." instance=ExtResource("5_prcf3")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20.295444, 1.9073486e-06, 8.725664)
+
+[node name="arvore_4" parent="." instance=ExtResource("4_xuisu")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 17.910988, -1.9073486e-06, -17.524746)
+
+[node name="arvore_2" parent="." instance=ExtResource("6_1ice8")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.2621956, 1.4279499, -17.33369)

@@ -1,13 +1,10 @@
-[gd_resource type="Terrain3DAssets" load_steps=17 format=3 uid="uid://dal3jhw6241qg"]
+[gd_resource type="Terrain3DAssets" load_steps=11 format=3 uid="uid://dal3jhw6241qg"]
 
 [ext_resource type="PackedScene" uid="uid://bn5nf4esciwex" path="res://demo/assets/models/LODExample.tscn" id="1_4jrdu"]
-[ext_resource type="PackedScene" uid="uid://4fhmps0as4yb" path="res://scenes/static/arvore_1.tscn" id="2_adagb"]
 [ext_resource type="Texture2D" uid="uid://c88j3oj0lf6om" path="res://demo/assets/textures/rock023_alb_ht.png" id="2_pog6b"]
-[ext_resource type="PackedScene" uid="uid://hgkaleqxeujo" path="res://scenes/static/arvore_2.tscn" id="3_cmr6o"]
 [ext_resource type="Texture2D" uid="uid://ddprscrpsofah" path="res://demo/assets/textures/ground037_alb_ht.png" id="3_g8f2m"]
 [ext_resource type="Texture2D" uid="uid://c307hdmos4gtm" path="res://demo/assets/textures/rock023_nrm_rgh.png" id="3_wncaf"]
 [ext_resource type="Texture2D" uid="uid://c1ots7w6i0i1q" path="res://demo/assets/textures/ground037_nrm_rgh.png" id="4_aw5y1"]
-[ext_resource type="PackedScene" uid="uid://bbkexhq0m0ueo" path="res://scenes/static/arvore_3.tscn" id="4_uyhyi"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_b2vqk"]
 transparency = 4
@@ -35,36 +32,6 @@ scene_file = ExtResource("1_4jrdu")
 last_lod = 3
 last_shadow_lod = 3
 
-[sub_resource type="Terrain3DMeshAsset" id="Terrain3DMeshAsset_e6edf"]
-name = "Arvore_1"
-id = 2
-scene_file = ExtResource("2_adagb")
-density = 0.01
-last_lod = 1
-last_shadow_lod = 1
-lod1_range = 4096.0
-lod2_range = 128.0
-
-[sub_resource type="Terrain3DMeshAsset" id="Terrain3DMeshAsset_xlng6"]
-name = "Arvore2"
-id = 3
-scene_file = ExtResource("3_cmr6o")
-density = 0.03372976
-last_lod = 1
-last_shadow_lod = 1
-lod1_range = 4096.0
-lod2_range = 128.0
-
-[sub_resource type="Terrain3DMeshAsset" id="Terrain3DMeshAsset_3wxcx"]
-name = "arvore_3"
-id = 4
-scene_file = ExtResource("4_uyhyi")
-density = 0.0338821
-last_lod = 1
-last_shadow_lod = 1
-lod1_range = 4096.0
-lod2_range = 128.0
-
 [sub_resource type="Terrain3DTextureAsset" id="Terrain3DTextureAsset_lha57"]
 name = "Cliff"
 albedo_texture = ExtResource("2_pog6b")
@@ -85,5 +52,5 @@ uv_scale = 0.2
 detiling_rotation = 0.161
 
 [resource]
-mesh_list = Array[Terrain3DMeshAsset]([SubResource("Terrain3DMeshAsset_2qf8x"), SubResource("Terrain3DMeshAsset_or12t"), SubResource("Terrain3DMeshAsset_e6edf"), SubResource("Terrain3DMeshAsset_xlng6"), SubResource("Terrain3DMeshAsset_3wxcx")])
+mesh_list = Array[Terrain3DMeshAsset]([SubResource("Terrain3DMeshAsset_2qf8x"), SubResource("Terrain3DMeshAsset_or12t")])
 texture_list = Array[Terrain3DTextureAsset]([SubResource("Terrain3DTextureAsset_lha57"), SubResource("Terrain3DTextureAsset_od0q7")])

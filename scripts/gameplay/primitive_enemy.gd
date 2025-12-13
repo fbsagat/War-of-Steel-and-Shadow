@@ -24,7 +24,7 @@ func _ready() -> void:
 	hp = max_hp
 	rng = RandomNumberGenerator.new()
 	rng.randomize()
-	add_to_group("enemies")
+	add_to_group("enemy")
 
 	wander_timer.timeout.connect(_on_wander_timeout)
 	hit_flash_timer.timeout.connect(_on_hit_flash_timeout)
