@@ -44,7 +44,7 @@ font_size = 24
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_6dd3c"]
 bg_color = Color(0.13, 0.81149995, 1, 1)
 
-[node name="Control" type="Control"]
+[node name="MainMenu" type="Control"]
 visible = false
 layout_mode = 3
 anchors_preset = 15
@@ -56,6 +56,7 @@ script = ExtResource("1_fe2o3")
 debug_mode = false
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
+visible = false
 follow_viewport_enabled = true
 
 [node name="ColorRect" type="ColorRect" parent="CanvasLayer"]

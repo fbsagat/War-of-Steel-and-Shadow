@@ -16,13 +16,18 @@ extends Node
 @export_category("Debug")
 @export var debug_mode: bool = true
 @export var debug_timer: bool = false
-@export var simulador_ativado: bool = true
+## Usa o TestManager para iniciar logo uma partida na execução
+@export var simulador_ativado: bool = false
 @export var simulador_players_qtd: int = 2
 
 @export_category("Server Settings")
 @export var server_port: int = 7777
 @export var max_clients: int = 32
 @export var is_headless : bool = true
+const  map_scene : String = "res://scenes/system/terrain_3d.tscn"
+const  player_scene : String = "res://scenes/system/player_warrior.tscn"
+const camera_controller : String = "res://scenes/system/camera_controller.tscn"
+const server_camera : String = "res://scenes/server_scenes/server_camera.tscn"
 
 @export_category("Room Settings")
 @export var max_players_per_room: int = 12
@@ -275,12 +280,6 @@ func _on_peer_disconnected(peer_id: int):
 				for player in updated_room["players"]:
 					if player["id"] != peer_id and _is_peer_connected(player["id"]):
 						NetworkManager.rpc_id(player["id"], "_client_remove_player", peer_id)
-						
-				# Remove nó do player do servidor
-				var player_node = round_registry.get_spawned_player(p_round["round_id"], peer_id)
-				if player_node:
-					player_node.queue_free()
-				
 			else:
 				_log_debug("Sala foi deletada (ficou vazia)")
 				_send_rooms_list_to_all()
@@ -352,8 +351,8 @@ func _handle_request_rooms_list(peer_id: int):
 		return
 	
 	# Busca salas disponíveis (fora de jogo)
-	var available_rooms = room_registry.get_rooms_in_lobby()
-	_log_debug("Enviando %d salas para o cliente" % available_rooms.size())
+	var available_rooms = room_registry.get_rooms_in_lobby_clean_to_menu()
+	_log_debug("Enviando %d salas para o cliente, qtd: " % available_rooms.size())
 	
 	NetworkManager.rpc_id(peer_id, "_client_receive_rooms_list", available_rooms)
 
@@ -574,7 +573,7 @@ func _send_rooms_list_to_all():
 	Envia lista de salas disponíveis para todos os jogadores no lobby
 	(não envia para jogadores em partida)
 	"""
-	var available_rooms = room_registry.get_rooms_in_lobby()
+	var available_rooms = room_registry.get_rooms_in_lobby_clean_to_menu()
 	
 	# Busca todos os jogadores que NÃO estão em rodada
 	var lobby_players = []
@@ -695,7 +694,7 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 	
 	# Extrai configurações da rodada
 	var final_settings = round_data.get("settings", {})
-	var map_scene = final_settings.get("map_scene", "res://scenes/system/WorldGenerator.tscn")
+	var map_scene_ = final_settings.get("map_scene", map_scene)
 	
 	# Gera spawn points para todos os jogadores
 	var players_count = round_registry.get_total_players(round_data["round_id"])
@@ -715,7 +714,7 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 	var match_data = {
 		"round_id": round_data["round_id"],
 		"room_id": room["id"],
-		"map_scene": map_scene,
+		"map_scene": map_scene_,
 		"settings": final_settings,
 		"players": room["players"],
 		"spawn_data": spawn_data
@@ -726,7 +725,7 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 		NetworkManager.rpc_id(room_player["id"], "_client_round_started", match_data)
 	
 	# Instancia mapa e players no servidor também
-	await _server_instantiate_round(match_data, players_node)
+	await _server_instantiate_round(match_data, round_node, players_node)
 	
 	# INICIA a rodada (ativa timers e verificações)
 	round_registry.start_round(round_data["round_id"])
@@ -794,15 +793,16 @@ func _create_spawn_points(match_players_count: int) -> Array:
 
 # ===== INSTANCIAÇÃO NO SERVIDOR =====
 
-func _server_instantiate_round(match_data: Dictionary, players_node):
+func _server_instantiate_round(match_data: Dictionary, round_node, players_node):
 	"""
 	Instancia a rodada no servidor (mapa e players)
 	Chamado após enviar comando para clientes carregarem
 	"""
+
 	_log_debug("Instanciando rodada no servidor...")
 	
 	# Carrega o mapa
-	await server_map_manager.load_map(match_data["map_scene"], match_data["settings"])
+	await server_map_manager.load_map(match_data["map_scene"], round_node, match_data["settings"])
 	
 	# Salva referência no RoundRegistry
 	if round_registry.rounds.has(match_data["round_id"]):
@@ -813,6 +813,18 @@ func _server_instantiate_round(match_data: Dictionary, players_node):
 		var spawn_data = match_data["spawn_data"][player_data["id"]]
 		_spawn_player_on_server(player_data, spawn_data, players_node)
 	
+	# Cria câmera livre se não estiver em modo headless
+	if not ServerManager.is_headless:
+		var debug_cam = preload(ServerManager.server_camera).instantiate()
+		
+		players_node.add_child(debug_cam)
+		debug_cam.global_position = Vector3(0, 3, 5)  # X=0, Y=10 (altura), Z=15 (distância)
+	
+	# Tira ui
+	var ui = get_tree().root.get_node_or_null("MainMenu")
+	if ui:
+		ui.queue_free()
+	
 	_log_debug("✓ Rodada instanciada no servidor")
 
 func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, players_node):
@@ -820,8 +832,8 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, pl
 	Spawna um jogador no servidor (versão autoritativa)
 	Registra node e inicializa estado para validação
 	"""
-	var player_scene = preload("res://scenes/system/player_warrior.tscn")
-	var player_instance = player_scene.instantiate()
+	var player_scene_ : PackedScene = preload(player_scene)
+	var player_instance = player_scene_.instantiate()
 	
 	# CONFIGURAÇÃO CRÍTICA: Nome = ID do peer
 	player_instance.name = str(player_data["id"])

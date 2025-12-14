@@ -8,6 +8,9 @@ extends Node
 @export var server_address: String = "127.0.0.1"
 @export var server_port: int = 7777
 @export var connection_timeout: float = 10.0
+const  map_scene : String = "res://scenes/system/terrain_3d.tscn"
+const  player_scene : String = "res://scenes/system/player_warrior.tscn"
+const camera_controller : String = "res://scenes/system/camera_controller.tscn"
 
 @export_category("Physics Settings")
 @export var drop_impulse_strength: float = 2.0
@@ -643,8 +646,8 @@ func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bo
 		return
 
 	# Instancia player
-	var player_scene = preload("res://scenes/system/player_warrior.tscn")
-	var player_instance = player_scene.instantiate()
+	var player_scene_ = preload(player_scene)
+	var player_instance = player_scene_.instantiate()
 	
 	player_instance.name = player_name_
 	player_instance.player_id = player_data["id"]
@@ -662,7 +665,7 @@ func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bo
 	# Configuração ESPECÍFICA por tipo de jogador
 	if is_local:
 		# Só instanciar e atribuir câmera para jogador LOCAL
-		var camera_scene = preload("res://scenes/system/camera_controller.tscn")
+		var camera_scene = preload(camera_controller)
 		var camera_instance = camera_scene.instantiate()
 		camera_instance.name = camera_name
 		camera_instance.target = player_instance
@@ -712,7 +715,7 @@ func _client_return_to_room(room_data: Dictionary):
 func _client_remove_player(peer_id : int):
 	"""Limpa o nó do cliente que se desconectou, esta função é para os outros 
 	que estão conectados"""
-	if local_peer_id != peer_id:
+	if peer_id and players_node and local_peer_id != peer_id:
 		var player_node = players_node.get_node_or_null(str(peer_id))
 		if player_node:
 			player_node.queue_free()

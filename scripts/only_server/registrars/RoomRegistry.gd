@@ -186,8 +186,62 @@ func get_rooms_in_lobby() -> Array:
 	for room_id in rooms:
 		if not rooms[room_id]["in_game"]:
 			var room = rooms[room_id].duplicate(true)
-			room.erase("password")
+			room.erase("password") # Segurança
 			lobby_rooms.append(room)
+	return lobby_rooms
+
+func get_rooms_in_lobby_clean_to_menu() -> Array:
+	"""Retorna apenas salas que NÃO estão em partida, com dados normalizados para o lobby"""
+	var lobby_rooms: Array = []
+
+	for room_id in rooms:
+		var room_data = rooms[room_id]
+		
+		# Ignora salas em jogo
+		if room_data.get("in_game", false):
+			continue
+		
+		var room = room_data.duplicate(true)
+		
+		# Players: Array → quantidade
+		var players_array = room.get("players", [])
+		var players_count: int = players_array.size() if players_array is Array else 0
+		
+		# Conversão direta de min_players
+		var min_raw = room.get("min_players", 0)
+		var min_players: int = (
+			min_raw if min_raw is int
+			else int(min_raw) if min_raw is float
+			else min_raw.to_int() if min_raw is String and min_raw.is_valid_integer()
+			else 0
+		)
+		
+		# Conversão direta de max_players
+		var max_raw = room.get("max_players", 0)
+		var max_players: int = (
+			max_raw if max_raw is int
+			else int(max_raw) if max_raw is float
+			else max_raw.to_int() if max_raw is String and max_raw.is_valid_integer()
+			else 0
+		)
+		
+		# Remove campos indesejados
+		room.erase("host_id")
+		room.erase("players")
+		room.erase("in_game")
+		room.erase("created_at")
+		room.erase("rounds_history")
+		room.erase("total_playtime")
+		room.erase("settings")
+		room.erase("password")
+		
+		# Reinsere dados normalizados
+		room["players"] = players_count
+		room["min_players"] = min_players
+		room["max_players"] = max_players
+		
+		lobby_rooms.append(room)
+
 	return lobby_rooms
 
 func get_rooms_in_game() -> Array:

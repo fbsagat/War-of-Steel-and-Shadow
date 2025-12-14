@@ -233,7 +233,7 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 	var round_settings = round_data.get("settings", {})
 	round_settings["round_players_count"] = players_qtd
 	round_settings["spawn_points"] = spawn_points
-	var map_scene = round_settings.get("map_scene", "res://scenes/system/terrain_3d.tscn")
+	var map_scene = round_settings.get("map_scene", ServerManager.map_scene)
 	
 	# PASSO 8: Prepara dados para clientes
 	var match_data = {
@@ -281,6 +281,7 @@ func _server_instantiate_round(match_data: Dictionary, players_node, round_node)
 	Instancia a rodada no servidor (mapa e players)
 	Similar ao ServerManager, mas com validações extras para testes
 	"""
+	
 	_log_debug("  Instanciando rodada no servidor...")
 	
 	# Carrega o mapa
@@ -297,13 +298,15 @@ func _server_instantiate_round(match_data: Dictionary, players_node, round_node)
 	
 	# Cria câmera livre se não estiver em modo headless
 	if not ServerManager.is_headless:
-		var debug_cam = preload("res://scenes/server_scenes/server_camera.tscn").instantiate()
+		var debug_cam = preload(ServerManager.server_camera).instantiate()
 		
 		players_node.add_child(debug_cam)
 		debug_cam.global_position = Vector3(0, 3, 5)  # X=0, Y=10 (altura), Z=15 (distância)
-		var ui = get_tree().root.get_node_or_null("Control")
-		if ui:
-			ui.queue_free()
+	
+	# Tira ui
+	var ui = get_tree().root.get_node_or_null("MainMenu")
+	if ui:
+		ui.queue_free()
 	
 	_log_debug("  ✓ Rodada instanciada no servidor")
 
@@ -337,7 +340,7 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 	var p_name = player_data["name"]
 	
 	# 2. Carrega e instancia a cena do player
-	var player_scene = preload("res://scenes/system/player_warrior.tscn")
+	var player_scene = preload(ServerManager.player_scene)
 	if not player_scene:
 		push_error("TestManager: Falha ao carregar player_warrior.tscn")
 		return

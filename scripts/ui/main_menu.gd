@@ -531,6 +531,7 @@ func _on_match_item_selected(index: int):
 		match_list_error_label.visible = false
 
 func populate_match_list(matches: Array):
+	
 	if not match_list:
 		push_warning("MatchList não está inicializado")
 		return
@@ -560,26 +561,9 @@ func populate_match_list(matches: Array):
 		var players = match_data.get("players", 0)
 		var max_players = match_data.get("max_players", 0)
 		
-		# Garante que são inteiros (trata strings, floats, nulls)
-		players = _safe_to_int(players)
-		max_players = _safe_to_int(max_players)
-		
 		# Formatação segura
 		text += " (%d/%d)" % [players, max_players]
 		match_list.add_item(text)
-
-# Função auxiliar para conversão segura para inteiro
-func _safe_to_int(value) -> int:
-	match typeof(value):
-		TYPE_INT:
-			return value
-		TYPE_FLOAT:
-			return int(value)  # Trunca decimais
-		TYPE_STRING:
-			return value.to_int() if value.is_valid_integer() else 0
-		_:
-			push_warning("Valor inválido para conversão: ", value)
-			return 0
 
 # ===== CALLBACKS DO MENU DE ENTRADA MANUAL =====
 
