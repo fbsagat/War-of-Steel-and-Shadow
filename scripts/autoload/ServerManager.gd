@@ -17,13 +17,13 @@ extends Node
 @export var debug_mode: bool = true
 @export var debug_timer: bool = false
 ## Usa o TestManager para iniciar logo uma partida na execução
-@export var simulador_ativado: bool = false
+@export var simulador_ativado: bool = true
 @export var simulador_players_qtd: int = 2
 
 @export_category("Server Settings")
 @export var server_port: int = 7777
 @export var max_clients: int = 32
-@export var is_headless : bool = true
+@export var is_headless : bool
 const  map_scene : String = "res://scenes/system/terrain_3d.tscn"
 const  player_scene : String = "res://scenes/system/player_warrior.tscn"
 const camera_controller : String = "res://scenes/system/camera_controller.tscn"
