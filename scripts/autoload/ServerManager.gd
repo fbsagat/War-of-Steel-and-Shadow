@@ -20,7 +20,7 @@ extends Node
 @export var simulador_ativado: bool = false
 ## Dropa itens perto dos players e ativa o trainer de cada player
 @export var item_trainer: bool = true
-@export var simulador_players_qtd: int = 1
+@export var simulador_players_qtd: int = 2
 
 @export_category("Server Settings")
 @export var server_port: int = 7777
