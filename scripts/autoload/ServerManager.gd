@@ -18,7 +18,8 @@ extends Node
 @export var debug_timer: bool = false
 ## Usa o TestManager para iniciar logo uma partida na execução
 @export var simulador_ativado: bool = false
-@export var simulador_players_qtd: int = 2
+@export var item_trainer: bool = true
+@export var simulador_players_qtd: int = 1
 
 @export_category("Server Settings")
 @export var server_port: int = 7777
@@ -730,6 +731,13 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 	# INICIA a rodada (ativa timers e verificações)
 	round_registry.start_round(round_data["round_id"])
 	
+	if item_trainer:
+		object_manager.spawn_item(objects_node, round_data["round_id"], "torch", Vector3(0, 2, 0), Vector3(0, 0, 0))
+		object_manager.spawn_item(objects_node, round_data["round_id"], "torch", Vector3(1, 4, 1), Vector3(0, 0, 0))
+		object_manager.spawn_item(objects_node, round_data["round_id"], "torch", Vector3(2, 4, 4), Vector3(0, 0, 0))
+		object_manager.spawn_item(objects_node, round_data["round_id"], "sword_2", Vector3(2, 30, 1), Vector3(0, 0, 0))
+		object_manager.spawn_item(objects_node, round_data["round_id"], "shield_3", Vector3(0, 500, 0), Vector3(0, 0, 0))
+	
 	# Atualiza lista de salas (remove esta sala da lista de disponíveis)
 	_send_rooms_list_to_all()
 
@@ -1171,7 +1179,7 @@ func _server_validate_equip_item(requesting_player_id: int, item_id: int, from_t
 	
 	# Verifica se pode aplicar pelo handle_test_equip_inputs_call, 
 	# se simulador_ativado, sim:
-	if from_test and not simulador_ativado:
+	if from_test and not item_trainer:
 		return
 	
 	var player = player_registry.get_player(requesting_player_id)
