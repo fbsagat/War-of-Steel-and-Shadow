@@ -40,6 +40,9 @@
 		matar o game manager no servidor para não sobrecarregar pois é inútil.
 42. Name label do player: Escolher cores no round e não aleatórias e adicionar transparência no distanciamento da camera.
 43. Fazer o spawn de inimigos.
+44. Deixar só o NetworkManager como autoload e inicializar todo o resto por ele, na sequencia correta para servidor e clientes.
+45. Servidor não precisa inicializar o main menu. Criar outro menu simples pra ele.
+46. Inicializar ItemDatabase por último.
 
 Adicionar no modelo do player:
 	1. Anim interact com a outra mão.

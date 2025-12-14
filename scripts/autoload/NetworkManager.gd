@@ -22,7 +22,7 @@ var item_database = null
 
 var is_connected_: bool = false
 var _is_server: bool = false
-var server_is_headless: bool = false
+var server_is_headless: bool
 var cached_unique_id: int = 0
 
 # --- SINCRONIZAÇÃO DE OBJETOS ---
@@ -87,12 +87,12 @@ func _on_connection_failed():
 	"""Callback quando falha ao conectar"""
 	is_connected_ = false
 	_log_debug("❌ Falha ao conectar ao servidor")
-
+	
 func _process(delta: float):
 	if _is_server:
 		_server_update_sync_timers(delta)
 		return
-
+		
 	# cliente seguro
 	if verificar_rede() and multiplayer.has_multiplayer_peer() and !multiplayer.is_server():
 		_client_interpolate_all(delta)
@@ -107,7 +107,7 @@ func register_player(player_name: String):
 	
 	_log_debug("📤 Registrando jogador: " + player_name)
 	rpc_id(1, "_server_register_player", player_name)
-
+	
 @rpc("any_peer", "call_remote", "reliable")
 func _server_register_player(player_name: String):
 	"""RPC: Servidor recebe pedido de registro"""
@@ -116,7 +116,7 @@ func _server_register_player(player_name: String):
 	
 	var peer_id = multiplayer.get_remote_sender_id()
 	ServerManager._handle_register_player(peer_id, player_name)
-
+	
 @rpc("authority", "call_remote", "reliable")
 func update_client_info(info):
 	if multiplayer.is_server():
@@ -133,7 +133,7 @@ func _client_name_accepted(accepted_name: String):
 		
 	_log_debug("Nome aceito: " + accepted_name)
 	GameManager._client_name_accepted(accepted_name)
-
+	
 @rpc("authority", "call_remote", "reliable")
 func _client_name_rejected(reason: String):
 	"""RPC: Cliente recebe rejeição de nome"""

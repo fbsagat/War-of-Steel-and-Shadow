@@ -679,6 +679,8 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 	# Adiciona à raiz
 	get_tree().root.add_child(round_node)
 	
+	round_registry.set_round_node(round_data["round_id"], round_node)
+	
 	# Cria nós organizacionais
 	var players_node = Node.new()
 	players_node.name = "Players"
