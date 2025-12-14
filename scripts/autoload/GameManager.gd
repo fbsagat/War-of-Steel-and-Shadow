@@ -673,6 +673,12 @@ func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bo
 		# Inicializa o inventário do player local (no game manager)
 		init_player_inventory()
 		
+		# Carrega o menu de inventário
+		var inventory_scene: PackedScene = load("res://scenes/ui/inventory_menu.tscn")
+		var inventory_node: Node = inventory_scene.instantiate()
+		get_tree().root.add_child(inventory_node)
+
+		
 		# Atribui referência DIRETA (só para local)
 		player_instance.camera_controller = camera_instance
 		

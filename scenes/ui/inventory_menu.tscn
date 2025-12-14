@@ -1,9 +1,324 @@
-[gd_scene format=3 uid="uid://bnyrp1vp6h5in"]
+[gd_scene load_steps=8 format=3 uid="uid://bnyrp1vp6h5in"]
 
-[node name="InventoryMenu" type="Control"]
+[ext_resource type="Script" uid="uid://dhk65ps1t8myj" path="res://scripts/ui/inventory_menu.gd" id="1_xmty8"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_xmty8"]
+bg_color = Color(0.24840015, 0.24840021, 0.24840006, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_1jujj"]
+bg_color = Color(1, 0, 0, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_apvdt"]
+bg_color = Color(0.14634857, 0.72350883, 0, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_qyubi"]
+bg_color = Color(0.18717611, 0.18717617, 0.18717602, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_pcuoj"]
+bg_color = Color(0.51114345, 0.22978832, 0, 0.5529412)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0, 0, 0, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fy31g"]
+bg_color = Color(0.3032328, 0.30323285, 0.30323276, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0, 0, 0, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[node name="InventoryUI" type="Control"]
+visible = false
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+script = ExtResource("1_xmty8")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.29411766)
+
+[node name="Background2" type="ColorRect" parent="."]
+custom_minimum_size = Vector2(1100, 650)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.29411766)
+
+[node name="ReferenceRect" type="ReferenceRect" parent="."]
+custom_minimum_size = Vector2(1100, 650)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -550.0
+offset_top = -325.0
+offset_right = 550.0
+offset_bottom = 325.0
+grow_horizontal = 2
+grow_vertical = 2
+border_color = Color(0, 0, 0, 1)
+border_width = 2.0
+editor_only = false
+
+[node name="CenterContainer" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="MainVBox" type="VBoxContainer" parent="CenterContainer"]
+custom_minimum_size = Vector2(600, 500)
+layout_mode = 2
+theme_override_constants/separation = 30
+
+[node name="BarsHBox" type="HBoxContainer" parent="CenterContainer/MainVBox"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 8
+theme_override_constants/separation = 20
+alignment = 1
+
+[node name="HealthContainer" type="VBoxContainer" parent="CenterContainer/MainVBox/BarsHBox"]
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="HealthLabel" type="Label" parent="CenterContainer/MainVBox/BarsHBox/HealthContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Vida"
+horizontal_alignment = 1
+
+[node name="HealthBar" type="ProgressBar" parent="CenterContainer/MainVBox/BarsHBox/HealthContainer"]
+custom_minimum_size = Vector2(250, 35)
+layout_mode = 2
+theme_override_styles/background = SubResource("StyleBoxFlat_xmty8")
+theme_override_styles/fill = SubResource("StyleBoxFlat_1jujj")
+value = 85.0
+show_percentage = false
+
+[node name="StaminaContainer" type="VBoxContainer" parent="CenterContainer/MainVBox/BarsHBox"]
+layout_mode = 2
+theme_override_constants/separation = 5
+alignment = 1
+
+[node name="StaminaLabel" type="Label" parent="CenterContainer/MainVBox/BarsHBox/StaminaContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Stamina"
+horizontal_alignment = 1
+
+[node name="StaminaBar" type="ProgressBar" parent="CenterContainer/MainVBox/BarsHBox/StaminaContainer"]
+custom_minimum_size = Vector2(250, 35)
+layout_mode = 2
+theme_override_styles/background = SubResource("StyleBoxFlat_xmty8")
+theme_override_styles/fill = SubResource("StyleBoxFlat_apvdt")
+value = 85.0
+show_percentage = false
+
+[node name="EquipmentContainer" type="HBoxContainer" parent="CenterContainer/MainVBox"]
+layout_mode = 2
+theme_override_constants/separation = 50
+alignment = 1
+
+[node name="EquipmentGrid" type="GridContainer" parent="CenterContainer/MainVBox/EquipmentContainer"]
+layout_mode = 2
+theme_override_constants/h_separation = 30
+theme_override_constants/v_separation = 20
+columns = 2
+
+[node name="HelmetContainer" type="VBoxContainer" parent="CenterContainer/MainVBox/EquipmentContainer/EquipmentGrid"]
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="HelmetLabel" type="Label" parent="CenterContainer/MainVBox/EquipmentContainer/EquipmentGrid/HelmetContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Capacete"
+horizontal_alignment = 1
+
+[node name="HelmetSlot" type="Panel" parent="CenterContainer/MainVBox/EquipmentContainer/EquipmentGrid/HelmetContainer"]
+custom_minimum_size = Vector2(80, 80)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_qyubi")
+
+[node name="CapeContainer" type="VBoxContainer" parent="CenterContainer/MainVBox/EquipmentContainer/EquipmentGrid"]
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="CapeLabel" type="Label" parent="CenterContainer/MainVBox/EquipmentContainer/EquipmentGrid/CapeContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Capa"
+horizontal_alignment = 1
+
+[node name="CapeSlot" type="Panel" parent="CenterContainer/MainVBox/EquipmentContainer/EquipmentGrid/CapeContainer"]
+custom_minimum_size = Vector2(80, 80)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_qyubi")
+
+[node name="RightHandContainer" type="VBoxContainer" parent="CenterContainer/MainVBox/EquipmentContainer/EquipmentGrid"]
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="RightHandLabel" type="Label" parent="CenterContainer/MainVBox/EquipmentContainer/EquipmentGrid/RightHandContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Mão Dir."
+horizontal_alignment = 1
+
+[node name="RightHandSlot" type="Panel" parent="CenterContainer/MainVBox/EquipmentContainer/EquipmentGrid/RightHandContainer"]
+custom_minimum_size = Vector2(80, 80)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_qyubi")
+
+[node name="LeftHandContainer" type="VBoxContainer" parent="CenterContainer/MainVBox/EquipmentContainer/EquipmentGrid"]
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="LeftHandLabel" type="Label" parent="CenterContainer/MainVBox/EquipmentContainer/EquipmentGrid/LeftHandContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Mão Esq."
+horizontal_alignment = 1
+
+[node name="LeftHandSlot" type="Panel" parent="CenterContainer/MainVBox/EquipmentContainer/EquipmentGrid/LeftHandContainer"]
+custom_minimum_size = Vector2(80, 80)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_qyubi")
+
+[node name="DropArea" type="Panel" parent="CenterContainer/MainVBox/EquipmentContainer"]
+custom_minimum_size = Vector2(180, 180)
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_pcuoj")
+
+[node name="DropLabel" type="Label" parent="CenterContainer/MainVBox/EquipmentContainer/DropArea"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -47.5
+offset_top = 2.0
+offset_right = 47.5
+offset_bottom = 229.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 14
+text = "🗑️
+
+DROPAR
+ITEM"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ItemsPanel" type="Panel" parent="CenterContainer/MainVBox"]
+layout_mode = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="CenterContainer/MainVBox/ItemsPanel"]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="ItemsGrid" type="GridContainer" parent="CenterContainer/MainVBox/ItemsPanel/MarginContainer"]
+layout_mode = 2
+theme_override_constants/h_separation = 5
+theme_override_constants/v_separation = 5
+columns = 10
+
+[node name="ItemSlot1" type="Panel" parent="CenterContainer/MainVBox/ItemsPanel/MarginContainer/ItemsGrid"]
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_fy31g")
+
+[node name="ItemSlot2" type="Panel" parent="CenterContainer/MainVBox/ItemsPanel/MarginContainer/ItemsGrid"]
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_fy31g")
+
+[node name="ItemSlot3" type="Panel" parent="CenterContainer/MainVBox/ItemsPanel/MarginContainer/ItemsGrid"]
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_fy31g")
+
+[node name="ItemSlot4" type="Panel" parent="CenterContainer/MainVBox/ItemsPanel/MarginContainer/ItemsGrid"]
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_fy31g")
+
+[node name="ItemSlot5" type="Panel" parent="CenterContainer/MainVBox/ItemsPanel/MarginContainer/ItemsGrid"]
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_fy31g")
+
+[node name="ItemSlot6" type="Panel" parent="CenterContainer/MainVBox/ItemsPanel/MarginContainer/ItemsGrid"]
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_fy31g")
+
+[node name="ItemSlot7" type="Panel" parent="CenterContainer/MainVBox/ItemsPanel/MarginContainer/ItemsGrid"]
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_fy31g")
+
+[node name="ItemSlot8" type="Panel" parent="CenterContainer/MainVBox/ItemsPanel/MarginContainer/ItemsGrid"]
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_fy31g")
+
+[node name="ItemSlot9" type="Panel" parent="CenterContainer/MainVBox/ItemsPanel/MarginContainer/ItemsGrid"]
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_fy31g")
+
+[node name="ItemSlot10" type="Panel" parent="CenterContainer/MainVBox/ItemsPanel/MarginContainer/ItemsGrid"]
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_fy31g")

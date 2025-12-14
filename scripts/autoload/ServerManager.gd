@@ -17,7 +17,7 @@ extends Node
 @export var debug_mode: bool = true
 @export var debug_timer: bool = false
 ## Usa o TestManager para iniciar logo uma partida na execução
-@export var simulador_ativado: bool = true
+@export var simulador_ativado: bool = false
 @export var simulador_players_qtd: int = 2
 
 @export_category("Server Settings")
