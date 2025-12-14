@@ -81,6 +81,7 @@ func _ready():	# Verifica se é servidor
 	if _is_server:
 		_log_debug("Servidor - NÃO inicializando GameManager")
 		return
+		
 	# Configuração do timer de reconexão (só para clientes)
 	if not _is_server:
 		reconnect_timer = Timer.new()
