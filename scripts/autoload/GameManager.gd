@@ -83,11 +83,10 @@ func _ready():	# Verifica se é servidor
 		return
 		
 	# Configuração do timer de reconexão (só para clientes)
-	if not _is_server:
-		reconnect_timer = Timer.new()
-		add_child(reconnect_timer)
-		reconnect_timer.one_shot = true
-		reconnect_timer.timeout.connect(_attempt_reconnection)
+	reconnect_timer = Timer.new()
+	add_child(reconnect_timer)
+	reconnect_timer.one_shot = true
+	reconnect_timer.timeout.connect(_attempt_reconnection)
 		
 	_log_debug("Inicializando GameManager como cliente")
 	
@@ -95,8 +94,7 @@ func _ready():	# Verifica se é servidor
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
 	multiplayer.connection_failed.connect(_on_connection_failed)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
-
-
+	
 func _process(_delta):
 	"""Verifica timeout de conexão"""
 	if is_connecting:

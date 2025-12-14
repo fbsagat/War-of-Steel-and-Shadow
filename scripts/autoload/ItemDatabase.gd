@@ -1295,7 +1295,7 @@ func print_item_info(item_name: String):
 func _log_debug(message: String):
 	if debug_mode:
 		var prefix = "[SERVER]" if _is_server else "[CLIENT]"
-		print("%s [ItemDatabase] %s" % [prefix, message])
+		print("%s[ItemDatabase] %s" % [prefix, message])
 
 ## Log de estatísticas após carregamento
 func _log_stats():

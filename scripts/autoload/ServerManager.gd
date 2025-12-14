@@ -1479,7 +1479,7 @@ func _is_peer_connected(peer_id: int) -> bool:
 func _log_debug(message: String):
 	"""Imprime mensagem de debug se habilitado"""
 	if debug_mode:
-		print("[SERVERMANAGER]" + message)
+		print("[SERVER]" + message)
 
 # ===== DEBUG =====
 
