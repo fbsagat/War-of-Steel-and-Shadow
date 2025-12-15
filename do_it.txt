@@ -43,9 +43,10 @@
 44. Deixar só o NetworkManager como autoload e inicializar todo o resto por ele, na sequencia correta para servidor e clientes.
 45. Servidor não precisa inicializar o main menu. Criar outro menu simples pra ele.
 46. Inicializar ItemDatabase por último.
-47. retirar main_menu da cena principal: Project → Project Settings → Application → Run → Main Scene.
+47. Retirar main_menu da cena principal: Project → Project Settings → Application → Run → Main Scene.
 48. Durante o pulo não pode atacar.
 49. Câmera fica de cabeça pra baixo quando a isntancia não é a principal.
+50. Colocar um bloqueio para a câmera não chegar tão perto do chão.
 
 Adicionar no modelo do player:
 	1. Anim interact com a outra mão.
@@ -55,3 +56,7 @@ Adicionar no modelo do player:
 
 Projeto:
 	1. Plugin de voz: https://github.com/goatchurchprime/two-voip-godot-4
+
+Idéias gerais pro jogo:
+	Provocações para os jogadores: A partida inicia com um nível aleatório de life para cada
+		jogador, e deixa alguns itens de alimentação por perto, se virem pra decidir quem come o quê...

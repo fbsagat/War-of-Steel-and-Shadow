@@ -68,17 +68,20 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_top = -56.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Background" type="ColorRect" parent="Inventory"]
-layout_mode = 2
-color = Color(0, 0, 0, 0.29411766)
+[node name="CanvasLayer" type="CanvasLayer" parent="Inventory"]
+layer = -1
 
-[node name="Background2" type="ColorRect" parent="Inventory"]
-custom_minimum_size = Vector2(1100, 650)
-layout_mode = 2
-color = Color(0, 0, 0, 0.29411766)
+[node name="Background" type="ColorRect" parent="Inventory/CanvasLayer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.7058824)
 
 [node name="ReferenceRect" type="ReferenceRect" parent="Inventory"]
 custom_minimum_size = Vector2(1100, 650)
@@ -305,7 +308,7 @@ custom_minimum_size = Vector2(250, 35)
 layout_mode = 2
 theme_override_styles/background = SubResource("StyleBoxFlat_xmty8")
 theme_override_styles/fill = SubResource("StyleBoxFlat_1jujj")
-value = 85.0
+value = 100.0
 show_percentage = false
 
 [node name="StaminaContainer" type="VBoxContainer" parent="StatusBar/BarsHBox"]
@@ -324,5 +327,5 @@ custom_minimum_size = Vector2(250, 35)
 layout_mode = 2
 theme_override_styles/background = SubResource("StyleBoxFlat_xmty8")
 theme_override_styles/fill = SubResource("StyleBoxFlat_apvdt")
-value = 85.0
+value = 100.0
 show_percentage = false

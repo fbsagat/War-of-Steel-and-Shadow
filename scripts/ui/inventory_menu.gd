@@ -2,9 +2,13 @@
 extends Control
 
 # Referências da UI
-@onready var background = $Inventory/Background
+@onready var background_canvas = $Inventory/CanvasLayer
 @onready var center_container = $Inventory/CenterContainer
 @onready var main_vbox = $Inventory/CenterContainer/MainVBox
+
+# Referências de grupos
+@onready var inventory = $Inventory
+@onready var status_bar = $StatusBar
 
 # Barras de status
 @onready var health_bar = $StatusBar/BarsHBox/HealthContainer/HealthBar

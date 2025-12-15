@@ -54,6 +54,7 @@ extends CharacterBody3D
 @onready var animation_tree: AnimationTree = $AnimationTree
 @onready var attack_timer: Timer = $attack_timer
 @onready var name_label: Label3D = $NameLabel
+@export var inventory : Control
 
 # ===== REGISTROS =====
 
@@ -81,6 +82,7 @@ var is_jumping: bool = false
 var is_aiming: bool = false
 var is_running: bool = false
 var mouse_mode: bool = true
+var inventory_mode: bool = false
 var run_on_jump: bool = false
 var nearest_enemy: CharacterBody3D = null
 var _detection_timer: Timer = null
@@ -456,14 +458,14 @@ func _handle_movement_input(delta: float):
 		move_dir = _get_movement_direction_locked()
 	else:
 		move_dir = _get_movement_direction_free_cam()
-	_apply_movement(move_dir, delta)
+	_apply_movement(move_dir if not inventory_mode else Vector3(0, 0, 0), delta)
 	return move_dir
 	
 # Movimentos: Pulo e corrida
 func _apply_movement(move_dir: Vector3, delta: float) -> void:
 	# Pulo: Preserva velocidade horizontal EXATA do chão
 	if not is_aiming:
-		if Input.is_action_just_pressed("jump") and is_on_floor():
+		if Input.is_action_just_pressed("jump") and is_on_floor() and not inventory_mode:
 			velocity.y = jump_velocity
 			is_jumping = true
 			run_on_jump = Input.is_action_pressed("run")
@@ -486,7 +488,7 @@ func _apply_movement(move_dir: Vector3, delta: float) -> void:
 			animation_tree["parameters/final_transt/transition_request"] = "jump_land"
 			animation_tree["parameters/final_transt/transition_request"] = "walking_e_blends"
 	else:
-		if Input.is_action_just_pressed("jump") and is_on_floor():
+		if Input.is_action_just_pressed("jump") and is_on_floor() and not inventory_mode:
 			animation_tree.set("parameters/Jump_Full_Short/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 			velocity.y = jump_velocity / 2.2
 			is_jumping = true
@@ -554,7 +556,7 @@ func camera_strafe_mode(ativar: bool = true):
 			camera_controller.release_to_free_look()
 			
 func _unhandled_input(event: InputEvent) -> void:
-	if is_local_player:
+	if is_local_player and not inventory_mode:
 		if event.is_action_pressed("ui_cancel"):
 			_toggle_mouse_mode()
 		elif event.is_action_pressed("interact"):
@@ -569,7 +571,23 @@ func _unhandled_input(event: InputEvent) -> void:
 			action_block_attack_call()
 		elif event.is_action_pressed("drop"):
 			action_drop_item_call()
+	if event.is_action_pressed("ui_inventory"):
+		request_inventory_toggle()
 			
+func request_inventory_toggle():
+	inventory_mode = not inventory_mode
+
+	if inventory_mode:
+		inventory.inventory.show()
+		inventory.background_canvas.show()
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+		_log_debug("Inventário aberto.")
+	else:
+		inventory.inventory.hide()
+		inventory.background_canvas.hide()
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+		_log_debug("Inventário fechado.")
+
 # Mouse
 func _toggle_mouse_mode():
 	mouse_mode = not mouse_mode
@@ -1285,26 +1303,27 @@ func initialize(p_id: int, p_name: String, spawn_pos: Vector3):
 
 # Função para equipar itens magicamente (Trainer de testes / Remover em produção)
 func handle_test_equip_inputs_call():
-	var mapped_id: int
-	var test_equip_map: Dictionary = {}
+	if not inventory_mode:
+		var mapped_id: int
+		var test_equip_map: Dictionary = {}
 
-	# preenche o resto até 8 com o padrão action_n -> n
-	for i in range(1, 9):
-		var key: String = "test_equip%d" % i
-		test_equip_map[key] = i
+		# preenche o resto até 8 com o padrão action_n -> n
+		for i in range(1, 9):
+			var key: String = "test_equip%d" % i
+			test_equip_map[key] = i
 
-	# Checa entradas em ordem de 1..8 e pega o primeiro pressionado
-	for i in range(1, 9):
-		var key := "test_equip%d" % i
-		if Input.is_action_just_pressed(key):
-			mapped_id = i
-			break # evita sobrescrever com outra ação no mesmo frame
+		# Checa entradas em ordem de 1..8 e pega o primeiro pressionado
+		for i in range(1, 9):
+			var key := "test_equip%d" % i
+			if Input.is_action_just_pressed(key):
+				mapped_id = i
+				break # evita sobrescrever com outra ação no mesmo frame
 
-	# Somente envie ao servidor / equipe se o mapped_id estiver no intervalo válido 1..8
-	if mapped_id >= 1 and mapped_id <= 8:
-		# envia para o servidor (se conectado)
-		if NetworkManager and NetworkManager.is_connected:
-			NetworkManager.request_equip_item(player_id, mapped_id, true)
+		# Somente envie ao servidor / equipe se o mapped_id estiver no intervalo válido 1..8
+		if mapped_id >= 1 and mapped_id <= 8:
+			# envia para o servidor (se conectado)
+			if NetworkManager and NetworkManager.is_connected:
+				NetworkManager.request_equip_item(player_id, mapped_id, true)
 
 # Executa quando o player equipa algum item / muda visual do modelo
 func apply_visual_equip_on_player_node(player_node, item_mapped_id):
