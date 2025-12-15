@@ -9,8 +9,8 @@ extends Node
 @export var server_port: int = 7777
 @export var connection_timeout: float = 10.0
 
-const  map_scene : String = "res://scenes/system/terrain_3d.tscn"
-const  player_scene : String = "res://scenes/system/player_warrior.tscn"
+const map_scene : String = "res://scenes/system/terrain_3d.tscn"
+const player_scene : String = "res://scenes/system/player_warrior.tscn"
 const camera_controller : String = "res://scenes/system/camera_controller.tscn"
 
 @export_category("Physics Settings")

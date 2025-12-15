@@ -43,6 +43,9 @@
 44. Deixar só o NetworkManager como autoload e inicializar todo o resto por ele, na sequencia correta para servidor e clientes.
 45. Servidor não precisa inicializar o main menu. Criar outro menu simples pra ele.
 46. Inicializar ItemDatabase por último.
+47. retirar main_menu da cena principal: Project → Project Settings → Application → Run → Main Scene.
+48. Durante o pulo não pode atacar.
+49. Câmera fica de cabeça pra baixo quando a isntancia não é a principal.
 
 Adicionar no modelo do player:
 	1. Anim interact com a outra mão.

@@ -3,9 +3,9 @@
 [ext_resource type="Terrain3DAssets" uid="uid://dal3jhw6241qg" path="res://demo/data/assets.tres" id="1_0rjur"]
 [ext_resource type="PackedScene" uid="uid://d3sr0a7dxfkr8" path="res://addons/terrain_3d/extras/particle_example/Terrain3DParticles.tscn" id="2_t70ke"]
 [ext_resource type="PackedScene" uid="uid://cwu8t6cp4qo1c" path="res://sky/sky_3d.tscn" id="3_t70ke"]
-[ext_resource type="PackedScene" uid="uid://bbkexhq0m0ueo" path="res://scenes/static/arvore_3.tscn" id="4_xuisu"]
-[ext_resource type="PackedScene" uid="uid://4fhmps0as4yb" path="res://scenes/static/arvore_1.tscn" id="5_prcf3"]
-[ext_resource type="PackedScene" uid="uid://hgkaleqxeujo" path="res://scenes/static/arvore_2.tscn" id="6_1ice8"]
+[ext_resource type="PackedScene" uid="uid://4fhmps0as4yb" path="res://scenes/static/arvore_1.tscn" id="4_xuisu"]
+[ext_resource type="PackedScene" uid="uid://hgkaleqxeujo" path="res://scenes/static/arvore_2.tscn" id="5_prcf3"]
+[ext_resource type="PackedScene" uid="uid://bbkexhq0m0ueo" path="res://scenes/static/arvore_3.tscn" id="6_1ice8"]
 
 [sub_resource type="Gradient" id="Gradient_xuisu"]
 offsets = PackedFloat32Array(0.2, 1)
@@ -861,26 +861,17 @@ shadow_mode = 1
 min_draw_distance = 132.0
 particle_count = 1115136
 
-[node name="arvore_3" parent="." instance=ExtResource("4_xuisu")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.2860007, 0, 0.29552233)
+[node name="Arvore_1" parent="." instance=ExtResource("4_xuisu")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -56.493565, 4.302539, -1.8669891)
 
-[node name="Arvore_1" parent="." instance=ExtResource("5_prcf3")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20.295444, 1.9073486e-06, 8.725664)
+[node name="arvore_2" parent="." instance=ExtResource("5_prcf3")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -45.741447, 35.015835, -114.49974)
 
-[node name="arvore_4" parent="." instance=ExtResource("4_xuisu")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 17.910988, -1.9073486e-06, -17.524746)
+[node name="Arvore_2" parent="." instance=ExtResource("4_xuisu")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -26.670776, -0.9861183, 22.031082)
 
-[node name="arvore_2" parent="." instance=ExtResource("6_1ice8")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.2621956, 1.4279499, -17.33369)
+[node name="Arvore_3" parent="." instance=ExtResource("4_xuisu")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -62.6378, 2.0359497, 23.898071)
 
-[node name="Arvore_2" parent="." instance=ExtResource("5_prcf3")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -84.92362, 45.874172, -155.82713)
-
-[node name="arvore_5" parent="." instance=ExtResource("6_1ice8")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -56.999176, 43.422134, -140.42172)
-
-[node name="arvore_6" parent="." instance=ExtResource("4_xuisu")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -137.96248, 38.672333, -69.87256)
-
-[node name="arvore_7" parent="." instance=ExtResource("4_xuisu")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -155.1536, 45.152607, -114.08063)
+[node name="arvore_3" parent="." instance=ExtResource("6_1ice8")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -77.61543, 42.0656, -152.40535)

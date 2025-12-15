@@ -27,8 +27,8 @@ extends Node
 @export var max_clients: int = 32
 @export var is_headless : bool
 
-const  map_scene : String = "res://scenes/system/terrain_3d.tscn"
-const  player_scene : String = "res://scenes/system/player_warrior.tscn"
+const map_scene : String = "res://scenes/system/terrain_3d.tscn"
+const player_scene : String = "res://scenes/system/player_warrior.tscn"
 const camera_controller : String = "res://scenes/system/camera_controller.tscn"
 const server_camera : String = "res://scenes/server_scenes/server_camera.tscn"
 
