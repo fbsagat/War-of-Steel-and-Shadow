@@ -1,4 +1,5 @@
 extends Node
+class_name ItemDatabase
 ## ItemDatabase - Sistema de consulta e leitura de itens
 ## 
 ## Gerencia database de itens carregado do JSON.

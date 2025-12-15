@@ -67,6 +67,7 @@ const server_camera : String = "res://scenes/server_scenes/server_camera.tscn"
 var player_registry : PlayerRegistry = null
 var room_registry: RoomRegistry = null
 var round_registry: RoundRegistry = null
+var item_database: ItemDatabase = null
 var object_manager: ObjectManager = null
 var test_manager: TestManager = null
 
@@ -135,6 +136,7 @@ func _start_server():
 	room_registry = load("res://scripts/only_server/registrars/RoomRegistry.gd").new()
 	round_registry = load("res://scripts/only_server/registrars/RoundRegistry.gd").new()
 	server_map_manager = preload("res://scripts/gameplay/MapManager.gd").new()
+	item_database = preload("res://scripts/only_server/registrars/ItemDatabase.gd").new()
 	object_manager = load("res://scripts/only_server/ObjectManager.gd").new()
 	test_manager = load("res://scripts/only_server/TestManager.gd").new()
 	
@@ -143,6 +145,7 @@ func _start_server():
 	room_registry.name = "RoomRegistry"
 	round_registry.name = "RoundRegistry"
 	server_map_manager.name = "MapManager"
+	item_database.name = "ItemDatabase"
 	object_manager.name = "ObjectManager"
 	test_manager.name = "TestManager"
 	
@@ -151,6 +154,7 @@ func _start_server():
 	add_child(room_registry)
 	add_child(round_registry)
 	add_child(server_map_manager)
+	add_child(item_database)
 	add_child(object_manager)
 	add_child(test_manager)
 	
@@ -172,7 +176,7 @@ func _inject_dependencies():
 	player_registry.room_registry = room_registry
 	player_registry.round_registry = round_registry
 	player_registry.object_manager = object_manager
-	player_registry.item_database = ItemDatabase
+	player_registry.item_database = item_database
 	
 	# RoomRegistry precisa de:
 	room_registry.player_registry = player_registry
@@ -187,7 +191,7 @@ func _inject_dependencies():
 	# ObjectManager precisa de:
 	object_manager.player_registry = player_registry
 	object_manager.round_registry = round_registry
-	object_manager.item_database = ItemDatabase
+	object_manager.item_database = item_database
 
 func _connect_signals():
 	"""Conecta sinais dos registries"""
@@ -1125,7 +1129,7 @@ func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 	var server_nearby = player_node.get_nearby_items()
 	var player = player_registry.get_player(requesting_player_id)
 	var round_ = round_registry.get_round_by_player_id(player["id"])
-	var item = ItemDatabase.get_item(object["item_name"]).to_dictionary()
+	var item = item_database.get_item(object["item_name"]).to_dictionary()
 	var round_players = round_registry.get_active_players_ids(round_["round_id"])
 	
 	# Verificação se o item está perto do player no servidor também
@@ -1140,9 +1144,9 @@ func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 		return
 	
 	# Se for item equipável de knight
-	if ItemDatabase.get_items_by_owner("knight"):
+	if item_database.get_items_by_owner("knight"):
 		# Dropar o item anterior se houver
-		var item_type = ItemDatabase.get_type(item["name"])
+		var item_type = item_database.get_type(item["name"])
 		var item_ = player_registry.get_equipped_item_in_slot(round_["round_id"], player["id"], item_type)
 		if item_:
 			player_registry.unequip_item(round_["round_id"], player["id"], item_type)
@@ -1189,20 +1193,20 @@ func _server_validate_equip_item(requesting_player_id: int, item_id: int, from_t
 	var player = player_registry.get_player(requesting_player_id)
 	var round_ = round_registry.get_round_by_player_id(player["id"])
 	var players_node = round_["round_node"].get_node_or_null("Players")
-	var item = ItemDatabase.get_item_by_id(item_id)
+	var item = item_database.get_item_by_id(item_id)
 	var item_slot = item.get_slot()
 	_log_debug("[ITEM]📦 Player %s pediu para equipar item %d, no round %d" % [player["name"], item_id, round_["round_id"]])
 	# FAZER TODAS AS VALIDAÇÕES DE EQUIPAR ITEM NO CLIENTE
 	
 	# Verifica se o id do item é válido
-	if not ItemDatabase.get_item_by_id(item_id):
+	if not item_database.get_item_by_id(item_id):
 		return
 	
 	# Verificar se o player já tem o item no slot deste item, se não, equipar este item, se sim, eqipar o novo e dropar o anterior
 	if not player_registry.is_slot_empty(round_["round_id"], player['id'], item_slot):
 		# Dropar o item anterior
 		var item_anterior = player_registry.get_equipped_item_in_slot(round_["round_id"], player['id'], item_slot)
-		var item_ant_id = ItemDatabase.get_item(item_anterior)["id"]
+		var item_ant_id = item_database.get_item(item_anterior)["id"]
 		drop_item(round_["round_id"], player['id'], item_ant_id)
 	
 	# Add no inventário
@@ -1234,7 +1238,7 @@ func _server_validate_drop_item(requesting_player_id: int, item_id: int):
 	var player = player_registry.get_player(requesting_player_id)
 	var round_ = round_registry.get_round_by_player_id(player["id"])
 	
-	if not ItemDatabase.get_item_by_id(item_id) and item_id != 0:
+	if not item_database.get_item_by_id(item_id) and item_id != 0:
 		push_warning("ServerManager: ID de item inválido recebido: %d" % item_id)
 		return
 	
@@ -1263,8 +1267,8 @@ func drop_item(round_id, player_id, item_id):
 	
 		# Valida estado do player NO SERVIDOR
 		if item_name:
-			var item_type = ItemDatabase.get_type(item_name)
-			var first_item = ItemDatabase.get_item(item_name).to_dictionary()
+			var item_type = item_database.get_type(item_name)
+			var first_item = item_database.get_item(item_name).to_dictionary()
 			player_registry.unequip_item(round_id, player_id, item_type)
 			player_registry.remove_item_from_inventory(round_id, player_id, item_name)
 			_log_debug("[ITEM]📦 Itens equipados no player: %s" % str(player_registry.get_equipped_items(round_id, player_id)))
@@ -1289,7 +1293,7 @@ func drop_item(round_id, player_id, item_id):
 		else:
 			_log_debug("[ITEM]📦 Não tem item no inventário do player")
 	else:
-		var item_data = ItemDatabase.get_item_by_id(item_id)
+		var item_data = item_database.get_item_by_id(item_id)
 		if item_data:
 			player_registry.drop_item(round_id, player_id, item_data.name)
 			object_manager.spawn_item_in_front_of_player(objects_node, round_id, player_id, item_data.name)

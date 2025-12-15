@@ -14,9 +14,7 @@ var player_registry: PlayerRegistry = null
 var room_registry: RoomRegistry = null
 var round_registry: RoundRegistry = null
 var object_manager: ObjectManager = null
-
-## Referência ao ItemDatabase (autoload)
-var item_database = null
+var item_database: ItemDatabase = null
 
 # ===== VARIÁVEIS INTERNAS =====
 
@@ -52,14 +50,18 @@ func _ready():
 		room_registry = ServerManager.room_registry
 		round_registry = ServerManager.round_registry
 		object_manager = ServerManager.object_manager
+	else:
+		item_database = preload("res://scripts/only_server/registrars/ItemDatabase.gd").new()
+		item_database.name = "ItemDatabase"
+		add_child(item_database)
+			
+		if not item_database:
+			push_error("NetworkManager: ItemDatabase não encontrado!")
 		
 		_log_debug("Inicializando NetworkManager como servidor")
 		return
 	
-	item_database = ItemDatabase
 	_log_debug("Inicializando NetworkManager como cliente")
-	if not item_database:
-		push_error("NetworkManager: ItemDatabase não encontrado!")
 	
 	# Conecta aos sinais de rede (apenas no cliente)
 	multiplayer.connected_to_server.connect(_on_connected_to_server)

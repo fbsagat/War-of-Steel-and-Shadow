@@ -55,6 +55,10 @@ extends CharacterBody3D
 @onready var attack_timer: Timer = $attack_timer
 @onready var name_label: Label3D = $NameLabel
 
+# ===== REGISTROS =====
+
+var item_database: ItemDatabase = null
+
 # Estados de sincronização
 var target_position: Vector3 = Vector3.ZERO
 var target_rotation_y: float = 0.0
@@ -120,6 +124,9 @@ func _ready():
 	if _is_server:
 	# Gerenciador de hitboxes
 		hitboxes_manager()
+		item_database = ServerManager.item_database
+	else:
+		item_database = GameManager.item_database
 	
 	add_to_group("player")
 	
@@ -571,7 +578,7 @@ func _toggle_mouse_mode():
 		
 # Visual
 func _hide_all_model_items():
-	var knight_items = ItemDatabase.query_items({"owner": "knight"})
+	var knight_items = item_database.query_items({"owner": "knight"})
 	for item in knight_items:
 		if item.owner:
 			var target = get_node_or_null(item.model_node_link)
@@ -1088,7 +1095,7 @@ func _client_receive_action(action_type: String, item_equipado_nome, anim_name: 
 				is_attacking = true
 				
 				# Atualiza actual_weapon
-				var weapon_node_path = ItemDatabase.get_item(item_equipado_nome)["model_node_link"]
+				var weapon_node_path = item_database.get_item(item_equipado_nome)["model_node_link"]
 				actual_weapon = get_node(weapon_node_path)
 				var hitbox = actual_weapon.get_node("hitbox")
 				actual_enabled_hitbox = hitbox
@@ -1103,7 +1110,7 @@ func _client_receive_action(action_type: String, item_equipado_nome, anim_name: 
 				is_block_attacking = true
 				
 				# Atualiza actual_weapon
-				var weapon_node_path = ItemDatabase.get_item(item_equipado_nome)["model_node_link"]
+				var weapon_node_path = item_database.get_item(item_equipado_nome)["model_node_link"]
 				actual_weapon = get_node(weapon_node_path)
 				var hitbox = actual_weapon.get_node("hitbox")
 				actual_enabled_hitbox = hitbox
@@ -1139,7 +1146,7 @@ func action_sword_attack_call():
 		return
 		
 	# Verificação local: Apenas atacar se for uma arma
-	if ItemDatabase.get_item(item_equipado_nome)["category"] != "weapon":
+	if item_database.get_item(item_equipado_nome)["category"] != "weapon":
 		return
 	
 	# Sincroniza ataque pela rede (Reliable = Garantido)
@@ -1167,7 +1174,7 @@ func action_block_attack_call():
 		return
 		
 	# Verificação local: Apenas atacar se for um escudo
-	if ItemDatabase.get_item(item_equipado_nome)["function"] != "defense":
+	if item_database.get_item(item_equipado_nome)["function"] != "defense":
 		return
 		
 	if not is_block_attacking and is_defending:
@@ -1194,7 +1201,7 @@ func action_lock_call():
 	
 	# Local: Apenas defender se tem um escudo
 	var item_equipado_nome = GameManager.local_inventory["equipped"]["hand-left"]
-	if item_equipado_nome and ItemDatabase.get_item(item_equipado_nome)["function"] == "defense":
+	if item_equipado_nome and item_database.get_item(item_equipado_nome)["function"] == "defense":
 		
 		# Animação de defesa com escudo
 		animation_tree.set("parameters/Blocking/blend_amount", 1.0)
@@ -1304,7 +1311,7 @@ func apply_visual_equip_on_player_node(player_node, item_mapped_id):
 	
 	animation_tree.set("PickUp", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 	
-	var item_node_link = ItemDatabase.get_item_by_id(item_mapped_id).model_node_link
+	var item_node_link = item_database.get_item_by_id(item_mapped_id).model_node_link
 	
 	_item_model_change_visibility(player_node, item_node_link)
 
@@ -1342,7 +1349,7 @@ func action_drop_item_call() -> void:
 		
 func execute_item_drop(player_node, item):
 	# Executa o drop do node do item
-	var item_node_link = ItemDatabase.get_item(item)["model_node_link"]
+	var item_node_link = item_database.get_item(item)["model_node_link"]
 		
 	# Atualiza visibilidade do item no modelo (uma vez)
 	_item_model_change_visibility(player_node, item_node_link, false)

@@ -20,6 +20,10 @@ const camera_controller : String = "res://scenes/system/camera_controller.tscn"
 @export_category("Debug")
 @export var debug_mode: bool = true
 
+# ===== REGISTROS =====
+
+var item_database: ItemDatabase = null
+
 # ===== VARIÁVEIS INTERNAS =====
 
 var main_menu: Control = null
@@ -81,7 +85,9 @@ func _ready():	# Verifica se é servidor
 	if _is_server:
 		print("[SERVER][GameManager]Servidor - NÃO inicializando GameManager")
 		return
-		
+	
+	item_database = NetworkManager.item_database
+	
 	# Configuração do timer de reconexão (só para clientes)
 	reconnect_timer = Timer.new()
 	add_child(reconnect_timer)
@@ -808,7 +814,7 @@ func init_player_inventory() -> bool:
 func add_item_to_inventory(item_name: String) -> bool:
 	"""Adiciona item ao inventário do jogador"""
 	# Valida item no ItemDatabase se disponível
-	if ItemDatabase and not ItemDatabase.item_exists(item_name):
+	if item_database and not item_database.item_exists(item_name):
 		push_error("PlayerRegistry: Item inválido: %s" % item_name)
 		return false
 	
@@ -854,7 +860,7 @@ func equip_item(item_name: String, slot: String = "") -> bool:
 	# Detecta slot automaticamente se não especificado
 	if slot.is_empty():
 		if ItemDatabase:
-			slot = ItemDatabase.get_slot(item_name)
+			slot = item_database.get_slot(item_name)
 		if slot.is_empty():
 			push_error("PlayerRegistry: Não foi possível detectar slot para item: %s" % item_name)
 			return false
@@ -865,7 +871,7 @@ func equip_item(item_name: String, slot: String = "") -> bool:
 		return false
 	
 	# Valida se item pode ser equipado neste slot
-	if ItemDatabase and not ItemDatabase.can_equip_in_slot(item_name, slot):
+	if ItemDatabase and not item_database.can_equip_in_slot(item_name, slot):
 		push_error("PlayerRegistry: Item %s não pode ser equipado em %s" % [item_name, slot])
 		return false
 	
@@ -914,7 +920,7 @@ func swap_equipped_item(new_item: String, slot: String = "") -> bool:
 	# Detecta slot se não especificado
 	if slot.is_empty():
 		if ItemDatabase:
-			slot = ItemDatabase.get_slot(new_item)
+			slot = item_database.get_slot(new_item)
 		if slot.is_empty():
 			return false
 	
@@ -978,12 +984,12 @@ func _spawn_on_client(object_id: int, round_id: int, item_name: String, position
 		return  # Servidor já spawnou na função principal
 	
 	# Valida ItemDatabase
-	if not ItemDatabase or not ItemDatabase.is_loaded:
+	if not item_database or not item_database.is_loaded:
 		push_error("GameManager[Cliente]: ItemDatabase não disponível")
 		return
 	
 	# Obtém scene_path
-	var scene_path = ItemDatabase.get_item(item_name)["scene_path"]
+	var scene_path = item_database.get_item(item_name)["scene_path"]
 	
 	if scene_path.is_empty():
 		push_error("GameManager[Cliente]: Scene path vazio para '%s'" % item_name)
@@ -1027,7 +1033,7 @@ func _spawn_on_client(object_id: int, round_id: int, item_name: String, position
 	
 	# Inicializa item
 	if item_node.has_method("initialize"):
-		var item_full_data = ItemDatabase.get_item_full_info(item_name)
+		var item_full_data = item_database.get_item_full_info(item_name)
 		var drop_velocity = _calculate_drop_impulse(rotation)
 		item_node.initialize(object_id, round_id, item_name, item_full_data, owner_id, drop_velocity)
 	
