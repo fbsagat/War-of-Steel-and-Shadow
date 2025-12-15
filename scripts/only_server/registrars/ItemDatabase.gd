@@ -19,7 +19,7 @@ class_name ItemDatabase
 ## Caminho do arquivo JSON com registro de itens
 @export var json_path: String = "res://scripts/utils/item_database_regs.json"
 ## Se true, carrega database automaticamente no _ready()
-@export var auto_load_on_ready: bool = true
+@export var auto_load_on_ready: bool = false
 
 @export_category("Debug")
 ## Ativa logs detalhados de operações

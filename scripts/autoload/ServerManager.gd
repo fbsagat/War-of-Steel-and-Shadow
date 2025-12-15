@@ -166,6 +166,7 @@ func _start_server():
 	room_registry.initialize()
 	round_registry.initialize()
 	test_manager.initialize()
+	item_database.load_database()
 	object_manager.initialize()
 	
 	_log_debug("✓ Servidor inicializado com sucesso!")

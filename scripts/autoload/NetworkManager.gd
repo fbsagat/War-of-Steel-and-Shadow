@@ -50,23 +50,23 @@ func _ready():
 		room_registry = ServerManager.room_registry
 		round_registry = ServerManager.round_registry
 		object_manager = ServerManager.object_manager
+		_log_debug("Inicializando NetworkManager como servidor")
+		
 	else:
 		item_database = preload("res://scripts/only_server/registrars/ItemDatabase.gd").new()
 		item_database.name = "ItemDatabase"
 		add_child(item_database)
+		item_database.load_database()
 			
 		if not item_database:
 			push_error("NetworkManager: ItemDatabase não encontrado!")
-		
-		_log_debug("Inicializando NetworkManager como servidor")
-		return
 	
-	_log_debug("Inicializando NetworkManager como cliente")
+		_log_debug("Inicializando NetworkManager como cliente")
 	
-	# Conecta aos sinais de rede (apenas no cliente)
-	multiplayer.connected_to_server.connect(_on_connected_to_server)
-	multiplayer.server_disconnected.connect(_on_server_disconnected)
-	multiplayer.connection_failed.connect(_on_connection_failed)
+		# Conecta aos sinais de rede (apenas no cliente)
+		multiplayer.connected_to_server.connect(_on_connected_to_server)
+		multiplayer.server_disconnected.connect(_on_server_disconnected)
+		multiplayer.connection_failed.connect(_on_connection_failed)
 
 func _on_connected_to_server():
 	"""Callback quando conecta ao servidor"""
