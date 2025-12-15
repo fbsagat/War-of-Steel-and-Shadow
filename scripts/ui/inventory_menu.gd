@@ -2,25 +2,25 @@
 extends Control
 
 # Referências da UI
-@onready var background = $Background
-@onready var center_container = $CenterContainer
-@onready var main_vbox = $CenterContainer/MainVBox
+@onready var background = $Inventory/Background
+@onready var center_container = $Inventory/CenterContainer
+@onready var main_vbox = $Inventory/CenterContainer/MainVBox
 
 # Barras de status
-@onready var health_bar = $CenterContainer/MainVBox/BarsHBox/HealthContainer/HealthBar
-@onready var stamina_bar = $CenterContainer/MainVBox/BarsHBox/StaminaContainer/StaminaBar
+@onready var health_bar = $StatusBar/BarsHBox/HealthContainer/HealthBar
+@onready var stamina_bar = $StatusBar/BarsHBox/StaminaContainer/StaminaBar
 
 # Slots de equipamento
-@onready var helmet_slot = $CenterContainer/MainVBox/EquipmentContainer/EquipmentGrid/HelmetContainer/HelmetSlot
-@onready var cape_slot = $CenterContainer/MainVBox/EquipmentContainer/EquipmentGrid/CapeContainer/CapeSlot
-@onready var right_hand_slot = $CenterContainer/MainVBox/EquipmentContainer/EquipmentGrid/RightHandContainer/RightHandSlot
-@onready var left_hand_slot = $CenterContainer/MainVBox/EquipmentContainer/EquipmentGrid/LeftHandContainer/LeftHandSlot
+@onready var helmet_slot = $Inventory/CenterContainer/MainVBox/EquipmentContainer/EquipmentGrid/HelmetContainer/HelmetSlot
+@onready var cape_slot = $Inventory/CenterContainer/MainVBox/EquipmentContainer/EquipmentGrid/CapeContainer/CapeSlot
+@onready var right_hand_slot = $Inventory/CenterContainer/MainVBox/EquipmentContainer/EquipmentGrid/RightHandContainer/RightHandSlot
+@onready var left_hand_slot = $Inventory/CenterContainer/MainVBox/EquipmentContainer/EquipmentGrid/LeftHandContainer/LeftHandSlot
 
 # Slots de itens
-@onready var item_slots_grid = $CenterContainer/MainVBox/ItemsPanel/MarginContainer/ItemsGrid
+@onready var item_slots_grid = $Inventory/CenterContainer/MainVBox/ItemsPanel/MarginContainer/ItemsGrid
 
 # Área de drop
-@onready var drop_area = $CenterContainer/MainVBox/EquipmentContainer/DropArea
+@onready var drop_area = $Inventory/CenterContainer/MainVBox/EquipmentContainer/DropArea
 
 # Valores do jogador
 var max_health = 100.0

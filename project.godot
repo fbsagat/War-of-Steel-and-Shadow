@@ -19,8 +19,8 @@ config/icon="res://icon.svg"
 [autoload]
 
 ItemDatabase="*res://scripts/autoload/ItemDatabase.gd"
-ServerManager="*res://scripts/autoload/ServerManager.gd"
 NetworkManager="*res://scripts/autoload/NetworkManager.gd"
+ServerManager="*res://scripts/autoload/ServerManager.gd"
 GameManager="*res://scripts/autoload/GameManager.gd"
 
 [display]

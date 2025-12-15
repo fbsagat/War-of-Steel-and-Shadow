@@ -17,7 +17,7 @@ extends Node
 @export var debug_mode: bool = true
 @export var debug_timer: bool = false
 ## Usa o TestManager para iniciar logo uma partida na execução
-@export var simulador_ativado: bool = false
+@export var simulador_ativado: bool = true
 ## Dropa itens perto dos players e ativa o trainer de cada player
 @export var item_trainer: bool = true
 @export var simulador_players_qtd: int = 2
