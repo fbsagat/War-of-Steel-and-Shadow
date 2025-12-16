@@ -56,11 +56,6 @@ mass = 3.0
 physics_material_override = SubResource("PhysicsMaterial_fr844")
 continuous_cd = true
 script = ExtResource("1_b6ki8")
-item_name = "sword_1"
-item_id = 1
-item_type = "hands"
-item_side = "right"
-item_level = "1"
 
 [node name="sword_1" type="MeshInstance3D" parent="."]
 process_physics_priority = 1

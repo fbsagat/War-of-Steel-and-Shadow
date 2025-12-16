@@ -858,10 +858,10 @@ min_draw_distance = 132.0
 particle_count = 1115136
 
 [node name="Arvore_1" parent="." instance=ExtResource("4_xuisu")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -56.493565, 4.302539, -1.8669891)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -56.493565, 1.9010181, -1.8669891)
 
 [node name="arvore_2" parent="." instance=ExtResource("5_prcf3")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -45.741447, 35.015835, -114.49974)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -74.132355, 21.368288, -114.49974)
 
 [node name="Arvore_2" parent="." instance=ExtResource("4_xuisu")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -26.670776, -0.9861183, 22.031082)
@@ -870,4 +870,4 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -26.670776, -0.9861183, 22.03
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -62.6378, 2.0359497, 23.898071)
 
 [node name="arvore_3" parent="." instance=ExtResource("6_1ice8")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -77.61543, 42.0656, -152.40535)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -77.61543, 27.25246, -152.40535)

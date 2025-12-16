@@ -1,0 +1,22 @@
+[gd_scene load_steps=4 format=3 uid="uid://b83ty82b5j1ax"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_cls06"]
+sky_top_color = Color(0.53191274, 0.60434026, 0.7010687, 1)
+sky_horizon_color = Color(0.9252188, 0.95931715, 1.0161519, 1)
+ground_bottom_color = Color(0.22696477, 0.2909307, 0.42154095, 1)
+ground_horizon_color = Color(0.9252188, 0.95931715, 1.0161519, 1)
+energy_multiplier = 1.3
+
+[sub_resource type="Sky" id="Sky_6qovk"]
+sky_material = SubResource("ProceduralSkyMaterial_cls06")
+
+[sub_resource type="Environment" id="Environment_17kia"]
+background_mode = 2
+sky = SubResource("Sky_6qovk")
+tonemap_mode = 2
+ssao_enabled = true
+sdfgi_enabled = true
+glow_enabled = true
+
+[node name="WorldEnvironment" type="WorldEnvironment"]
+environment = SubResource("Environment_17kia")

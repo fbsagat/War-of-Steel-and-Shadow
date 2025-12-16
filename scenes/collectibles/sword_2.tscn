@@ -57,11 +57,6 @@ mass = 4.0
 physics_material_override = SubResource("PhysicsMaterial_rw5pi")
 continuous_cd = true
 script = ExtResource("1_rw5pi")
-item_name = "sword_2"
-item_id = 2
-item_type = "hands"
-item_side = "right"
-item_level = "2"
 
 [node name="sword_2" type="MeshInstance3D" parent="."]
 transform = Transform3D(-3.934025e-08, 0.9, -3.934025e-08, 0, -3.934025e-08, -0.9, -0.9, -3.934025e-08, 1.7196169e-15, -0.5, 0, 0)

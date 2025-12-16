@@ -58,12 +58,6 @@ physics_material_override = SubResource("PhysicsMaterial_3hmh7")
 can_sleep = false
 continuous_cd = true
 script = ExtResource("1_3hmh7")
-item_name = "shield_3"
-item_id = 9
-item_type = "hand"
-item_side = "left"
-item_level = "3"
-item_shot = true
 
 [node name="shield_3" type="MeshInstance3D" parent="."]
 transform = Transform3D(0.9, -2.5205356e-06, 3.0336122e-07, 2.5205356e-06, 0.9, 1.8596981e-07, -3.0336173e-07, -1.8596897e-07, 0.9, 0, 0.017011786, 0.15588534)

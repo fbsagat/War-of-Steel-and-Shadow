@@ -59,11 +59,6 @@ mass = 5.0
 physics_material_override = SubResource("PhysicsMaterial_fr844")
 continuous_cd = true
 script = ExtResource("1_01tis")
-item_name = "steel_helmet"
-item_id = 6
-item_type = "head"
-item_side = "up"
-item_level = "2"
 
 [node name="mesh" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, -2.209651e-22, -1.4210853e-14, 2.209651e-22, 1, 0, 1.4210853e-14, -3.1401024e-36, 1, 4.7683716e-07, -0.025534328, -1.0854231e-07)

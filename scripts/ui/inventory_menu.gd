@@ -315,43 +315,63 @@ func create_item_in_slot(slot: Panel, item_scene: PackedScene, item_name: String
 	
 	slot.add_child(item_instance)
 
-func add_test_items():
-	var sword_scene = create_test_item_scene(Color.STEEL_BLUE, "⚔")
-	add_item_to_inventory(sword_scene, "Espada", "right_hand")
-	
-	var shield_scene = create_test_item_scene(Color.DARK_GRAY, "🛡")
-	add_item_to_inventory(shield_scene, "Escudo", "left_hand")
-	
-	var helmet_scene = create_test_item_scene(Color.GOLD, "⛑")
-	add_item_to_inventory(helmet_scene, "Capacete", "helmet")
-	
-	var cape_scene = create_test_item_scene(Color.DARK_RED, "🎽")
-	add_item_to_inventory(cape_scene, "Capa", "cape")
-	
-	var potion_scene = create_test_item_scene(Color.RED, "🧪")
-	add_item_to_inventory(potion_scene, "Poção", "")
+# Adicionar os itens a partir do item_database, pegar o caminho do png de lá
 
-func create_test_item_scene(color: Color, emoji: String) -> PackedScene:
+func add_test_items():
+	var slot_size = Vector2(64, 64)  # Ajuste ao seu UI
+	
+	# Adicionar itens com ícones PNG
+	var sword_icon = create_test_item_scene("res://material/collectibles_icons/sword_1.png", slot_size)
+	add_item_to_inventory(sword_icon, "Espada", "right_hand")
+	
+	var shield_icon = create_test_item_scene("res://material/collectibles_icons/shield_1.png", slot_size)
+	add_item_to_inventory(shield_icon, "Escudo", "left_hand")
+	
+	var helmet_icon = create_test_item_scene("res://material/collectibles_icons/steel_helmet.png", slot_size)
+	add_item_to_inventory(helmet_icon, "Capacete", "helmet")
+	
+	var cape_icon = create_test_item_scene("res://material/collectibles_icons/cape_1.png", slot_size)
+	add_item_to_inventory(cape_icon, "Capa", "cape")
+	
+	var torch_icon = create_test_item_scene("res://material/collectibles_icons/torch.png", slot_size)
+	add_item_to_inventory(torch_icon, "Tocha", "left_hand")
+
+func create_test_item_scene(icon_path: String, size: Vector2) -> PackedScene:
 	var scene = PackedScene.new()
 	
-	var panel = Panel.new()
-	panel.custom_minimum_size = Vector2(50, 50)
+	# ✅ TEXTURERECT DIRETO (sem Panel intermediário - mais confiável)
+	var icon = TextureRect.new()
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.expand_mode = TextureRect.EXPAND_FIT_WIDTH
+	icon.custom_minimum_size = size
+	icon.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	icon.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	
-	var bg = StyleBoxFlat.new()
-	bg.bg_color = color
-	bg.corner_radius_top_left = 4
-	bg.corner_radius_top_right = 4
-	bg.corner_radius_bottom_left = 4
-	bg.corner_radius_bottom_right = 4
-	panel.add_theme_stylebox_override("panel", bg)
+	# ✅ CARREGAMENTO SEGURO DA TEXTURA
+	var texture = load(icon_path)
+	if texture:
+		icon.texture = texture
+	else:
+		# ⚠️ DEBUG VISUAL SE A TEXTURA NÃO CARREGAR
+		printerr("❌ ERRO: Textura não encontrada em: ", icon_path)
+		icon.texture = _create_missing_texture(size)
+		icon.self_modulate = Color.RED  # Vermelho = erro
 	
-	var label = Label.new()
-	label.text = emoji
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.size = Vector2(50, 50)
-	label.add_theme_font_size_override("font_size", 24)
-	panel.add_child(label)
-	
-	scene.pack(panel)
+	# ✅ EMPACOTAR CENA
+	scene.pack(icon)
 	return scene
+
+func _create_missing_texture(size: Vector2) -> Texture2D:
+	# Cria um quadro vermelho com "X" para identificar itens faltantes
+	var image = Image.create(int(size.x), int(size.y), false, Image.FORMAT_RGBA8)
+	image.fill(Color(0.599, 0.0, 0.0, 0.3))  # Fundo vermelho translúcido
+	
+	# Desenhar um "X" branco
+	var line_thickness = max(2, int(min(size.x, size.y) / 10))
+	for i in range(line_thickness):
+		# Diagonal principal
+		image.draw_line(Vector2(i, i), Vector2(size.x - i, size.y - i), Color.WHITE)
+		# Diagonal secundária
+		image.draw_line(Vector2(i, size.y - i), Vector2(size.x - i, i), Color.WHITE)
+	
+	return ImageTexture.create_from_image(image)
