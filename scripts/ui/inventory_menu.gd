@@ -2,6 +2,7 @@
 extends Control
 
 # Referências da UI
+@onready var inventory_root = $Inventory
 @onready var background_canvas = $Inventory/CanvasLayer
 @onready var center_container = $Inventory/CenterContainer
 @onready var main_vbox = $Inventory/CenterContainer/MainVBox
@@ -41,6 +42,42 @@ func _ready():
 	update_bars()
 	setup_slot_metadata()
 	add_test_items()
+
+func _process(_delta):
+	if inventory_root and !inventory_root.visible:
+		if dragged_item or drag_preview:
+			cleanup_drag()
+		
+		disable_inventory_input()
+
+func show_inventory():
+	# Reativar input somente quando visível
+	enable_inventory_input()
+	inventory_root.show()
+	background_canvas.show()
+
+func hide_inventory():
+	cleanup_drag()
+	
+	disable_inventory_input()
+	
+	inventory_root.hide()
+	background_canvas.hide()
+
+# Desativa input de TODO o inventário (slots + itens)
+func disable_inventory_input():
+	_set_mouse_filter_recursive(inventory_root, Control.MOUSE_FILTER_IGNORE)
+
+# Reativa input de TODO o inventário
+func enable_inventory_input():
+	_set_mouse_filter_recursive(inventory_root, Control.MOUSE_FILTER_STOP)
+
+# Aplica recursivamente a todos os controles
+func _set_mouse_filter_recursive(node: Node, filter: int):
+	if node is Control:
+		node.mouse_filter = filter
+	for child in node.get_children():
+		_set_mouse_filter_recursive(child, filter)
 
 func setup_slot_metadata():
 	# Configurar metadados dos slots de equipamento
@@ -91,6 +128,8 @@ func restore_stamina(amount: float):
 
 # Sistema de Drag & Drop
 func _input(event):
+	if !inventory_root or !inventory_root.visible:
+		return
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT:
 			if event.pressed:
@@ -124,7 +163,7 @@ func try_start_drag(mouse_pos: Vector2):
 		preview_instance.modulate.a = 0.7
 		drag_preview.add_child(preview_instance)
 	
-	add_child(drag_preview)
+	inventory_root.add_child(drag_preview)
 	update_drag_preview(mouse_pos)
 	
 	item.modulate.a = 0.3
@@ -225,11 +264,22 @@ func drop_item():
 		dragged_item.queue_free()
 
 func cleanup_drag():
+	# ✅ REMOVER PREVIEW DA ÁRVORE (mesmo que órfão)
 	if drag_preview:
+		if drag_preview.get_parent():
+			drag_preview.get_parent().remove_child(drag_preview)
 		drag_preview.queue_free()
 		drag_preview = null
+	
+	# ✅ RESETAR VARIÁVEIS DE ESTADO
 	dragged_item = null
 	original_slot = null
+	
+	# ✅ GARANTIR QUE NENHUM ITEM FIQUE SEMI-TRANSPARENTE
+	if original_slot:
+		var item = find_item_in_slot(original_slot)
+		if item:
+			item.modulate.a = 1.0
 
 func add_item_to_inventory(item_scene: PackedScene, item_name: String, item_type: String = ""):
 	for slot in item_slots_grid.get_children():

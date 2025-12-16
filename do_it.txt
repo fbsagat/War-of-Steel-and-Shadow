@@ -47,6 +47,7 @@
 48. Durante o pulo não pode atacar.
 49. Câmera fica de cabeça pra baixo quando a isntancia não é a principal.
 50. Colocar um bloqueio para a câmera não chegar tão perto do chão.
+51. Resolver problema de itens entrando no chão quando player pula em cima deles.
 
 Adicionar no modelo do player:
 	1. Anim interact com a outra mão.

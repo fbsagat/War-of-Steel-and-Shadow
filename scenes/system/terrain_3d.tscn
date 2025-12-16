@@ -839,10 +839,6 @@ data_directory = "res://scenes/system/terrain_data"
 material = SubResource("Terrain3DMaterial_xuisu")
 assets = ExtResource("1_0rjur")
 collision_mode = 3
-collision_shape_size = 24
-collision_priority = 2.0
-mesh_lods = 6
-vertex_spacing = 0.6
 top_level = true
 metadata/_edit_lock_ = true
 

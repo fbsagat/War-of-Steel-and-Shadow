@@ -587,5 +587,4 @@ func print_round_objects(round_id: int):
 
 func _log_debug(message: String):
 	if debug_mode:
-		var prefix = "[SERVER]" if multiplayer.is_server() else "[CLIENT]"
-		print("%s[ObjectManager]%s" % [prefix, message])
+		print("[SERVER][ObjectManager]%s" % [message])

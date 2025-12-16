@@ -55,7 +55,7 @@ func _ready():
 	else:
 		item_database = preload("res://scripts/only_server/registrars/ItemDatabase.gd").new()
 		item_database.name = "ItemDatabase"
-		add_child(item_database)
+		get_tree().root.add_child.call_deferred(item_database)
 		item_database.load_database()
 			
 		if not item_database:

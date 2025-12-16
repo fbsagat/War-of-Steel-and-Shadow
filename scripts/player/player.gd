@@ -557,9 +557,7 @@ func camera_strafe_mode(ativar: bool = true):
 			
 func _unhandled_input(event: InputEvent) -> void:
 	if is_local_player and not inventory_mode:
-		if event.is_action_pressed("ui_cancel"):
-			_toggle_mouse_mode()
-		elif event.is_action_pressed("interact"):
+		if event.is_action_pressed("interact"):
 			action_pick_up_item_call()
 		elif event.is_action_pressed("attack"):
 			action_sword_attack_call()
@@ -573,18 +571,24 @@ func _unhandled_input(event: InputEvent) -> void:
 			action_drop_item_call()
 	if event.is_action_pressed("ui_inventory"):
 		request_inventory_toggle()
+	if event.is_action_pressed("ui_cancel"):
+		_toggle_mouse_mode()
+		if inventory_mode:
+			request_inventory_toggle()
 			
 func request_inventory_toggle():
 	inventory_mode = not inventory_mode
 
 	if inventory_mode:
-		inventory.inventory.show()
-		inventory.background_canvas.show()
+		# Mostrar inventário
+		inventory.show_inventory()
+		
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 		_log_debug("Inventário aberto.")
 	else:
-		inventory.inventory.hide()
-		inventory.background_canvas.hide()
+		# Esconder inventário
+		inventory.hide_inventory()
+		
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 		_log_debug("Inventário fechado.")
 

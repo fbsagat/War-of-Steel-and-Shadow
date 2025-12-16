@@ -150,13 +150,13 @@ func _start_server():
 	test_manager.name = "TestManager"
 	
 	# Adiciona à árvore
-	add_child(player_registry)
-	add_child(room_registry)
-	add_child(round_registry)
-	add_child(server_map_manager)
-	add_child(item_database)
-	add_child(object_manager)
-	add_child(test_manager)
+	get_tree().root.add_child.call_deferred(player_registry)
+	get_tree().root.add_child.call_deferred(room_registry)
+	get_tree().root.add_child.call_deferred(round_registry)
+	get_tree().root.add_child.call_deferred(server_map_manager)
+	get_tree().root.add_child.call_deferred(item_database)
+	get_tree().root.add_child.call_deferred(object_manager)
+	get_tree().root.add_child.call_deferred(test_manager)
 	
 	# Injeta dependências cruzadas
 	_inject_dependencies()
