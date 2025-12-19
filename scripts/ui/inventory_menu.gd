@@ -47,7 +47,7 @@ func _ready():
 	
 	update_bars()
 	setup_slot_metadata()
-	add_test_items()
+	#add_test_items()
 
 func _process(_delta):
 	if inventory_root and !inventory_root.visible:
@@ -101,16 +101,16 @@ func _set_mouse_filter_recursive(node: Node, filter: int):
 
 func setup_slot_metadata():
 	# Configurar metadados dos slots de equipamento
-	helmet_slot.set_meta("slot_type", "helmet")
+	helmet_slot.set_meta("slot_type", "head")
 	helmet_slot.set_meta("is_equipment", true)
 	
-	cape_slot.set_meta("slot_type", "cape")
+	cape_slot.set_meta("slot_type", "back")
 	cape_slot.set_meta("is_equipment", true)
 	
-	right_hand_slot.set_meta("slot_type", "right_hand")
+	right_hand_slot.set_meta("slot_type", "hand-right")
 	right_hand_slot.set_meta("is_equipment", true)
 	
-	left_hand_slot.set_meta("slot_type", "left_hand")
+	left_hand_slot.set_meta("slot_type", "hand-left")
 	left_hand_slot.set_meta("is_equipment", true)
 	
 	# Configurar metadados dos slots de inventário
@@ -312,8 +312,40 @@ func is_over_drop_area(pos: Vector2) -> bool:
 
 func drop_item():
 	if dragged_item:
-		print("Item dropado: ", dragged_item.get_meta("item_name") if dragged_item.has_meta("item_name") else "Item")
+		_log_debug("Item dropado: %s" % dragged_item.get_meta("item_name") if dragged_item.has_meta("item_name") else "Item")
 		dragged_item.queue_free()
+
+func drop_item_by_name(item_name: String) -> bool:
+	"""
+	Dropa um item específico do inventário (remove permanentemente).
+	:param item_name: Nome do item a ser dropado (ex: "Espada")
+	:return: true se dropado com sucesso, false se não encontrado
+	"""
+	# Procurar no inventário principal (grade de itens)
+	for slot in item_slots_grid.get_children():
+		var item_in_slot = find_item_in_slot(slot)
+		if item_in_slot and item_in_slot.has_meta("item_name"):
+			if item_in_slot.get_meta("item_name") == item_name:
+				# ✅ Item encontrado no inventário - remover e retornar
+				item_in_slot.queue_free()
+				_log_debug("Item dropado: %s" % item_name)
+				return true
+	
+	# Procurar em slots de equipamento (caso queira permitir dropar equipados)
+	var equipment_slots = [helmet_slot, cape_slot, right_hand_slot, left_hand_slot]
+	for slot in equipment_slots:
+		if slot:
+			var item_in_slot = find_item_in_slot(slot)
+			if item_in_slot and item_in_slot.has_meta("item_name"):
+				if item_in_slot.get_meta("item_name") == item_name:
+					# ✅ Item equipado encontrado - remover e retornar
+					item_in_slot.queue_free()
+					_log_debug("Item equipado dropado: %s" % item_name)
+					return true
+	
+	# Item não encontrado em lugar nenhum
+	_log_debug("Item não encontrado para dropar: %s" % item_name)
+	return false
 
 func cleanup_drag():
 	# ✅ REMOVER PREVIEW DA ÁRVORE (mesmo que órfão)
@@ -374,27 +406,37 @@ func create_item_in_slot(slot: Panel, item_scene: PackedScene, item_name: String
 		slot.add_child(item_instance)
 		_position_item_in_slot(item_instance, slot)
 
+func add_item(item_name, item_type):
+	var slot_size = Vector2(64, 64)  # Ajuste ao seu UI
+	
+	var png_root = "res://material/collectibles_icons/%s.png" % item_name
+	var item_ = create_item_scene(png_root, slot_size)
+	add_item_to_inventory(item_, item_name, item_type)
+
 # Adicionar os itens a partir do item_database, pegar o caminho do png de lá
 func add_test_items():
 	var slot_size = Vector2(64, 64)  # Ajuste ao seu UI
 	
 	# Adicionar itens com ícones PNG
-	var sword_icon = create_test_item_scene("res://material/collectibles_icons/sword_1.png", slot_size)
+	var sword_icon = create_item_scene("res://material/collectibles_icons/sword_1.png", slot_size)
 	add_item_to_inventory(sword_icon, "Espada", "right_hand")
 	
-	var shield_icon = create_test_item_scene("res://material/collectibles_icons/shield_1.png", slot_size)
+	var shield_icon = create_item_scene("res://material/collectibles_icons/shield_1.png", slot_size)
 	add_item_to_inventory(shield_icon, "Escudo", "left_hand")
 	
-	var helmet_icon = create_test_item_scene("res://material/collectibles_icons/steel_helmet.png", slot_size)
+	var helmet_icon = create_item_scene("res://material/collectibles_icons/steel_helmet.png", slot_size)
 	add_item_to_inventory(helmet_icon, "Capacete", "helmet")
 	
-	var cape_icon = create_test_item_scene("res://material/collectibles_icons/cape_1.png", slot_size)
+	var cape_icon = create_item_scene("res://material/collectibles_icons/cape_1.png", slot_size)
 	add_item_to_inventory(cape_icon, "Capa", "cape")
 	
-	var torch_icon = create_test_item_scene("res://material/collectibles_icons/torch.png", slot_size)
+	var torch_icon = create_item_scene("res://material/collectibles_icons/torch.png", slot_size)
 	add_item_to_inventory(torch_icon, "Tocha", "left_hand")
+	
+	var potion_icon = create_item_scene("res://material/collectibles_icons/torch.png", slot_size)
+	add_item_to_inventory(potion_icon, "Poção de Vida", "")
 
-func create_test_item_scene(icon_path: String, size_: Vector2) -> PackedScene:
+func create_item_scene(icon_path: String, size_: Vector2) -> PackedScene:
 	var scene = PackedScene.new()
 	
 	# ✅ TEXTURERECT DIRETO (sem Panel intermediário - mais confiável)
@@ -460,3 +502,92 @@ func _position_item_in_slot(item: Control, slot: Panel):
 func _restore_item_opacity(item: Control):
 	if item and item.is_inside_tree():
 		item.modulate.a = 1.0
+
+func equip_item(item_name: String, slot_type: String):
+	# Encontrar o item no inventário
+	var inventory_item = null
+	var source_slot = null
+	
+	# Procurar no inventário principal
+	for slot in item_slots_grid.get_children():
+		var item_in_slot = find_item_in_slot(slot)
+		if item_in_slot and item_in_slot.get_meta("item_name") == item_name:
+			inventory_item = item_in_slot
+			source_slot = slot
+			break
+	
+	if not inventory_item:
+		_log_debug("Item não encontrado no inventário: %s" % item_name)
+		return false
+	
+	# Encontrar o slot de equipamento correspondente
+	var equip_slot = _get_equipment_slot_by_type(slot_type)
+	if not equip_slot:
+		_log_debug("Slot de equipamento não encontrado para: %s" % slot_type)
+		return false
+	
+	# Verificar se o slot aceita este tipo de item
+	if not can_place_item(inventory_item, equip_slot):
+		_log_debug("Tipo de item incompatível com slot: %s" % slot_type)
+		return false
+	
+	# Remover do inventário e colocar no slot de equipamento
+	inventory_item.get_parent().remove_child(inventory_item)
+	equip_slot.add_child(inventory_item)
+	_position_item_in_slot(inventory_item, equip_slot)
+	
+	# Notificar o sistema de gameplay (ex: atualizar stats do jogador)
+	_on_item_equipped(item_name, slot_type)
+	
+	return true
+	
+func unequip_item(slot_type: String):
+	var equip_slot = _get_equipment_slot_by_type(slot_type)
+	if not equip_slot:
+		return false
+	
+	var equipped_item = find_item_in_slot(equip_slot)
+	if not equipped_item:
+		return false  # Nada equipado
+	
+	# Encontrar um slot vazio no inventário
+	for slot in item_slots_grid.get_children():
+		if find_item_in_slot(slot) == null:
+			# Mover item de volta para o inventário
+			equipped_item.get_parent().remove_child(equipped_item)
+			slot.add_child(equipped_item)
+			_position_item_in_slot(equipped_item, slot)
+			
+			# Notificar sistema de gameplay
+			_on_item_unequipped(equipped_item.get_meta("item_name"), slot_type)
+			
+			return true
+	
+	_log_debug("Inventário cheio! Não é possível desequipar item.")
+	return false
+	
+# Mapeia tipos de slot para referências reais
+func _get_equipment_slot_by_type(slot_type: String) -> Panel:
+	match slot_type:
+		"head": return helmet_slot
+		"back": return cape_slot
+		"hand-right": return right_hand_slot
+		"hand-left": return left_hand_slot
+		_: 
+			_log_debug("Slot type não reconhecido: %s" % slot_type)
+			return null
+
+# Callbacks para integração com gameplay (implemente conforme seu jogo)
+func _on_item_equipped(item_name: String, slot_type: String):
+	_log_debug("Equipado: %s no slot %s" % [item_name, slot_type])
+	# Aqui você atualizaria stats, animações, etc.
+	# Ex: get_tree().call_group("player", "apply_item_effect", item_name, slot_type)
+
+func _on_item_unequipped(item_name: String, slot_type: String):
+	_log_debug("Desequipado: %s do slot %s" % [item_name, slot_type])
+	# Aqui você removeria efeitos do item
+	# Ex: get_tree().call_group("player", "remove_item_effect", item_name, slot_type)
+
+func _log_debug(message: String):
+	"""Imprime mensagem de debug se habilitado"""
+	print("[CLIENT][INVENTORY_MENU]%s" % message)

@@ -20,6 +20,9 @@ const camera_controller : String = "res://scenes/system/camera_controller.tscn"
 @export_category("Debug")
 @export var debug_mode: bool = true
 
+@export_category("Player")
+@export var inventory : Control
+
 # ===== REGISTROS =====
 
 var item_database: ItemDatabase = null
@@ -683,8 +686,7 @@ func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bo
 		var inventory_scene: PackedScene = load("res://scenes/ui/inventory_menu.tscn")
 		var inventory_node: Node = inventory_scene.instantiate()
 		get_tree().root.add_child(inventory_node)
-		# Esconde inventário
-		inventory_node.hide_inventory()
+		inventory = inventory_node
 		
 		# Atribui referência DIRETA (só para local) inventory_node
 		player_instance.inventory = inventory_node
@@ -825,6 +827,13 @@ func add_item_to_inventory(item_name: String) -> bool:
 	local_inventory["inventory"].append(item_name)
 	local_inventory["stats"]["items_collected"] += 1
 	
+	# Adiciona visualmente no nó do inventário
+	var type_ = item_database.get_type(item_name)
+	if inventory:
+		inventory.add_item(item_name, type_)
+	else:
+		_log_debug("Nó do inventáruio do player não encontrado!")
+	
 	_log_debug("✓ Item adicionado: %s → Player %s" % [item_name, player_name])
 	
 	return true
@@ -842,6 +851,9 @@ func remove_item_from_inventory(item_name: String) -> bool:
 	
 	local_inventory["inventory"].remove_at(idx)
 	local_inventory["stats"]["items_used"] += 1
+	
+	# Adiciona visualmente no nó do inventário
+	inventory.drop_item_by_name(item_name)
 	
 	_log_debug("✓ Item removido: %s" % [item_name])
 	
@@ -888,6 +900,10 @@ func equip_item(item_name: String, slot: String = "") -> bool:
 	local_inventory["equipped"][slot] = item_name
 	local_inventory["stats"]["items_equipped"] += 1
 	
+	# Adiciona visualmente no nó do inventário
+	print("[111 slot]: ", slot)
+	inventory.equip_item(item_name, slot)
+	
 	_log_debug("✓ Item equipado: %s" % [item_name])
 		
 	return true
@@ -907,6 +923,9 @@ func unequip_item(slot: String) -> bool:
 		return false
 	
 	local_inventory["equipped"][slot] = ""
+	
+	# Remoe visualmente no nó do inventário
+	inventory.unequip_item(slot)
 	
 	_log_debug("✓ Item desequipado: %s de %s" % [item_name, slot])
 	
@@ -954,6 +973,7 @@ func drop_item(item_name: String) -> bool:
 	if remove_item_from_inventory(item_name):
 		if not local_inventory.is_empty():
 			local_inventory["stats"]["items_dropped"] += 1
+		
 		_log_debug("✓ Item dropado: %s" % [item_name])
 		return true
 	

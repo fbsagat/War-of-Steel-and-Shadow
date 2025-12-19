@@ -1177,7 +1177,7 @@ func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 		var item_node = object.get("node")
 		if item_node and is_instance_valid(item_node) and item_node.is_inside_tree():
 			item_node.queue_free()
-			_log_debug("Node removido da cena")
+			_log_debug("_server_validate_pick_up_item: Node removido da cena")
 		
 		# Remove do registro local
 		object_manager.spawned_objects[round_["round_id"]].erase(object_id)

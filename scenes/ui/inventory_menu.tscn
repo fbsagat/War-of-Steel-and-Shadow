@@ -82,7 +82,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0, 0, 0, 0.7058824)
+color = Color(0, 0, 0, 0.8392157)
 
 [node name="ReferenceRect" type="ReferenceRect" parent="Inventory"]
 custom_minimum_size = Vector2(1100, 650)
