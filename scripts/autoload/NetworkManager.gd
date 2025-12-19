@@ -35,6 +35,14 @@ var sync_timers: Dictionary = {}
 ## { object_id: { last_update: float, target_pos: Vector3, target_rot: Vector3, has_first: bool } }
 var client_sync_buffer: Dictionary = {}
 
+# Configurações de rate limit para pedidor RPCs de clientes
+const RPC_RATE_LIMIT_SEC = 0.25  # 4 RPCs por segundo por jogador
+const MAX_RPC_QUEUE = 10        # Número máximo de RPCs na fila
+
+# Armazena o último timestamp de RPC por jogador
+var _player_rpc_timestamps = {}  # { peer_id: float }
+var _player_rpc_queues = {}      # { peer_id: [rpc_data] }
+
 # ===== FUNÇÕES DE INICIALIZAÇÃO =====
 
 func _ready():
@@ -44,12 +52,20 @@ func _ready():
 	
 	if _is_server:
 		server_is_headless = ServerManager.is_headless
-	
-	if _is_server:
+		
 		player_registry = ServerManager.player_registry
 		room_registry = ServerManager.room_registry
 		round_registry = ServerManager.round_registry
 		object_manager = ServerManager.object_manager
+		
+			
+		# Inicializar dicionários de proteção
+		_player_rpc_timestamps.clear()
+		_player_rpc_queues.clear()
+		
+		# Conectar-se ao evento de desconexão para limpar dados
+		multiplayer.peer_disconnected.connect(_on_peer_disconnected)
+		
 		_log_debug("Inicializando NetworkManager como servidor")
 		
 	else:
@@ -99,6 +115,42 @@ func _process(delta: float):
 	if verificar_rede() and multiplayer.has_multiplayer_peer() and !multiplayer.is_server():
 		_client_interpolate_all(delta)
 
+func is_rpc_allowed(peer_id: int) -> bool:
+	"""
+	Verifica se o jogador pode enviar um RPC agora.
+	:return: true se permitido, false se rate limited
+	"""
+	if not _is_server:
+		return true  # Cliente não precisa de rate limit
+	
+	var current_time = Time.get_ticks_usec() / 1000000.0  # segundos
+	
+	# Inicializar dados do jogador se não existir
+	if not _player_rpc_timestamps.has(peer_id):
+		_player_rpc_timestamps[peer_id] = current_time
+		_player_rpc_queues[peer_id] = []
+		return true
+	
+	# Verificar rate limit
+	var last_rpc_time = _player_rpc_timestamps[peer_id]
+	if current_time - last_rpc_time < RPC_RATE_LIMIT_SEC:
+		# Rate limited - ignorar esta RPC
+		print("RPC rate limited para peer %d: %.3fs desde última" % [peer_id, current_time - last_rpc_time])
+		return false
+	
+	# Atualizar timestamp
+	_player_rpc_timestamps[peer_id] = current_time
+	return true
+
+func _on_peer_disconnected(peer_id: int):
+	"""
+	Limpa dados do jogador quando ele desconecta.
+	"""
+	if _player_rpc_timestamps.has(peer_id):
+		_player_rpc_timestamps.erase(peer_id)
+	if _player_rpc_queues.has(peer_id):
+		_player_rpc_queues.erase(peer_id)
+
 # ===== REGISTRO DE JOGADOR =====
 
 func register_player(player_name: String):
@@ -114,6 +166,9 @@ func register_player(player_name: String):
 func _server_register_player(player_name: String):
 	"""RPC: Servidor recebe pedido de registro"""
 	if not multiplayer.is_server():
+		return
+	
+	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
 		return
 	
 	var peer_id = multiplayer.get_remote_sender_id()
@@ -162,6 +217,9 @@ func _server_request_rooms_list():
 	if not multiplayer.is_server():
 		return
 	
+	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
+		return
+	
 	var peer_id = multiplayer.get_remote_sender_id()
 	ServerManager._handle_request_rooms_list(peer_id)
 
@@ -198,6 +256,9 @@ func _server_create_room(room_name: String, password: String):
 	if not multiplayer.is_server():
 		return
 	
+	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
+		return
+	
 	var peer_id = multiplayer.get_remote_sender_id()
 	ServerManager._handle_create_room(peer_id, room_name, password)
 
@@ -225,6 +286,9 @@ func _server_join_room(room_id: int, password: String):
 	if not multiplayer.is_server():
 		return
 	
+	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
+		return
+	
 	var peer_id = multiplayer.get_remote_sender_id()
 	ServerManager._handle_join_room(peer_id, room_id, password)
 
@@ -241,6 +305,9 @@ func join_room_by_name(room_name: String, password: String = ""):
 func _server_join_room_by_name(room_name: String, password: String):
 	"""RPC: Servidor recebe pedido de entrada em sala por nome"""
 	if not multiplayer.is_server():
+		return
+	
+	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
 		return
 	
 	var peer_id = multiplayer.get_remote_sender_id()
@@ -306,6 +373,9 @@ func _server_leave_room():
 	if not multiplayer.is_server():
 		return
 	
+	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
+		return
+	
 	var peer_id = multiplayer.get_remote_sender_id()
 	ServerManager._handle_leave_room(peer_id)
 
@@ -322,6 +392,9 @@ func close_room():
 func _server_close_room():
 	"""RPC: Servidor recebe pedido de fechamento de sala"""
 	if not multiplayer.is_server():
+		return
+	
+	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
 		return
 	
 	var peer_id = multiplayer.get_remote_sender_id()
@@ -362,17 +435,23 @@ func _server_start_round(round_settings: Dictionary):
 	if not multiplayer.is_server():
 		return
 	
+	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
+		return
+	
 	var peer_id = multiplayer.get_remote_sender_id()
 	ServerManager._handle_start_round(peer_id, round_settings)
 
-func start_match(match_settings: Dictionary = {}):
-	"""Alias para start_round (compatibilidade)"""
-	start_round(match_settings)
+#func start_match(match_settings: Dictionary = {}):
+	#"""Alias para start_round (compatibilidade)"""
+	#start_round(match_settings)
 
 @rpc("any_peer", "call_remote", "reliable")
 func _server_start_match(match_settings: Dictionary):
 	"""RPC: Alias para _server_start_round (compatibilidade)"""
 	if not multiplayer.is_server():
+		return
+	
+	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
 		return
 	
 	var peer_id = multiplayer.get_remote_sender_id()
@@ -512,14 +591,20 @@ func request_drop_item(player_id, item_id=0):
 
 @rpc("any_peer", "call_remote", "unreliable")
 func _server_pick_up_player_item(player_id, object_id):
+	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
+		return
 	ServerManager._server_validate_pick_up_item(player_id, object_id)
 
 @rpc("any_peer", "call_remote", "unreliable")
 func _server_equip_player_item(player_id, item_id, from_test):
+	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
+		return
 	ServerManager._server_validate_equip_item(player_id, item_id, from_test)
 
 @rpc("any_peer", "call_remote", "unreliable")
 func _server_drop_player_item(player_id, item_id):
+	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
+		return
 	ServerManager._server_validate_drop_item(player_id, item_id)
 
 @rpc("authority", "call_remote", "reliable")

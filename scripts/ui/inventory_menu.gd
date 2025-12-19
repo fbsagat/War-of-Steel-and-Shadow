@@ -506,14 +506,14 @@ func _restore_item_opacity(item: Control):
 func equip_item(item_name: String, slot_type: String):
 	# Encontrar o item no inventário
 	var inventory_item = null
-	var source_slot = null
+	var _source_slot = null
 	
 	# Procurar no inventário principal
 	for slot in item_slots_grid.get_children():
 		var item_in_slot = find_item_in_slot(slot)
 		if item_in_slot and item_in_slot.get_meta("item_name") == item_name:
 			inventory_item = item_in_slot
-			source_slot = slot
+			_source_slot = slot
 			break
 	
 	if not inventory_item:
