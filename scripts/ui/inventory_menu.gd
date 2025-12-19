@@ -1,5 +1,6 @@
 # InventoryUI.gd
 extends Control
+# teste
 
 # Referências da UI
 @onready var inventory_root = $Inventory
