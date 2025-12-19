@@ -1125,8 +1125,12 @@ func _rpc_despawn_on_clients(player_ids: Array, round_id: int, object_id: int):
 @rpc("any_peer", "call_remote", "reliable")
 func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 	"""Servidor recebe pedido de pegar item, equipa automaticamente se for equipável, valida e redistribui"""
+	if not _is_peer_connected(requesting_player_id):
+		return
+		
 	var player_node = player_registry.get_player_node(requesting_player_id)
-	var object = object_manager.spawned_objects[1][object_id]
+	var round_id = player_registry.get_player_round(requesting_player_id)
+	var object = _get_spawned_object(round_id ,object_id)
 	var server_nearby = player_node.get_nearby_items()
 	var player = player_registry.get_player(requesting_player_id)
 	var round_ = round_registry.get_round_by_player_id(player["id"])
@@ -1150,8 +1154,8 @@ func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 		# Dropar o item anterior se houver
 		var item_type = item_database.get_type(item["name"])
 		var item_ = player_registry.get_equipped_item_in_slot(round_["round_id"], player["id"], item_type)
-		var item_id = item_database.get_item(item_)["id"]
 		if item_:
+			var item_id = item_database.get_item(item_)["id"]
 			player_registry.unequip_item(round_["round_id"], player["id"], item_type)
 			player_registry.remove_item_from_inventory(round_["round_id"], player["id"], item_)
 			drop_item(round_["round_id"], player["id"], item_id)
@@ -1484,6 +1488,15 @@ func _is_peer_connected(peer_id: int) -> bool:
 	
 	var connected_peers = multiplayer.get_peers()
 	return peer_id in connected_peers
+
+func _get_spawned_object(round_id: int, object_id: int):
+	if (
+		object_manager and
+		object_manager.spawned_objects.has(round_id) and
+		object_manager.spawned_objects[round_id].has(object_id)
+	):
+		return object_manager.spawned_objects[round_id][object_id]
+	return null
 
 func _log_debug(message: String):
 	"""Imprime mensagem de debug se habilitado"""
