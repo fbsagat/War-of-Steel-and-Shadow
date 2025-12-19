@@ -39,6 +39,12 @@ var drag_preview = null
 var original_slot = null
 
 func _ready():
+	# Configurar estado inicial do inventário
+	if inventory_root:
+		inventory_root.mouse_filter = Control.MOUSE_FILTER_IGNORE  # Iniciar bloqueando cliques
+		inventory_root.hide()  # Iniciar escondido
+		background_canvas.hide()
+	
 	update_bars()
 	setup_slot_metadata()
 	add_test_items()
@@ -51,20 +57,33 @@ func _process(_delta):
 		disable_inventory_input()
 
 func show_inventory():
-	# Reativar input somente quando visível
-	enable_inventory_input()
-	inventory_root.show()
-	background_canvas.show()
+	if inventory_root:
+		# ✅ PERMITIR CLIQUES NO INVENTÁRIO
+		inventory_root.mouse_filter = Control.MOUSE_FILTER_STOP
+		
+		# Reativar input recursivo (slots + itens)
+		_set_mouse_filter_recursive(inventory_root, Control.MOUSE_FILTER_STOP)
+		
+		# Mostrar interface
+		inventory_root.show()
+		background_canvas.show()
 
 func hide_inventory():
-	cleanup_drag()
-	
-	disable_inventory_input()
-	
-	inventory_root.hide()
-	background_canvas.hide()
+	if inventory_root:
+		# ✅ BLOQUEAR CLIQUES NO INVENTÁRIO (liberar para o jogo)
+		inventory_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		
+		# Desativar input recursivo (slots + itens)
+		_set_mouse_filter_recursive(inventory_root, Control.MOUSE_FILTER_IGNORE)
+		
+		# Limpar qualquer drag pendente
+		cleanup_drag()
+		
+		# Esconder interface
+		inventory_root.hide()
+		background_canvas.hide()
 
-# Desativa input de TODO o inventário (slots + itens)
+# Desativa input de TOD.O o inventário (slots + itens)
 func disable_inventory_input():
 	_set_mouse_filter_recursive(inventory_root, Control.MOUSE_FILTER_IGNORE)
 
@@ -76,6 +95,7 @@ func enable_inventory_input():
 func _set_mouse_filter_recursive(node: Node, filter: int):
 	if node is Control:
 		node.mouse_filter = filter
+	
 	for child in node.get_children():
 		_set_mouse_filter_recursive(child, filter)
 
@@ -142,7 +162,7 @@ func _input(event):
 
 func try_start_drag(mouse_pos: Vector2):
 	var slot = find_slot_at_position(mouse_pos)
-	if not slot:
+	if not slot or not slot.visible:
 		return
 	
 	var item = find_item_in_slot(slot)
@@ -151,26 +171,53 @@ func try_start_drag(mouse_pos: Vector2):
 	
 	dragged_item = item
 	original_slot = slot
+	item.modulate.a = 0.3
 	
-	# Criar preview visual
+	# ✅ CRIAR PREVIEW
 	drag_preview = Control.new()
 	drag_preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	drag_preview.z_index = 100
+	drag_preview.z_index = 1000
+	drag_preview.visible = false
 	
+	# Instanciar conteúdo
 	var item_scene = item.get_meta("item_scene") if item.has_meta("item_scene") else null
 	if item_scene:
 		var preview_instance = item_scene.instantiate()
 		preview_instance.modulate.a = 0.7
 		drag_preview.add_child(preview_instance)
 	
-	inventory_root.add_child(drag_preview)
-	update_drag_preview(mouse_pos)
+	# ✅ DEFINIR TAMANHO EXPLÍCITO (CRUCIAL)
+	drag_preview.custom_minimum_size = Vector2(64, 64)  # Tamanho padrão dos slots
+	drag_preview.size = Vector2(64, 64)
 	
-	item.modulate.a = 0.3
+	# ✅ ADICIONAR À RAIZ DA ÁRVORE (FUNCIONA SEMPRE)
+	get_tree().root.add_child(drag_preview)
+	
+	# ✅ POSICIONAR CORRETAMENTE NO PRIMEIRO FRAME
+	_position_drag_preview(mouse_pos)
+	
+	# ✅ TORNAR VISÍVEL APENAS APÓS POSICIONADO
+	drag_preview.visible = true
+
+func _position_drag_preview(mouse_pos: Vector2):
+	if not drag_preview:
+		return
+	
+	# ✅ CENTRALIZAR NO CURSOR USANDO TAMANHO FIXO
+	var center_offset = drag_preview.size / 2
+	drag_preview.global_position = mouse_pos - center_offset
+
+func _finalize_drag_preview_position(mouse_pos: Vector2):
+	if drag_preview and drag_preview.is_inside_tree():
+		# ✅ POSIÇÃO FINAL USANDO TAMANHO REAL (já calculado)
+		var center_offset = drag_preview.size / 2
+		drag_preview.global_position = mouse_pos - center_offset
 
 func update_drag_preview(mouse_pos: Vector2):
-	if drag_preview:
-		drag_preview.global_position = mouse_pos - Vector2(25, 25)
+	if drag_preview and drag_preview.visible:
+		# ✅ SEMPRE USAR O TAMANHO REAL DO PREVIEW
+		var center_offset = drag_preview.size / 2
+		drag_preview.global_position = mouse_pos - center_offset
 
 func try_end_drag(mouse_pos: Vector2):
 	if not dragged_item:
@@ -234,23 +281,28 @@ func place_item_in_slot(item: Control, target_slot: Panel):
 	else:
 		item.get_parent().remove_child(item)
 		target_slot.add_child(item)
-		item.position = Vector2.ZERO
-		item.size = target_slot.size
+		_position_item_in_slot(item, target_slot)  # ✅ USAR FUNÇÃO PADRONIZADA
 		item.modulate.a = 1.0
 
 func swap_items(item1: Control, item2: Control, slot1: Panel, slot2: Panel):
+	if not item1 or not item2 or not slot1 or not slot2:
+		return
+	
+	# ✅ RESTAURAR OPACIDADE ANTES DE MOVER (evita estados residuais)
+	_restore_item_opacity(item1)
+	_restore_item_opacity(item2)
+	
+	# Remover itens das posições atuais
 	item1.get_parent().remove_child(item1)
 	item2.get_parent().remove_child(item2)
 	
+	# Adicionar aos novos slots
 	slot2.add_child(item1)
 	slot1.add_child(item2)
 	
-	item1.position = Vector2.ZERO
-	item1.size = slot2.size
-	item1.modulate.a = 1.0
-	
-	item2.position = Vector2.ZERO
-	item2.size = slot1.size
+	# ✅ POSICIONAR CORRETAMENTE APÓS MOVER
+	_position_item_in_slot(item1, slot2)
+	_position_item_in_slot(item2, slot1)
 
 func is_over_drop_area(pos: Vector2) -> bool:
 	if not drop_area:
@@ -295,12 +347,15 @@ func create_item_in_slot(slot: Panel, item_scene: PackedScene, item_name: String
 	item_instance.set_meta("item_type", item_type)
 	item_instance.set_meta("item_scene", item_scene)
 	
-	item_instance.position = Vector2.ZERO
-	
 	if item_instance is Control:
+		# Configurar tamanho e adicionar diretamente
 		item_instance.custom_minimum_size = slot.size
 		item_instance.size = slot.size
+		slot.add_child(item_instance)
+		_position_item_in_slot(item_instance, slot)
+		
 	elif item_instance is Node2D:
+		# Criar wrapper apenas para Node2D
 		var wrapper = Control.new()
 		wrapper.custom_minimum_size = slot.size
 		wrapper.size = slot.size
@@ -309,14 +364,17 @@ func create_item_in_slot(slot: Panel, item_scene: PackedScene, item_name: String
 		wrapper.set_meta("item_type", item_type)
 		wrapper.set_meta("item_scene", item_scene)
 		wrapper.add_child(item_instance)
-		item_instance.position = slot.size / 2
+		item_instance.position = Vector2.ZERO  # Node2D: posição relativa ao wrapper
+		
 		slot.add_child(wrapper)
-		return
-	
-	slot.add_child(item_instance)
+		_position_item_in_slot(wrapper, slot)  # Centralizar o wrapper
+		
+	else:
+		# Caso genérico (pouco comum)
+		slot.add_child(item_instance)
+		_position_item_in_slot(item_instance, slot)
 
 # Adicionar os itens a partir do item_database, pegar o caminho do png de lá
-
 func add_test_items():
 	var slot_size = Vector2(64, 64)  # Ajuste ao seu UI
 	
@@ -336,14 +394,14 @@ func add_test_items():
 	var torch_icon = create_test_item_scene("res://material/collectibles_icons/torch.png", slot_size)
 	add_item_to_inventory(torch_icon, "Tocha", "left_hand")
 
-func create_test_item_scene(icon_path: String, size: Vector2) -> PackedScene:
+func create_test_item_scene(icon_path: String, size_: Vector2) -> PackedScene:
 	var scene = PackedScene.new()
 	
 	# ✅ TEXTURERECT DIRETO (sem Panel intermediário - mais confiável)
 	var icon = TextureRect.new()
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	icon.expand_mode = TextureRect.EXPAND_FIT_WIDTH
-	icon.custom_minimum_size = size
+	icon.custom_minimum_size = size_
 	icon.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	icon.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	
@@ -361,17 +419,44 @@ func create_test_item_scene(icon_path: String, size: Vector2) -> PackedScene:
 	scene.pack(icon)
 	return scene
 
-func _create_missing_texture(size: Vector2) -> Texture2D:
+func _create_missing_texture(size_: Vector2) -> Texture2D:
 	# Cria um quadro vermelho com "X" para identificar itens faltantes
-	var image = Image.create(int(size.x), int(size.y), false, Image.FORMAT_RGBA8)
+	var image = Image.create(int(size_.x), int(size_.y), false, Image.FORMAT_RGBA8)
 	image.fill(Color(0.599, 0.0, 0.0, 0.3))  # Fundo vermelho translúcido
 	
 	# Desenhar um "X" branco
-	var line_thickness = max(2, int(min(size.x, size.y) / 10))
+	var line_thickness = max(2, int(min(size_.x, size_.y) / 10))
 	for i in range(line_thickness):
 		# Diagonal principal
-		image.draw_line(Vector2(i, i), Vector2(size.x - i, size.y - i), Color.WHITE)
+		image.draw_line(Vector2(i, i), Vector2(size_.x - i, size_.y - i), Color.WHITE)
 		# Diagonal secundária
-		image.draw_line(Vector2(i, size.y - i), Vector2(size.x - i, i), Color.WHITE)
+		image.draw_line(Vector2(i, size_.y - i), Vector2(size_.x - i, i), Color.WHITE)
 	
 	return ImageTexture.create_from_image(image)
+
+func _position_item_in_slot(item: Control, slot: Panel):
+	if not item or not slot:
+		return
+	
+	# Forçar tamanho do slot
+	item.custom_minimum_size = slot.size
+	item.size = slot.size
+	
+	# ✅ CENTRALIZAÇÃO UNIVERSAL (funciona para 99% dos casos)
+	item.anchor_left = 0.0
+	item.anchor_top = 0.0
+	item.anchor_right = 0.0
+	item.anchor_bottom = 0.0
+	item.offset_left = 0
+	item.offset_top = 0
+	item.offset_right = slot.size.x
+	item.offset_bottom = slot.size.y
+	
+	# Se for TextureRect (ícones PNG), centralizar pixel-perfect
+	if item is TextureRect:
+		item.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		item.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+
+func _restore_item_opacity(item: Control):
+	if item and item.is_inside_tree():
+		item.modulate.a = 1.0
