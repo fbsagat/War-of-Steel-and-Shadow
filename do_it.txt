@@ -48,7 +48,8 @@
 49. Câmera fica de cabeça pra baixo quando a isntancia não é a principal.
 50. Colocar um bloqueio para a câmera não chegar tão perto do chão.
 51. Resolver problema de itens entrando no chão quando player pula em cima deles.
-52. O player está trocando itens ao dropar, diferente dos que estão na mão dele.
+52. 	Ok. O player está trocando itens ao dropar, diferente dos que estão na mão dele.
+53. Criar um buffer de tranferencias de itens entre slots para o inventory_menu, previne bugs.
 
 
 Adicionar no modelo do player:

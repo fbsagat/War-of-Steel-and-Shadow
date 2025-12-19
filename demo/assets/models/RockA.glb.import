@@ -3,7 +3,7 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://clhjbf3ps5wld"
+uid="uid://bxwiqxgwoh630"
 path="res://.godot/imported/RockA.glb-2e416adf16cd89c5c5afc8e204027147.scn"
 
 [deps]
@@ -13,8 +13,8 @@ dest_files=["res://.godot/imported/RockA.glb-2e416adf16cd89c5c5afc8e204027147.sc
 
 [params]
 
-nodes/root_type=""
-nodes/root_name=""
+nodes/root_type="StaticBody3D"
+nodes/root_name="Scene Root"
 nodes/root_script=null
 nodes/apply_root_scale=true
 nodes/root_scale=1.0
@@ -37,6 +37,13 @@ import_script/path=""
 materials/extract=0
 materials/extract_format=0
 materials/extract_path=""
-_subresources={}
-gltf/naming_version=2
+_subresources={
+"materials": {
+"@MATERIAL:0": {
+"use_external/enabled": true,
+"use_external/path": "res://demo/assets/materials/M_rock30.tres"
+}
+}
+}
+gltf/naming_version=0
 gltf/embedded_image_handling=1
