@@ -1146,13 +1146,15 @@ func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 	
 	# Se for item equipável de knight
 	if item_database.get_items_by_owner("knight"):
+		
 		# Dropar o item anterior se houver
 		var item_type = item_database.get_type(item["name"])
 		var item_ = player_registry.get_equipped_item_in_slot(round_["round_id"], player["id"], item_type)
+		var item_id = item_database.get_item(item_)["id"]
 		if item_:
 			player_registry.unequip_item(round_["round_id"], player["id"], item_type)
 			player_registry.remove_item_from_inventory(round_["round_id"], player["id"], item_)
-			drop_item(round_["round_id"], player["id"], item.id)
+			drop_item(round_["round_id"], player["id"], item_id)
 			
 		# Equipar o item novo
 		player_registry.add_item_to_inventory(round_["round_id"], player["id"], item["name"])
@@ -1254,7 +1256,7 @@ func _server_validate_drop_item(requesting_player_id: int, item_id: int):
 	_log_debug("[ITEM]📦 Player %s pediu para dropar item %d, no round %d" % [player["name"], item_id, round_["round_id"]])
 	drop_item(round_["round_id"], player["id"], item_id)
 
-func drop_item(round_id, player_id, item_id):
+func drop_item(round_id: int, player_id: int, item_id: int):
 	# Se item_id == 0, é pedido do player, pegar o item de menor valor do player
 	# Se não, é pedido do server, pegar item_id que veio e dropar
 	
