@@ -106,7 +106,12 @@ func _ready():
 		# Timer de debug opcional
 		if debug_timer:
 			_setup_debug_timer()
-
+	
+	# Tira ui
+	var ui = get_tree().root.get_node_or_null("MainMenu")
+	if ui:
+		ui.queue_free()
+	
 func _start_server():
 	"""Inicializa servidor dedicado e todos os subsistemas"""
 	var timestamp = Time.get_datetime_string_from_system()
@@ -836,11 +841,6 @@ func _server_instantiate_round(match_data: Dictionary, round_node, players_node)
 		
 		players_node.add_child(debug_cam)
 		debug_cam.global_position = Vector3(0, 3, 5)  # X=0, Y=10 (altura), Z=15 (distância)
-	
-	# Tira ui
-	var ui = get_tree().root.get_node_or_null("MainMenu")
-	if ui:
-		ui.queue_free()
 	
 	_log_debug("✓ Rodada instanciada no servidor")
 
