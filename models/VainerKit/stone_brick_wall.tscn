@@ -1,0 +1,22 @@
+[gd_scene load_steps=5 format=3 uid="uid://blch7pk3hv26u"]
+
+[ext_resource type="ArrayMesh" uid="uid://bg4ar3c6t0mq3" path="res://models/Structures/Stone_wall/Stone_brick_wall.obj" id="1_greim"]
+[ext_resource type="Texture2D" uid="uid://i6husb7mbl3m" path="res://models/Structures/Stone_wall/stone_brick_wall_texture.png" id="2_bci8e"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_3ohy7"]
+albedo_texture = ExtResource("2_bci8e")
+
+[sub_resource type="ConvexPolygonShape3D" id="ConvexPolygonShape3D_greim"]
+points = PackedVector3Array(2.5054264, 4, 0.062475502, 2.4963803, 3.9874706, 0.11245841, 2.5117192, 3.9373531, 0.062475502, 2.5117192, 3.9373531, -0.43753672, 2.4932342, 4, -0.43753672, -1.4610204, 4, 0.062475502, 2.4963803, 3.9373531, 0.125, -1.4547275, 3.9874706, 0.11245841, 2.5054264, 2.9373531, 0.125, 2.5117192, 0.56225526, 0.062475502, 2.5117192, 0.56225526, -0.43753672, 2.5054264, 3.5622554, -0.5, 2.4932342, 3.9373531, -0.5, 2.4932342, 3.9874706, -0.48751956, -1.4610204, 4, -0.43753672, -1.4791123, 3.9373531, 0.062475502, -1.4669199, 3.9373531, 0.125, 2.5054264, 0.9373532, 0.125, 2.5054264, 0.062255286, 0.062475502, 2.5054264, 1.5622553, -0.5, 2.5054264, 0.062255286, -0.43753672, 2.4928408, 0.062255286, -0.5, -1.4732127, 3.9373531, -0.5, -1.4610204, 3.9874706, -0.48751956, -1.4791123, 3.9373531, -0.43753672, -1.5027103, 3.4373531, 0.062475502, -1.4901247, 3.4373531, 0.125, 2.4932342, 0.56225526, 0.125, 2.4739623, 0.062255286, 0.125, 2.4550838, 0.012137823, 0.11245841, 2.4739623, 0, 0.062475502, 2.4928408, 0, -0.43753672, 2.4928408, 0.012137823, -0.48751956, -1.4775391, 0.062255286, -0.5, -1.4901247, 3.4373531, -0.5, -1.5027103, 3.4373531, -0.43753672, -1.50625, 1.4373531, 0.062475502, -1.4901247, 0.062255286, 0.125, -1.4649533, 0.012137823, 0.11245841, -1.4649533, 0, 0.062475502, -1.4649533, 0, -0.43753672, -1.4523677, 0.012137823, -0.48751956, -1.5027103, 0.062255286, -0.43753672, -1.4901247, 0.43735316, -0.5, -1.4940577, 1.4373531, -0.5, -1.50625, 1.4373531, -0.43753672, -1.50625, 1.0622553, 0.062475502, -1.5027103, 0.062255286, 0.062475502, -1.50625, 1.0622553, -0.43753672)
+
+[node name="Node3D" type="Node3D"]
+
+[node name="StoneBrickWallTest" type="MeshInstance3D" parent="."]
+transform = Transform3D(3, 0, 0, 0, 3, 0, 0, 0, 3, -0.443, 0, 0)
+mesh = ExtResource("1_greim")
+surface_material_override/0 = SubResource("StandardMaterial3D_3ohy7")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="StoneBrickWallTest"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="StoneBrickWallTest/StaticBody3D"]
+shape = SubResource("ConvexPolygonShape3D_greim")

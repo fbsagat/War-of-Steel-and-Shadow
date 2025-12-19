@@ -1,0 +1,23 @@
+[gd_scene load_steps=5 format=3 uid="uid://x57b852buk6k"]
+
+[ext_resource type="ArrayMesh" uid="uid://bnwv4kxqp1nx" path="res://models/Structures/Stone_wall/stone_brick_stair.obj" id="1_d331n"]
+[ext_resource type="Texture2D" uid="uid://i6husb7mbl3m" path="res://models/Structures/Stone_wall/stone_brick_wall_texture.png" id="2_13bh2"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_snfoq"]
+albedo_texture = ExtResource("2_13bh2")
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_mmceu"]
+size = Vector3(3.9643555, 6.4568977, 0.48828125)
+
+[node name="Node3D" type="Node3D"]
+
+[node name="StoneBrickStairTest" type="MeshInstance3D" parent="."]
+transform = Transform3D(3, 0, 0, 0, 3, 0, 0, 0, 3, -0.884, 0, 0)
+mesh = ExtResource("1_d331n")
+surface_material_override/0 = SubResource("StandardMaterial3D_snfoq")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="StoneBrickStairTest"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="StoneBrickStairTest/StaticBody3D"]
+transform = Transform3D(1, 0, 0, 0, 0.6540811, -0.7564246, 0, 0.7564246, 0.6540811, 0.517334, 1.5577005, 1.6668743)
+shape = SubResource("BoxShape3D_mmceu")

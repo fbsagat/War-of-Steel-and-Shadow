@@ -1,0 +1,26 @@
+[gd_scene load_steps=6 format=3 uid="uid://cxjgmxn0wye7i"]
+
+[ext_resource type="ArrayMesh" uid="uid://dqqssdcfsca78" path="res://models/Structures/Stone_wall/Wood_floor.obj" id="1_y2wpf"]
+[ext_resource type="Texture2D" uid="uid://dfpxubyfg2jc5" path="res://models/Structures/Stone_wall/wood_floor_texture.png" id="2_6ggag"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_su5dl"]
+albedo_texture = ExtResource("2_6ggag")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_wt4xh"]
+albedo_texture = ExtResource("2_6ggag")
+
+[sub_resource type="ConvexPolygonShape3D" id="ConvexPolygonShape3D_ss8pa"]
+points = PackedVector3Array(-2.0154645, -0.3359375, -2.640625, -2.0154645, -0.3359375, 1.3402398, -2.0166414, 0.02561149, -0.093058586, -2.0166414, 0.037455797, -0.6250367, -2.0154645, 0.13125, -2.640625, 1.9910157, -0.3359375, -2.640625, -2.0166414, 0.037455797, 1.34375, 1.9910157, -0.3359375, 1.3402398, -2.0166414, 0.08433002, -0.6250367, -2.0166414, 0.09997001, -0.5938356, -2.0154645, 0.13125, -2.140628, 1.9910157, 0.11625025, -1.5922694, 1.9910157, 0.09997001, -2.640625, -2.0166414, 0.09997001, 1.34375, 1.9894464, 0.037455797, 1.34375, 1.9910157, 0.03905639, 1.3402398, 1.9894464, 0.09997001, 1.34375, 1.9910157, 0.09997001, -0.67222834)
+
+[node name="Node3D" type="Node3D"]
+
+[node name="WoodFloorTest" type="MeshInstance3D" parent="."]
+transform = Transform3D(3, 0, 0, 0, 3, 0, 0, 0, 3, 0, 0, 0)
+mesh = ExtResource("1_y2wpf")
+surface_material_override/0 = SubResource("StandardMaterial3D_su5dl")
+surface_material_override/1 = SubResource("StandardMaterial3D_wt4xh")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="WoodFloorTest"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="WoodFloorTest/StaticBody3D"]
+shape = SubResource("ConvexPolygonShape3D_ss8pa")

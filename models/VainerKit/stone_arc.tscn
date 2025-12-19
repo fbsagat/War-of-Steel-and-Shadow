@@ -1,0 +1,48 @@
+[gd_scene load_steps=8 format=3 uid="uid://d34k8d0y7vk3b"]
+
+[ext_resource type="ArrayMesh" uid="uid://ct6q4ya24y8ny" path="res://models/Structures/Stone_wall/stone_arc_test.obj" id="1_8hal1"]
+[ext_resource type="Texture2D" uid="uid://i6husb7mbl3m" path="res://models/Structures/Stone_wall/stone_brick_wall_texture.png" id="2_einsi"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_pisvs"]
+albedo_texture = ExtResource("2_einsi")
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_v4i7e"]
+size = Vector3(1.0996094, 3.9663086, 0.986145)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_hreqa"]
+size = Vector3(1.0917969, 3.974121, 1.0097656)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_10ykb"]
+size = Vector3(1.7941895, 0.96051025, 0.99780273)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_so8d8"]
+size = Vector3(0.83740234, 0.3046875, 0.6767578)
+
+[node name="Node3D" type="Node3D"]
+
+[node name="StoneArcTest" type="MeshInstance3D" parent="."]
+transform = Transform3D(3, 0, 0, 0, 3, 0, 0, 0, 3, 0, 0, 0)
+mesh = ExtResource("1_8hal1")
+surface_material_override/0 = SubResource("StandardMaterial3D_pisvs")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="StoneArcTest"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="StoneArcTest/StaticBody3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.4471617, 1.991284, -0.17849731)
+shape = SubResource("BoxShape3D_v4i7e")
+
+[node name="CollisionShape3D2" type="CollisionShape3D" parent="StoneArcTest/StaticBody3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.446733, 1.99519, -0.17285156)
+shape = SubResource("BoxShape3D_hreqa")
+
+[node name="CollisionShape3D3" type="CollisionShape3D" parent="StoneArcTest/StaticBody3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0040283203, 3.5099874, -0.16833496)
+shape = SubResource("BoxShape3D_10ykb")
+
+[node name="CollisionShape3D4" type="CollisionShape3D" parent="StoneArcTest/StaticBody3D"]
+transform = Transform3D(0.65410733, -0.7564017, 0, 0.7564017, 0.65410733, 0, 0, 0, 1, -0.78878427, 2.880365, 0)
+shape = SubResource("BoxShape3D_so8d8")
+
+[node name="CollisionShape3D5" type="CollisionShape3D" parent="StoneArcTest/StaticBody3D"]
+transform = Transform3D(0.7695556, 0.6385797, 0, -0.6385797, 0.7695556, 0, 0, 0, 1, 0.797245, 2.880365, -0.34057617)
+shape = SubResource("BoxShape3D_so8d8")
