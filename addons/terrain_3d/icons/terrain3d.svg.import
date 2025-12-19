@@ -2,10 +2,9 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bnsydn4jkyeyn"
+uid="uid://hd1saii18ngl"
 path="res://.godot/imported/terrain3d.svg-eb45756f1a003759fda81eaa1db10769.ctex"
 metadata={
-"has_editor_variant": true,
 "vram_texture": false
 }
 
@@ -40,5 +39,5 @@ process/hdr_clamp_exposure=false
 process/size_limit=0
 detect_3d/compress_to=1
 svg/scale=1.0
-editor/scale_with_editor_scale=true
+editor/scale_with_editor_scale=false
 editor/convert_colors_with_editor_theme=false
