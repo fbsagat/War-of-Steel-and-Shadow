@@ -13,8 +13,8 @@ extends Control
 @onready var status_bar = $StatusBar
 
 # Barras de status
-@onready var health_bar = $StatusBar/BarsHBox/HealthContainer/HealthBar
-@onready var stamina_bar = $StatusBar/BarsHBox/StaminaContainer/StaminaBar
+@onready var health_bar = $StatusBar/VBoxContainer/BarsHBox/HealthContainer/HealthBar
+@onready var stamina_bar = $StatusBar/VBoxContainer/BarsHBox/StaminaContainer/StaminaBar
 
 # Slots de equipamento
 @onready var helmet_slot = $Inventory/CenterContainer/MainVBox/EquipmentContainer/EquipmentGrid/HelmetContainer/HelmetSlot
@@ -23,7 +23,8 @@ extends Control
 @onready var left_hand_slot = $Inventory/CenterContainer/MainVBox/EquipmentContainer/EquipmentGrid/LeftHandContainer/LeftHandSlot
 
 # Slots de itens
-@onready var item_slots_grid = $Inventory/CenterContainer/MainVBox/ItemsPanel/MarginContainer/ItemsGrid
+@onready var item_slots_grid = $Inventory/CenterContainer/MainVBox/HBoxContainer/ItemsPanel/MarginContainer/ItemsGrid
+@onready var item_slots_grid_on = $StatusBar/VBoxContainer/HBoxContainer/ItemsPanel/MarginContainer/ItemsGrid
 
 # Área de drop
 @onready var drop_area = $Inventory/CenterContainer/MainVBox/EquipmentContainer/DropArea
@@ -39,6 +40,10 @@ var dragged_item = null
 var drag_preview = null
 var original_slot = null
 
+# para item_slots_grid_on
+var selected_index: int = 0
+var item_slots: Array[Panel] = []
+
 func _ready():
 	# Configurar estado inicial do inventário
 	if inventory_root:
@@ -48,7 +53,23 @@ func _ready():
 	
 	update_bars()
 	setup_slot_metadata()
+	_sync_quickbar()
 	#add_test_items()
+	
+	# Coleta os 9 filhos do ItemsGrid (espera-se que sejam Panels)
+	item_slots = []
+	for i in range(9):
+		if i < item_slots_grid_on.get_child_count():
+			var child = item_slots_grid_on.get_child(i)
+			if child is Panel:
+				item_slots.append(child)
+	
+	if item_slots.size() != 9:
+		push_error("ItemsGrid deve ter exatamente 9 filhos do tipo Panel!")
+		return
+
+	# Seleciona o primeiro slot (índice 0)
+	select_slot(0)
 
 func _process(_delta):
 	if inventory_root and !inventory_root.visible:
@@ -68,6 +89,7 @@ func show_inventory():
 		# Mostrar interface
 		inventory_root.show()
 		background_canvas.show()
+		item_slots_grid_on.hide()
 
 func hide_inventory():
 	if inventory_root:
@@ -83,6 +105,7 @@ func hide_inventory():
 		# Esconder interface
 		inventory_root.hide()
 		background_canvas.hide()
+		item_slots_grid_on.show()
 
 # Desativa input de TOD.O o inventário (slots + itens)
 func disable_inventory_input():
@@ -150,7 +173,16 @@ func restore_stamina(amount: float):
 # Sistema de Drag & Drop
 func _input(event):
 	if !inventory_root or !inventory_root.visible:
-		return
+		# Teclas 1-9: selecionam slots 0-8
+		for digit in range(1, 10):
+			if event.is_action_pressed("digit_" + str(digit)):
+				print("digit_" + str(digit))
+				select_slot(digit - 1)
+		
+		# Tecla 'q': ativa o item selecionado
+		if event.is_action_pressed("drop"):  # Use uma ação do Input Map (ex: "use_item")
+			use_selected_item()
+		
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT:
 			if event.pressed:
@@ -160,7 +192,7 @@ func _input(event):
 	
 	elif event is InputEventMouseMotion and dragged_item:
 		update_drag_preview(event.position)
-
+	
 func try_start_drag(mouse_pos: Vector2):
 	var slot = find_slot_at_position(mouse_pos)
 	if not slot or not slot.visible:
@@ -284,6 +316,7 @@ func place_item_in_slot(item: Control, target_slot: Panel):
 		target_slot.add_child(item)
 		_position_item_in_slot(item, target_slot)  # ✅ USAR FUNÇÃO PADRONIZADA
 		item.modulate.a = 1.0
+		_sync_quickbar()
 
 func swap_items(item1: Control, item2: Control, slot1: Panel, slot2: Panel):
 	if not item1 or not item2 or not slot1 or not slot2:
@@ -304,6 +337,8 @@ func swap_items(item1: Control, item2: Control, slot1: Panel, slot2: Panel):
 	# ✅ POSICIONAR CORRETAMENTE APÓS MOVER
 	_position_item_in_slot(item1, slot2)
 	_position_item_in_slot(item2, slot1)
+	
+	_sync_quickbar()
 
 func is_over_drop_area(pos: Vector2) -> bool:
 	if not drop_area:
@@ -315,36 +350,36 @@ func drop_item():
 	if dragged_item:
 		_log_debug("Item dropado: %s" % dragged_item.get_meta("item_name") if dragged_item.has_meta("item_name") else "Item")
 		dragged_item.queue_free()
+		_sync_quickbar()
 
 func drop_item_by_name(item_name: String) -> bool:
-	"""
-	Dropa um item específico do inventário (remove permanentemente).
-	:param item_name: Nome do item a ser dropado (ex: "Espada")
-	:return: true se dropado com sucesso, false se não encontrado
-	"""
-	# Procurar no inventário principal (grade de itens)
-	for slot in item_slots_grid.get_children():
-		var item_in_slot = find_item_in_slot(slot)
-		if item_in_slot and item_in_slot.has_meta("item_name"):
-			if item_in_slot.get_meta("item_name") == item_name:
-				# ✅ Item encontrado no inventário - remover e retornar
-				item_in_slot.queue_free()
-				_log_debug("Item dropado: %s" % item_name)
-				return true
+	_log_debug("🔍 Buscando item para dropar: %s" % item_name)
 	
-	# Procurar em slots de equipamento (caso queira permitir dropar equipados)
+	# Inventário
+	for i in range(item_slots_grid.get_child_count()):
+		var slot = item_slots_grid.get_child(i)
+		var item = find_item_in_slot(slot)
+		_log_debug("  Slot inventário %d: item = %s" % [i, item.get_meta("item_name", "SEM NOME") if item else "vazio"])
+		if item and item.get_meta("item_name", "") == item_name:
+			item.queue_free()
+			_sync_quickbar()
+			_log_debug("Item dropado do inventário: %s" % item_name)
+			return true
+
+	# Equipamento
+	var eq_names = ["helmet", "cape", "right", "left"]
 	var equipment_slots = [helmet_slot, cape_slot, right_hand_slot, left_hand_slot]
-	for slot in equipment_slots:
+	for i in range(equipment_slots.size()):
+		var slot = equipment_slots[i]
 		if slot:
-			var item_in_slot = find_item_in_slot(slot)
-			if item_in_slot and item_in_slot.has_meta("item_name"):
-				if item_in_slot.get_meta("item_name") == item_name:
-					# ✅ Item equipado encontrado - remover e retornar
-					item_in_slot.queue_free()
-					_log_debug("Item equipado dropado: %s" % item_name)
-					return true
-	
-	# Item não encontrado em lugar nenhum
+			var item = find_item_in_slot(slot)
+			_log_debug("  Slot equip %s: item = %s" % [eq_names[i], item.get_meta("item_name", "SEM NOME") if item else "vazio"])
+			if item and item.get_meta("item_name", "") == item_name:
+				item.queue_free()
+				_log_debug("Item dropado do equipamento: %s" % item_name)
+				return true
+
+	_log_debug("❌ Item não encontrado!")
 	_log_debug("Item não encontrado para dropar: %s" % item_name)
 	return false
 
@@ -371,6 +406,7 @@ func add_item_to_inventory(item_scene: PackedScene, item_name: String, item_type
 		if find_item_in_slot(slot) == null:
 			create_item_in_slot(slot, item_scene, item_name, item_type)
 			return true
+	_sync_quickbar()
 	return false
 
 func create_item_in_slot(slot: Panel, item_scene: PackedScene, item_name: String, item_type: String):
@@ -540,6 +576,7 @@ func equip_item(item_name: String, slot_type: String):
 	# Notificar o sistema de gameplay (ex: atualizar stats do jogador)
 	_on_item_equipped(item_name, slot_type)
 	
+	_sync_quickbar()
 	return true
 	
 func unequip_item(slot_type: String):
@@ -562,6 +599,7 @@ func unequip_item(slot_type: String):
 			# Notificar sistema de gameplay
 			_on_item_unequipped(equipped_item.get_meta("item_name"), slot_type)
 			
+			_sync_quickbar()
 			return true
 	
 	_log_debug("Inventário cheio! Não é possível desequipar item.")
@@ -588,6 +626,117 @@ func _on_item_unequipped(item_name: String, slot_type: String):
 	_log_debug("Desequipado: %s do slot %s" % [item_name, slot_type])
 	# Aqui você removeria efeitos do item
 	# Ex: get_tree().call_group("player", "remove_item_effect", item_name, slot_type)
+
+func _sync_quickbar():
+	# Limpar todos os slots do quickbar
+	for i in range(item_slots_grid_on.get_child_count()):
+		var slot = item_slots_grid_on.get_child(i)
+		if slot is Panel:
+			# Remove pelo nome (mais seguro)
+			var existing_copy = slot.find_child("QuickbarItemCopy", true, false)
+			if existing_copy:
+				existing_copy.queue_free()
+
+	# Preencher com base no inventário
+	var inventory_slots = item_slots_grid.get_children()
+	for i in range(min(9, inventory_slots.size())):
+		var source_slot = inventory_slots[i]
+		var target_slot = item_slots_grid_on.get_child(i) if i < item_slots_grid_on.get_child_count() else null
+		
+		if !target_slot or !(target_slot is Panel):
+			continue
+
+		var item_in_inventory = find_item_in_slot(source_slot)
+		if item_in_inventory:
+			var quickbar_item = _create_quickbar_item_copy(item_in_inventory)
+			target_slot.add_child(quickbar_item)
+			_position_item_in_slot(quickbar_item, target_slot)
+
+func _create_quickbar_item_copy(original_item: Control) -> Control:
+	if !original_item:
+		return null
+
+	# Criar uma cópia visual leve (não é o mesmo nó!)
+	var copy: Control = null
+
+	# Caso 1: é um TextureRect (ícone comum)
+	if original_item is TextureRect:
+		copy = TextureRect.new()
+		copy.name = "QuickbarItemCopy"  # ← NOME ÚNICO
+		copy.set_meta("is_quickbar_copy", true)  # mantém por compatibilidade
+		copy.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		copy.custom_minimum_size = Vector2(64, 64)
+		copy.size = Vector2(64, 64)
+		copy.texture = original_item.texture
+		copy.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		copy.expand_mode = TextureRect.EXPAND_FIT_WIDTH
+
+	# Caso 2: é um wrapper com um TextureRect ou Node2D dentro
+	else:
+		# Procurar o TextureRect ou ícone dentro
+		var icon_node = _find_icon_in_item(original_item)
+		if icon_node and icon_node is TextureRect:
+			copy = TextureRect.new()
+			copy.texture = icon_node.texture
+			copy.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			copy.expand_mode = TextureRect.EXPAND_FIT_WIDTH
+		else:
+			# Fallback: criar um ícone genérico (opcional)
+			copy = TextureRect.new()
+			copy.texture = _create_missing_texture(Vector2(64, 64))
+			copy.self_modulate = Color(0.7, 0.7, 0.7)
+
+	if copy:
+		copy.set_meta("is_quickbar_copy", true)
+		copy.mouse_filter = Control.MOUSE_FILTER_IGNORE  # Não deve ser clicável no quickbar
+		copy.custom_minimum_size = Vector2(64, 64)
+		copy.size = Vector2(64, 64)
+
+	return copy
+
+func _find_icon_in_item(item_node: Node) -> TextureRect:
+	if item_node is TextureRect:
+		return item_node
+	for child in item_node.get_children():
+		if child is TextureRect:
+			return child
+		# Recursivo (caso raro, mas seguro)
+		var nested = _find_icon_in_item(child)
+		if nested:
+			return nested
+	return null
+
+func select_slot(index: int):
+	if index < 0 or index >= item_slots.size() or item_slots.size() == 0:
+		return
+
+	# Remove destaque de TODOS os slots
+	for panel in item_slots:
+		panel.remove_theme_stylebox_override("panel")  # Remove qualquer override de estilo
+
+	# Cria um novo estilo de seleção (borda amarela)
+	var highlight_style = StyleBoxFlat.new()
+	highlight_style.bg_color = Color(0.1, 0.1, 0.1, 0.8)  # Cor de fundo sutil (opcional)
+	highlight_style.border_color = Color.YELLOW
+	highlight_style.border_width_left = 2
+	highlight_style.border_width_right = 2
+	highlight_style.border_width_top = 2
+	highlight_style.border_width_bottom = 2
+	highlight_style.content_margin_left = 2  # Ajuste fino para alinhar borda
+	highlight_style.content_margin_right = 2
+	highlight_style.content_margin_top = 2
+	highlight_style.content_margin_bottom = 2
+	highlight_style.draw_center = true  # Mantém o preenchimento do fundo
+
+	# Aplica o estilo APENAS ao slot selecionado
+	item_slots[index].add_theme_stylebox_override("panel", highlight_style)
+	selected_index = index
+
+func use_selected_item():
+	print("Item usado no slot: ", selected_index)
+	# Aqui você integra com seu sistema de inventário
+	# Exemplo: emitir um sinal ou chamar uma função do jogador
+	# get_parent().use_inventory_item(selected_index)
 
 func _log_debug(message: String):
 	"""Imprime mensagem de debug se habilitado"""

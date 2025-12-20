@@ -1362,7 +1362,6 @@ func action_pick_up_item():
 	
 	#animation_tree.set("PickUp", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 	
-		
 # Ações do player (Dropar item) *por enquanto dropa tudo sequencialmente
 func action_drop_item_call() -> void:
 	if not is_local_player:
