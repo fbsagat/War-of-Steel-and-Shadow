@@ -836,13 +836,32 @@ func _server_instantiate_round(match_data: Dictionary, round_node, players_node)
 		_spawn_player_on_server(player_data, spawn_data, players_node)
 	
 	# Cria câmera livre se não estiver em modo headless
-	if not ServerManager.is_headless:
+	if not is_headless:
 		var debug_cam = preload(ServerManager.server_camera).instantiate()
 		
 		players_node.add_child(debug_cam)
 		debug_cam.global_position = Vector3(0, 3, 5)  # X=0, Y=10 (altura), Z=15 (distância)
-	
-	_log_debug("✓ Rodada instanciada no servidor")
+	else:
+		# Se estiver em modo headless criar uma câmera dummy
+		var dummy_camera = Camera3D.new()
+		dummy_camera.name = "ServerCamera"
+		add_child(dummy_camera)
+		
+		# Posiciona em algum lugar (não importa muito)
+		dummy_camera.global_position = Vector3(0, 100, 0)
+		
+		# Define como câmera ativa
+		dummy_camera.current = true
+		
+		# Aguarda um frame para garantir que tudo está inicializado
+		await get_tree().process_frame
+		
+		var terrain_3d = round_node.get_node_or_null("Terrain3D")
+		
+		# Configura o Terrain3D para usar essa câmera
+		if terrain_3d:
+			terrain_3d.set_camera(dummy_camera)
+			_log_debug("✓ is_headless = false, terrain3D configurado com câmera dummy")
 
 func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, players_node):
 	"""

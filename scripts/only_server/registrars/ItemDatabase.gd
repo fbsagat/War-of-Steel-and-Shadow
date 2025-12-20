@@ -407,16 +407,16 @@ var is_loaded: bool = false
 # ═══════════════════════════════════════════════════════════════════════════
 
 func _ready():
-	# Detecta se é servidor
-	var args = OS.get_cmdline_args()
-	_is_server = "--server" in args
-	
 	# Carrega database automaticamente se configurado
 	if auto_load_on_ready:
 		load_database()
 
 ## Carrega o database do arquivo JSON
 func load_database() -> bool:
+	# Detecta se é servidor
+	var args = OS.get_cmdline_args()
+	_is_server = "--server" in args
+	
 	var start_time = Time.get_ticks_msec()
 	
 	if not _load_json_data():
