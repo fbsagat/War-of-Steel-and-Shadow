@@ -402,9 +402,7 @@ var material_items: Array = []
 var load_time: float = 0.0
 var is_loaded: bool = false
 
-# ═══════════════════════════════════════════════════════════════════════════
 # INICIALIZAÇÃO
-# ═══════════════════════════════════════════════════════════════════════════
 
 func _ready():
 	# Carrega database automaticamente se configurado

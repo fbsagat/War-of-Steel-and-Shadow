@@ -20,3 +20,8 @@ glow_enabled = true
 
 [node name="WorldEnvironment" type="WorldEnvironment"]
 environment = SubResource("Environment_17kia")
+
+[node name="Label" type="Label" parent="."]
+offset_right = 40.0
+offset_bottom = 23.0
+text = "Este WorldEnvironment serve para ser usado para criar icones do itens spawnables: Colocase como filho e eis a iluminação padrão para criar os prints deste item."
