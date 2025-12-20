@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3 uid="uid://3m24sag7gx5w"]
+[gd_scene load_steps=18 format=3 uid="uid://3m24sag7gx5w"]
 
 [ext_resource type="Terrain3DAssets" uid="uid://dal3jhw6241qg" path="res://demo/data/assets.tres" id="1_0rjur"]
 [ext_resource type="PackedScene" uid="uid://d3sr0a7dxfkr8" path="res://addons/terrain_3d/extras/particle_example/Terrain3DParticles.tscn" id="2_t70ke"]
@@ -6,6 +6,11 @@
 [ext_resource type="PackedScene" uid="uid://4fhmps0as4yb" path="res://scenes/static/arvore_1.tscn" id="4_xuisu"]
 [ext_resource type="PackedScene" uid="uid://hgkaleqxeujo" path="res://scenes/static/arvore_2.tscn" id="5_prcf3"]
 [ext_resource type="PackedScene" uid="uid://bbkexhq0m0ueo" path="res://scenes/static/arvore_3.tscn" id="6_1ice8"]
+[ext_resource type="PackedScene" uid="uid://c2bwrpol02yfw" path="res://models/VainerKit/stone_ground.tscn" id="7_mgaq5"]
+[ext_resource type="PackedScene" uid="uid://d34k8d0y7vk3b" path="res://models/VainerKit/stone_arc.tscn" id="8_rro5h"]
+[ext_resource type="PackedScene" uid="uid://x57b852buk6k" path="res://models/VainerKit/stone_brick_stairs.tscn" id="9_dxps6"]
+[ext_resource type="PackedScene" uid="uid://blch7pk3hv26u" path="res://models/VainerKit/stone_brick_wall.tscn" id="10_blrkw"]
+[ext_resource type="PackedScene" uid="uid://cxjgmxn0wye7i" path="res://models/VainerKit/wood_floor.tscn" id="11_tpv2i"]
 
 [sub_resource type="Gradient" id="Gradient_xuisu"]
 offsets = PackedFloat32Array(0.2, 1)
@@ -871,3 +876,26 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -62.6378, 2.0359497, 23.89807
 
 [node name="arvore_3" parent="." instance=ExtResource("6_1ice8")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -77.61543, 27.25246, -152.40535)
+
+[node name="Fort" type="Node" parent="."]
+
+[node name="Ground" parent="Fort" instance=ExtResource("7_mgaq5")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -120.947365, 4.213031, 13.364878)
+
+[node name="Arc" parent="Fort" instance=ExtResource("8_rro5h")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -120.82234, 4.52209, 6.7313075)
+
+[node name="Stairs" parent="Fort" instance=ExtResource("9_dxps6")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -135.36818, 3.877514, 6.485387)
+
+[node name="Wall" parent="Fort" instance=ExtResource("10_blrkw")]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -113.53083, 4.527263, 14.067444)
+
+[node name="Wall2" parent="Fort" instance=ExtResource("10_blrkw")]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -127.20183, 4.527263, 14.067444)
+
+[node name="Wall3" parent="Fort" instance=ExtResource("10_blrkw")]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -119.824135, 4.527263, 17.473585)
+
+[node name="Wood" parent="Fort" instance=ExtResource("11_tpv2i")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -120.88861, 16.320824, 14.621712)
