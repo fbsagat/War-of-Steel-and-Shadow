@@ -1,7 +1,8 @@
 [gd_scene load_steps=5 format=3 uid="uid://x57b852buk6k"]
 
-[ext_resource type="ArrayMesh" uid="uid://bnwv4kxqp1nx" path="res://models/Structures/Stone_wall/stone_brick_stair.obj" id="1_d331n"]
-[ext_resource type="Texture2D" uid="uid://i6husb7mbl3m" path="res://models/Structures/Stone_wall/stone_brick_wall_texture.png" id="2_13bh2"]
+[ext_resource type="ArrayMesh" uid="uid://cxip4te8p22t3" path="res://models/VainerKit/stone_brick_stair.obj" id="1_d331n"]
+[ext_resource type="Texture2D" uid="uid://wqde7e4gricf" path="res://models/VainerKit/stone_brick_wall_texture.png" id="2_13bh2"]
+
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_snfoq"]
 albedo_texture = ExtResource("2_13bh2")
