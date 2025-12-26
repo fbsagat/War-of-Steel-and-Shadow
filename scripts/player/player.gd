@@ -135,7 +135,7 @@ func _ready():
 	# visibilidade inicial (modelo)
 	if hide_itens_on_start:
 		_hide_all_model_items()
-
+	
 # Física geral
 func _physics_process(delta: float) -> void:
 	"""
@@ -210,6 +210,12 @@ func _physics_process(delta: float) -> void:
 
 func _process(_delta: float) -> void:
 	pass
+
+func connect_inventory_signals():
+	inventory.request_drop_item.connect(action_drop_item_call)
+	inventory.request_equip_item.connect(action_equip_item_call)
+	inventory.request_unequip_item.connect(action_unequip_item_call)
+	inventory.request_swap_items.connect(action_swap_items_call)
 
 func hitboxes_manager():
 	# Conecta automaticamente todos os hitboxes de ataque presentes no modelo
@@ -567,8 +573,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			action_stop_locking_call()
 		elif event.is_action_pressed("block_attack"):
 			action_block_attack_call()
-		elif event.is_action_pressed("drop"):
-			action_drop_item_call()
+		elif event.is_action_pressed("drop_test"):
+			handle_test_drop_item_call()
 	if event.is_action_pressed("ui_inventory"):
 		request_inventory_toggle()
 	if event.is_action_pressed("ui_cancel"):
@@ -579,13 +585,13 @@ func _unhandled_input(event: InputEvent) -> void:
 func request_inventory_toggle():
 	inventory_mode = not inventory_mode
 
-	if inventory_mode:
+	if inventory and inventory_mode:
 		# Mostrar inventário
 		inventory.show_inventory()
 		
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 		_log_debug("Inventário aberto.")
-	else:
+	elif inventory:
 		# Esconder inventário
 		inventory.hide_inventory()
 		
@@ -1327,16 +1333,25 @@ func handle_test_equip_inputs_call():
 		if mapped_id >= 1 and mapped_id <= 8:
 			# envia para o servidor (se conectado)
 			if NetworkManager and NetworkManager.is_connected:
-				NetworkManager.request_equip_item(player_id, mapped_id, true)
+				NetworkManager.request_trainer_spawn_item(player_id, mapped_id)
+
+# Ações do player (Dropar item)
+func handle_test_drop_item_call() -> void:
+	_log_debug("handle_test_drop_item_call")
+	if not is_local_player:
+		return
+		
+	if NetworkManager and NetworkManager.is_connected:
+		NetworkManager.handle_test_drop_item_call(player_id)
 
 # Executa quando o player equipa algum item / muda visual do modelo
-func apply_visual_equip_on_player_node(player_node, item_mapped_id):
+func apply_visual_equip_on_player_node(player_node, item_mapped_id, unnequip = false):
 	
 	animation_tree.set("PickUp", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 	
-	var item_node_link = item_database.get_item_by_id(item_mapped_id).model_node_link
+	var item_node_link = item_database.get_item_by_id(int(item_mapped_id)).model_node_link
 	
-	_item_model_change_visibility(player_node, item_node_link)
+	_item_model_change_visibility(player_node, item_node_link, unnequip)
 
 # Ações do player (Pegar item)
 func action_pick_up_item_call():
@@ -1362,24 +1377,50 @@ func action_pick_up_item():
 	
 	#animation_tree.set("PickUp", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 	
-# Ações do player (Dropar item) *por enquanto dropa tudo sequencialmente
-func action_drop_item_call() -> void:
+# Ações do player (Dropar item)
+func action_drop_item_call(obj_id) -> void:
+	print("action_drop_item_call: %s" % obj_id)
 	if not is_local_player:
 		return
+		
 	if NetworkManager and NetworkManager.is_connected:
-		NetworkManager.request_drop_item(player_id)
+		NetworkManager.request_drop_item(player_id, int(obj_id))
 		
 func execute_item_drop(player_node, item):
 	# Executa o drop do node do item
 	var item_node_link = item_database.get_item(item)["model_node_link"]
-		
+	
 	# Atualiza visibilidade do item no modelo (uma vez)
 	_item_model_change_visibility(player_node, item_node_link, false)
 	# Animação de drop
 	_execute_animation("Interact", "Common", "parameters/Interact/transition_request", "parameters/Interact_shot/request")
 
+func action_equip_item_call(item_id, slot_type):
+	print("action_equip_item_call: %s" % item_id)
+	if not is_local_player:
+		return
+		
+	if NetworkManager and NetworkManager.is_connected:
+		NetworkManager.request_equip_item(player_id, int(item_id), slot_type)
+
+func action_unequip_item_call(slot_type):
+	print("[111]action_unequip_item_call: %s" % slot_type)
+	if not is_local_player:
+		return
+		
+	if NetworkManager and NetworkManager.is_connected:
+		NetworkManager.request_unequip_item(player_id, slot_type)
+
+func action_swap_items_call(item_id_1: String, item_id_2: String, slot_type_1: String, slot_type_2: String):
+	print("request_swap_items_call: %s, %s" % [item_id_1, item_id_2])
+	if not is_local_player:
+		return
+		
+	if NetworkManager and NetworkManager.is_connected:
+		NetworkManager.request_swap_items(item_id_1, item_id_2, slot_type_1, slot_type_2)
+
 # Modifica a visibilidade do item na mão do modelo
-func _item_model_change_visibility(player_node, node_link: String, visible_ : bool = true):
+func _item_model_change_visibility(player_node, node_link: String, unnequip = false):
 	"""
 	Aplica visibilidade em um item específico através do node_link
 	Se visible = true, ESCONDE todos os outros itens no mesmo slot
@@ -1397,6 +1438,7 @@ func _item_model_change_visibility(player_node, node_link: String, visible_ : bo
 		Se visible=true, TODOS os filhos de "handslot_l" serão escondidos,
 		EXCETO "shield_2" que será mostrado
 		"""
+		
 	# VALIDAÇÃO: Verifica se node é válido
 	if not player_node or not is_instance_valid(player_node):
 		push_error("apply_item_visibility: node inválido ou null")
@@ -1411,31 +1453,31 @@ func _item_model_change_visibility(player_node, node_link: String, visible_ : bo
 		_log_debug("Caminho base: %s, caminho completo: %s/%s" % [player_node.get_path(), player_node.get_path(), node_link])
 		return false
 	
-	# Se visible = True: esconde outros imãos (outros itens no mesmo slot)
-	if visible_:
-		var parent_node = item_node.get_parent()
-		
-		if parent_node:
-			# Esconde todos os filhos do slot (ex: todos em "handslot_l")
-			for sibling in parent_node.get_children():
-				if sibling == item_node:
-					continue  # Pula o item atual (será mostrado depois)
-				
-				# Esconde o irmão
-				if sibling is CanvasItem:
-					sibling.visible = false
-				elif sibling is VisualInstance3D:
-					sibling.visible = false
-				elif sibling.has_method("set_visible"):
-					sibling.set_visible(false)
-				elif "visible" in sibling:
-					sibling.visible = false
-				
-				_log_debug("🚫_item_model_change_visibility: Escondendo irmão: %s" % sibling.name)
+	var parent_node = item_node.get_parent()
+	
+	if parent_node:
+		# Esconde todos os filhos do slot (ex: todos em "handslot_l")
+		for sibling in parent_node.get_children():
+			if sibling == item_node:
+				continue  # Pula o item atual (será mostrado depois)
+			
+			# Esconde o irmão
+			if sibling is CanvasItem:
+				sibling.visible = false
+			elif sibling is VisualInstance3D:
+				sibling.visible = false
+			elif sibling.has_method("set_visible"):
+				sibling.set_visible(false)
+			elif "visible" in sibling:
+				sibling.visible = false
+			
+			_log_debug("🚫_item_model_change_visibility: Escondendo irmão: %s" % sibling.name)
 	
 	# APLICA VISIBILIDADE NO ITEM ALVO
 	# Suporta Node3D, VisualInstance3D, MeshInstance3D, etc
 	var applied = false
+	
+	var visible_ = false if unnequip else true
 	
 	if item_node is CanvasItem:
 		item_node.visible = visible_

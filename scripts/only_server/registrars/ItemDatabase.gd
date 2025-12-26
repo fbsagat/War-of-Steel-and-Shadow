@@ -603,6 +603,11 @@ func get_item_by_id(id: int) -> ItemData:
 func item_exists(item_name: String) -> bool:
 	return items.has(item_name)
 
+## Verifica se item existe no database
+func item_exists_by_id(item_id: int) -> bool:
+	var item_name = get_item_by_id(item_id)["name"]
+	return items.has(item_name)
+
 ## Retorna array com nomes de todos os itens
 func get_all_item_names() -> Array:
 	return items.keys()
