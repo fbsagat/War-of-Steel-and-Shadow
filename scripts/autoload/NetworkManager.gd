@@ -135,7 +135,7 @@ func is_rpc_allowed(peer_id: int) -> bool:
 	var last_rpc_time = _player_rpc_timestamps[peer_id]
 	if current_time - last_rpc_time < RPC_RATE_LIMIT_SEC:
 		# Rate limited - ignorar esta RPC
-		print("RPC rate limited para peer %d: %.3fs desde última" % [peer_id, current_time - last_rpc_time])
+		_log_debug("RPC rate limited para peer %d: %.3fs desde última" % [peer_id, current_time - last_rpc_time])
 		return false
 	
 	# Atualizar timestamp
@@ -811,7 +811,7 @@ func local_unequip_item(item_id, slot):
 		return
 		
 	if GameManager and GameManager.has_method("unequip_item"):
-		GameManager.unequip_item(item_id, slot)
+		GameManager.unequip_item(int(item_id), slot)
 
 # Troca item no inventário do player
 @rpc("authority", "call_remote", "reliable")

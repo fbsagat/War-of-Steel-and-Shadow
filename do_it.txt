@@ -50,20 +50,9 @@
 51. Resolver problema de itens entrando no chão quando player pula em cima deles.
 52. 	Ok. O player está trocando itens ao dropar, diferente dos que estão na mão dele.
 53. Criar um buffer de tranferencias de itens entre slots para o inventory_menu, previne bugs.
-
-
-Implementações passo a passo para o sistema de inventários funcionar plenamente:
-	Ajustar o sistema do trainer para apenas pedir pro servidor dropar os itens na frene do player
-	 e o servidor cria o objeto com o object manager.
-	Ajustar o pedido de drop na tecla q, para que este pedido envie as informações do objeto para o
-	 servidor(id, nome e etc), portanto o objeto obrigatoriamente já deve estar em posse do player.
-	Ajustar inventory em player registry e no game manager local (local_inventory) para armazenar
-	 não apenas o nome do item, mas também o seu id. I InventoryManager deve definir separadamente spawn
-	para itens novos criados e spawn de itens que estão apenas armazenados no inventário do player, de forma
-	que permaneçam configurações de itens criados pelo server, mesmo entrando em inventários e saindo, até 
-	sua destruição. Portanto deve-se configurar uma variável para armazenar itens e seus respectivos players quando
-	estiverem em seus inventários, e depois retornar para spawned_objects normalmente com suas configurações.
-	Agora sim o inventory_menu vai armazenas itens corretamente.
+54. Implementações passo a passo para o sistema de inventários funcionar plenamente:
+	Fata apenas, parei nisso: Quando o player pede pra dropar um item que está equipado, arrastando 
+	ele no inventário menu diretamente do quadro de equipamentos para drop area, desequipar primeiro, depois dropar.
 
 
 Adicionar no modelo do player:

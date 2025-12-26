@@ -81,7 +81,7 @@ signal returned_to_room(room_data: Dictionary)
 signal item_added(object_id: String, item_name: String, item_type: String, slot_id: String, icon_path: String)
 signal item_removed(item_id: String)
 signal item_equipped(item_id: String, slot_type: String)
-signal item_unequipped(item_id: String, target_inventory_slot: int)
+signal item_unequipped(item_id: String)
 signal items_swapped(item_id_1: String, item_id_2: String)
 
 # ===== FUNÇÕES DE INICIALIZAÇÃO =====

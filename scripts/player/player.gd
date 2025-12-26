@@ -1379,7 +1379,6 @@ func action_pick_up_item():
 	
 # Ações do player (Dropar item)
 func action_drop_item_call(obj_id) -> void:
-	print("action_drop_item_call: %s" % obj_id)
 	if not is_local_player:
 		return
 		
@@ -1396,7 +1395,6 @@ func execute_item_drop(player_node, item):
 	_execute_animation("Interact", "Common", "parameters/Interact/transition_request", "parameters/Interact_shot/request")
 
 func action_equip_item_call(item_id, slot_type):
-	print("action_equip_item_call: %s" % item_id)
 	if not is_local_player:
 		return
 		
@@ -1404,7 +1402,6 @@ func action_equip_item_call(item_id, slot_type):
 		NetworkManager.request_equip_item(player_id, int(item_id), slot_type)
 
 func action_unequip_item_call(slot_type):
-	print("[111]action_unequip_item_call: %s" % slot_type)
 	if not is_local_player:
 		return
 		
@@ -1412,7 +1409,6 @@ func action_unequip_item_call(slot_type):
 		NetworkManager.request_unequip_item(player_id, slot_type)
 
 func action_swap_items_call(item_id_1: String, item_id_2: String, slot_type_1: String, slot_type_2: String):
-	print("request_swap_items_call: %s, %s" % [item_id_1, item_id_2])
 	if not is_local_player:
 		return
 		

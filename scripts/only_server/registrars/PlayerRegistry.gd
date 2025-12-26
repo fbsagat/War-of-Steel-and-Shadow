@@ -383,7 +383,6 @@ func remove_item_from_inventory(round_id: int, player_id: int, object_id: int) -
 			break
 	
 	if idx == -1:
-		print("inventory2: ", inventory["inventory"])
 		_log_debug("⚠ Item com object_id %d não encontrado no inventário" % object_id)
 		return false
 	

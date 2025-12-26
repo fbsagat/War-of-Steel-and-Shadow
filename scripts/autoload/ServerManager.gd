@@ -1261,14 +1261,7 @@ func _server_validate_unequip_item(requesting_player_id: int, slot_type: String)
 	var player = player_registry.get_player(requesting_player_id)
 	var round_ = round_registry.get_round_by_player_id(player["id"])
 	var item_ = player_registry.get_equipped_item_in_slot(round_["round_id"], requesting_player_id, slot_type)
-	
-	
-	# verificar
-	print("[111], ", item_)
-	
-	
-	
-	
+
 	var item_id = item_["item_id"]
 	var players_node = round_["round_node"].get_node_or_null("Players")
 	var item = item_database.get_item_by_id(int(item_id))
@@ -1354,15 +1347,16 @@ func _server_validate_drop_item(requesting_player_id: int, obj_id: int):
 	IMPORTANTE: USA ESTADO DO SERVIDOR, não do cliente"""
 	
 	var round_ = round_registry.get_round_by_player_id(requesting_player_id)
-	var item_id = int(player_registry.get_inventory_items(round_["round_id"], requesting_player_id)[0]["item_id"])
-	var item_ = item_database.get_item_by_id(item_id)
-	
-	_log_debug("[ITEM]📦 Servidor vai validar pedido de drop de item ObjId: %d tipo %s do player ID %s" % [obj_id, item_["name"], requesting_player_id])
 	
 	# Se o player não tiver nenhum item no inventário para dropar, não faz nada
 	_log_debug("Player tem algum item para dropar?: %s" % player_registry.has_any_item(round_["round_id"], requesting_player_id))
 	if not player_registry.has_any_item(round_["round_id"], requesting_player_id):
 		return
+	
+	var item_id = int(player_registry.get_inventory_items(round_["round_id"], requesting_player_id)[0]["item_id"])
+	var item_ = item_database.get_item_by_id(item_id)
+	
+	_log_debug("[ITEM]📦 Servidor vai validar pedido de drop de item ObjId: %d tipo %s do player ID %s" % [obj_id, item_["name"], requesting_player_id])
 	
 	var player = player_registry.get_player(requesting_player_id)
 	

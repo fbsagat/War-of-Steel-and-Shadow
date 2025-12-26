@@ -353,7 +353,6 @@ func try_end_drag(mouse_pos: Vector2):
 	if is_over_drop_area(mouse_pos):
 		_log_debug("🗑️ Item dropado na área de lixeira: %s" % dragged_item_id)
 		request_drop_item.emit(dragged_item_id)
-		print("[TEST_INV_MEN]request_drop_item: ", dragged_item_id)
 		cleanup_drag()
 		# ✅ Sincronizar após drop
 		await get_tree().create_timer(0.05).timeout
@@ -421,17 +420,27 @@ func _handle_drop_in_slot(target_slot: Panel):
 	if target_is_equipment and !original_is_equipment:
 		_log_debug("⚔️ Equipando: %s → %s" % [dragged_item_id, target_slot_type])
 		request_equip_item.emit(dragged_item_id, target_slot_type)
-		print("[TEST_INV_MEN]request_equip_item: ", dragged_item_id, target_slot_type)
 		return
 	
 	# =========================================================================
 	# AÇÃO 3: DESEQUIPAR (mover de equipamento para inventário)
 	# =========================================================================
 	if !target_is_equipment and original_is_equipment:
+		_log_debug("🎒 Desequipando visualmente: %s → slot sob o mouse" % dragged_item_id)
+	
+		# ✅ MOVER ITEM LOCALMENTE PARA O SLOT ALVO (sem RPC)
+		dragged_item.get_parent().remove_child(dragged_item)
+		target_slot.add_child(dragged_item)
+		_position_item_in_slot(dragged_item, target_slot)
+		dragged_item.modulate.a = 1.0
+		
 		var original_eq_type = original_slot.get_meta("slot_type", "")
-		_log_debug("🎒 Desequipando: %s de %s" % [dragged_item_id, original_eq_type])
 		request_unequip_item.emit(original_eq_type)
-		print("[TEST_INV_MEN]request_unequip_item: ", original_eq_type)
+		
+		# ✅ Forçar sincronização imediata do quickbar
+		_sync_quickbar()
+		
+		cleanup_drag()
 		return
 	
 	# =========================================================================
@@ -451,12 +460,9 @@ func _handle_drop_in_slot(target_slot: Panel):
 		# Desequipar do slot original primeiro
 		var original_eq_type = original_slot.get_meta("slot_type", "")
 		request_unequip_item.emit(original_eq_type)
-		print("[TEST_INV_MEN]Movendo entre equipamentos")
-		print("[TEST_INV_MEN]request_unequip_item: ", original_eq_type)
 		# Aguardar um frame e então equipar no novo slot
 		await get_tree().process_frame
 		request_equip_item.emit(dragged_item_id, target_slot_type)
-		print("[TEST_INV_MEN]request_equip_item: ", dragged_item_id, target_slot_type)
 		return
 	
 	# Caso nenhuma ação seja aplicável, cancela
@@ -582,7 +588,6 @@ func drop_selected_quickbar_item():
 		var item_id = item.get_meta("item_id", "")
 		if item_id != "":
 			_log_debug("🗑️ Dropando item do quickbar: %s" % item_id)
-			print("[TEST_INV_MEN]request_drop_item: ", item_id)
 			request_drop_item.emit(item_id)
 
 func use_selected_item():
@@ -644,12 +649,12 @@ func on_server_item_equipped(item_id: String, slot_type: String):
 	
 	_log_debug("✅ Item equipado visualmente: %s" % item_id)
 
-func on_server_item_unequipped(item_id: String, target_inventory_slot: int):
+func on_server_item_unequipped(item_id: String):
 	"""Resposta do servidor: desequipa item visualmente"""
-	_log_debug("🎒 Servidor confirmou desequipamento: %s para slot %d" % [item_id, target_inventory_slot])
+	_log_debug("🎒 Servidor confirmou desequipamento: %s para slot %d" % item_id)
 	
 	var item = _find_item_by_id(item_id)
-	var inv_slot = item_slots_grid.get_child(target_inventory_slot) if target_inventory_slot < item_slots_grid.get_child_count() else null
+	var inv_slot = null
 	
 	if item and inv_slot:
 		item.get_parent().remove_child(item)
