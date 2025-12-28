@@ -629,14 +629,14 @@ func has_item_in_inventory(round_id: int, player_id: int, item_name: String) -> 
 			return true
 	return false
 
-func is_item_equipped(round_id: int, player_id: int, item_name: String) -> bool:
+func is_item_equipped(round_id: int, player_id: int, object_id: String) -> bool:
 	"""Verifica se item está equipado"""
 	var inventory = _get_player_inventory(round_id, player_id)
 	if inventory.is_empty():
 		return false
 	
 	for item_data in inventory["equipped"].values():
-		if not item_data.is_empty() and item_data["item_name"] == item_name:
+		if not item_data.is_empty() and item_data["object_id"] == int(object_id):
 			return true
 	return false
 

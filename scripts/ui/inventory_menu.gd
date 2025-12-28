@@ -55,9 +55,9 @@ signal request_swap_items(item_id_1: String, item_id_2: String, slot_type_1: Str
 # =============================================================================
 
 var max_health = 100.0
-var current_health = 85.0
+var current_health = 100.0
 var max_stamina = 100.0
-var current_stamina = 60.0
+var current_stamina = 100.0
 
 # =============================================================================
 # SISTEMA DE DRAG & DROP (APENAS VISUAL - NÃO ALTERA ESTADO)
@@ -469,7 +469,7 @@ func _handle_drop_in_slot(target_slot: Panel):
 	_log_debug("❌ Nenhuma ação aplicável")
 	dragged_item.modulate.a = 1.0
 
-func _local_move_item(item: Control, from_slot: Panel, to_slot: Panel):
+func _local_move_item(item: Control, _from_slot: Panel, to_slot: Panel):
 	"""Move item localmente (sem enviar ao servidor)"""
 	item.get_parent().remove_child(item)
 	to_slot.add_child(item)
@@ -651,7 +651,8 @@ func on_server_item_equipped(item_id: String, slot_type: String):
 
 func on_server_item_unequipped(item_id: String):
 	"""Resposta do servidor: desequipa item visualmente"""
-	_log_debug("🎒 Servidor confirmou desequipamento: %s para slot %d" % item_id)
+
+	_log_debug("🎒 Servidor confirmou desequipamento: %s" % item_id)
 	
 	var item = _find_item_by_id(item_id)
 	var inv_slot = null
