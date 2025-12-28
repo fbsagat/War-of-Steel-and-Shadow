@@ -777,9 +777,11 @@ func has_shield_equipped(round_id: int, player_id: int) -> bool:
 	if hand_left_data.is_empty():
 		return false
 	
-	var hand_left_name = hand_left_data["item_name"]
-	var item = item_database.get_item(hand_left_name).to_dictionary()
-	return item["function"] == "defense"
+	if hand_left_data.has("item_id"):
+		var item_id = hand_left_data["item_id"]
+		var item = item_database.get_item_by_id(int(item_id)).to_dictionary()
+		return item["function"] == "defense"
+	return false
 	
 func count_items_of_type(round_id: int, player_id: int, item_type: String) -> int:
 	"""Conta quantos itens de um tipo específico o jogador possui"""

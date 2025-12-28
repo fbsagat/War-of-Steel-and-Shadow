@@ -1169,25 +1169,28 @@ func action_sword_attack_call():
 		return
 	
 	# Verificação local: Apenas atacar se estiver com uma arma na mão direita
-	var item_equipado_nome = GameManager.local_inventory["equipped"]["hand-right"]
-	if not item_equipado_nome:
-		return
+	var hand_right = GameManager.local_inventory["equipped"]["hand-right"]
+	if hand_right.has("item_id"):
+		var item_id = hand_right["item_id"]
+		var item_equipado = item_database.get_item_by_id(int(item_id)).to_dictionary()
+		if not item_equipado:
+			return
 		
-	# Verificação local: Apenas atacar se for uma arma
-	if item_database.get_item(item_equipado_nome)["category"] != "weapon":
-		return
+		# Verificação local: Apenas atacar se for item de categoria weapon, (uma arma)
+		if item_equipado["category"] != "weapon":
+			return
 	
-	# Sincroniza ataque pela rede (Reliable = Garantido)
-	if NetworkManager and NetworkManager.is_connected:
-		var anim_name = _determine_attack_from_input()
-		NetworkManager.send_player_action(player_id, "attack", item_equipado_nome, anim_name)
-		
-		# executa animação localmente
-		var anim_length = _execute_animation(anim_name, "Attack", "parameters/sword_attacks/transition_request",
-		"parameters/Attack/request")
-		
-		# Só local aqui: Pode atacar novamente só depois que acaba o tempo do ataque atual
-		_on_attack_timer_timeout(anim_length)
+		# Sincroniza ataque pela rede (Reliable = Garantido)
+		if NetworkManager and NetworkManager.is_connected:
+			var anim_name = _determine_attack_from_input()
+			NetworkManager.send_player_action(player_id, "attack", item_equipado["name"], anim_name)
+			
+			# executa animação localmente
+			var anim_length = _execute_animation(anim_name, "Attack", "parameters/sword_attacks/transition_request",
+			"parameters/Attack/request")
+			
+			# Só local aqui: Pode atacar novamente só depois que acaba o tempo do ataque atual
+			_on_attack_timer_timeout(anim_length)
 
 func action_block_attack_call():
 	"""Executa e sincroniza ataque com escudo"""
@@ -1195,27 +1198,30 @@ func action_block_attack_call():
 	# Apenas jogador local pede para atacar com escudo
 	if not is_local_player:
 		return
-		
-	var item_equipado_nome = GameManager.local_inventory["equipped"]["hand-left"]
-	# Verificação local: Apenas atacar se estiver com um escudo na mão esquerda
-	if not item_equipado_nome:
-		return
-		
-	# Verificação local: Apenas atacar se for um escudo
-	if item_database.get_item(item_equipado_nome)["function"] != "defense":
-		return
-		
-	if not is_block_attacking and is_defending:
-		is_block_attacking = true
-		
-		var anim_time = _execute_animation("Block_Attack", "Attack", 
-		"parameters/sword_attacks/transition_request", "parameters/Attack/request")
-		
-		_on_block_attack_timer_timeout(anim_time * 0.85)
 	
-		# Sincroniza defesa (Reliable)
-		if NetworkManager and NetworkManager.is_connected:
-			NetworkManager.send_player_action(player_id, "block_attack", item_equipado_nome, "Block_Attack")
+	# Verificação local: Apenas atacar se estiver com um escudo na mão esquerda
+	var hand_left = GameManager.local_inventory["equipped"]["hand-left"]
+	if hand_left.has("item_id"):
+		var item_id = hand_left["item_id"]
+		var item_equipado = item_database.get_item_by_id(int(item_id)).to_dictionary()
+		if not item_equipado:
+			return
+		
+		# Verificação local: Apenas atacar se for um item categoria defense (escudo)
+		if item_equipado["category"] != "defense":
+			return
+		
+		if not is_block_attacking and is_defending:
+			is_block_attacking = true
+			
+			var anim_time = _execute_animation("Block_Attack", "Attack", 
+			"parameters/sword_attacks/transition_request", "parameters/Attack/request")
+			
+			_on_block_attack_timer_timeout(anim_time * 0.85)
+		
+			# Sincroniza defesa (Reliable)
+			if NetworkManager and NetworkManager.is_connected:
+				NetworkManager.send_player_action(player_id, "block_attack", item_equipado["name"], "Block_Attack")
 
 func action_lock_call():
 	"""Executa e sincroniza defesa"""
@@ -1227,9 +1233,17 @@ func action_lock_call():
 	# Ativa o modo strafe sempre
 	camera_strafe_mode(true)
 	
-	# Local: Apenas defender se tem um escudo
-	var item_equipado_nome = GameManager.local_inventory["equipped"]["hand-left"]
-	if item_equipado_nome and item_database.get_item(item_equipado_nome)["function"] == "defense":
+	# Verificação local: Apenas defender se tem um escudo
+	var hand_left = GameManager.local_inventory["equipped"]["hand-left"]
+	if hand_left.has("item_id"):
+		var item_id = hand_left["item_id"]
+		var item_equipado = item_database.get_item_by_id(int(item_id)).to_dictionary()
+		if not item_equipado:
+			return
+		
+		# Verificação local: Apenas atacar se for um item categoria defense (escudo)
+		if item_equipado["function"] != "defense":
+			return
 		
 		# Animação de defesa com escudo
 		animation_tree.set("parameters/Blocking/blend_amount", 1.0)

@@ -1230,7 +1230,7 @@ func _server_validate_equip_item(requesting_player_id: int, object_id: int, _tar
 	if not player_registry.is_slot_empty(round_["round_id"], player['id'], item_slot):
 		# Dropar o item anterior
 		var item_anterior = player_registry.get_equipped_item_in_slot(round_["round_id"], player['id'], item_slot)
-		var item_ant_id = item_database.get_item(item_anterior)["id"]
+		#var item_ant_id = item_database.get_item(item_anterior)["id"]
 		#drop_item(round_["round_id"], player['id'], item_ant_id)
 	
 	# Add no inventário
