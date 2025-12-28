@@ -197,7 +197,7 @@ func collect(collector_id: int) -> bool:
 
 func _notify_collected(collector_id: int):
 	# Adiciona ao inventário
-	ServerManager.player_registry.add_item_to_inventory(round_id, collector_id, item_name)
+	#ServerManager.player_registry.add_item_to_inventory(round_id, collector_id, item_name)
 	_log_debug("✓ Item coletado por player %d" % collector_id)
 	
 	# Remove do servidor

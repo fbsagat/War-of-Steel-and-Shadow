@@ -1,6 +1,0 @@
-[gd_scene load_steps=2 format=3 uid="uid://c6nucxbbgb4wx"]
-
-[sub_resource type="Environment" id="Environment_bwpn6"]
-
-[node name="server_environment" type="WorldEnvironment"]
-environment = SubResource("Environment_bwpn6")

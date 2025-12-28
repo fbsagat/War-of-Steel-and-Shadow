@@ -13,7 +13,7 @@ class_name PlayerRegistry
 # ===== CONFIGURAÇÕES =====
 
 @export var debug_mode: bool = true
-@export var max_inventory_slots: int = 20  # Limite de itens por jogador
+@export var max_inventory_slots: int = 9 # Limite de itens por jogador
 
 # ===== REGISTROS (Injetados pelo ServerManager) =====
 
@@ -50,12 +50,12 @@ signal player_joined_round(peer_id: int, round_id: int)
 signal player_left_round(peer_id: int, round_id: int)
 
 # --- Sinais de Inventário ---
-signal item_added_to_inventory(round_id: int, player_id: int, item_name: String)
-signal item_removed_from_inventory(round_id: int, player_id: int, item_name: String)
-signal item_equipped(round_id: int, player_id: int, item_name: String, slot: String)
-signal item_unequipped(round_id: int, player_id: int, item_name: String, slot: String)
-signal inventory_full(round_id: int, player_id: int)
-signal item_swapped(round_id: int, player_id: int, old_item: String, new_item: String, slot: String)
+#signal item_added_to_inventory(round_id: int, player_id: int, item_name: String)
+#signal item_removed_from_inventory(round_id: int, player_id: int, item_name: String)
+#signal item_equipped(round_id: int, player_id: int, item_name: String, slot: String)
+#signal item_unequipped(round_id: int, player_id: int, item_name: String, slot: String)
+#signal inventory_full(round_id: int, player_id: int)
+#signal item_swapped(round_id: int, player_id: int, old_item: String, new_item: String, slot: String)
 
 # ===== ESTRUTURAS DE DADOS =====
 
@@ -72,19 +72,13 @@ signal item_swapped(round_id: int, player_id: int, old_item: String, new_item: S
 
 ## InventoryData:
 ## {
-##   "inventory": Array[String],  # Lista de item_names
-##   "equipped": {                 # Itens equipados por slot
-##     "hand-right": String,
-##     "hand-left": String,
-##     "head": String,
-##     "body": String,
-##     "back": String
-##   },
-##   "stats": {
-##     "items_collected": int,
-##     "items_used": int,
-##     "items_dropped": int,
-##     "items_equipped": int
+##   "inventory": Array[Dictionary],  # Lista de {item_id: String, object_id: int}
+##   "equipped": {                     # Itens equipados por slot
+##     "hand-right": Dictionary,       # {item_name: String, item_id: String, object_id: int}
+##     "hand-left": Dictionary,
+##     "head": Dictionary,
+##     "body": Dictionary,
+##     "back": Dictionary
 ##   }
 ## }
 
@@ -332,24 +326,18 @@ func init_player_inventory(round_id: int, player_id: int) -> bool:
 	player_inventories[round_id][player_id] = {
 		"inventory": [],
 		"equipped": {
-			"hand-right": "",
-			"hand-left": "",
-			"head": "",
-			"body": "",
-			"back": ""
-		},
-		"stats": {
-			"items_collected": 0,
-			"items_used": 0,
-			"items_dropped": 0,
-			"items_equipped": 0
+			"hand-right": {},
+			"hand-left": {},
+			"head": {},
+			"body": {},
+			"back": {}
 		}
 	}
 	
 	_log_debug("✓ Inventário inicializado: Player %d na rodada %d" % [player_id, round_id])
 	return true
 
-func add_item_to_inventory(round_id: int, player_id: int, item_name: String) -> bool:
+func add_item_to_inventory(round_id: int, player_id: int, item_id: String, object_id: int) -> bool:
 	"""Adiciona item ao inventário do jogador"""
 	var inventory = _get_player_inventory(round_id, player_id)
 	if inventory.is_empty():
@@ -358,48 +346,59 @@ func add_item_to_inventory(round_id: int, player_id: int, item_name: String) -> 
 	
 	if inventory["inventory"].size() >= max_inventory_slots:
 		_log_debug("⚠ Inventário cheio: Player %d" % player_id)
-		inventory_full.emit(round_id, player_id)
+		#inventory_full.emit(round_id, player_id)
 		return false
 	
 	# Valida item no ItemDatabase se disponível
-	if item_database and not item_database.item_exists(item_name):
-		push_error("PlayerRegistry: Item inválido: %s" % item_name)
+	if item_database and not item_database.item_exists_by_id(int(item_id)):
+		push_error("PlayerRegistry: Item inválido: %s" % item_id)
 		return false
 	
-	inventory["inventory"].append(item_name)
-	inventory["stats"]["items_collected"] += 1
+	var item_name = item_database.get_item_by_id(int(item_id)).to_dictionary()['name']
+	var item_data = {
+		"item_id": item_id,
+		"object_id": object_id
+	}
 	
-	_log_debug("✓ Item adicionado: %s → Player %d (Rodada %d)" % [item_name, player_id, round_id])
-	item_added_to_inventory.emit(round_id, player_id, item_name)
+	inventory["inventory"].append(item_data)
+	
+	_log_debug("✓ Item adicionado: %s (ID: %s, Object: %d) → Player %d (Rodada %d)" % [item_name, item_id, object_id, player_id, round_id])
+	#item_added_to_inventory.emit(round_id, player_id, item_name)
 	
 	# Atualizar o do player local também via rpc
-	NetworkManager.rpc_id(player_id, "local_add_item_to_inventory", item_name)
+	NetworkManager.rpc_id(player_id, "local_add_item_to_inventory", item_id, object_id)
 	
 	return true
 
-func remove_item_from_inventory(round_id: int, player_id: int, item_name: String) -> bool:
-	"""Remove item do inventário do jogador"""
+func remove_item_from_inventory(round_id: int, player_id: int, object_id: int) -> bool:
+	"""Remove item do inventário pelo object_id"""
 	var inventory = _get_player_inventory(round_id, player_id)
 	if inventory.is_empty():
 		return false
 	
-	var idx = inventory["inventory"].find(item_name)
+	var idx = -1
+	for i in range(inventory["inventory"].size()):
+		if inventory["inventory"][i]["object_id"] == object_id:
+			idx = i
+			break
+	
 	if idx == -1:
-		_log_debug("⚠ Item não encontrado no inventário: %s" % item_name)
+		_log_debug("⚠ Item com object_id %d não encontrado no inventário" % object_id)
 		return false
 	
+	var item_id = inventory["inventory"][idx]["item_id"]
+	var item_name = item_database.get_item_by_id(int(item_id))["name"]
 	inventory["inventory"].remove_at(idx)
-	inventory["stats"]["items_used"] += 1
 	
-	_log_debug("✓ Item removido: %s de Player %d (Rodada %d)" % [item_name, player_id, round_id])
-	item_removed_from_inventory.emit(round_id, player_id, item_name)
+	_log_debug("✓ Item removido por object_id: %d (%s) de Player %d (Rodada %d)" % [object_id, item_name, player_id, round_id])
+	#item_removed_from_inventory.emit(round_id, player_id, item_name)
 	
 	# Atualizar o do player local também via rpc
-	NetworkManager.rpc_id(player_id, "local_remove_item_from_inventory", item_name)
+	NetworkManager.rpc_id(player_id, "local_remove_item_from_inventory", object_id)
 	
 	return true
 
-func equip_item(round_id: int, player_id: int, item_name: String, slot: String = "") -> bool:
+func equip_item(round_id: int, player_id: int, item_name: String, object_id, slot: String = "") -> bool:
 	"""
 	Equipa item em um slot (detecta automaticamente se não especificado)
 	Slots válidos: hand-right, hand-left, head, body, back
@@ -408,8 +407,16 @@ func equip_item(round_id: int, player_id: int, item_name: String, slot: String =
 	if inventory.is_empty():
 		return false
 	
-	# Verifica se item está no inventário
-	if item_name not in inventory["inventory"]:
+	# Procura o item no inventário
+	var item_data: Dictionary = {}
+	var item_idx = -1
+	for i in range(inventory["inventory"].size()):
+		if inventory["inventory"][i]["object_id"] == object_id:
+			item_data = inventory["inventory"][i]
+			item_idx = i
+			break
+	
+	if item_data.is_empty():
 		_log_debug("⚠ Item não está no inventário: %s" % item_name)
 		return false
 	
@@ -432,24 +439,25 @@ func equip_item(round_id: int, player_id: int, item_name: String, slot: String =
 		return false
 	
 	# Desequipa item atual se houver
-	var current_item = inventory["equipped"][slot]
-	if not current_item.is_empty():
+	if not inventory["equipped"][slot].is_empty():
 		unequip_item(round_id, player_id, slot)
 	
 	# Equipa novo item
-	inventory["equipped"][slot] = item_name
-	inventory["stats"]["items_equipped"] += 1
+	inventory["equipped"][slot] = item_data
+	
+	# Remove do inventário
+	inventory["inventory"].remove_at(item_idx)
 	
 	_log_debug("✓ Item equipado: %s em %s (Player %d, Rodada %d)" % [item_name, slot, player_id, round_id])
-	item_equipped.emit(round_id, player_id, item_name, slot)
+	#item_equipped.emit(round_id, player_id, item_name, slot)
 		
 	# Atualizar o do player local também via rpc
-	NetworkManager.rpc_id(player_id, "local_equip_item", item_name, slot)
+	NetworkManager.rpc_id(player_id, "local_equip_item", item_name, object_id, slot)
 	
 	return true
 
 func unequip_item(round_id: int, player_id: int, slot: String) -> bool:
-	"""Desequipa item de um slot"""
+	"""Desequipa item de um slot e retorna ao inventário"""
 	var inventory = _get_player_inventory(round_id, player_id)
 	if inventory.is_empty():
 		return false
@@ -458,17 +466,29 @@ func unequip_item(round_id: int, player_id: int, slot: String) -> bool:
 		push_error("PlayerRegistry: Slot inválido: %s" % slot)
 		return false
 	
-	var item_name = inventory["equipped"][slot]
-	if item_name.is_empty():
+	var item_data = inventory["equipped"][slot]
+	if item_data.is_empty():
 		return false
 	
-	inventory["equipped"][slot] = ""
+	# Verifica se há espaço no inventário
+	if inventory["inventory"].size() >= max_inventory_slots:
+		_log_debug("⚠ Inventário cheio, não pode desequipar item")
+		#inventory_full.emit(round_id, player_id)
+		return false
+	
+	var item_name = item_database.get_item_by_id(int(item_data["item_id"]))["name"]
+	
+	# Adiciona de volta ao inventário
+	inventory["inventory"].append(item_data)
+	
+	# Limpa slot
+	inventory["equipped"][slot] = {}
 	
 	_log_debug("✓ Item desequipado: %s de %s (Player %d, Rodada %d)" % [item_name, slot, player_id, round_id])
-	item_unequipped.emit(round_id, player_id, item_name, slot)
+	#item_unequipped.emit(round_id, player_id, item_name, slot)
 		
 	# Atualizar o do player local também via rpc
-	NetworkManager.rpc_id(player_id, "local_unequip_item", slot)
+	NetworkManager.rpc_id(player_id, "local_unequip_item", item_data["item_id"], slot)
 	
 	return true
 
@@ -488,66 +508,23 @@ func swap_equipped_item(round_id: int, player_id: int, new_item: String, slot: S
 		if slot.is_empty():
 			return false
 	
-	var old_item = inventory["equipped"][slot]
+	var old_item_data = inventory["equipped"][slot]
+	var old_item = old_item_data.get("item_name", "") if not old_item_data.is_empty() else ""
 	
 	# Desequipa item atual (se houver)
 	if not old_item.is_empty():
-		unequip_item(round_id, player_id, slot)
+		if not unequip_item(round_id, player_id, slot):
+			return false
 	
 	# Equipa novo item
 	if equip_item(round_id, player_id, new_item, slot):
-		if not old_item.is_empty():
-			item_swapped.emit(round_id, player_id, old_item, new_item, slot)
-		return true
-		
-	# Atualizar o do player local também via rpc
-	NetworkManager.rpc_id(player_id, "local_swap_equipped_item", new_item, slot)
-	
-	return false
-
-func transfer_item(round_id: int, from_player: int, to_player: int, item_name: String) -> bool:
-	"""Transfere item entre jogadores (trade)"""
-	if not has_item(round_id, from_player, item_name):
-		_log_debug("⚠ Player %d não possui item %s" % [from_player, item_name])
-		return false
-	
-	if is_inventory_full(round_id, to_player):
-		_log_debug("⚠ Inventário de Player %d está cheio" % to_player)
-		inventory_full.emit(round_id, to_player)
-		return false
-	
-	if not remove_item_from_inventory(round_id, from_player, item_name):
-		return false
-	
-	if not add_item_to_inventory(round_id, to_player, item_name):
-		# Rollback
-		add_item_to_inventory(round_id, from_player, item_name)
-		return false
-	
-	_log_debug("✓ Item transferido: %s (Player %d → Player %d)" % [item_name, from_player, to_player])
-	return true
-
-func drop_item(round_id: int, player_id: int, item_name: String) -> bool:
-	"""
-	Remove item do inventário (simula drop)
-	Se equipado, desequipa primeiro
-	"""
-	# Verifica se está equipado e desequipa
-	var slot = get_equipped_slot(round_id, player_id, item_name)
-	if not slot.is_empty():
-		unequip_item(round_id, player_id, slot)
-	
-	# Remove do inventário
-	if remove_item_from_inventory(round_id, player_id, item_name):
-		var inventory = _get_player_inventory(round_id, player_id)
-		if not inventory.is_empty():
-			inventory["stats"]["items_dropped"] += 1
+		#if not old_item.is_empty():
+			#item_swapped.emit(round_id, player_id, old_item, new_item, slot)
 		
 		# Atualizar o do player local também via rpc
-		NetworkManager.rpc_id(player_id, "local_drop_item", player_id, item_name)
-		_log_debug("✓ Item dropado: %s por Player %d" % [item_name, player_id])
+		NetworkManager.rpc_id(player_id, "local_swap_equipped_item", new_item, slot)
 		return true
-		
+	
 	return false
 
 func clear_player_inventory(round_id: int, player_id: int):
@@ -581,19 +558,35 @@ func get_inventory_items(round_id: int, player_id: int) -> Array:
 		return []
 	return inventory["inventory"].duplicate()
 
+func get_inventory_item_names(round_id: int, player_id: int) -> Array:
+	"""Retorna apenas os nomes dos itens no inventário"""
+	var inventory = _get_player_inventory(round_id, player_id)
+	if inventory.is_empty():
+		return []
+	
+	var names = []
+	for item_data in inventory["inventory"]:
+		names.append(item_data["item_name"])
+	return names
+
 func get_equipped_items(round_id: int, player_id: int) -> Dictionary:
-	"""Retorna dicionário de itens equipados {slot: item_name}"""
+	"""Retorna dicionário de itens equipados {slot: item_data}"""
 	var inventory = _get_player_inventory(round_id, player_id)
 	if inventory.is_empty():
 		return {}
 	return inventory["equipped"].duplicate()
 
-func get_equipped_item_in_slot(round_id: int, player_id: int, slot: String) -> String:
-	"""Retorna nome do item equipado em slot específico"""
+func get_equipped_item_in_slot(round_id: int, player_id: int, slot: String) -> Dictionary:
+	"""Retorna dados completos do item equipado em slot específico"""
 	var inventory = _get_player_inventory(round_id, player_id)
 	if inventory.is_empty():
-		return ""
-	return inventory["equipped"].get(slot, "")
+		return {}
+	return inventory["equipped"].get(slot, {})
+
+func get_equipped_item_name_in_slot(round_id: int, player_id: int, slot: String) -> String:
+	"""Retorna nome do item equipado em slot específico"""
+	var item_data = get_equipped_item_in_slot(round_id, player_id, slot)
+	return item_data.get("item_name", "")
 
 func get_all_player_items(round_id: int, player_id: int) -> Array:
 	"""Retorna TODOS os itens do jogador (inventário + equipados)"""
@@ -602,29 +595,50 @@ func get_all_player_items(round_id: int, player_id: int) -> Array:
 		return []
 	
 	var all_items = inventory["inventory"].duplicate()
-	for item in inventory["equipped"].values():
-		if not item.is_empty():
-			all_items.append(item)
+	for item_data in inventory["equipped"].values():
+		if not item_data.is_empty():
+			all_items.append(item_data)
 	
 	return all_items
 
+func get_all_player_item_names(round_id: int, player_id: int) -> Array:
+	"""Retorna apenas os nomes de TODOS os itens do jogador"""
+	var all_items = get_all_player_items(round_id, player_id)
+	var names = []
+	for item_data in all_items:
+		names.append(item_data["item_name"])
+	return names
+
 func has_item(round_id: int, player_id: int, item_name: String) -> bool:
-	"""Verifica se jogador possui um item (em qualquer lugar)"""
+	"""Verifica se jogador possui um item especifico (em qualquer lugar)"""
 	return has_item_in_inventory(round_id, player_id, item_name) or is_item_equipped(round_id, player_id, item_name)
+
+func has_any_item(round_id: int, player_id: int) -> bool:
+	"""Verifica se jogador possui algum item qualquer (em qualquer lugar)"""
+	var inventory = _get_player_inventory(round_id, player_id)
+	return not inventory["inventory"].is_empty()
 
 func has_item_in_inventory(round_id: int, player_id: int, item_name: String) -> bool:
 	"""Verifica se item está no inventário (não equipado)"""
 	var inventory = _get_player_inventory(round_id, player_id)
 	if inventory.is_empty():
 		return false
-	return item_name in inventory["inventory"]
+	
+	for item_data in inventory["inventory"]:
+		if item_data["item_name"] == item_name:
+			return true
+	return false
 
-func is_item_equipped(round_id: int, player_id: int, item_name: String) -> bool:
+func is_item_equipped(round_id: int, player_id: int, object_id: String) -> bool:
 	"""Verifica se item está equipado"""
 	var inventory = _get_player_inventory(round_id, player_id)
 	if inventory.is_empty():
 		return false
-	return item_name in inventory["equipped"].values()
+	
+	for item_data in inventory["equipped"].values():
+		if not item_data.is_empty() and item_data["object_id"] == int(object_id):
+			return true
+	return false
 
 func get_equipped_slot(round_id: int, player_id: int, item_name: String) -> String:
 	"""Retorna slot onde item está equipado (ou "" se não equipado)"""
@@ -633,7 +647,8 @@ func get_equipped_slot(round_id: int, player_id: int, item_name: String) -> Stri
 		return ""
 	
 	for slot in inventory["equipped"]:
-		if inventory["equipped"][slot] == item_name:
+		var item_data = inventory["equipped"][slot]
+		if not item_data.is_empty() and item_data["item_name"] == item_name:
 			return slot
 	
 	return ""
@@ -679,8 +694,8 @@ func get_equipped_count(round_id: int, player_id: int) -> int:
 	"""Retorna quantidade de itens equipados"""
 	var equipped = get_equipped_items(round_id, player_id)
 	var count = 0
-	for item in equipped.values():
-		if not item.is_empty():
+	for item_data in equipped.values():
+		if not item_data.is_empty():
 			count += 1
 	return count
 
@@ -696,13 +711,6 @@ func get_inventory_space_left(round_id: int, player_id: int) -> int:
 	"""Retorna espaço disponível no inventário"""
 	return max(0, max_inventory_slots - get_inventory_count(round_id, player_id))
 
-func get_inventory_stats(round_id: int, player_id: int) -> Dictionary:
-	"""Retorna estatísticas do inventário"""
-	var inventory = _get_player_inventory(round_id, player_id)
-	if inventory.is_empty():
-		return {}
-	return inventory["stats"].duplicate()
-
 func has_any_equipped(round_id: int, player_id: int) -> bool:
 	"""Verifica se jogador tem algum item equipado"""
 	return get_equipped_count(round_id, player_id) > 0
@@ -711,10 +719,28 @@ func has_full_equipment(round_id: int, player_id: int) -> bool:
 	"""Verifica se todos os slots estão equipados"""
 	return get_empty_slots(round_id, player_id).is_empty()
 
+func get_item_by_object_id(round_id: int, player_id: int, object_id: int) -> Dictionary:
+	"""Retorna dados do item pelo object_id (busca em inventário e equipados)"""
+	var inventory = _get_player_inventory(round_id, player_id)
+	if inventory.is_empty():
+		return {}
+	
+	# Busca no inventário
+	for item_data in inventory["inventory"]:
+		if item_data["object_id"] == object_id:
+			return item_data.duplicate()
+	
+	# Busca nos equipados
+	for item_data in inventory["equipped"].values():
+		if not item_data.is_empty() and item_data["object_id"] == object_id:
+			return item_data.duplicate()
+	
+	return {}
+
 # ===== QUERIES DE FACILITAÇÃO =====
 
 func get_equipped_hand_items(round_id: int, player_id: int) -> Dictionary:
-	"""Retorna itens equipados nas mãos {hand-left: item, hand-right: item}"""
+	"""Retorna itens equipados nas mãos {hand-left: item_data, hand-right: item_data}"""
 	return {
 		"hand-left": get_equipped_item_in_slot(round_id, player_id, "hand-left"),
 		"hand-right": get_equipped_item_in_slot(round_id, player_id, "hand-right")
@@ -733,7 +759,7 @@ func has_both_hands_equipped(round_id: int, player_id: int) -> bool:
 	return not left.is_empty() and not right.is_empty()
 
 func get_equipped_armor(round_id: int, player_id: int) -> Dictionary:
-	"""Retorna armadura equipada {head: item, body: item}"""
+	"""Retorna armadura equipada {head: item_data, body: item_data}"""
 	return {
 		"head": get_equipped_item_in_slot(round_id, player_id, "head"),
 		"body": get_equipped_item_in_slot(round_id, player_id, "body")
@@ -747,16 +773,22 @@ func has_armor_equipped(round_id: int, player_id: int) -> bool:
 	
 func has_shield_equipped(round_id: int, player_id: int) -> bool:
 	"""Verifica se tem escudo equipado"""
-	var hand_left = get_equipped_item_in_slot(round_id, player_id, "hand-left")
-	var item = item_database.get_item(hand_left).to_dictionary()
-	return item["function"] == "defense"
+	var hand_left_data = get_equipped_item_in_slot(round_id, player_id, "hand-left")
+	if hand_left_data.is_empty():
+		return false
+	
+	if hand_left_data.has("item_id"):
+		var item_id = hand_left_data["item_id"]
+		var item = item_database.get_item_by_id(int(item_id)).to_dictionary()
+		return item["function"] == "defense"
+	return false
 	
 func count_items_of_type(round_id: int, player_id: int, item_type: String) -> int:
 	"""Conta quantos itens de um tipo específico o jogador possui"""
 	if not item_database:
 		return 0
 	
-	var all_items = get_all_player_items(round_id, player_id)
+	var all_items = get_all_player_item_names(round_id, player_id)
 	var count = 0
 	
 	for item_name in all_items:
@@ -770,7 +802,7 @@ func find_items_by_level(round_id: int, player_id: int, min_level: int = 1, max_
 	if not item_database:
 		return []
 	
-	var all_items = get_all_player_items(round_id, player_id)
+	var all_items = get_all_player_item_names(round_id, player_id)
 	var result = []
 	
 	for item_name in all_items:
@@ -780,24 +812,24 @@ func find_items_by_level(round_id: int, player_id: int, min_level: int = 1, max_
 	
 	return result
 
-func get_first_equipped_item(round_id: int, player_id: int) -> String:
+func get_first_equipped_item(round_id: int, player_id: int) -> Dictionary:
 	"""
 	Retorna o primeiro item equipado seguindo a ordem de prioridade:
 	mão esquerda -> mão direita -> corpo -> cabeça -> costas
-	Retorna string vazia se nenhum item equipado
+	Retorna dicionário vazio se nenhum item equipado
 	"""
 	var inventory = _get_player_inventory(round_id, player_id)
 	if inventory.is_empty():
-		return ""
+		return {}
 	
 	var priority_order = ["hand-left", "hand-right", "body", "head", "back"]
 	
 	for slot in priority_order:
-		var item = inventory["equipped"].get(slot, "")
-		if not item.is_empty():
-			return item
+		var item_data = inventory["equipped"].get(slot, {})
+		if not item_data.is_empty():
+			return item_data.duplicate()
 	
-	return ""
+	return {}
 
 # ===== GERENCIAMENTO DE NODES =====
 
@@ -900,24 +932,19 @@ func debug_print_player_inventory(round_id: int, player_id: int):
 	if inventory["inventory"].is_empty():
 		print("    (vazio)")
 	else:
-		for item in inventory["inventory"]:
-			print("    - %s" % item)
+		for item_data in inventory["inventory"]:
+			print("    - %s (ID: %s, Object: %d)" % [item_data["item_name"], item_data["item_id"], item_data["object_id"]])
 	
 	# Itens equipados
 	print("\n  [Equipados]")
 	var has_equipped = false
 	for slot in inventory["equipped"]:
-		var item = inventory["equipped"][slot]
-		if not item.is_empty():
-			print("    %s: %s" % [slot, item])
+		var item_data = inventory["equipped"][slot]
+		if not item_data.is_empty():
+			print("    %s: %s (ID: %s, Object: %d)" % [slot, item_data["item_name"], item_data["item_id"], item_data["object_id"]])
 			has_equipped = true
 	if not has_equipped:
 		print("    (nenhum)")
-	
-	# Estatísticas
-	print("\n  [Estatísticas]")
-	for stat in inventory["stats"]:
-		print("    %s: %d" % [stat, inventory["stats"][stat]])
 	
 	print("╚" + "═".repeat(50) + "╝\n")
 

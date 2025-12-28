@@ -402,21 +402,19 @@ var material_items: Array = []
 var load_time: float = 0.0
 var is_loaded: bool = false
 
-# ═══════════════════════════════════════════════════════════════════════════
 # INICIALIZAÇÃO
-# ═══════════════════════════════════════════════════════════════════════════
 
 func _ready():
-	# Detecta se é servidor
-	var args = OS.get_cmdline_args()
-	_is_server = "--server" in args
-	
 	# Carrega database automaticamente se configurado
 	if auto_load_on_ready:
 		load_database()
 
 ## Carrega o database do arquivo JSON
 func load_database() -> bool:
+	# Detecta se é servidor
+	var args = OS.get_cmdline_args()
+	_is_server = "--server" in args
+	
 	var start_time = Time.get_ticks_msec()
 	
 	if not _load_json_data():
@@ -603,6 +601,11 @@ func get_item_by_id(id: int) -> ItemData:
 
 ## Verifica se item existe no database
 func item_exists(item_name: String) -> bool:
+	return items.has(item_name)
+
+## Verifica se item existe no database
+func item_exists_by_id(item_id: int) -> bool:
+	var item_name = get_item_by_id(item_id)["name"]
 	return items.has(item_name)
 
 ## Retorna array com nomes de todos os itens

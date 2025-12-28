@@ -135,7 +135,7 @@ func is_rpc_allowed(peer_id: int) -> bool:
 	var last_rpc_time = _player_rpc_timestamps[peer_id]
 	if current_time - last_rpc_time < RPC_RATE_LIMIT_SEC:
 		# Rate limited - ignorar esta RPC
-		print("RPC rate limited para peer %d: %.3fs desde última" % [peer_id, current_time - last_rpc_time])
+		_log_debug("RPC rate limited para peer %d: %.3fs desde última" % [peer_id, current_time - last_rpc_time])
 		return false
 	
 	# Atualizar timestamp
@@ -494,23 +494,6 @@ func _client_remove_player(peer_id: int):
 
 # ===== SPAWN DE OBJETOS (ObjectSpawner) =====
 
-#@rpc("authority", "call_remote", "reliable")
-#func _rpc_spawn_on_clients(objects_node, active_players, object_id: int, round_id: int, item_name: String, position: Vector3, rotation: Vector3, owner_id: int):
-	#"""
-	#✅ CORRIGIDO: Envia spawn para clientes ativos na rodada
-	#"""
-	#_log_debug("🔄 Spawning item for clients: ID=%d, Item=%s" % [object_id, item_name])
-	#
-	## ✅ CORRIGIDO: Itera pelos players ativos e envia RPC individual
-	#for player_id in active_players:
-		#if player_id == 1:  # Ignora servidor
-			#continue
-		#
-		#if _is_peer_connected(player_id):
-			#_rpc_receive_spawn_on_clients.rpc_id(objects_node, player_id, object_id, round_id, item_name, position, rotation, owner_id)
-	#
-	#_log_debug("✓ Spawn enviado para %d clientes" % (active_players.size() - 1))
-
 @rpc("authority", "call_remote", "reliable")
 func _rpc_receive_spawn_on_clients(object_id: int, round_id: int, item_name: String, position: Vector3, rotation: Vector3, owner_id: int):
 	"""
@@ -581,13 +564,31 @@ func request_pick_up_item(player_id: int, object_id: int) -> void:
 	"""Requisição do player: Chama RPC no servidor para pedir para equipar um item"""
 	rpc_id(1, "_server_pick_up_player_item", player_id, object_id)
 
-func request_equip_item(player_id: int, item_id: int, from_test: bool) -> void:
+func request_equip_item(player_id: int, object_id: int, slot_type) -> void:
 	"""Requisição do player: Chama RPC no servidor para pedir para equipar um item"""
-	rpc_id(1, "_server_equip_player_item", player_id, item_id, from_test)
+	rpc_id(1, "_server_equip_player_item", player_id, object_id, slot_type)
 
-func request_drop_item(player_id, item_id=0):
+func request_unequip_item(player_id: int, slot_type: String) -> void:
+	"""Requisição do player: Chama RPC no servidor para pedir para desequipar um item"""
+	rpc_id(1, "_server_unequip_player_item", player_id, slot_type)
+
+func request_swap_items(item_id_1, item_id_2, slot_type_1, slot_type_2):
+	"""Requisição do player: Chama RPC no servidor para pedir para trocar dois itens"""
+	rpc_id(1, "_server_swap_items", item_id_1, item_id_2, slot_type_1, slot_type_2)
+
+func request_trainer_spawn_item(player_id: int, item_id: int):
+	"""Requisição do player: Chama RPC no servidor para pedir para spawnar um item na frente dele
+	 (trainer de testes, apenas se estiver no modo de testes)"""
+	rpc_id(1, "_server_trainer_spawn_item", player_id, item_id)
+
+func handle_test_drop_item_call(player_id: int):
+	"""Requisição do player: Chama RPC no servidor para pedir para dropar um item de seu inventário
+	 na frente dele (trainer de testes, apenas se estiver no modo de testes)"""
+	rpc_id(1, "_server_trainer_drop_item", player_id)
+
+func request_drop_item(player_id, obj_id):
 	"""Requisição do player: Chama RPC no servidor para pedir para dropar um item"""
-	rpc_id(1, "_server_drop_player_item", player_id, item_id)
+	rpc_id(1, "_server_drop_player_item", player_id, obj_id)
 
 @rpc("any_peer", "call_remote", "unreliable")
 func _server_pick_up_player_item(player_id, object_id):
@@ -596,16 +597,40 @@ func _server_pick_up_player_item(player_id, object_id):
 	ServerManager._server_validate_pick_up_item(player_id, object_id)
 
 @rpc("any_peer", "call_remote", "unreliable")
-func _server_equip_player_item(player_id, item_id, from_test):
+func _server_equip_player_item(player_id, item_id, slot_type):
 	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
 		return
-	ServerManager._server_validate_equip_item(player_id, item_id, from_test)
+	ServerManager._server_validate_equip_item(player_id, item_id, slot_type)
 
 @rpc("any_peer", "call_remote", "unreliable")
-func _server_drop_player_item(player_id, item_id):
+func _server_unequip_player_item(player_id, item_id):
 	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
 		return
-	ServerManager._server_validate_drop_item(player_id, item_id)
+	ServerManager._server_validate_unequip_item(player_id, item_id)
+
+@rpc("any_peer", "call_remote", "unreliable")
+func _server_swap_items(item_id_1, item_id_2, slot_type_1, slot_type_2):
+	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
+		return
+	ServerManager._server_validate_swap_items(item_id_1, item_id_2, slot_type_1, slot_type_2)
+
+@rpc("any_peer", "call_remote", "unreliable")
+func _server_trainer_spawn_item(player_id, item_id):
+	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
+		return
+	ServerManager._server_trainer_spawn_item(player_id, item_id)
+
+@rpc("any_peer", "call_remote", "unreliable")
+func _server_trainer_drop_item(player_id):
+	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
+		return
+	ServerManager._server_trainer_drop_item(player_id)
+
+@rpc("any_peer", "call_remote", "unreliable")
+func _server_drop_player_item(player_id, obj_id):
+	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
+		return
+	ServerManager._server_validate_drop_item(player_id, obj_id)
 
 @rpc("authority", "call_remote", "reliable")
 func server_apply_picked_up_item(player_id):
@@ -615,8 +640,8 @@ func server_apply_picked_up_item(player_id):
 		player_node.action_pick_up_item()
 
 @rpc("authority", "call_remote", "reliable")
-func server_apply_equiped_item(player_id: int, change_data: int):
-	"""Cliente recebe comando de equipamento"""
+func server_apply_equiped_item(player_id: int, item_id: int, unnequip: bool = false):
+	"""Cliente recebe comando de equipamento equipar ou desequipar"""
 	
 	if multiplayer.is_server():
 		return
@@ -624,7 +649,7 @@ func server_apply_equiped_item(player_id: int, change_data: int):
 	# Encontra o player e executa a mudança de item equipado
 	var player_node = GameManager.players_node.get_node_or_null(str(player_id))
 	if player_node and player_node.has_method("apply_visual_equip_on_player_node"):
-		player_node.apply_visual_equip_on_player_node(player_node, change_data)
+		player_node.apply_visual_equip_on_player_node(player_node, item_id, unnequip)
 
 @rpc("authority", "call_remote", "reliable")
 func server_apply_drop_item(player_id: int, item: String):
@@ -751,42 +776,42 @@ func _client_player_animation_state(p_id: int, speed: float, attacking: bool, de
 
 # Adiciona item no inventário do player
 @rpc("authority", "call_remote", "reliable")
-func local_add_item_to_inventory(item_name):
+func local_add_item_to_inventory(item_id, object_id):
 	
 	# Ignorar se for servidor
 	if multiplayer.is_server():
 		return
 
 	if GameManager and GameManager.has_method("add_item_to_inventory"):
-		GameManager.add_item_to_inventory(item_name)
+		GameManager.add_item_to_inventory(item_id, object_id)
 
 # Remove item do inventário do player
 @rpc("authority", "call_remote", "reliable")
-func local_remove_item_from_inventory(item_name):
+func local_remove_item_from_inventory(object_id):
 	if multiplayer.is_server():
 		return
 		
 	if GameManager and GameManager.has_method("remove_item_from_inventory"):
-		GameManager.remove_item_from_inventory(item_name)
-
+		GameManager.remove_item_from_inventory(object_id)
+		
 # Equipa item no inventário do player
 @rpc("authority", "call_remote", "reliable")
-func local_equip_item(item_name, slot):
+func local_equip_item(item_name, object_id, slot):
 	if multiplayer.is_server():
 		return
 		
 	if GameManager and GameManager.has_method("equip_item"):
-		GameManager.equip_item(item_name, slot)
+		GameManager.equip_item(item_name, object_id, slot)
 
 # Desequipa item no inventário do player
 @rpc("authority", "call_remote", "reliable")
-func local_unequip_item(slot):
+func local_unequip_item(item_id, slot):
 
 	if multiplayer.is_server():
 		return
 		
 	if GameManager and GameManager.has_method("unequip_item"):
-		GameManager.unequip_item(slot)
+		GameManager.unequip_item(int(item_id), slot)
 
 # Troca item no inventário do player
 @rpc("authority", "call_remote", "reliable")
@@ -797,19 +822,6 @@ func local_swap_equipped_item(new_item, slot):
 		
 	if GameManager and GameManager.has_method("swap_equipped_item"):
 		GameManager.swap_equipped_item(new_item, slot)
-
-# Dropa item do inventário do player
-@rpc("authority", "call_remote", "reliable")
-func local_drop_item(player_id, item_name):
-	_log_debug("local_drop_item")
-	if multiplayer.is_server():
-		return
-		
-	var player = GameManager.players_node.get_node_or_null(str(player_id))
-	if not player:
-		_log_debug("Não encontrado player para atualizar inventário")
-	if player and player.has_method("drop_item"):
-		player.drop_item(item_name)
 
 # ===== REGISTRO DE OBJETOS SINCRONIZÁVEIS =====
 
