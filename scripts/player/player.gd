@@ -25,7 +25,7 @@ extends CharacterBody3D
 @export var attack_time_tolerance: float = 0.5
 
 @export_category("Item Detection")
-@export var pickup_radius: float = 1.2
+@export var pickup_radius: float = 1.6
 @export var pickup_collision_mask: int = 1 << 2 # Layer 3
 @export var max_pickup_results: int = 10
 
