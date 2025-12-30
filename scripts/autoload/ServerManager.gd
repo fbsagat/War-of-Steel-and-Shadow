@@ -1197,6 +1197,14 @@ func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 	# Equipa o item no registro do player
 	player_registry.equip_item(round_["round_id"], player['id'], item["name"], object_id)
 	
+	# Executa animação no player no servidor e em seus remotos nos clientes
+	for peer_id in round_players:
+		NetworkManager.server_apply_picked_up_item.rpc_id(peer_id, requesting_player_id)
+	
+	# Aplica no nó do servidor
+	if player_node and player_node.has_method("action_pick_up_item"):
+		player_node.action_pick_up_item()
+		
 	_log_debug("[ITEM]📦 Item equipado validado: Player %d equipou item %d" % [requesting_player_id, item["id"]])
 	
 	# Envia para todos os clientes do round (para atualizar visual)
@@ -1421,6 +1429,16 @@ func _server_validate_drop_item(requesting_player_id: int, obj_id: int):
 		
 		# Remove item do inentário do player
 		player_registry.remove_item_from_inventory(round_["round_id"], player["id"], obj_id)
+		
+		# Executa animação no player no servidor e em seus remotos nos clientes
+		var round_players = player_registry.get_players_in_round(round_["round_id"])
+		for peer_id in round_players:
+			NetworkManager.server_apply_drop_item.rpc_id(peer_id, requesting_player_id, item_data["name"])
+		
+		# Aplica no nó do servidor
+		var player_node = player_registry.get_player_node(requesting_player_id)
+		if player_node and player_node.has_method("execute_item_drop"):
+			player_node.execute_item_drop()
 		
 # ===== VALIDAÇÕES DE AÇÕES DO PLAYER =====
 

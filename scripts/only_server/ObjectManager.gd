@@ -230,7 +230,7 @@ func spawn_item_in_front_of_player(objects_node, round_id: int, player_id: int, 
 	# Calcula posição na frente do player
 	var spawn_pos = _calculate_front_position(player_pos, player_rot)
 	var spawn_rot = Vector3.ZERO  # Rotação padrão
-	
+
 	_log_debug("Spawn na frente do player %d: pos=%s" % [player_id, spawn_pos])
 	
 	return await spawn_item(objects_node, round_id, item_name, spawn_pos, spawn_rot, player_id)

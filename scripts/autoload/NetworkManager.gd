@@ -652,18 +652,18 @@ func server_apply_equiped_item(player_id: int, item_id: int, unnequip: bool = fa
 		player_node.apply_visual_equip_on_player_node(player_node, item_id, unnequip)
 
 @rpc("authority", "call_remote", "reliable")
-func server_apply_drop_item(player_id: int, item: String):
+func server_apply_drop_item(player_id: int, item_name: String):
 	"""Cliente recebe comando de drop"""
 	
 	if multiplayer.is_server():
 		return
 	
-	_log_debug("📥 Dropando equipamento: Player %d, Item %s" % [player_id, item])
+	_log_debug("📥 Dropando equipamento: Player %d, Item %s" % [player_id, item_name])
 	
 	# ENCONTRA O PLAYER E EXECUTA
 	var player_node = GameManager.players_node.get_node_or_null(str(player_id))
 	if player_node and player_node.has_method("execute_item_drop"):
-		player_node.execute_item_drop(player_node, item)
+		player_node.execute_item_drop()
 
 # ===== ATUALIZAÇÕES DE ESTADOS DE CLIENTES =====
 
