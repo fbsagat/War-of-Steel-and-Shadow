@@ -1156,7 +1156,7 @@ func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 	var item = item_database.get_item(object["item_name"]).to_dictionary()
 	var round_players = round_registry.get_active_players_ids(round_["round_id"])
 	
-	# Verificação se o item está perto do player no servidor também
+	# Verificação se o item está perto do player na cena do servidor também
 	if not server_nearby.has(object["node"]):
 		_log_debug("O nó deste player no servidor não tem este item por perto para pickup, recusar!")
 		return
@@ -1187,11 +1187,29 @@ func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 		item_node.queue_free()
 		_log_debug("_server_validate_pick_up_item: Node removido da cena")
 	
-	# Remove do registro local(round)
-	#object_manager.spawned_objects[round_["round_id"]].erase(object_id)
-	# Define objeto armazenado
+	# Define objeto armazenado / sai do spawned objects
 	object_manager.store_object(round_["round_id"], object_id, player["id"])
 	
+	# Se o slot deste item estiver vazio, equipar este item lá automaticamente \/
+	if not player_registry.is_slot_empty(round_["round_id"], player['id'], item["type"]):
+		return
+		
+	# Equipa o item no registro do player
+	player_registry.equip_item(round_["round_id"], player['id'], item["name"], object_id)
+	
+	_log_debug("[ITEM]📦 Item equipado validado: Player %d equipou item %d" % [requesting_player_id, item["id"]])
+	
+	# Envia para todos os clientes do round (para atualizar visual)
+	
+	for peer in round_["players"]:
+		var peer_id = peer["id"]
+		if _is_peer_connected(peer_id):
+			NetworkManager.rpc_id(peer_id, "server_apply_equiped_item", requesting_player_id, item["id"])
+	
+	# Aplica visual tbm na cena do servidor
+	if player_node and player_node.has_method("apply_visual_equip_on_player_node"):
+		player_node.apply_visual_equip_on_player_node(player_node, str(item["id"]))
+
 @rpc("any_peer", "call_remote", "reliable")
 func _server_validate_equip_item(requesting_player_id: int, object_id: int, _target_slot_type):
 	"""Servidor recebe pedido de equipar item, valida e redistribui"""
@@ -1210,19 +1228,20 @@ func _server_validate_equip_item(requesting_player_id: int, object_id: int, _tar
 	if not item_database.get_item_by_id(item_id):
 		return
 	
-	# Equipa o item
+	# Equipa o item no registro do player
 	player_registry.equip_item(round_["round_id"], player['id'], item["name"], object_id)
 	
 	_log_debug("[ITEM]📦 Item equipado validado: Player %d equipou item %d" % [requesting_player_id, item_id])
 	
 	# Envia para todos os clientes do round (para atualizar visual)
 	
+	# Para cada player neste round
 	for peer in round_["players"]:
 		var peer_id = peer["id"]
 		if _is_peer_connected(peer_id):
 			NetworkManager.rpc_id(peer_id, "server_apply_equiped_item", requesting_player_id, item_id)
 	
-	# Aplica na cena do servidor (atualizar visual)
+	# Aplica visual tbm na cena do servidor
 	var player_node = players_node.get_node_or_null(str(requesting_player_id))
 	if player_node and player_node.has_method("apply_visual_equip_on_player_node"):
 			player_node.apply_visual_equip_on_player_node(player_node, item_id)
@@ -1282,7 +1301,7 @@ func _server_trainer_spawn_item(requesting_player_id: int, item_id: int):
 
 @rpc("any_peer", "call_remote", "reliable")
 func _server_trainer_drop_item(player_id):
-	"""Servidor recebe pedido de dropar item do inventário(apenas) na frente do player para testes"""
+	"""Servidor recebe pedido de dropar item do inventário(apenas do inventário) na frente do player para testes"""
 	_log_debug('_server_trainer_drop_item')
 	
 	if not item_trainer:
@@ -1354,7 +1373,7 @@ func _server_validate_drop_item(requesting_player_id: int, obj_id: int):
 		var equiped_obj_id = player_registry.get_equipped_item_in_slot(round_["round_id"], requesting_player_id, item_slot)["object_id"]
 		if int(equiped_obj_id) == int(obj_id):
 			# O item dropado é o mesmo item que está equipado, pedir para desequipar
-			player_registry.unequip_item(round_["round_id"], requesting_player_id, item_slot)
+			player_registry.unequip_item(round_["round_id"], requesting_player_id, item_slot, false)
 			
 		# Servidor manda desequipar obj item / mudança no visual do modelo
 		item_id = int(player_registry.get_inventory_items(round_["round_id"], requesting_player_id)[0]["item_id"])

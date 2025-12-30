@@ -931,7 +931,7 @@ func equip_item(item_name: String, object_id, item_slot: String = "") -> bool:
 	
 	return true
 
-func unequip_item(_object_id: int, item_slot: String) -> bool:
+func unequip_item(_object_id: int, item_slot: String, verify: bool = true) -> bool:
 	"""Desequipa item de um slot e retorna ao inventário"""
 
 	if local_inventory.is_empty():
@@ -946,7 +946,7 @@ func unequip_item(_object_id: int, item_slot: String) -> bool:
 		return false
 	
 	# Verifica se há espaço no inventário
-	if local_inventory["inventory"].size() >= 9:
+	if verify and local_inventory["inventory"].size() >= 9:
 		_log_debug("⚠ Inventário cheio, não pode desequipar item")
 		return false
 	
@@ -964,7 +964,7 @@ func unequip_item(_object_id: int, item_slot: String) -> bool:
 	_log_debug("✓ Item desequipado: %s de %s" % [item_name, item_slot])
 	
 	return true
-	
+
 func swap_equipped_item(new_item: String, slot: String = "") -> bool:
 	"""
 	Troca item equipado diretamente (desequipa antigo, equipa novo)

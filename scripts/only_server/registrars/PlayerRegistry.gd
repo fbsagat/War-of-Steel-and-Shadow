@@ -456,8 +456,10 @@ func equip_item(round_id: int, player_id: int, item_name: String, object_id, slo
 	
 	return true
 
-func unequip_item(round_id: int, player_id: int, slot: String) -> bool:
-	"""Desequipa item de um slot e retorna ao inventário"""
+func unequip_item(round_id: int, player_id: int, slot: String, verify: bool = true) -> bool:
+	"""Desequipa item de um slot e retorna ao inventário
+	verify false: Não faz verificação de max_inventory_slots, usado quando vai desequipar para 
+	item diretamente para ser dropado, ou seja, não retorna para inventário"""
 	var inventory = _get_player_inventory(round_id, player_id)
 	if inventory.is_empty():
 		return false
@@ -471,7 +473,7 @@ func unequip_item(round_id: int, player_id: int, slot: String) -> bool:
 		return false
 	
 	# Verifica se há espaço no inventário
-	if inventory["inventory"].size() >= max_inventory_slots:
+	if verify and inventory["inventory"].size() >= max_inventory_slots:
 		_log_debug("⚠ Inventário cheio, não pode desequipar item")
 		#inventory_full.emit(round_id, player_id)
 		return false
@@ -488,7 +490,7 @@ func unequip_item(round_id: int, player_id: int, slot: String) -> bool:
 	#item_unequipped.emit(round_id, player_id, item_name, slot)
 		
 	# Atualizar o do player local também via rpc
-	NetworkManager.rpc_id(player_id, "local_unequip_item", item_data["item_id"], slot)
+	NetworkManager.rpc_id(player_id, "local_unequip_item", item_data["item_id"], slot, verify)
 	
 	return true
 

@@ -805,13 +805,13 @@ func local_equip_item(item_name, object_id, slot):
 
 # Desequipa item no inventário do player
 @rpc("authority", "call_remote", "reliable")
-func local_unequip_item(item_id, slot):
+func local_unequip_item(item_id, slot, verify):
 
 	if multiplayer.is_server():
 		return
 		
 	if GameManager and GameManager.has_method("unequip_item"):
-		GameManager.unequip_item(int(item_id), slot)
+		GameManager.unequip_item(int(item_id), slot, verify)
 
 # Troca item no inventário do player
 @rpc("authority", "call_remote", "reliable")
