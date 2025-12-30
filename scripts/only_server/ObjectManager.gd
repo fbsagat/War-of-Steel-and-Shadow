@@ -26,7 +26,8 @@ class_name ObjectManager
 
 @export_category("Physics Settings")
 @export var drop_impulse_strength: float = 3.5
-@export var drop_impulse_variance: float = 1.0
+@export var drop_impulse_variance: float = 1.2
+@export var drop_impulse_up_multiplier: float = 0.6
 
 @export_category("Debug")
 @export var debug_mode: bool = true
@@ -147,9 +148,9 @@ func spawn_item(objects_node, round_id: int, item_name: String, position: Vector
 		"owner_id": owner_id,
 		"spawn_time": Time.get_unix_time_from_system()
 	}
-	
+	var drop_velocity = item_node.initial_velocity
 	# ✅ Envia RPC individual para cada cliente ativo
-	_send_spawn_to_clients(round_id, object_id, item_name, position, rotation, owner_id)
+	_send_spawn_to_clients(round_id, object_id, item_name, position, rotation, drop_velocity, owner_id)
 	
 	_log_debug("✓ Item spawnado: %s (ID: %d, Round: %d)" % [item_name, object_id, round_id])
 	
@@ -157,7 +158,7 @@ func spawn_item(objects_node, round_id: int, item_name: String, position: Vector
 	
 	return object_id
 
-func _send_spawn_to_clients(round_id: int, object_id: int, item_name: String, position: Vector3, rotation: Vector3, owner_id: int):
+func _send_spawn_to_clients(round_id: int, object_id: int, item_name: String, position: Vector3, rotation: Vector3, drop_velocity: Vector3, owner_id: int):
 	"""
 	✅ Envia spawn para clientes ativos na rodada
 	Chama RPC individual para cada peer conectado
@@ -200,6 +201,7 @@ func _send_spawn_to_clients(round_id: int, object_id: int, item_name: String, po
 			item_name,
 			position,
 			rotation,
+			drop_velocity,
 			owner_id
 		)
 		
@@ -479,9 +481,9 @@ func retrieve_stored_object(objects_node, round_id: int, object_id: int, positio
 		"owner_id": new_owner_id,
 		"spawn_time": Time.get_unix_time_from_system()
 	}
-	
+	var drop_velocity = item_node.initial_velocity
 	# Envia spawn para clientes
-	_send_spawn_to_clients(round_id, object_id, item_name, position, rotation, new_owner_id)
+	_send_spawn_to_clients(round_id, object_id, item_name, position, rotation, drop_velocity, new_owner_id)
 	
 	_log_debug("📤 Objeto respawnado: ID %d (Round: %d)" % [object_id, round_id])
 	
@@ -659,7 +661,7 @@ func _spawn_on_server(objects_node, object_id: int, round_id: int, item_name: St
 	
 	@return: Node do item ou null se falhar
 	"""
-	
+
 	# Obtém scene_path do ItemDatabase
 	var scene_path = item_database.get_item(item_name)["scene_path"]
 	
@@ -706,7 +708,15 @@ func _spawn_on_server(objects_node, object_id: int, round_id: int, item_name: St
 	# Inicializa item (se tiver método initialize)
 	if item_node.has_method("initialize"):
 		var item_full_data = item_database.get_item_full_info(item_name)
-		var drop_velocity = _calculate_drop_impulse(rotation)
+		var drop_velocity = Vector3(0, 10, 0)
+		
+		# Se for drop de player, ajustar drop_velocity para a direção de sua fronte
+		if owner_id > 0:
+			var player_state = ServerManager.player_states[owner_id]
+			var player_rot = player_state["rot"]
+			drop_velocity = _calculate_drop_impulse(player_rot)
+			
+		_log_debug("drop_velocity %s" % drop_velocity)
 		item_node.initialize(object_id, round_id, item_name, item_full_data, owner_id, drop_velocity)
 	
 	_log_debug("Node criado no servidor: %s" % item_node.name)
@@ -765,15 +775,24 @@ func _calculate_front_position(player_pos: Vector3, player_rot: Vector3) -> Vect
 	return base_pos + Vector3(variance_x, 0, variance_z)
 
 func _calculate_drop_impulse(player_rot: Vector3) -> Vector3:
-	"""Calcula vetor de impulso para dropar item"""
+	# Ignora position — não é usada no cálculo do impulso (só da posição de spawn)
+	var yaw = player_rot.y
 	
-	var basis = Basis.from_euler(player_rot)
-	var forward = -basis.z
+	# Frente: Z local → calculado via trigonometria
+	var forward = Vector3(sin(yaw), 0.0, cos(yaw))
 	
+	# Vetor lateral (direita local)
+	var right = Vector3(cos(yaw), 0.0, -sin(yaw))
+	
+	# Impulso principal
 	var impulse = forward * drop_impulse_strength
-	impulse.x += randf_range(-drop_impulse_variance, drop_impulse_variance)
-	impulse.y += drop_impulse_strength * 0.5  # Para cima
-	impulse.z += randf_range(-drop_impulse_variance, drop_impulse_variance)
+	
+	# Variação aleatória (relativa à orientação do jogador)
+	impulse += right * randf_range(-drop_impulse_variance, drop_impulse_variance)
+	impulse += forward * randf_range(-drop_impulse_variance * 0.3, drop_impulse_variance * 0.3)
+	
+	# Impulso vertical para cima
+	impulse.y += drop_impulse_strength * drop_impulse_up_multiplier
 	
 	return impulse
 

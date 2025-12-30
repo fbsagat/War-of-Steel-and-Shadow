@@ -1341,7 +1341,7 @@ func _server_trainer_drop_item(player_id):
 		var spawn_pos = object_manager._calculate_front_position(player_pos, player_rot)
 			
 		# Retomar o nó do item de volta à cena no object manager
-		object_manager.retrieve_stored_object(objects_node, round_["round_id"], obj_id, spawn_pos)
+		object_manager.retrieve_stored_object(objects_node, round_["round_id"], obj_id, spawn_pos, Vector3(0, 0, 0,), player_id)
 		player_registry.remove_item_from_inventory(round_["round_id"], player_id, obj_id)
 	
 @rpc("any_peer", "call_remote", "reliable")
@@ -1425,7 +1425,7 @@ func _server_validate_drop_item(requesting_player_id: int, obj_id: int):
 		var spawn_pos = object_manager._calculate_front_position(player_pos, player_rot)
 		
 		# Object Manager, retomar o nó do item de volta à cena
-		object_manager.retrieve_stored_object(objects_node, round_["round_id"], obj_id, spawn_pos)
+		object_manager.retrieve_stored_object(objects_node, round_["round_id"], obj_id, spawn_pos, Vector3(0, 0, 0,), requesting_player_id)
 		
 		# Remove item do inentário do player
 		player_registry.remove_item_from_inventory(round_["round_id"], player["id"], obj_id)

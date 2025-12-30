@@ -495,7 +495,7 @@ func _client_remove_player(peer_id: int):
 # ===== SPAWN DE OBJETOS (ObjectSpawner) =====
 
 @rpc("authority", "call_remote", "reliable")
-func _rpc_receive_spawn_on_clients(object_id: int, round_id: int, item_name: String, position: Vector3, rotation: Vector3, owner_id: int):
+func _rpc_receive_spawn_on_clients(object_id: int, round_id: int, item_name: String, position: Vector3, rotation: Vector3, drop_velocity: Vector3, owner_id: int):
 	"""
 	RPC chamado APENAS pelo servidor para spawnar objeto em clientes
 	
@@ -514,7 +514,7 @@ func _rpc_receive_spawn_on_clients(object_id: int, round_id: int, item_name: Str
 	
 	# Chama GameManager para spawnar localmente
 	if GameManager.has_method("_spawn_on_client"):
-		GameManager._spawn_on_client(object_id, round_id, item_name, position, rotation, owner_id)
+		GameManager._spawn_on_client(object_id, round_id, item_name, position, rotation, drop_velocity, owner_id)
 	else:
 		push_error("GameManager não tem método _spawn_on_client")
 		
