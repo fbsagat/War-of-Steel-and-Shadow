@@ -931,7 +931,7 @@ func equip_item(item_name: String, object_id, item_slot: String = "") -> bool:
 	
 	return true
 
-func unequip_item(_object_id: int, item_slot: String) -> bool:
+func unequip_item(_object_id: int, item_slot: String, verify: bool = true) -> bool:
 	"""Desequipa item de um slot e retorna ao inventário"""
 
 	if local_inventory.is_empty():
@@ -946,7 +946,7 @@ func unequip_item(_object_id: int, item_slot: String) -> bool:
 		return false
 	
 	# Verifica se há espaço no inventário
-	if local_inventory["inventory"].size() >= 9:
+	if verify and local_inventory["inventory"].size() >= 9:
 		_log_debug("⚠ Inventário cheio, não pode desequipar item")
 		return false
 	
@@ -964,7 +964,7 @@ func unequip_item(_object_id: int, item_slot: String) -> bool:
 	_log_debug("✓ Item desequipado: %s de %s" % [item_name, item_slot])
 	
 	return true
-	
+
 func swap_equipped_item(new_item: String, slot: String = "") -> bool:
 	"""
 	Troca item equipado diretamente (desequipa antigo, equipa novo)
@@ -1003,7 +1003,7 @@ func clear_player_inventory():
 
 # ===== SPAWN DE OBJETOS =====
 
-func _spawn_on_client(object_id: int, round_id: int, item_name: String, position: Vector3, rotation: Vector3, owner_id: int):
+func _spawn_on_client(object_id: int, round_id: int, item_name: String, position: Vector3, rotation: Vector3, drop_velocity: Vector3, owner_id: int):
 	"""
 	Spawna objeto no cliente (chamado via RPC)
 	"""
@@ -1062,9 +1062,7 @@ func _spawn_on_client(object_id: int, round_id: int, item_name: String, position
 	# Inicializa item
 	if item_node.has_method("initialize"):
 		var item_full_data = item_database.get_item_full_info(item_name)
-		var drop_velocity = _calculate_drop_impulse(rotation)
 		item_node.initialize(object_id, round_id, item_name, item_full_data, owner_id, drop_velocity)
-	
 	# ✅ CORRIGIDO: Registra com estrutura correta
 	if not spawned_objects.has(round_id):
 		spawned_objects[round_id] = {}
@@ -1126,19 +1124,6 @@ func _despawn_on_client(object_id: int, round_id: int):
 	NetworkManager.unregister_syncable_object(object_id)
 	
 	_log_debug("✓ Objeto despawnado no cliente: ID=%d" % object_id)
-
-func _calculate_drop_impulse(player_rot: Vector3) -> Vector3:
-	"""Calcula vetor de impulso para dropar item"""
-	
-	var basis = Basis.from_euler(player_rot)
-	var forward = -basis.z
-	
-	var impulse = forward * drop_impulse_strength
-	impulse.x += randf_range(-drop_impulse_variance, drop_impulse_variance)
-	impulse.y += drop_impulse_strength * 0.5  # Para cima
-	impulse.z += randf_range(-drop_impulse_variance, drop_impulse_variance)
-	
-	return impulse
 
 # ===== UTILITÁRIOS =====
 

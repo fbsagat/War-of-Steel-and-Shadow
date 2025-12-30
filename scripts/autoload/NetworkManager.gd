@@ -69,7 +69,7 @@ func _ready():
 		_log_debug("Inicializando NetworkManager como servidor")
 		
 	else:
-		item_database = preload("res://scripts/only_server/registrars/ItemDatabase.gd").new()
+		item_database = preload("res://scripts/gameplay/ItemDatabase.gd").new()
 		item_database.name = "ItemDatabase"
 		get_tree().root.add_child.call_deferred(item_database)
 		item_database.load_database()
@@ -495,7 +495,7 @@ func _client_remove_player(peer_id: int):
 # ===== SPAWN DE OBJETOS (ObjectSpawner) =====
 
 @rpc("authority", "call_remote", "reliable")
-func _rpc_receive_spawn_on_clients(object_id: int, round_id: int, item_name: String, position: Vector3, rotation: Vector3, owner_id: int):
+func _rpc_receive_spawn_on_clients(object_id: int, round_id: int, item_name: String, position: Vector3, rotation: Vector3, drop_velocity: Vector3, owner_id: int):
 	"""
 	RPC chamado APENAS pelo servidor para spawnar objeto em clientes
 	
@@ -514,7 +514,7 @@ func _rpc_receive_spawn_on_clients(object_id: int, round_id: int, item_name: Str
 	
 	# Chama GameManager para spawnar localmente
 	if GameManager.has_method("_spawn_on_client"):
-		GameManager._spawn_on_client(object_id, round_id, item_name, position, rotation, owner_id)
+		GameManager._spawn_on_client(object_id, round_id, item_name, position, rotation, drop_velocity, owner_id)
 	else:
 		push_error("GameManager não tem método _spawn_on_client")
 		
@@ -652,18 +652,18 @@ func server_apply_equiped_item(player_id: int, item_id: int, unnequip: bool = fa
 		player_node.apply_visual_equip_on_player_node(player_node, item_id, unnequip)
 
 @rpc("authority", "call_remote", "reliable")
-func server_apply_drop_item(player_id: int, item: String):
+func server_apply_drop_item(player_id: int, item_name: String):
 	"""Cliente recebe comando de drop"""
 	
 	if multiplayer.is_server():
 		return
 	
-	_log_debug("📥 Dropando equipamento: Player %d, Item %s" % [player_id, item])
+	_log_debug("📥 Dropando equipamento: Player %d, Item %s" % [player_id, item_name])
 	
 	# ENCONTRA O PLAYER E EXECUTA
 	var player_node = GameManager.players_node.get_node_or_null(str(player_id))
 	if player_node and player_node.has_method("execute_item_drop"):
-		player_node.execute_item_drop(player_node, item)
+		player_node.execute_item_drop()
 
 # ===== ATUALIZAÇÕES DE ESTADOS DE CLIENTES =====
 
@@ -805,13 +805,13 @@ func local_equip_item(item_name, object_id, slot):
 
 # Desequipa item no inventário do player
 @rpc("authority", "call_remote", "reliable")
-func local_unequip_item(item_id, slot):
+func local_unequip_item(item_id, slot, verify):
 
 	if multiplayer.is_server():
 		return
 		
 	if GameManager and GameManager.has_method("unequip_item"):
-		GameManager.unequip_item(int(item_id), slot)
+		GameManager.unequip_item(int(item_id), slot, verify)
 
 # Troca item no inventário do player
 @rpc("authority", "call_remote", "reliable")

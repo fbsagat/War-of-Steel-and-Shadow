@@ -1399,12 +1399,7 @@ func action_drop_item_call(obj_id) -> void:
 	if NetworkManager and NetworkManager.is_connected:
 		NetworkManager.request_drop_item(player_id, int(obj_id))
 		
-func execute_item_drop(player_node, item):
-	# Executa o drop do node do item
-	var item_node_link = item_database.get_item(item)["model_node_link"]
-	
-	# Atualiza visibilidade do item no modelo (uma vez)
-	_item_model_change_visibility(player_node, item_node_link, false)
+func execute_item_drop():
 	# Animação de drop
 	_execute_animation("Interact", "Common", "parameters/Interact/transition_request", "parameters/Interact_shot/request")
 
