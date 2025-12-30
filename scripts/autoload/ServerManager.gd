@@ -1328,6 +1328,21 @@ func _server_validate_drop_item(requesting_player_id: int, obj_id: int):
 	var round_ = round_registry.get_round_by_player_id(requesting_player_id)
 	var player = player_registry.get_player(requesting_player_id)
 	
+	# Validação 1:
+	if not player_states.has(requesting_player_id):
+		push_warning("[ServerManager]: Player %d não tem estado registrado" % requesting_player_id)
+		return
+		
+	# Validação 2:
+	if round_registry.get_round_state(round_["round_id"]) != "playing":
+		push_warning("[ServerManager]: Round inválido, não está em partida")
+		return
+	
+	# Validação 3:
+	if not object_manager.stored_object_exists(round_["round_id"], obj_id):
+		push_warning("[ServerManager]: Objeto inválido, não existe no ObjectManager stored_objects do player")
+		return
+	
 	var is_item_equipped = player_registry.is_item_equipped(round_["round_id"], requesting_player_id, str(obj_id))
 	var object_item_name = object_manager.get_stored_object_item_name(round_["round_id"], obj_id)
 	var item_ = item_database.get_item(object_item_name).to_dictionary()
@@ -1335,14 +1350,13 @@ func _server_validate_drop_item(requesting_player_id: int, obj_id: int):
 	var item_id = 0
 	
 	# Se o item estiver equipado
-	_log_debug("is_item_equipped?: %s" % is_item_equipped)
 	if is_item_equipped:
 		var equiped_obj_id = player_registry.get_equipped_item_in_slot(round_["round_id"], requesting_player_id, item_slot)["object_id"]
 		if int(equiped_obj_id) == int(obj_id):
 			# O item dropado é o mesmo item que está equipado, pedir para desequipar
 			player_registry.unequip_item(round_["round_id"], requesting_player_id, item_slot)
 			
-		# Servidor manda desequipar obj item
+		# Servidor manda desequipar obj item / mudança no visual do modelo
 		item_id = int(player_registry.get_inventory_items(round_["round_id"], requesting_player_id)[0]["item_id"])
 		for peer in round_["players"]:
 			var peer_id = peer["id"]
@@ -1351,26 +1365,10 @@ func _server_validate_drop_item(requesting_player_id: int, obj_id: int):
 	
 	_log_debug("[ITEM]📦 Servidor vai validar pedido de drop de item ObjId: %d tipo %s do player ID %s" % [obj_id, item_["name"], requesting_player_id])
 	
-	# Validação 1:
+	# Validação 4:
 	if not item_database.get_item_by_id(item_id) and item_id != 0:
 		push_warning("[ServerManager]: ID de item inválido recebido: %d" % item_id)
 		return
-	
-	# Validação 2:
-	if not player_states.has(requesting_player_id):
-		push_warning("[ServerManager]: Player %d não tem estado registrado" % requesting_player_id)
-		return
-		
-	# Validação 3:
-	if round_registry.get_round_state(round_["round_id"]) != "playing":
-		push_warning("[ServerManager]: Round inválido, não está em partida")
-		return
-		
-	if not object_manager.stored_object_exists(round_["round_id"], obj_id):
-		push_warning("[ServerManager]: Objeto inválido, não existe no ObjectManager")
-		return
-	
-	_log_debug("[ITEM]📦Pedido válido! Player %s pediu para dropar item %d, no round %d" % [player["name"], item_id, round_["round_id"]])
 	
 	# Se o player não tiver nenhum item no próprio inventário para dropar, não faz nada
 	var has_any = player_registry.has_any_item(round_["round_id"], requesting_player_id)
@@ -1379,6 +1377,8 @@ func _server_validate_drop_item(requesting_player_id: int, obj_id: int):
 		push_warning("[ServerManager]: Player não tem nenhum item no inentário para dropar")
 		return
 		
+	_log_debug("[ITEM]📦Pedido válido! Player %s pediu para dropar item %d, no round %d" % [player["name"], item_id, round_["round_id"]])
+	
 	# Executar drop (o item deve estar no inventário do player / já verificado acima) \/
 	# Pegar o item_id do objeto referido
 	var player_invent_items = player_registry.get_inventory_items(round_["round_id"], requesting_player_id)
@@ -1397,7 +1397,7 @@ func _server_validate_drop_item(requesting_player_id: int, obj_id: int):
 		var player_rot = player_state["rot"]
 		var spawn_pos = object_manager._calculate_front_position(player_pos, player_rot)
 		
-		# Retomar o nó do item de volta à cena no object manager
+		# Object Manager, retomar o nó do item de volta à cena
 		object_manager.retrieve_stored_object(objects_node, round_["round_id"], obj_id, spawn_pos)
 		
 		# Remove item do inentário do player
