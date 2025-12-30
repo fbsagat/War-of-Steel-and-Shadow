@@ -141,7 +141,7 @@ func _start_server():
 	room_registry = load("res://scripts/only_server/registrars/RoomRegistry.gd").new()
 	round_registry = load("res://scripts/only_server/registrars/RoundRegistry.gd").new()
 	server_map_manager = preload("res://scripts/gameplay/MapManager.gd").new()
-	item_database = preload("res://scripts/only_server/registrars/ItemDatabase.gd").new()
+	item_database = preload("res://scripts/gameplay/ItemDatabase.gd").new()
 	object_manager = load("res://scripts/only_server/ObjectManager.gd").new()
 	test_manager = load("res://scripts/only_server/TestManager.gd").new()
 	
@@ -1342,12 +1342,12 @@ func _server_validate_drop_item(requesting_player_id: int, obj_id: int):
 			# O item dropado é o mesmo item que está equipado, pedir para desequipar
 			player_registry.unequip_item(round_["round_id"], requesting_player_id, item_slot)
 			
-			# Servidor manda desequipar obj item
-			item_id = int(player_registry.get_inventory_items(round_["round_id"], requesting_player_id)[0]["item_id"])
-			for peer in round_["players"]:
-				var peer_id = peer["id"]
-				if _is_peer_connected(peer_id):
-					NetworkManager.rpc_id(peer_id, "server_apply_equiped_item", requesting_player_id, int(item_id), true)
+		# Servidor manda desequipar obj item
+		item_id = int(player_registry.get_inventory_items(round_["round_id"], requesting_player_id)[0]["item_id"])
+		for peer in round_["players"]:
+			var peer_id = peer["id"]
+			if _is_peer_connected(peer_id):
+				NetworkManager.rpc_id(peer_id, "server_apply_equiped_item", requesting_player_id, int(item_id), true)
 	
 	_log_debug("[ITEM]📦 Servidor vai validar pedido de drop de item ObjId: %d tipo %s do player ID %s" % [obj_id, item_["name"], requesting_player_id])
 	

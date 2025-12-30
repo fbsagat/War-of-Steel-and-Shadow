@@ -69,7 +69,7 @@ func _ready():
 		_log_debug("Inicializando NetworkManager como servidor")
 		
 	else:
-		item_database = preload("res://scripts/only_server/registrars/ItemDatabase.gd").new()
+		item_database = preload("res://scripts/gameplay/ItemDatabase.gd").new()
 		item_database.name = "ItemDatabase"
 		get_tree().root.add_child.call_deferred(item_database)
 		item_database.load_database()
