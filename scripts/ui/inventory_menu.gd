@@ -665,35 +665,42 @@ func on_server_item_unequipped(item_id: String):
 		_sync_quickbar()
 
 func on_server_items_swapped(item_id_1: String, item_id_2: String):
-	"""Resposta do servidor: troca dois itens visualmente"""
+	"""Resposta do servidor: troca dois itens visualmente - versão CORRIGIDA"""
 	_log_debug("🔄 Servidor confirmou swap: %s <-> %s" % [item_id_1, item_id_2])
 	
 	var item1 = _find_item_by_id(item_id_1)
 	var item2 = _find_item_by_id(item_id_2)
 	
 	if not item1 or not item2:
+		_log_debug("❌ Um dos itens não encontrado no swap")
 		return
 	
+	# 🔑 PASSO 1: Identificar os SLOTS ATUAIS DOS ITENS (origem)
 	var slot1 = item1.get_parent()
 	var slot2 = item2.get_parent()
 	
-	# Remover itens
-	item1.get_parent().remove_child(item1)
-	item2.get_parent().remove_child(item2)
+	if not slot1 or not slot2:
+		_log_debug("❌ Slots dos itens não encontrados")
+		return
 	
-	# Adicionar nos slots trocados
+	# 🔑 PASSO 2: REMOVER OS ITENS DOS SLOTS ATUAIS (como em equipped/unequipped)
+	slot1.remove_child(item1)
+	slot2.remove_child(item2)
+	
+	# 🔑 PASSO 3: COLOCAR NOS SLOTS TROCADOS (simétrico)
 	slot2.add_child(item1)
 	slot1.add_child(item2)
 	
-	# Posicionar corretamente
+	# 🔑 PASSO 4: POSICIONAR CORRETAMENTE (como em equipped)
 	_position_item_in_slot(item1, slot2)
 	_position_item_in_slot(item2, slot1)
 	
-	# Restaurar opacidade
+	# 🔑 PASSO 5: RESTAURAR OPACIDADE E SINCRONIZAR (como em equipped)
 	item1.modulate.a = 1.0
 	item2.modulate.a = 1.0
 	
 	_sync_quickbar()
+	_log_debug("✅ Swap visual concluído: %s <-> %s" % [item_id_1, item_id_2])
 
 # =============================================================================
 # UTILITÁRIOS DE BUSCA

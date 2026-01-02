@@ -1241,7 +1241,7 @@ func action_lock_call():
 		if not item_equipado:
 			return
 		
-		# Verificação local: Apenas atacar se for um item categoria defense (escudo)
+		# Verificação local: Apenas defender se for um item categoria defense (escudo)
 		if item_equipado["function"] != "defense":
 			return
 		
@@ -1264,6 +1264,20 @@ func action_stop_locking_call():
 	# Apenas se estiver lockado
 	if not is_aiming:
 		return 
+	
+	# Verificação local: Apenas parar de defender se tem um escudo
+	var hand_left = GameManager.local_inventory["equipped"]["hand-left"]
+	if hand_left.has("item_id"):
+		var item_id = hand_left["item_id"]
+		var item_equipado = item_database.get_item_by_id(int(item_id)).to_dictionary()
+		if not item_equipado:
+			return
+		
+		# Verificação local: Apenas defender se for um item categoria defense (escudo)
+		if item_equipado["function"] != "defense":
+			return
+	else:
+		return
 		
 	camera_strafe_mode(false)
 	

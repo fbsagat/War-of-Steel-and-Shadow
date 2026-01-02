@@ -1,24 +1,76 @@
-# Godot 4+ specific ignores
-.godot/
-.nomedia
+# .gitignore — Godot 4.5.1 (recomendações)
+# Ajuste conforme necessário para seu fluxo de trabalho
 
-# Godot-specific ignores
+# --- Godot editor / cache / machine-specific ---
+.godot/
 .import/
+**/*.uid
+*.uid
+
+# Godot generated/converted/imported files
+*.import
+*.converted.*
+*.converted.scn
+*.converted.tres
+
+# Export presets / credentials
 export.cfg
+export_presets.cfg
 export_credentials.cfg
 
-# Imported translations (automatically generated from CSV files)
+# Translations (gerados a partir de CSV)
 *.translation
 
-# Mono-specific ignores
+# Mono (C#) / .NET
 .mono/
-data_*/
 mono_crash.*.json
+data_*/
+/bin/
+/obj/
 
-# Do projeto
+# C# IDE / Rider / VS
+.vscode/
+.vs/
+.idea/
+*.sln.iml
+
+# Editor / workspace files
+*.log
+*.tmp
+tmp/
+.temp/
+
+# OS specific
+.DS_Store
+Thumbs.db
+desktop.ini
+.nomedia
+
+# Builds / exports / compilados (local build output)
+/builds/
+/export/
+/build/
+
+# Pasta específica do projeto (dados gerados de terreno)
 /scenes/system/terrain_data/
-*.res
-*.res
-*.res
-/scenes/system/terrain_data
-/builds
+
+# Arquivos binários/gerados que não precisam ser versionados
+*.stackdump
+*.crash
+
+# Node / package manager
+node_modules/
+
+# Optional: lock files / environment
+.env
+.env.local
+
+# Fallback: ignore arquivos de backup/edição
+
+*~
+*.bak
+
+# Observação: NÃO ignorar arquivos de cena (.tscn/.scn), scripts (.gd/.cs), project.godot
+# project.godot deve ser versionado (configurações do projeto)
+
+# FIM

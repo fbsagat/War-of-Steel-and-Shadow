@@ -411,7 +411,7 @@ func equip_item(round_id: int, player_id: int, item_name: String, object_id, slo
 	var item_data: Dictionary = {}
 	var item_idx = -1
 	for i in range(inventory["inventory"].size()):
-		if inventory["inventory"][i]["object_id"] == object_id:
+		if inventory["inventory"][i]["object_id"] == int(object_id):
 			item_data = inventory["inventory"][i]
 			item_idx = i
 			break
@@ -494,40 +494,58 @@ func unequip_item(round_id: int, player_id: int, slot: String, verify: bool = tr
 	
 	return true
 
-func swap_equipped_item(round_id: int, player_id: int, new_item: String, slot: String = "") -> bool:
+func swap_equipped_item(round_id: int, player_id: int, new_item_name: String, dragged_item: Dictionary, existing_item_id: int, target_slot: String) -> bool:
 	"""
 	Troca item equipado diretamente (desequipa antigo, equipa novo)
-	Útil para trocas rápidas de armas/equipamentos
+	- Não emite sinais intermediários de equip/unequip
+	- Mantém ambos os itens no inventário/equipamento
+	- Emite apenas items_swapped no final
 	"""
 	var inventory = _get_player_inventory(round_id, player_id)
 	if inventory.is_empty():
 		return false
 	
-	# Detecta slot se não especificado
-	if slot.is_empty():
-		if item_database:
-			slot = item_database.get_slot(new_item)
-		if slot.is_empty():
-			return false
+	if not inventory["equipped"].has(target_slot):
+		push_error("PlayerRegistry: Slot inválido para swap: %s" % target_slot)
+		return false
 	
-	var old_item_data = inventory["equipped"][slot]
-	var old_item = old_item_data.get("item_name", "") if not old_item_data.is_empty() else ""
+	var old_item_data = inventory["equipped"][target_slot]
+	if old_item_data.is_empty():
+		push_error("PlayerRegistry: Nenhum item equipado no slot %s para trocar" % target_slot)
+		return false
 	
-	# Desequipa item atual (se houver)
-	if not old_item.is_empty():
-		if not unequip_item(round_id, player_id, slot):
-			return false
+	# Verifica se o dragged_item realmente está no inventário
+	var new_item_idx = -1
+	for i in range(inventory["inventory"].size()):
+		if inventory["inventory"][i]["object_id"] == int(dragged_item["object_id"]):
+			new_item_idx = i
+			break
 	
-	# Equipa novo item
-	if equip_item(round_id, player_id, new_item, slot):
-		#if not old_item.is_empty():
-			#item_swapped.emit(round_id, player_id, old_item, new_item, slot)
-		
-		# Atualizar o do player local também via rpc
-		NetworkManager.rpc_id(player_id, "local_swap_equipped_item", new_item, slot)
-		return true
+	if new_item_idx == -1:
+		push_error("PlayerRegistry: Item arrastado não encontrado no inventário")
+		return false
 	
-	return false
+	var new_item_data = inventory["inventory"][new_item_idx]
+	
+	# 1. Remove o NOVO item do inventário
+	inventory["inventory"].remove_at(new_item_idx)
+	
+	# 2. Coloca o ITEM ANTIGO no inventário (no lugar do novo)
+	inventory["inventory"].append(old_item_data)
+	
+	# 3. Equipa o NOVO item no slot
+	inventory["equipped"][target_slot] = new_item_data
+	
+	var old_item_name = item_database.get_item_by_id(int(old_item_data["item_id"]))["name"]
+	
+	_log_debug("🔄 Item trocado diretamente: %s <-> %s em %s (Player %d, Rodada %d)" % [
+		old_item_name, new_item_name, target_slot, player_id, round_id
+	])
+	
+	# Atualiza o cliente via RPC
+	NetworkManager.rpc_id(player_id, "local_swap_equipped_item", new_item_name, dragged_item, existing_item_id, target_slot)
+	
+	return true
 
 func clear_player_inventory(round_id: int, player_id: int):
 	"""Limpa inventário do jogador em uma rodada"""

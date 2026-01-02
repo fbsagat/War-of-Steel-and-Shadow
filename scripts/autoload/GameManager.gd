@@ -79,9 +79,9 @@ signal round_started()
 signal round_ended(end_data: Dictionary)
 signal returned_to_room(room_data: Dictionary)
 signal item_added(object_id: String, item_name: String, item_type: String, slot_id: String, icon_path: String)
-signal item_removed(item_id: String)
-signal item_equipped(item_id: String, slot_type: String)
-signal item_unequipped(item_id: String)
+signal item_removed(object_id: String)
+signal item_equipped(object_id: String, slot_type: String)
+signal item_unequipped(object_id: String)
 signal items_swapped(item_id_1: String, item_id_2: String)
 
 # ===== FUNÇÕES DE INICIALIZAÇÃO =====
@@ -887,7 +887,7 @@ func equip_item(item_name: String, object_id, item_slot: String = "") -> bool:
 	var item_data: Dictionary = {}
 	var item_idx = -1
 	for i in range(local_inventory["inventory"].size()):
-		if local_inventory["inventory"][i]["object_id"] == object_id:
+		if local_inventory["inventory"][i]["object_id"] == int(object_id):
 			item_data = local_inventory["inventory"][i]
 			item_idx = i
 			break
@@ -965,35 +965,56 @@ func unequip_item(_object_id: int, item_slot: String, verify: bool = true) -> bo
 	
 	return true
 
-func swap_equipped_item(new_item: String, slot: String = "") -> bool:
+func swap_equipped_item(new_item_name: String, dragged_item: Dictionary, existing_item_id: int, target_slot: String) -> bool:
 	"""
 	Troca item equipado diretamente (desequipa antigo, equipa novo)
-	Útil para trocas rápidas de armas/equipamentos
+	- Não emite sinais intermediários de equip/unequip
+	- Mantém ambos os itens no inventário/equipamento
+	- Emite apenas items_swapped no final
 	"""
-	
+
 	if local_inventory.is_empty():
 		return false
 	
-	# Detecta slot se não especificado
-	if slot.is_empty():
-		if ItemDatabase:
-			slot = item_database.get_slot(new_item)
-		if slot.is_empty():
-			return false
+	if not local_inventory["equipped"].has(target_slot):
+		push_error("PlayerRegistry: Slot inválido para swap: %s" % target_slot)
+		return false
 	
-	var old_item = local_inventory["equipped"][slot]
+	var old_item_data = local_inventory["equipped"][target_slot]
+	if old_item_data.is_empty():
+		push_error("PlayerRegistry: Nenhum item equipado no slot %s para trocar" % target_slot)
+		return false
 	
-	# Desequipa item atual (se houver)
-	if not old_item.is_empty():
-		unequip_item(old_item["item_id"], slot)
+	# Verifica se o dragged_item realmente está no inventário
+	var new_item_idx = -1
+	for i in range(local_inventory["inventory"].size()):
+		if local_inventory["inventory"][i]["object_id"] == int(dragged_item["object_id"]):
+			new_item_idx = i
+			break
 	
-	# Equipa novo item
-	if equip_item(new_item, slot):
-		return true
+	if new_item_idx == -1:
+		push_error("PlayerRegistry: Item arrastado não encontrado no inventário")
+		return false
 	
-	items_swapped.emit(old_item["object_id"], new_item)
+	var new_item_data = local_inventory["inventory"][new_item_idx]
 	
-	return false
+	# 1. Remove o NOVO item do inventário
+	local_inventory["inventory"].remove_at(new_item_idx)
+	
+	# 2. Coloca o ITEM ANTIGO no inventário (no lugar do novo)
+	local_inventory["inventory"].append(old_item_data)
+	
+	# 3. Equipa o NOVO item no slot
+	local_inventory["equipped"][target_slot] = new_item_data
+	
+	var old_item_name = item_database.get_item_by_id(int(old_item_data["item_id"]))["name"]
+	
+	_log_debug("🔄 Item trocado diretamente: %s <-> %s em %s" % [
+		old_item_name, new_item_name, target_slot])
+	
+	items_swapped.emit(dragged_item["object_id"], str(existing_item_id))
+	
+	return true
 
 func clear_player_inventory():
 	"""Limpa inventário do jogador em uma rodada"""

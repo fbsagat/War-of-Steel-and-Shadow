@@ -815,13 +815,13 @@ func local_unequip_item(item_id, slot, verify):
 
 # Troca item no inventário do player
 @rpc("authority", "call_remote", "reliable")
-func local_swap_equipped_item(new_item, slot):
+func local_swap_equipped_item(new_item_name: String, dragged_item: Dictionary, existing_item_id: int, target_slot: String):
 
 	if multiplayer.is_server():
 		return
 		
 	if GameManager and GameManager.has_method("swap_equipped_item"):
-		GameManager.swap_equipped_item(new_item, slot)
+		GameManager.swap_equipped_item(new_item_name, dragged_item, existing_item_id, target_slot)
 
 # ===== REGISTRO DE OBJETOS SINCRONIZÁVEIS =====
 

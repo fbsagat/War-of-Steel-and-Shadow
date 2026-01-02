@@ -716,7 +716,7 @@ func _spawn_on_server(objects_node, object_id: int, round_id: int, item_name: St
 			var player_rot = player_state["rot"]
 			drop_velocity = _calculate_drop_impulse(player_rot)
 			
-		_log_debug("drop_velocity %s" % drop_velocity)
+		_log_debug("Impulso inicial do drop calculado: %s" % drop_velocity)
 		item_node.initialize(object_id, round_id, item_name, item_full_data, owner_id, drop_velocity)
 	
 	_log_debug("Node criado no servidor: %s" % item_node.name)
