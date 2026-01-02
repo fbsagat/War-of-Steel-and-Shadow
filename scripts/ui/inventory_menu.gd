@@ -15,7 +15,7 @@ extends Control
 signal request_drop_item(item_id: String)
 signal request_equip_item(item_id: String, slot_type: String)
 signal request_unequip_item(slot_type: String)
-signal request_swap_items(item_id_1: String, item_id_2: String, slot_type_1: String, slot_type_2: String)
+signal request_swap_items(item_id_1: String, item_id_2: String)
 #signal request_move_item(item_id: String, from_slot: String, to_slot: String)
 
 # =============================================================================
@@ -408,10 +408,7 @@ func _handle_drop_in_slot(target_slot: Panel):
 		_log_debug("🔄 Swap detectado: %s ↔ %s" % [dragged_item_id, existing_item_id])
 		request_swap_items.emit(
 			dragged_item_id,
-			existing_item_id,
-			original_slot_type,
-			target_slot_id
-		)
+			existing_item_id)
 		return
 	
 	# =========================================================================

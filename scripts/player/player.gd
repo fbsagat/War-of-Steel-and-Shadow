@@ -1265,6 +1265,9 @@ func action_stop_locking_call():
 	if not is_aiming:
 		return 
 	
+	# Desativa o modo strafe sempre
+	camera_strafe_mode(false)
+	
 	# Verificação local: Apenas parar de defender se tem um escudo
 	var hand_left = GameManager.local_inventory["equipped"]["hand-left"]
 	if hand_left.has("item_id"):
@@ -1431,12 +1434,12 @@ func action_unequip_item_call(slot_type):
 	if NetworkManager and NetworkManager.is_connected:
 		NetworkManager.request_unequip_item(player_id, slot_type)
 
-func action_swap_items_call(item_id_1: String, item_id_2: String, slot_type_1: String, slot_type_2: String):
+func action_swap_items_call(item_id_1: String, item_id_2: String):
 	if not is_local_player:
 		return
 		
 	if NetworkManager and NetworkManager.is_connected:
-		NetworkManager.request_swap_items(item_id_1, item_id_2, slot_type_1, slot_type_2)
+		NetworkManager.request_swap_items(item_id_1, item_id_2)
 
 # Modifica a visibilidade do item na mão do modelo
 func _item_model_change_visibility(player_node, node_link: String, unnequip = false):

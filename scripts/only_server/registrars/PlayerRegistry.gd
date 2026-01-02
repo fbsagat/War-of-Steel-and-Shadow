@@ -494,7 +494,7 @@ func unequip_item(round_id: int, player_id: int, slot: String, verify: bool = tr
 	
 	return true
 
-func swap_equipped_item(round_id: int, player_id: int, new_item_name: String, dragged_item: Dictionary, existing_item_id: int, target_slot: String) -> bool:
+func swap_equipped_item(round_id: int, player_id: int, new_item_name: String, inventory_item: Dictionary, equiped_item_id: int, target_slot: String) -> bool:
 	"""
 	Troca item equipado diretamente (desequipa antigo, equipa novo)
 	- Não emite sinais intermediários de equip/unequip
@@ -517,7 +517,7 @@ func swap_equipped_item(round_id: int, player_id: int, new_item_name: String, dr
 	# Verifica se o dragged_item realmente está no inventário
 	var new_item_idx = -1
 	for i in range(inventory["inventory"].size()):
-		if inventory["inventory"][i]["object_id"] == int(dragged_item["object_id"]):
+		if inventory["inventory"][i]["object_id"] == int(inventory_item["object_id"]):
 			new_item_idx = i
 			break
 	
@@ -543,7 +543,7 @@ func swap_equipped_item(round_id: int, player_id: int, new_item_name: String, dr
 	])
 	
 	# Atualiza o cliente via RPC
-	NetworkManager.rpc_id(player_id, "local_swap_equipped_item", new_item_name, dragged_item, existing_item_id, target_slot)
+	NetworkManager.rpc_id(player_id, "local_swap_equipped_item", new_item_name, inventory_item, equiped_item_id, target_slot)
 	
 	return true
 

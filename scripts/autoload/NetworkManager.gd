@@ -572,9 +572,9 @@ func request_unequip_item(player_id: int, slot_type: String) -> void:
 	"""Requisição do player: Chama RPC no servidor para pedir para desequipar um item"""
 	rpc_id(1, "_server_unequip_player_item", player_id, slot_type)
 
-func request_swap_items(item_id_1, item_id_2, slot_type_1, slot_type_2):
+func request_swap_items(item_id_1, item_id_2):
 	"""Requisição do player: Chama RPC no servidor para pedir para trocar dois itens"""
-	rpc_id(1, "_server_swap_items", item_id_1, item_id_2, slot_type_1, slot_type_2)
+	rpc_id(1, "_server_swap_items", item_id_1, item_id_2)
 
 func request_trainer_spawn_item(player_id: int, item_id: int):
 	"""Requisição do player: Chama RPC no servidor para pedir para spawnar um item na frente dele
@@ -609,10 +609,10 @@ func _server_unequip_player_item(player_id, item_id):
 	ServerManager._server_validate_unequip_item(player_id, item_id)
 
 @rpc("any_peer", "call_remote", "unreliable")
-func _server_swap_items(item_id_1, item_id_2, slot_type_1, slot_type_2):
+func _server_swap_items(item_id_1, item_id_2):
 	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
 		return
-	ServerManager._server_validate_swap_items(item_id_1, item_id_2, slot_type_1, slot_type_2)
+	ServerManager._server_validate_swap_items(item_id_1, item_id_2)
 
 @rpc("any_peer", "call_remote", "unreliable")
 func _server_trainer_spawn_item(player_id, item_id):

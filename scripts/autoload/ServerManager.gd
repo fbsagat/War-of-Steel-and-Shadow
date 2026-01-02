@@ -1283,35 +1283,78 @@ func _server_validate_unequip_item(requesting_player_id: int, slot_type: String)
 			player_node.apply_visual_equip_on_player_node(player_node, item_id, true)
 
 @rpc("any_peer", "call_remote", "reliable")
-func _server_validate_swap_items(dragged_item_id: String, existing_item_id: String, original_slot_type: String, target_slot: String):
-	"""Servidor recebe pedido para trocar dois itens, valida e redistribui"""
+func _server_validate_swap_items(dragged_item_id: String, target_item_id: String):
+	"""
+	Processa troca entre inventário e equipamento.
 	
-	var player_id = multiplayer.get_remote_sender_id()
-	var round_id = player_registry.get_player_round(player_id)
-	var round_ = round_registry.get_round(round_id)
-	var item_name = object_manager.get_stored_object_item_name(round_id, int(dragged_item_id))
-	var item_novo = item_database.get_item(item_name).to_dictionary()
-	var item_invent = {"item_id": item_novo["id"], "object_id": dragged_item_id}
-	var players_node = round_["round_node"].get_node_or_null("Players")
+	NOTA IMPORTANTE: Esta função SEMPRE chama swap_equipped_item com:
+		- O item do INVENTÁRIO como primeiro item (será equipado)
+		- O item EQUIPADO como segundo item (será substituído)
 	
-	# Verifica se o item é válido
-	if not item_name and not item_novo:
-		return
+	Para isso, inverte os IDs se necessário, garantindo que a lógica do servidor
+	sempre receba os parâmetros na ordem correta.
+	"""
+	var player_id: int = multiplayer.get_remote_sender_id()
+	var round_id: int = player_registry.get_player_round(player_id)
+	var round_data = round_registry.get_round(round_id)
 
-	player_registry.swap_equipped_item(round_id, player_id, item_novo["name"], item_invent, int(existing_item_id), item_novo["type"])
+	# PASSO 1: IDENTIFICAR QUAL ITEM VEM DO INVENTÁRIO (será equipado)
 	
-	# Envia para todos os clientes do round (para atualizar visual)
+	var is_dragged_equipped: bool = player_registry.is_item_equipped(round_id, player_id, dragged_item_id)
+	#var is_target_equipped: bool = player_registry.is_item_equipped(round_id, player_id, target_item_id)
 	
-	# Para cada player neste round
-	for peer in round_["players"]:
-		var peer_id = peer["id"]
+	# Determina qual ID representa o item do inventário (será o novo equipado)
+	var inventory_item_id: String
+	var equipped_item_id: String
+	
+	if is_dragged_equipped:
+		# Item arrastado está equipado → então o ALVO está no inventário
+		inventory_item_id = target_item_id
+		equipped_item_id = dragged_item_id
+	else:
+		# Item arrastado está no inventário → então o ALVO está equipado
+		inventory_item_id = dragged_item_id
+		equipped_item_id = target_item_id
+
+	# PASSO 2: OBTER DADOS DO ITEM QUE VEM DO INVENTÁRIO
+	
+	var item_name: String = object_manager.get_stored_object_item_name(round_id, int(inventory_item_id))
+	if item_name.is_empty():
+		push_error("Item para swap não encontrado. ID: %s" % inventory_item_id)
+		return
+	
+	# Carrega dados do item (usando SUA estrutura existente que funciona)
+	var item_data: Dictionary = item_database.get_item(item_name).to_dictionary()
+	var inventory_item_dict: Dictionary = {
+		"item_id": item_data["id"],
+		"object_id": inventory_item_id
+	}
+	
+	# PASSO 3: EXECUTAR TROCA (usando EXATAMENTE sua lógica original)
+	
+	# NOTA: Usamos item_data["type"] como slot de destino (como no seu código original)
+	player_registry.swap_equipped_item(
+		round_id,
+		player_id,
+		item_name,                # Nome do item do inventário
+		inventory_item_dict,      # Dados do item do inventário
+		int(equipped_item_id),    # ID do item equipado (será substituído)
+		item_data["type"]         # Tipo do slot (ex: "hand-left", "head") - MANTENHA "type"
+	)
+
+	# PASSO 4: ATUALIZAR VISUAL (mantendo sua lógica original)
+	var players_node = round_data["round_node"].get_node_or_null("Players")
+	if not players_node:
+		return
+	
+	for peer in round_data["players"]:
+		var peer_id: int = peer["id"]
 		if _is_peer_connected(peer_id):
-			NetworkManager.rpc_id(peer_id, "server_apply_equiped_item", player_id, item_novo["id"])
+			NetworkManager.rpc_id(peer_id, "server_apply_equiped_item", player_id, item_data["id"])
 	
-	# Aplica visual tbm na cena do servidor
 	var player_node = players_node.get_node_or_null(str(player_id))
 	if player_node and player_node.has_method("apply_visual_equip_on_player_node"):
-			player_node.apply_visual_equip_on_player_node(player_node, item_novo["id"])
+		player_node.apply_visual_equip_on_player_node(player_node, item_data["id"])
 
 @rpc("any_peer", "call_remote", "reliable")
 func _server_trainer_spawn_item(requesting_player_id: int, item_id: int):
