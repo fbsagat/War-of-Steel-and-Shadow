@@ -47,9 +47,9 @@
 45. 	Ok. Servidor não precisa inicializar o main menu. Criar outro menu simples pra ele.
 46. 	Ok. Inicializar ItemDatabase por último.
 47. Retirar main_menu da cena principal: Project → Project Settings → Application → Run → Main Scene.
-48. Durante o pulo não pode atacar.
+48. 	Ok. Durante o pulo não pode receber ordem de atacar.
 49. Câmera fica de cabeça pra baixo quando a isntancia não é a principal.
-50. Colocar um bloqueio para a câmera não chegar tão perto do chão.
+50. 	Ok. Colocar um bloqueio para a câmera não chegar tão perto do chão.
 51. Resolver problema de itens entrando no chão quando player pula em cima deles.
 52. 	Ok. O player está trocando itens ao dropar, diferente dos que estão na mão dele.
 53. 	Ok. (Ps: Não precisou pois o problema era outro) Criar um buffer de tranferencias de itens 

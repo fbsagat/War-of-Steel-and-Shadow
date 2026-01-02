@@ -1165,6 +1165,11 @@ func action_sword_attack_call():
 	if not is_local_player:
 		return
 	
+	# Não ataca enquanto estiver em um pulo
+	if is_jumping:
+		return
+	
+	# Espera o atraque anterir, se estiver em curso, acabar
 	if is_attacking:
 		return
 	
