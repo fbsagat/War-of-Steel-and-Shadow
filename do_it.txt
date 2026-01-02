@@ -52,9 +52,9 @@
 50. Colocar um bloqueio para a câmera não chegar tão perto do chão.
 51. Resolver problema de itens entrando no chão quando player pula em cima deles.
 52. 	Ok. O player está trocando itens ao dropar, diferente dos que estão na mão dele.
-53. Ok. (Ps: Não precisou pois o problema era outro) Criar um buffer de tranferencias de itens 
+53. 	Ok. (Ps: Não precisou pois o problema era outro) Criar um buffer de tranferencias de itens 
 	entre slots para o inventory_menu, previne bugs.
-54. Ok. Implementações passo a passo para o sistema de inventários funcionar plenamente:
+54. 	Ok. Implementações passo a passo para o sistema de inventários funcionar plenamente:
 	Fata apenas, parei nisso: Quando o player pede pra dropar um item que está equipado, arrastando 
 	ele no inventário menu diretamente do quadro de equipamentos para drop area, desequipar primeiro, depois dropar.
 55. Ajustar a forma como os itens dropáveis são spawnados, a partir do player, leve impulso para frente
