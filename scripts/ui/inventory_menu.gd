@@ -7,6 +7,10 @@ extends Control
 # Toda lógica de estado é controlada pelo servidor via sinais
 # =============================================================================
 
+# ===== REGISTROS =====
+
+var game_manager: GameManager = null
+
 # =============================================================================
 # SINAIS PARA COMUNICAÇÃO COM O SERVIDOR
 # =============================================================================
@@ -15,7 +19,7 @@ extends Control
 signal request_drop_item(item_id: String)
 signal request_equip_item(item_id: String, slot_type: String)
 signal request_unequip_item(slot_type: String)
-signal request_swap_items(item_id_1: String, item_id_2: String, slot_type_1: String, slot_type_2: String)
+signal request_swap_items(item_id_1: String, item_id_2: String)
 #signal request_move_item(item_id: String, from_slot: String, to_slot: String)
 
 # =============================================================================
@@ -151,11 +155,11 @@ func _setup_quickbar_slots():
 		select_slot(0)  # Selecionar primeiro slot
 
 func setup_inventory_signals():
-	GameManager.item_added.connect(on_server_item_added)
-	GameManager.item_removed.connect(on_server_item_removed)
-	GameManager.item_equipped.connect(on_server_item_equipped)
-	GameManager.item_unequipped.connect(on_server_item_unequipped)
-	GameManager.items_swapped.connect(on_server_items_swapped)
+	game_manager.item_added.connect(on_server_item_added)
+	game_manager.item_removed.connect(on_server_item_removed)
+	game_manager.item_equipped.connect(on_server_item_equipped)
+	game_manager.item_unequipped.connect(on_server_item_unequipped)
+	game_manager.items_swapped.connect(on_server_items_swapped)
 	
 # =============================================================================
 # VISIBILIDADE DO INVENTÁRIO
@@ -408,10 +412,7 @@ func _handle_drop_in_slot(target_slot: Panel):
 		_log_debug("🔄 Swap detectado: %s ↔ %s" % [dragged_item_id, existing_item_id])
 		request_swap_items.emit(
 			dragged_item_id,
-			existing_item_id,
-			original_slot_type,
-			target_slot_id
-		)
+			existing_item_id)
 		return
 	
 	# =========================================================================
@@ -665,35 +666,42 @@ func on_server_item_unequipped(item_id: String):
 		_sync_quickbar()
 
 func on_server_items_swapped(item_id_1: String, item_id_2: String):
-	"""Resposta do servidor: troca dois itens visualmente"""
+	"""Resposta do servidor: troca dois itens visualmente - versão CORRIGIDA"""
 	_log_debug("🔄 Servidor confirmou swap: %s <-> %s" % [item_id_1, item_id_2])
 	
 	var item1 = _find_item_by_id(item_id_1)
 	var item2 = _find_item_by_id(item_id_2)
 	
 	if not item1 or not item2:
+		_log_debug("❌ Um dos itens não encontrado no swap")
 		return
 	
+	# 🔑 PASSO 1: Identificar os SLOTS ATUAIS DOS ITENS (origem)
 	var slot1 = item1.get_parent()
 	var slot2 = item2.get_parent()
 	
-	# Remover itens
-	item1.get_parent().remove_child(item1)
-	item2.get_parent().remove_child(item2)
+	if not slot1 or not slot2:
+		_log_debug("❌ Slots dos itens não encontrados")
+		return
 	
-	# Adicionar nos slots trocados
+	# 🔑 PASSO 2: REMOVER OS ITENS DOS SLOTS ATUAIS (como em equipped/unequipped)
+	slot1.remove_child(item1)
+	slot2.remove_child(item2)
+	
+	# 🔑 PASSO 3: COLOCAR NOS SLOTS TROCADOS (simétrico)
 	slot2.add_child(item1)
 	slot1.add_child(item2)
 	
-	# Posicionar corretamente
+	# 🔑 PASSO 4: POSICIONAR CORRETAMENTE (como em equipped)
 	_position_item_in_slot(item1, slot2)
 	_position_item_in_slot(item2, slot1)
 	
-	# Restaurar opacidade
+	# 🔑 PASSO 5: RESTAURAR OPACIDADE E SINCRONIZAR (como em equipped)
 	item1.modulate.a = 1.0
 	item2.modulate.a = 1.0
 	
 	_sync_quickbar()
+	_log_debug("✅ Swap visual concluído: %s <-> %s" % [item_id_1, item_id_2])
 
 # =============================================================================
 # UTILITÁRIOS DE BUSCA

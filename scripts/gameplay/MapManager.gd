@@ -1,4 +1,6 @@
 extends Node
+class_name MapManager
+
 ## MapManager - Gerenciador de mapas e spawns
 ## Responsável por carregar/descarregar mapas e gerenciar pontos de spawn
 
@@ -25,12 +27,6 @@ var map_settings: Dictionary = {}
 signal map_loaded(map_node: Node)
 signal map_unloaded()
 signal spawn_points_ready(count: int)
-
-# ===== FUNÇÕES DE INICIALIZAÇÃO =====
-
-func _ready():
-	_log_debug("MapManager criado")
-	name = "MapManager"  # Nome fixo para fácil localização
 
 # ===== CARREGAMENTO DE MAPA =====
 

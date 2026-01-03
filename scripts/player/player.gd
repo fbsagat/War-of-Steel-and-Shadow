@@ -58,7 +58,10 @@ extends CharacterBody3D
 
 # ===== REGISTROS =====
 
+var network_manager: NetworkManager = null
 var item_database: ItemDatabase = null
+var server_manager: ServerManager = null
+var game_manager: GameManager = null
 
 # Estados de sincronização
 var target_position: Vector3 = Vector3.ZERO
@@ -113,28 +116,13 @@ var terrain : Terrain3D
 
 # Ready
 func _ready():
-	# Detecta se é servidor
-	var args = OS.get_cmdline_args()
-	_is_server = "--server" in args
-	
 	# Connect do Timer (attack_timer)
 	attack_timer.timeout.connect(Callable(self, "_on_attack_timer_timeout"))
 	
 	# Aplicador de tempo de detecção do inimigo
 	enemy_detection_timer()
 	
-	if _is_server:
-	# Gerenciador de hitboxes
-		hitboxes_manager()
-		item_database = ServerManager.item_database
-	else:
-		item_database = GameManager.item_database
-	
 	add_to_group("player")
-	
-	# visibilidade inicial (modelo)
-	if hide_itens_on_start:
-		_hide_all_model_items()
 	
 # Física geral
 func _physics_process(delta: float) -> void:
@@ -219,10 +207,7 @@ func connect_inventory_signals():
 
 func hitboxes_manager():
 	# Conecta automaticamente todos os hitboxes de ataque presentes no modelo
-	
-	# Só o nó dos players no servidor processam hitboxes
-	if not _is_server:
-		return
+	# Só o nó dos players no servidor devem processar hitboxes
 
 	var all_areas = find_children("*", "Area3D", true)
 	var hitboxes = all_areas.filter(func(n): return n.is_in_group("hitboxes"))
@@ -694,7 +679,6 @@ func _determine_attack_from_input() -> String:
 # Função acionada pelas animações(AnimationPlayer), habilita hitbox na hora
 # exata do golpe; Pega current_item_right_id para saber qual foi a espada usada
 func _enable_attack_area():
-	
 	# Apenas o servidor faz verificação de hitbox
 	if not _is_server:
 		return
@@ -707,13 +691,14 @@ func _enable_attack_area():
 			actual_enabled_hitbox = hitbox
 			hitbox.monitoring = true
 			_log_debug("Hitbox de %s ativado! (%s %s)" % [actual_weapon.name, actual_enabled_hitbox, hitbox.monitoring])
-
+			
 	else:
 		_log_debug("_enable_attack_area: Não encontrado node de hitbox")
+	print("[111]_enable_attack_area")
 			
 # Para o contato das hitboxes das espadas(no momento ativo) com inimigos (área3D)
 func _on_hitbox_body_entered(body: Node, hitbox_area: Area3D) -> void:
-	
+	print("[111]_on_hitbox_body_entered!!!")
 	# Só o nó dos players no servidor processam hitboxes
 	if not _is_server:
 		return
@@ -743,12 +728,13 @@ func _on_hitbox_body_entered(body: Node, hitbox_area: Area3D) -> void:
 			group = "player"
 			_log_debug("%s foi acertado por %s" % [body.name, hitbox_area.get_parent().name])
 		
-		if ServerManager and ServerManager.has_method("attack_validation"):
-			ServerManager.attack_validation(group, player_id, actual_weapon.name, int(body.name))
+		if server_manager and server_manager.has_method("attack_validation"):
+			server_manager.attack_validation(group, player_id, actual_weapon.name, int(body.name))
 
 @rpc("authority", "call_remote", "unreliable")
 func take_damage():
 	"""Jogador local ou remoto recebe dano de golpe"""
+	print("[111]take_damage!!!")
 	
 	# Animação de hit
 	var random_hit = ["parameters/Hit_B/request", "parameters/Hit_A/request"].pick_random()
@@ -834,7 +820,7 @@ func _send_state_to_server(delta: float):
 						sync_pos.y = terrain_y + 0.1
 						_log_debug("📡 Enviando Y do terreno: %.2f (dist: %.2f)" % [sync_pos.y, dist_to_camera])
 				
-				NetworkManager.send_player_state(
+				network_manager.send_player_state(
 					player_id,
 					sync_pos,  # ← Usa posição ajustada
 					rotation,
@@ -874,8 +860,8 @@ func _send_animation_state(delta: float):
 		if _animation_state_changed(current_state):
 			last_anim_state = current_state.duplicate()
 			
-			if NetworkManager and NetworkManager.is_connected:
-				NetworkManager.send_player_animation_state(
+			if network_manager and network_manager.is_connected:
+				network_manager.send_player_animation_state(
 					player_id,
 					current_state["speed"],
 					current_state["is_attacking"],
@@ -1165,11 +1151,16 @@ func action_sword_attack_call():
 	if not is_local_player:
 		return
 	
+	# Não ataca enquanto estiver em um pulo
+	if is_jumping:
+		return
+	
+	# Espera o atraque anterir, se estiver em curso, acabar
 	if is_attacking:
 		return
 	
 	# Verificação local: Apenas atacar se estiver com uma arma na mão direita
-	var hand_right = GameManager.local_inventory["equipped"]["hand-right"]
+	var hand_right = game_manager.local_inventory["equipped"]["hand-right"]
 	if hand_right.has("item_id"):
 		var item_id = hand_right["item_id"]
 		var item_equipado = item_database.get_item_by_id(int(item_id)).to_dictionary()
@@ -1183,7 +1174,7 @@ func action_sword_attack_call():
 		# Sincroniza ataque pela rede (Reliable = Garantido)
 		if NetworkManager and NetworkManager.is_connected:
 			var anim_name = _determine_attack_from_input()
-			NetworkManager.send_player_action(player_id, "attack", item_equipado["name"], anim_name)
+			network_manager.send_player_action(player_id, "attack", item_equipado["name"], anim_name)
 			
 			# executa animação localmente
 			var anim_length = _execute_animation(anim_name, "Attack", "parameters/sword_attacks/transition_request",
@@ -1200,7 +1191,7 @@ func action_block_attack_call():
 		return
 	
 	# Verificação local: Apenas atacar se estiver com um escudo na mão esquerda
-	var hand_left = GameManager.local_inventory["equipped"]["hand-left"]
+	var hand_left = game_manager.local_inventory["equipped"]["hand-left"]
 	if hand_left.has("item_id"):
 		var item_id = hand_left["item_id"]
 		var item_equipado = item_database.get_item_by_id(int(item_id)).to_dictionary()
@@ -1220,8 +1211,8 @@ func action_block_attack_call():
 			_on_block_attack_timer_timeout(anim_time * 0.85)
 		
 			# Sincroniza defesa (Reliable)
-			if NetworkManager and NetworkManager.is_connected:
-				NetworkManager.send_player_action(player_id, "block_attack", item_equipado["name"], "Block_Attack")
+			if network_manager and network_manager.is_connected:
+				network_manager.send_player_action(player_id, "block_attack", item_equipado["name"], "Block_Attack")
 
 func action_lock_call():
 	"""Executa e sincroniza defesa"""
@@ -1234,14 +1225,14 @@ func action_lock_call():
 	camera_strafe_mode(true)
 	
 	# Verificação local: Apenas defender se tem um escudo
-	var hand_left = GameManager.local_inventory["equipped"]["hand-left"]
+	var hand_left = game_manager.local_inventory["equipped"]["hand-left"]
 	if hand_left.has("item_id"):
 		var item_id = hand_left["item_id"]
 		var item_equipado = item_database.get_item_by_id(int(item_id)).to_dictionary()
 		if not item_equipado:
 			return
 		
-		# Verificação local: Apenas atacar se for um item categoria defense (escudo)
+		# Verificação local: Apenas defender se for um item categoria defense (escudo)
 		if item_equipado["function"] != "defense":
 			return
 		
@@ -1251,8 +1242,8 @@ func action_lock_call():
 		is_defending = true
 		
 		# Sincroniza defesa (Reliable)
-		if NetworkManager and NetworkManager.is_connected:
-			NetworkManager.send_player_action(player_id, "defend_start", "", "")
+		if network_manager and network_manager.is_connected:
+			network_manager.send_player_action(player_id, "defend_start", "", "")
 
 func action_stop_locking_call():
 	"""Executa e sincroniza fim da defesa"""
@@ -1264,6 +1255,23 @@ func action_stop_locking_call():
 	# Apenas se estiver lockado
 	if not is_aiming:
 		return 
+	
+	# Desativa o modo strafe sempre
+	camera_strafe_mode(false)
+	
+	# Verificação local: Apenas parar de defender se tem um escudo
+	var hand_left = game_manager.local_inventory["equipped"]["hand-left"]
+	if hand_left.has("item_id"):
+		var item_id = hand_left["item_id"]
+		var item_equipado = item_database.get_item_by_id(int(item_id)).to_dictionary()
+		if not item_equipado:
+			return
+		
+		# Verificação local: Apenas defender se for um item categoria defense (escudo)
+		if item_equipado["function"] != "defense":
+			return
+	else:
+		return
 		
 	camera_strafe_mode(false)
 	
@@ -1272,8 +1280,8 @@ func action_stop_locking_call():
 	animation_tree.set("parameters/Blocking/blend_amount", 0.0)
 		
 	# Sincroniza fim da defesa (Reliable)
-	if NetworkManager and NetworkManager.is_connected:
-		NetworkManager.send_player_action(player_id, "defend_stop", "", "")
+	if network_manager and network_manager.is_connected:
+		network_manager.send_player_action(player_id, "defend_stop", "", "")
 
 # ===== INICIALIZAÇÃO MULTIPLAYER =====
 
@@ -1323,6 +1331,14 @@ func initialize(p_id: int, p_name: String, spawn_pos: Vector3):
 	# Preenche o atalho de nó do terreno
 	terrain = get_tree().get_root().get_node_or_null("Round/Terrain3D")
 	
+	# visibilidade inicial (modelo)
+	if hide_itens_on_start:
+		_hide_all_model_items()
+	
+	# Ativa hitboxes
+	if _is_server:
+		hitboxes_manager()
+	
 # ===== FUNÇÕES DE ITENS ===============
 
 # Função para equipar itens magicamente (Trainer de testes / Remover em produção)
@@ -1346,8 +1362,8 @@ func handle_test_equip_inputs_call():
 		# Somente envie ao servidor / equipe se o mapped_id estiver no intervalo válido 1..8
 		if mapped_id >= 1 and mapped_id <= 8:
 			# envia para o servidor (se conectado)
-			if NetworkManager and NetworkManager.is_connected:
-				NetworkManager.request_trainer_spawn_item(player_id, mapped_id)
+			if network_manager and network_manager.is_connected:
+				network_manager.request_trainer_spawn_item(player_id, mapped_id)
 
 # Ações do player (Dropar item)
 func handle_test_drop_item_call() -> void:
@@ -1355,8 +1371,8 @@ func handle_test_drop_item_call() -> void:
 	if not is_local_player:
 		return
 		
-	if NetworkManager and NetworkManager.is_connected:
-		NetworkManager.handle_test_drop_item_call(player_id)
+	if network_manager and network_manager.is_connected:
+		network_manager.handle_test_drop_item_call(player_id)
 
 # Executa quando o player equipa algum item / muda visual do modelo
 func apply_visual_equip_on_player_node(player_node, item_mapped_id, unnequip = false):
@@ -1382,8 +1398,8 @@ func action_pick_up_item_call():
 		return
 	var object = found[0]
 	_log_debug("Player %d pediu para pegar o item %d" % [player_id, object.object_id])
-	if NetworkManager and NetworkManager.is_connected and object:
-		NetworkManager.request_pick_up_item(player_id, object.object_id)
+	if network_manager and network_manager.is_connected and object:
+		network_manager.request_pick_up_item(player_id, object.object_id)
 		
 func action_pick_up_item():
 	#_execute_animation("Interact", "Common", "parameters/Interact/transition_request", "parameters/Interact_shot/request")
@@ -1396,8 +1412,8 @@ func action_drop_item_call(obj_id) -> void:
 	if not is_local_player:
 		return
 		
-	if NetworkManager and NetworkManager.is_connected:
-		NetworkManager.request_drop_item(player_id, int(obj_id))
+	if network_manager and network_manager.is_connected:
+		network_manager.request_drop_item(player_id, int(obj_id))
 		
 func execute_item_drop():
 	# Animação de drop
@@ -1407,22 +1423,22 @@ func action_equip_item_call(item_id, slot_type):
 	if not is_local_player:
 		return
 		
-	if NetworkManager and NetworkManager.is_connected:
-		NetworkManager.request_equip_item(player_id, int(item_id), slot_type)
+	if network_manager and network_manager.is_connected:
+		network_manager.request_equip_item(player_id, int(item_id), slot_type)
 
 func action_unequip_item_call(slot_type):
 	if not is_local_player:
 		return
 		
-	if NetworkManager and NetworkManager.is_connected:
-		NetworkManager.request_unequip_item(player_id, slot_type)
+	if network_manager and network_manager.is_connected:
+		network_manager.request_unequip_item(player_id, slot_type)
 
-func action_swap_items_call(item_id_1: String, item_id_2: String, slot_type_1: String, slot_type_2: String):
+func action_swap_items_call(item_id_1: String, item_id_2: String):
 	if not is_local_player:
 		return
 		
-	if NetworkManager and NetworkManager.is_connected:
-		NetworkManager.request_swap_items(item_id_1, item_id_2, slot_type_1, slot_type_2)
+	if network_manager and network_manager.is_connected:
+		network_manager.request_swap_items(item_id_1, item_id_2)
 
 # Modifica a visibilidade do item na mão do modelo
 func _item_model_change_visibility(player_node, node_link: String, unnequip = false):

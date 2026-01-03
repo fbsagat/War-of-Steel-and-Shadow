@@ -1,0 +1,21 @@
+[gd_scene load_steps=2 format=3 uid="uid://d3sxgvl7reai3"]
+
+[ext_resource type="Script" uid="uid://cgc5t2uosculb" path="res://scripts/gameplay/camera_pivot.gd" id="1_8y15a"]
+
+[node name="CameraController" type="Node3D"]
+script = ExtResource("1_8y15a")
+free_look_smoothness = 2.0
+free_look_min_pitch_deg = -8.0
+behind_height_offset = 2.0
+behind_target_pitch_deg = 20.0
+disable_mouse_in_behind_mode = false
+transition_speed = 6.0
+
+[node name="SpringArm3D" type="SpringArm3D" parent="."]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0, 0, 0)
+spring_length = 5.0
+margin = 0.3
+
+[node name="Camera3D" type="Camera3D" parent="SpringArm3D"]
+transform = Transform3D(1, 0, 0, 0, 0.9816272, 0.190809, 0, -0.190809, 0.9816272, 0, 0, 0)
+current = true

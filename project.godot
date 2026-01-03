@@ -12,15 +12,9 @@ config_version=5
 
 config/name="War of Steel and Shadow"
 config/tags=PackedStringArray("3d", "multiplayer", "official")
-run/main_scene="uid://dwnsmgw3eenld"
+run/main_scene="uid://bbtne7r17yl3i"
 config/features=PackedStringArray("4.5", "Forward Plus")
 config/icon="res://icon.svg"
-
-[autoload]
-
-NetworkManager="*res://scripts/autoload/NetworkManager.gd"
-ServerManager="*res://scripts/autoload/ServerManager.gd"
-GameManager="*res://scripts/autoload/GameManager.gd"
 
 [display]
 
