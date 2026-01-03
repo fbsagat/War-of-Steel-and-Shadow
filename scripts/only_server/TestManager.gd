@@ -15,7 +15,7 @@ class_name TestManager
 @export_category("Debug")
 @export var debug_mode: bool = true
 
-# ===== REGISTROS (Injetados pelo ServerManager) =====
+# ===== REGISTROS (Injetados pelo initializer.gd) =====
 
 var server_manager: ServerManager = null
 var network_manager: NetworkManager = null
@@ -375,6 +375,7 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 	player_instance.name = str(p_id)
 	player_instance.player_id = p_id
 	player_instance.player_name = p_name
+	player_instance._is_server = true
 	
 	# IMPORTANTE: No servidor, nenhum player é "local"
 	player_instance.is_local_player = false
@@ -386,9 +387,6 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 	player_instance.item_database = item_database
 	player_instance.network_manager = network_manager
 	player_instance.server_manager = server_manager
-	
-	# configura
-	player_instance._is_server = true
 	
 	# AGUARDA PROCESSAMENTO COMPLETO
 	if not player_instance.is_node_ready():

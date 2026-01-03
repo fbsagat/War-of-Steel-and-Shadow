@@ -151,6 +151,7 @@ func _init_client():
 	var game_manager_scene: PackedScene = load("res://scenes/system/game_manager.tscn")
 	var main_menu_scene: PackedScene = load("res://scenes/ui/main_menu.tscn")
 	item_database = load("res://scripts/gameplay/ItemDatabase.gd").new()
+	map_manager = preload("res://scripts/gameplay/MapManager.gd").new()
 
 	network_manager = network_manager_scene.instantiate()
 	game_manager = game_manager_scene.instantiate()
@@ -161,12 +162,14 @@ func _init_client():
 	game_manager.name = "GameManager"
 	item_database.name = "ItemDatabase"
 	main_menu.name = "MainMenu"
+	map_manager.name = "MapManager"
 	
 	# Adiciona à árvore
 	get_tree().root.add_child.call_deferred(network_manager)
 	get_tree().root.add_child.call_deferred(game_manager)
 	get_tree().root.add_child.call_deferred(item_database)
 	get_tree().root.add_child.call_deferred(main_menu)
+	get_tree().root.add_child.call_deferred(map_manager)
 	
 	# Injeta dependências cruzadas:
 	
@@ -177,6 +180,7 @@ func _init_client():
 	# GameManager precisa de:
 	game_manager.item_database = item_database
 	game_manager.network_manager = network_manager
+	game_manager.map_manager = map_manager
 	
 	# MainMenu precisa de:
 	main_menu.game_manager = game_manager

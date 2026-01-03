@@ -15,13 +15,13 @@ class_name PlayerRegistry
 @export var debug_mode: bool = true
 @export var max_inventory_slots: int = 9 # Limite de itens por jogador
 
-# ===== REGISTROS (Injetados pelo ServerManager) =====
+# ===== REGISTROS (Injetados pelo initializer.gd) =====
 
 var network_manager: NetworkManager = null
-var room_registry: RoomRegistry = null  # Injetado
-var round_registry: RoundRegistry = null  # Injetado
-var object_manager: ObjectManager = null  # Injetado
-var item_database: ItemDatabase = null  # Referência ao ItemDatabase
+var room_registry: RoomRegistry = null
+var round_registry: RoundRegistry = null
+var object_manager: ObjectManager = null
+var item_database: ItemDatabase = null
 
 # ===== VARIÁVEIS INTERNAS =====
 

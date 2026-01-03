@@ -22,16 +22,12 @@ extends CharacterBody3D
 
 @export_category("Player actions")
 @export var hide_itens_on_start: bool = true
-@export var attack_time_tolerance: float = 0.5
+@export var attack_time_tolerance: float = 0.8
 
 @export_category("Item Detection")
 @export var pickup_radius: float = 1.6
 @export var pickup_collision_mask: int = 1 << 2 # Layer 3
 @export var max_pickup_results: int = 10
-
-@export_category("Taking Hit")
-@onready var mesh: MeshInstance3D = $Knight/Rig/Skeleton3D/Knight_Head
-@onready var hit_flash_timer: Timer = $HitFlashTimer
 
 @export_category("Enemy detection")
 @export var detection_radius_fov: float = 14.0 # Raio para detecção no FOV
@@ -56,7 +52,7 @@ extends CharacterBody3D
 @onready var name_label: Label3D = $NameLabel
 @export var inventory : Control
 
-# ===== REGISTROS =====
+# ===== REGISTROS (Injetados pelo initializer.gd) =====
 
 var network_manager: NetworkManager = null
 var item_database: ItemDatabase = null
@@ -694,11 +690,9 @@ func _enable_attack_area():
 			
 	else:
 		_log_debug("_enable_attack_area: Não encontrado node de hitbox")
-	print("[111]_enable_attack_area")
 			
 # Para o contato das hitboxes das espadas(no momento ativo) com inimigos (área3D)
 func _on_hitbox_body_entered(body: Node, hitbox_area: Area3D) -> void:
-	print("[111]_on_hitbox_body_entered!!!")
 	# Só o nó dos players no servidor processam hitboxes
 	if not _is_server:
 		return
@@ -734,7 +728,6 @@ func _on_hitbox_body_entered(body: Node, hitbox_area: Area3D) -> void:
 @rpc("authority", "call_remote", "unreliable")
 func take_damage():
 	"""Jogador local ou remoto recebe dano de golpe"""
-	print("[111]take_damage!!!")
 	
 	# Animação de hit
 	var random_hit = ["parameters/Hit_B/request", "parameters/Hit_A/request"].pick_random()

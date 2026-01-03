@@ -65,7 +65,7 @@ const server_camera : String = "res://scenes/server_scenes/server_camera.tscn"
 ## Variação na rotação (em radianos, ~5.7 graus)
 @export var rotation_variance: float = 0.2
 
-# ===== REGISTROS (Injetados após inicialização) =====
+# ===== REGISTROS (Injetados pelo initializer.gd) =====
 
 var network_manager: NetworkManager = null
 var player_registry : PlayerRegistry = null
@@ -803,6 +803,7 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, pl
 	player_instance.name = str(player_data["id"])
 	player_instance.player_id = player_data["id"]
 	player_instance.player_name = player_data["name"]
+	player_instance._is_server = true
 	
 	# IMPORTANTE: No servidor, nenhum player é "local"
 	player_instance.is_local_player = false

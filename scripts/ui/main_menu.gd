@@ -1,10 +1,10 @@
 extends Control
 
-# ===== REGISTROS =====
+# ===== REGISTROS (Injetados pelo initializer.gd) =====
 
 var game_manager: GameManager = null
 
-# Sinais
+# ===== SINAIS =====
 #signal join_match_requested()
 #signal create_match_requested(room_name: String, password: String)
 #signal match_selected(match_id: int, password: String)

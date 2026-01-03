@@ -10,7 +10,7 @@ class_name NetworkManager
 @export_category("Debug")
 @export var debug_mode: bool = true
 
-# ===== REGISTROS =====
+# ===== REGISTROS (Injetados pelo initializer.gd) =====
 
 var server_manager: ServerManager = null
 var player_registry: PlayerRegistry = null

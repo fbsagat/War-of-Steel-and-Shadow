@@ -25,7 +25,7 @@ const camera_controller : String = "res://scenes/gameplay/camera_controller.tscn
 @export_category("Player")
 @export var inventory : Control
 
-# ===== REGISTROS =====
+# ===== REGISTROS (Injetados pelo initializer.gd) =====
 
 var item_database: ItemDatabase = null
 var network_manager: NetworkManager = null
@@ -48,7 +48,7 @@ var spawned_objects: Dictionary = {}
 var local_inventory: Dictionary = {} # Inventário(de itens e equipamentos) local do player.
 
 ## Referências da rodada atual
-var client_map_manager: Node = null
+var map_manager: Node = null
 var local_player: Node = null
 var is_in_round: bool = false
 var round_node: Node = null
@@ -273,7 +273,7 @@ func _reset_client_state():
 	configs = {}
 	current_room = {}
 	current_round = {}
-	client_map_manager = null
+	map_manager = null
 	local_player = null
 	is_in_round = false
 	reconnect_attempts = 0
@@ -618,12 +618,8 @@ func _start_round_locally(match_data: Dictionary):
 	objects_node.name = "Objects"
 	round_node.add_child(objects_node)
 	
-	# Instancia MapManager
-	client_map_manager = preload("res://scripts/gameplay/MapManager.gd").new()
-	get_tree().root.add_child(client_map_manager)
-	
 	# Carrega o mapa
-	await client_map_manager.load_map(match_data["map_scene"], round_node, match_data["settings"])
+	await map_manager.load_map(match_data["map_scene"], round_node, match_data["settings"])
 
 	# Spawna todos os jogadores
 	for player_data in match_data["players"]:
@@ -672,7 +668,7 @@ func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bo
 	player_instance.game_manager = self
 	
 	# Inicializa jogador
-	var spawn_info = client_map_manager.get_spawn_data(spawn_data["spawn_index"])
+	var spawn_info = map_manager.get_spawn_data(spawn_data["spawn_index"])
 	player_instance.initialize(player_data["id"], player_data["name"], spawn_info["position"])
 	player_instance.rotation = spawn_info["rotation"]
 	player_instance.setup_name_label()
@@ -770,11 +766,11 @@ func _cleanup_local_round():
 	
 	spawned_objects.clear()
 	
-	# Remove mapa
-	if client_map_manager:
-		client_map_manager.unload_map()
-		client_map_manager.queue_free()
-		client_map_manager = null
+	## Remove mapa
+	#if map_manager:
+		#map_manager.unload_map()
+		#map_manager.queue_free()
+		#map_manager = null
 	
 	_log_debug("✓ Limpeza completa")
 
