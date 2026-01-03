@@ -34,11 +34,11 @@ class_name ObjectManager
 
 # ===== REGISTROS (Injetados pelo initializer.gd) =====
 
-var server_manager: ServerManager = null     # Injetado pelo ServerManager
-var network_manager: NetworkManager = null   # Injetado pelo ServerManager
-var player_registry: PlayerRegistry = null   # Injetado pelo ServerManager
-var round_registry: RoundRegistry = null    # Injetado pelo ServerManager
-var item_database: ItemDatabase = null     # Injetado pelo ServerManager
+var server_manager: ServerManager = null
+var network_manager: NetworkManager = null
+var player_registry: PlayerRegistry = null
+var round_registry: RoundRegistry = null
+var item_database: ItemDatabase = null
 
 # ===== VARIÁVEIS INTERNAS =====
 

@@ -27,9 +27,9 @@ class_name RoundRegistry
 
 # ===== REGISTROS (Injetados pelo initializer.gd) =====
 
-var player_registry = null  # Injetado
-var room_registry = null  # Injetado
-var object_manager = null  # Injetado
+var player_registry = null
+var room_registry = null
+var object_manager = null
 
 # ===== VARIÁVEIS INTERNAS =====
 

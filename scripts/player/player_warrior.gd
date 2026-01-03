@@ -22,7 +22,7 @@ extends CharacterBody3D
 
 @export_category("Player actions")
 @export var hide_itens_on_start: bool = true
-@export var attack_time_tolerance: float = 0.5
+@export var attack_time_tolerance: float = 0.8
 
 @export_category("Item Detection")
 @export var pickup_radius: float = 1.6
