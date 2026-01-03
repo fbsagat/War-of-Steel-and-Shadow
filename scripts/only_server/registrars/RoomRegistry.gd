@@ -14,7 +14,7 @@ class_name RoomRegistry
 
 @export var debug_mode: bool = true
 
-# ===== REGISTROS (Injetados pelo ServerManager) =====
+# ===== REGISTROS (Injetados pelo initializer.gd) =====
 
 var player_registry = null  # Injetado
 var round_registry = null  # Injetado

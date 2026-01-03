@@ -25,7 +25,7 @@ class_name RoundRegistry
 @export_group("Debug")
 @export var debug_mode: bool = true
 
-# ===== REGISTROS (Injetados pelo ServerManager) =====
+# ===== REGISTROS (Injetados pelo initializer.gd) =====
 
 var player_registry = null  # Injetado
 var room_registry = null  # Injetado

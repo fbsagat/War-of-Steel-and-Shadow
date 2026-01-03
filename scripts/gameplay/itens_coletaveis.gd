@@ -40,7 +40,7 @@ var can_be_collected: bool = false
 # ===== SINAIS =====
 signal despawned(object_id: int)
 
-# ===== REGISTROS =====
+# ===== REGISTROS (Injetados pelo initializer.gd) =====
 
 var network_manager: NetworkManager = null
 var server_manager: ServerManager = null

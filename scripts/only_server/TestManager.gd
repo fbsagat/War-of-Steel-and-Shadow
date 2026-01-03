@@ -15,7 +15,7 @@ class_name TestManager
 @export_category("Debug")
 @export var debug_mode: bool = true
 
-# ===== REGISTROS (Injetados pelo ServerManager) =====
+# ===== REGISTROS (Injetados pelo initializer.gd) =====
 
 var server_manager: ServerManager = null
 var network_manager: NetworkManager = null

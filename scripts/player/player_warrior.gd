@@ -29,10 +29,6 @@ extends CharacterBody3D
 @export var pickup_collision_mask: int = 1 << 2 # Layer 3
 @export var max_pickup_results: int = 10
 
-@export_category("Taking Hit")
-@onready var mesh: MeshInstance3D = $Knight/Rig/Skeleton3D/Knight_Head
-@onready var hit_flash_timer: Timer = $HitFlashTimer
-
 @export_category("Enemy detection")
 @export var detection_radius_fov: float = 14.0 # Raio para detecção no FOV
 @export var detection_radius_360: float = 6.0 # Raio menor (ou maior) para fallback 360°
@@ -56,7 +52,7 @@ extends CharacterBody3D
 @onready var name_label: Label3D = $NameLabel
 @export var inventory : Control
 
-# ===== REGISTROS =====
+# ===== REGISTROS (Injetados pelo initializer.gd) =====
 
 var network_manager: NetworkManager = null
 var item_database: ItemDatabase = null

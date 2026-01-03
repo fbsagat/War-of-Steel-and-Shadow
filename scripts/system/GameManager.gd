@@ -25,7 +25,7 @@ const camera_controller : String = "res://scenes/gameplay/camera_controller.tscn
 @export_category("Player")
 @export var inventory : Control
 
-# ===== REGISTROS =====
+# ===== REGISTROS (Injetados pelo initializer.gd) =====
 
 var item_database: ItemDatabase = null
 var network_manager: NetworkManager = null

@@ -32,7 +32,7 @@ class_name ObjectManager
 @export_category("Debug")
 @export var debug_mode: bool = true
 
-# ===== REGISTROS =====
+# ===== REGISTROS (Injetados pelo initializer.gd) =====
 
 var server_manager: ServerManager = null     # Injetado pelo ServerManager
 var network_manager: NetworkManager = null   # Injetado pelo ServerManager

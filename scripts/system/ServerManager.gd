@@ -65,7 +65,7 @@ const server_camera : String = "res://scenes/server_scenes/server_camera.tscn"
 ## Variação na rotação (em radianos, ~5.7 graus)
 @export var rotation_variance: float = 0.2
 
-# ===== REGISTROS (Injetados após inicialização) =====
+# ===== REGISTROS (Injetados pelo initializer.gd) =====
 
 var network_manager: NetworkManager = null
 var player_registry : PlayerRegistry = null

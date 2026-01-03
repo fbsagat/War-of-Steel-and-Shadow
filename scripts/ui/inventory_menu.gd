@@ -7,7 +7,7 @@ extends Control
 # Toda lógica de estado é controlada pelo servidor via sinais
 # =============================================================================
 
-# ===== REGISTROS =====
+# ===== REGISTROS (Injetados pelo initializer.gd) =====
 
 var game_manager: GameManager = null
 
@@ -15,7 +15,6 @@ var game_manager: GameManager = null
 # SINAIS PARA COMUNICAÇÃO COM O SERVIDOR
 # =============================================================================
 
-# Sinais enviados AO SERVIDOR (requisições)
 signal request_drop_item(item_id: String)
 signal request_equip_item(item_id: String, slot_type: String)
 signal request_unequip_item(slot_type: String)
