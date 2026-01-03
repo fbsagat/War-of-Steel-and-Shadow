@@ -40,6 +40,11 @@ var can_be_collected: bool = false
 # ===== SINAIS =====
 signal despawned(object_id: int)
 
+# ===== REGISTROS =====
+
+var network_manager: NetworkManager = null
+var server_manager: ServerManager = null
+
 # ===== INICIALIZAÇÃO =====
 func initialize(
 	_object_id: int,
@@ -78,7 +83,7 @@ func initialize(
 	# ✅ Registra no NetworkManager se sync_enabled
 	if sync_enabled and is_server_authority():
 		# Servidor registra imediatamente
-		NetworkManager.register_syncable_object(
+		network_manager.register_syncable_object(
 			object_id,
 			self,
 			{
@@ -160,7 +165,7 @@ func _check_nearby_players():
 	if !auto_collect or !has_network():
 		return
 	
-	var active_players = ServerManager.round_registry.get_all_spawned_players(round_id)
+	var active_players = server_manager.round_registry.get_all_spawned_players(round_id)
 	
 	for player_node in active_players:
 		if !player_node or !is_instance_valid(player_node):
@@ -184,7 +189,7 @@ func collect(collector_id: int) -> bool:
 		return false
 	
 	# Validação de distância
-	var player_node = ServerManager.player_registry.get_player_node(collector_id)
+	var player_node = server_manager.player_registry.get_player_node(collector_id)
 	if player_node:
 		var distance = global_position.distance_to(player_node.global_position)
 		if distance > collection_radius * 1.5:
@@ -208,13 +213,13 @@ func despawn():
 		return
 	
 	# Notifica clientes para despawn
-	NetworkManager.rpc("_rpc_client_despawn_item", object_id, round_id)
+	network_manager.rpc("_rpc_client_despawn_item", object_id, round_id)
 	
 	# Remove do servidor
 	if sync_enabled:
-		NetworkManager.unregister_syncable_object(object_id)  # opcional, mas seguro
+		network_manager.unregister_syncable_object(object_id)  # opcional, mas seguro
 	
-	ServerManager.object_manager.despawn_object(round_id, object_id)
+	server_manager.object_manager.despawn_object(round_id, object_id)
 	queue_free()
 	emit_signal("despawned", object_id)
 

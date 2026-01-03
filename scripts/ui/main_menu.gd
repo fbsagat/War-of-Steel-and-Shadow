@@ -1,5 +1,9 @@
 extends Control
 
+# ===== REGISTROS =====
+
+var game_manager: GameManager = null
+
 # Sinais
 #signal join_match_requested()
 #signal create_match_requested(room_name: String, password: String)
@@ -154,13 +158,13 @@ func _ready():
 	_center_window()
 	
 	# Registra esta UI no GameManager e conecta sinais
-	if GameManager:
-		GameManager.set_main_menu(self)
+	if game_manager:
+		game_manager.set_main_menu(self)
 		_connect_game_manager_signals()
 		
 		# Mostra tela de conexão e conecta automaticamente ao servidor
 		show_connecting_menu()
-		GameManager.connect_to_server()
+		game_manager.connect_to_server()
 	else:
 		push_warning("GameManager não encontrado! Certifique-se de que está configurado como Autoload.")
 		# Se não há GameManager, mostra o menu principal
@@ -302,17 +306,17 @@ func _connect_if_exists(parent: Node, button_name: String, callback: Callable):
 		push_warning("%s não encontrado em %s" % [button_name, parent.name])
 
 func _connect_game_manager_signals():
-	GameManager.connected_to_server.connect(_on_game_manager_connected)
-	GameManager.connection_failed.connect(_on_game_manager_connection_failed)
-	GameManager.disconnected_from_server.connect(_on_game_manager_disconnected)
-	GameManager.rooms_list_received.connect(_on_game_manager_rooms_received)
-	GameManager.name_accepted.connect(_on_game_manager_name_accepted)
-	GameManager.name_rejected.connect(_on_game_manager_name_rejected)
-	GameManager.room_created.connect(_on_game_manager_room_created)
-	GameManager.joined_room.connect(_on_game_manager_room_joined)
-	GameManager.room_updated.connect(_on_game_manager_room_updated)
-	#GameManager.match_started.connect(_on_game_manager_match_started)
-	GameManager.error_occurred.connect(_on_game_manager_error)
+	game_manager.connected_to_server.connect(_on_game_manager_connected)
+	game_manager.connection_failed.connect(_on_game_manager_connection_failed)
+	game_manager.disconnected_from_server.connect(_on_game_manager_disconnected)
+	game_manager.rooms_list_received.connect(_on_game_manager_rooms_received)
+	game_manager.name_accepted.connect(_on_game_manager_name_accepted)
+	game_manager.name_rejected.connect(_on_game_manager_name_rejected)
+	game_manager.room_created.connect(_on_game_manager_room_created)
+	game_manager.joined_room.connect(_on_game_manager_room_joined)
+	game_manager.room_updated.connect(_on_game_manager_room_updated)
+	#game_manager.match_started.connect(_on_game_manager_match_started)
+	game_manager.error_occurred.connect(_on_game_manager_error)
 	
 	# Conecta sinais das opções de vídeo
 	if vsync_check:
@@ -479,13 +483,13 @@ func _on_name_confirm_pressed():
 		show_error_name_input("O nome deve ter no máximo 20 caracteres")
 		return
 	
-	GameManager.set_player_name(p_name)
+	game_manager.set_player_name(p_name)
 
 # ===== CALLBACKS DO MENU PRINCIPAL =====
 
 func _on_join_match_pressed():
 	show_match_list_menu()
-	GameManager.request_rooms_list()
+	game_manager.request_rooms_list()
 
 func _on_create_match_pressed():
 	show_create_match_menu()
@@ -511,7 +515,7 @@ func _on_match_list_join_pressed():
 		return
 	
 	var password = match_password_input.text if match_password_input else ""
-	GameManager.join_room(selected_match_id, password)
+	game_manager.join_room(selected_match_id, password)
 
 func _on_manual_join_button_pressed():
 	show_manual_join_menu()
@@ -578,7 +582,7 @@ func _on_manual_join_confirm_pressed():
 		show_error_manual_join("Nome da sala não pode estar vazio")
 		return
 	
-	GameManager.join_room_by_name(room_name, password)
+	game_manager.join_room_by_name(room_name, password)
 
 func _on_manual_join_back_pressed():
 	show_match_list_menu()
@@ -596,7 +600,7 @@ func _on_create_match_confirm_pressed():
 		show_error_create_match("Nome da sala não pode estar vazio")
 		return
 	
-	GameManager.create_room(room_name, password)
+	game_manager.create_room(room_name, password)
 
 func _on_create_match_back_pressed():
 	show_main_menu()
@@ -907,13 +911,13 @@ func _apply_audio_settings():
 # ===== CALLBACKS DO MENU DE SALA (LOBBY) =====
 
 func _on_room_start_pressed():
-	GameManager.start_match()
+	game_manager.start_match()
 
 func _on_room_close_pressed():
-	GameManager.close_room()
+	game_manager.close_room()
 
 func _on_room_leave_pressed():
-	GameManager.leave_room()
+	game_manager.leave_room()
 
 # ===== ATUALIZAÇÃO DO MENU DE SALA =====
 

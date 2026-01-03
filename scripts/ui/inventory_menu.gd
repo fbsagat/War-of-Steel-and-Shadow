@@ -7,6 +7,10 @@ extends Control
 # Toda lógica de estado é controlada pelo servidor via sinais
 # =============================================================================
 
+# ===== REGISTROS =====
+
+var game_manager: GameManager = null
+
 # =============================================================================
 # SINAIS PARA COMUNICAÇÃO COM O SERVIDOR
 # =============================================================================
@@ -151,11 +155,11 @@ func _setup_quickbar_slots():
 		select_slot(0)  # Selecionar primeiro slot
 
 func setup_inventory_signals():
-	GameManager.item_added.connect(on_server_item_added)
-	GameManager.item_removed.connect(on_server_item_removed)
-	GameManager.item_equipped.connect(on_server_item_equipped)
-	GameManager.item_unequipped.connect(on_server_item_unequipped)
-	GameManager.items_swapped.connect(on_server_items_swapped)
+	game_manager.item_added.connect(on_server_item_added)
+	game_manager.item_removed.connect(on_server_item_removed)
+	game_manager.item_equipped.connect(on_server_item_equipped)
+	game_manager.item_unequipped.connect(on_server_item_unequipped)
+	game_manager.items_swapped.connect(on_server_items_swapped)
 	
 # =============================================================================
 # VISIBILIDADE DO INVENTÁRIO

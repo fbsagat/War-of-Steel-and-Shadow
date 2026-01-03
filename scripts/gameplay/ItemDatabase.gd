@@ -24,6 +24,7 @@ class_name ItemDatabase
 @export_category("Debug")
 ## Ativa logs detalhados de operações
 @export var debug_mode: bool = true
+@export var log_stats: bool = false
 
 # ═══════════════════════════════════════════════════════════════════════════
 # VARIÁVEIS INTERNAS
@@ -424,8 +425,8 @@ func load_database() -> bool:
 	load_time = (Time.get_ticks_msec() - start_time) / 1000.0
 	is_loaded = true
 	
-	_log_debug("✓ Database carregado: %d itens em %.3fs" % [items.size(), load_time])
-	_log_stats()
+	if log_stats:
+		_log_stats()
 	
 	return true
 

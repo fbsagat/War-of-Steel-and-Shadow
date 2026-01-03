@@ -34,6 +34,8 @@ class_name ObjectManager
 
 # ===== REGISTROS =====
 
+var server_manager: ServerManager = null     # Injetado pelo ServerManager
+var network_manager: NetworkManager = null   # Injetado pelo ServerManager
 var player_registry: PlayerRegistry = null   # Injetado pelo ServerManager
 var round_registry: RoundRegistry = null    # Injetado pelo ServerManager
 var item_database: ItemDatabase = null     # Injetado pelo ServerManager
@@ -194,7 +196,7 @@ func _send_spawn_to_clients(round_id: int, object_id: int, item_name: String, po
 			continue
 		
 		# ✅ Envia RPC individual via NetworkManager
-		NetworkManager._rpc_receive_spawn_on_clients.rpc_id(
+		network_manager._rpc_receive_spawn_on_clients.rpc_id(
 			player_id,
 			object_id,
 			round_id,
@@ -221,11 +223,11 @@ func spawn_item_in_front_of_player(objects_node, round_id: int, player_id: int, 
 		return -1
 	
 	# Valida estado do player
-	if not ServerManager.player_states.has(player_id):
+	if not server_manager.player_states.has(player_id):
 		push_error("ObjectManager: Player %d não tem estado no servidor" % player_id)
 		return -1
 	
-	var player_state = ServerManager.player_states[player_id]
+	var player_state = server_manager.player_states[player_id]
 	var player_pos = player_state["pos"]
 	var player_rot = player_state["rot"]
 	
@@ -282,7 +284,7 @@ func despawn_object(round_id: int, object_id: int) -> bool:
 	
 	# ✅ Desregistra do NetworkManager
 	if item_node and item_node.has_method("get_sync_config") and item_node.sync_enabled:
-		NetworkManager.unregister_syncable_object(object_id)
+		network_manager.unregister_syncable_object(object_id)
 	
 	# Remove do registro
 	spawned_objects[round_id].erase(object_id)
@@ -316,7 +318,7 @@ func _send_despawn_to_clients(round_id: int, object_id: int):
 			continue
 		
 		# ✅ Envia RPC individual
-		NetworkManager._rpc_client_despawn_item.rpc_id(player_id, object_id, round_id)
+		network_manager._rpc_client_despawn_item.rpc_id(player_id, object_id, round_id)
 
 func _is_peer_connected(peer_id: int) -> bool:
 	"""Verifica se um peer está conectado"""
@@ -686,6 +688,10 @@ func _spawn_on_server(objects_node, object_id: int, round_id: int, item_name: St
 	# ✅ Nome único sem underscore duplicado
 	item_node.name = "Object_%d_%s_%d" % [object_id, item_name, round_id]
 	
+	# Injeta dependências
+	item_node.network_manager = network_manager
+	item_node.server_manager = server_manager
+	
 	_log_debug("Criando node: %s" % item_node.name)
 	
 	# Adiciona à árvore (raiz de objeto do round no servidor)
@@ -712,7 +718,7 @@ func _spawn_on_server(objects_node, object_id: int, round_id: int, item_name: St
 		
 		# Se for drop de player, ajustar drop_velocity para a direção de sua fronte
 		if owner_id > 0:
-			var player_state = ServerManager.player_states[owner_id]
+			var player_state = server_manager.player_states[owner_id]
 			var player_rot = player_state["rot"]
 			drop_velocity = _calculate_drop_impulse(player_rot)
 			

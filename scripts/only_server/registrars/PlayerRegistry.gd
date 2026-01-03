@@ -17,6 +17,7 @@ class_name PlayerRegistry
 
 # ===== REGISTROS (Injetados pelo ServerManager) =====
 
+var network_manager: NetworkManager = null
 var room_registry: RoomRegistry = null  # Injetado
 var round_registry: RoundRegistry = null  # Injetado
 var object_manager: ObjectManager = null  # Injetado
@@ -366,7 +367,7 @@ func add_item_to_inventory(round_id: int, player_id: int, item_id: String, objec
 	#item_added_to_inventory.emit(round_id, player_id, item_name)
 	
 	# Atualizar o do player local também via rpc
-	NetworkManager.rpc_id(player_id, "local_add_item_to_inventory", item_id, object_id)
+	network_manager.rpc_id(player_id, "local_add_item_to_inventory", item_id, object_id)
 	
 	return true
 
@@ -394,7 +395,7 @@ func remove_item_from_inventory(round_id: int, player_id: int, object_id: int) -
 	#item_removed_from_inventory.emit(round_id, player_id, item_name)
 	
 	# Atualizar o do player local também via rpc
-	NetworkManager.rpc_id(player_id, "local_remove_item_from_inventory", object_id)
+	network_manager.rpc_id(player_id, "local_remove_item_from_inventory", object_id)
 	
 	return true
 
@@ -452,7 +453,7 @@ func equip_item(round_id: int, player_id: int, item_name: String, object_id, slo
 	#item_equipped.emit(round_id, player_id, item_name, slot)
 		
 	# Atualizar o do player local também via rpc
-	NetworkManager.rpc_id(player_id, "local_equip_item", item_name, object_id, slot)
+	network_manager.rpc_id(player_id, "local_equip_item", item_name, object_id, slot)
 	
 	return true
 
@@ -490,7 +491,7 @@ func unequip_item(round_id: int, player_id: int, slot: String, verify: bool = tr
 	#item_unequipped.emit(round_id, player_id, item_name, slot)
 		
 	# Atualizar o do player local também via rpc
-	NetworkManager.rpc_id(player_id, "local_unequip_item", item_data["item_id"], slot, verify)
+	network_manager.rpc_id(player_id, "local_unequip_item", item_data["item_id"], slot, verify)
 	
 	return true
 
@@ -543,7 +544,7 @@ func swap_equipped_item(round_id: int, player_id: int, new_item_name: String, in
 	])
 	
 	# Atualiza o cliente via RPC
-	NetworkManager.rpc_id(player_id, "local_swap_equipped_item", new_item_name, inventory_item, equiped_item_id, target_slot)
+	network_manager.rpc_id(player_id, "local_swap_equipped_item", new_item_name, inventory_item, equiped_item_id, target_slot)
 	
 	return true
 
