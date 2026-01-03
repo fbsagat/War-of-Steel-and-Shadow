@@ -207,10 +207,7 @@ func connect_inventory_signals():
 
 func hitboxes_manager():
 	# Conecta automaticamente todos os hitboxes de ataque presentes no modelo
-	
-	# Só o nó dos players no servidor processam hitboxes
-	if not _is_server:
-		return
+	# Só o nó dos players no servidor devem processar hitboxes
 
 	var all_areas = find_children("*", "Area3D", true)
 	var hitboxes = all_areas.filter(func(n): return n.is_in_group("hitboxes"))
@@ -682,7 +679,6 @@ func _determine_attack_from_input() -> String:
 # Função acionada pelas animações(AnimationPlayer), habilita hitbox na hora
 # exata do golpe; Pega current_item_right_id para saber qual foi a espada usada
 func _enable_attack_area():
-	
 	# Apenas o servidor faz verificação de hitbox
 	if not _is_server:
 		return
@@ -695,13 +691,14 @@ func _enable_attack_area():
 			actual_enabled_hitbox = hitbox
 			hitbox.monitoring = true
 			_log_debug("Hitbox de %s ativado! (%s %s)" % [actual_weapon.name, actual_enabled_hitbox, hitbox.monitoring])
-
+			
 	else:
 		_log_debug("_enable_attack_area: Não encontrado node de hitbox")
+	print("[111]_enable_attack_area")
 			
 # Para o contato das hitboxes das espadas(no momento ativo) com inimigos (área3D)
 func _on_hitbox_body_entered(body: Node, hitbox_area: Area3D) -> void:
-	
+	print("[111]_on_hitbox_body_entered!!!")
 	# Só o nó dos players no servidor processam hitboxes
 	if not _is_server:
 		return
@@ -737,6 +734,7 @@ func _on_hitbox_body_entered(body: Node, hitbox_area: Area3D) -> void:
 @rpc("authority", "call_remote", "unreliable")
 func take_damage():
 	"""Jogador local ou remoto recebe dano de golpe"""
+	print("[111]take_damage!!!")
 	
 	# Animação de hit
 	var random_hit = ["parameters/Hit_B/request", "parameters/Hit_A/request"].pick_random()
@@ -1336,6 +1334,10 @@ func initialize(p_id: int, p_name: String, spawn_pos: Vector3):
 	# visibilidade inicial (modelo)
 	if hide_itens_on_start:
 		_hide_all_model_items()
+	
+	# Ativa hitboxes
+	if _is_server:
+		hitboxes_manager()
 	
 # ===== FUNÇÕES DE ITENS ===============
 

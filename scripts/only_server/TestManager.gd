@@ -387,6 +387,9 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 	player_instance.network_manager = network_manager
 	player_instance.server_manager = server_manager
 	
+	# configura
+	player_instance._is_server = true
+	
 	# AGUARDA PROCESSAMENTO COMPLETO
 	if not player_instance.is_node_ready():
 		await player_instance.ready
