@@ -803,6 +803,7 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, pl
 	player_instance.name = str(player_data["id"])
 	player_instance.player_id = player_data["id"]
 	player_instance.player_name = player_data["name"]
+	player_instance._is_server = true
 	
 	# IMPORTANTE: No servidor, nenhum player é "local"
 	player_instance.is_local_player = false

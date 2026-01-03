@@ -55,8 +55,8 @@
 53. 	Ok. (Ps: Não precisou pois o problema era outro) Criar um buffer de tranferencias de itens 
 	entre slots para o inventory_menu, previne bugs.
 54. 	Ok. Implementações passo a passo para o sistema de inventários funcionar plenamente:
-	Fata apenas, parei nisso: Quando o player pede pra dropar um item que está equipado, arrastando 
-	ele no inventário menu diretamente do quadro de equipamentos para drop area, desequipar primeiro, depois dropar.
+		Ok. Fata apenas, parei nisso: Quando o player pede pra dropar um item que está equipado, arrastando 
+		ele no inventário menu diretamente do quadro de equipamentos para drop area, desequipar primeiro, depois dropar.
 55. Ajustar a forma como os itens dropáveis são spawnados, a partir do player, leve impulso para frente
  	e cima, a partir do nada para o mapa, sem impulse, criar outros drops para inimigos mortos, baús e etc..
 

@@ -694,11 +694,9 @@ func _enable_attack_area():
 			
 	else:
 		_log_debug("_enable_attack_area: Não encontrado node de hitbox")
-	print("[111]_enable_attack_area")
 			
 # Para o contato das hitboxes das espadas(no momento ativo) com inimigos (área3D)
 func _on_hitbox_body_entered(body: Node, hitbox_area: Area3D) -> void:
-	print("[111]_on_hitbox_body_entered!!!")
 	# Só o nó dos players no servidor processam hitboxes
 	if not _is_server:
 		return
@@ -734,7 +732,6 @@ func _on_hitbox_body_entered(body: Node, hitbox_area: Area3D) -> void:
 @rpc("authority", "call_remote", "unreliable")
 func take_damage():
 	"""Jogador local ou remoto recebe dano de golpe"""
-	print("[111]take_damage!!!")
 	
 	# Animação de hit
 	var random_hit = ["parameters/Hit_B/request", "parameters/Hit_A/request"].pick_random()
