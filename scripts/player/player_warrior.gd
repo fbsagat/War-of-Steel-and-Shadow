@@ -378,15 +378,15 @@ func get_nearest_enemy() -> CharacterBody3D:
 				
 	# --- Prioridade: FOV primeiro ---
 	if closest_in_fov != null:
-		_log_debug("Inimigo mais próximo (FOV): %s" % closest_in_fov)
+		#_log_debug("Inimigo mais próximo (FOV): %s" % closest_in_fov)
 		return closest_in_fov
 		
 	# --- Fallback: 360° (se ativado e dentro do raio menor) ---
 	if use_360_vision_as_backup and closest_in_360 != null:
-		_log_debug("Inimigo mais próximo (360° fallback): %s" % closest_in_360)
+		#_log_debug("Inimigo mais próximo (360° fallback): %s" % closest_in_360)
 		return closest_in_360
 		
-	_log_debug("Nenhum inimigo detectado.")
+	#_log_debug("Nenhum inimigo detectado.")
 	return null
 	
 func _update_nearest_enemy() -> void:
@@ -1004,11 +1004,12 @@ func _interpolate_remote_player(delta: float):
 		
 		remote_is_on_floor = is_on_floor()
 		
-		_log_debug("🎯 Modo remoto próximo: %.2fm (com física)" % distance_to_local)
+		#_log_debug("🎯 Modo remoto próximo: %.2fm (com física)" % distance_to_local)
 	
 	# ===== INTERPOLAÇÃO DE ROTAÇÃO =====
-	visual_rotation_y = lerp_angle(visual_rotation_y, target_rotation_y, interpolation_speed * delta)
-	rotation.y = visual_rotation_y
+	#visual_rotation_y = lerp_angle(visual_rotation_y, target_rotation_y, interpolation_speed * delta)
+	#rotation.y = visual_rotation_y
+	rotation.y = lerp_angle(rotation.y, target_rotation_y, interpolation_speed * delta)
 	
 	# ===== SNAP FINAL (APENAS PARA DISTANTES) =====
 	if is_distant and terrain_y != -INF:
@@ -1024,7 +1025,7 @@ func _interpolate_remote_player(delta: float):
 @rpc("authority", "call_remote", "unreliable")
 func _client_receive_state(pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
 	"""Recebe estado de outros jogadores e define alvos para interpolação"""
-	
+	_log_debug("_client_receive_state: jumping: %s" % jumping)
 	if is_local_player:
 		return  # Ignora para si mesmo
 	
