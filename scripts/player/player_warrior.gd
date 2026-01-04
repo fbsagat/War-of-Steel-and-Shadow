@@ -131,7 +131,6 @@ func _physics_process(delta: float) -> void:
 	if is_local_player:
 		# Jogador controlado pelo usuário
 		move_dir = _handle_movement_input(delta)
-		move_and_slide()
 		
 		# Sincronização de rede (se aplicável)
 		if has_network:
@@ -146,13 +145,15 @@ func _physics_process(delta: float) -> void:
 			# Jogador remoto no cliente
 			_interpolate_remote_player(delta)
 	
+	move_and_slide()
+	
 	# Lógica de rotação e mira
 	if is_aiming:
 		if is_local_player and nearest_enemy:
 			var to_enemy = nearest_enemy.global_transform.origin - global_transform.origin
 			var flat_dir = Vector3(to_enemy.x, 0, to_enemy.z)
 			var target_angle = atan2(flat_dir.x, flat_dir.z)
-			rotation.y = lerp_angle(rotation.y, target_angle, turn_speed * delta)
+			rotation.y = lerp_angle(rotation.y, target_angle, turn_speed * delta) # aqui é cancelado durante o pulo
 			aiming_forward_direction = Vector3(cos(target_angle), 0, sin(target_angle)).normalized()
 		else:
 			if camera_controller:
@@ -474,7 +475,7 @@ func _apply_movement(move_dir: Vector3, delta: float) -> void:
 	else:
 		if Input.is_action_just_pressed("jump") and is_on_floor() and not inventory_mode:
 			animation_tree.set("parameters/Jump_Full_Short/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
-			velocity.y = jump_velocity / 2.2
+			#velocity.y = jump_velocity / 2.2
 			is_jumping = true
 		
 	# Movimento no chão
@@ -995,7 +996,7 @@ func _interpolate_remote_player(delta: float):
 		else:
 			velocity.y = 0
 		
-		move_and_slide()
+		#move_and_slide()
 		
 		remote_is_on_floor = is_on_floor()
 		
