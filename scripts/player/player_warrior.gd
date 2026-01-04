@@ -44,6 +44,7 @@ extends CharacterBody3D
 @export var position_threshold: float = 0.01 # Distância mínima para sincronizar
 @export var rotation_threshold: float = 0.01 # Rotação mínima para sincronizar
 @export var anim_sync_rate: float = 0.1  # 10 updates/segundo (menos que posição)
+@export var visual_rotation_y: float = 0.0
 
 # referências
 @onready var animation_player: AnimationPlayer = $AnimationPlayer
@@ -325,7 +326,8 @@ func get_nearest_enemy() -> CharacterBody3D:
 	var closest_in_360: CharacterBody3D = null
 	var closest_in_360_dist_sq: float = INF
 
-	var enemies = get_tree().get_nodes_in_group("enemy")
+	var enemies = get_tree().get_nodes_in_group("remote_player")
+
 	if enemies.is_empty():
 		return null
 
@@ -799,7 +801,7 @@ func _send_state_to_server(delta: float):
 			target_position = global_position
 			target_rotation_y = rotation.y
 			
-			if NetworkManager and NetworkManager.is_connected:
+			if network_manager and network_manager.is_connected:
 				# APENAS SINCRONIZA X e Z se estiver longe da câmera
 				var camera_pos = camera_controller.global_position if camera_controller else global_position
 				var dist_to_camera = global_position.distance_to(camera_pos)
@@ -815,7 +817,7 @@ func _send_state_to_server(delta: float):
 				
 				network_manager.send_player_state(
 					player_id,
-					sync_pos,  # ← Usa posição ajustada
+					sync_pos,
 					rotation,
 					velocity,
 					is_running,
@@ -1005,7 +1007,8 @@ func _interpolate_remote_player(delta: float):
 		_log_debug("🎯 Modo remoto próximo: %.2fm (com física)" % distance_to_local)
 	
 	# ===== INTERPOLAÇÃO DE ROTAÇÃO =====
-	rotation.y = lerp_angle(rotation.y, target_rotation_y, interpolation_speed * delta)
+	visual_rotation_y = lerp_angle(visual_rotation_y, target_rotation_y, interpolation_speed * delta)
+	rotation.y = visual_rotation_y
 	
 	# ===== SNAP FINAL (APENAS PARA DISTANTES) =====
 	if is_distant and terrain_y != -INF:
@@ -1015,13 +1018,7 @@ func _interpolate_remote_player(delta: float):
 			global_position.y = terrain_y
 			velocity.y = 0
 			_log_debug("🔧 Snap final: %.2f -> %.2f" % [global_position.y + final_diff, terrain_y])
-
-
-# Parei nessa pergunta pro claudio:
-#Sobre a sincronização, prefiro a do script antigo, pois a sincronia é constante, não quero que os itens adormeçam, pois o mapa do jogo será pequeno, terá poucos itens e terá gráfico leve.
-#Os itens continuam, quando dropados longe da câmera do servidor, caindo pra baixo do chão, mas quando a câmera do servidor chega perto, eles aparecem para o cliente que dropou, no chão, caídos. A lógica é assim, o  servidor executa o drop, faz rpc pra dropar os modelos configurados nos clientes e cada item tem este script de sincronia. O servidor roda a cena do mapa também, com nós remotos de cada player sincronizados em tempo real, devemos aplicar a física do servidor nas áreas onde estes nós(remotos de clientes) estão? Mas e quando o servidor dropar um item longe de qualquer player?
-
-
+			
 # ===== RECEPÇÃO DE ESTADO (REMOTOS) =====
 
 @rpc("authority", "call_remote", "unreliable")
@@ -1165,7 +1162,7 @@ func action_sword_attack_call():
 			return
 	
 		# Sincroniza ataque pela rede (Reliable = Garantido)
-		if NetworkManager and NetworkManager.is_connected:
+		if network_manager and network_manager.is_connected:
 			var anim_name = _determine_attack_from_input()
 			network_manager.send_player_action(player_id, "attack", item_equipado["name"], anim_name)
 			

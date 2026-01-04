@@ -804,6 +804,7 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, pl
 	player_instance.player_id = player_data["id"]
 	player_instance.player_name = player_data["name"]
 	player_instance._is_server = true
+	player_instance.add_to_group("remote_player")
 	
 	# IMPORTANTE: No servidor, nenhum player é "local"
 	player_instance.is_local_player = false
@@ -1155,7 +1156,7 @@ func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 @rpc("any_peer", "call_remote", "reliable")
 func _server_validate_equip_item(requesting_player_id: int, object_id: int, _target_slot_type):
 	"""Servidor recebe pedido de equipar item, valida e redistribui"""
-	print("_server_validate_equip_item")
+
 	var player = player_registry.get_player(requesting_player_id)
 	var round_ = round_registry.get_round_by_player_id(player["id"])
 	var item_id = item_database.get_item(object_manager.get_stored_object_item_name(round_["round_id"] ,object_id))["id"]
