@@ -1282,15 +1282,22 @@ func _server_validate_swap_items(dragged_item_id: String, target_item_id: String
 	if not players_node:
 		return
 	
-	for peer in round_data["players"]:
-		var peer_id: int = peer["id"]
-		if _is_peer_connected(peer_id):
-			network_manager.rpc_id(peer_id, "server_apply_equiped_item", player_id, item_data["id"])
-	
+	# Servidor:
+	# Mudança de visual sincronizada para os remotes e clientes
 	var player_node = players_node.get_node_or_null(str(player_id))
 	if player_node and player_node.has_method("apply_visual_equip_on_player_node"):
 		player_node.apply_visual_equip_on_player_node(item_data["id"])
-
+	# Ações diversas relacionadas a swap de itens sincronizadas para os remotes e clientes
+	if player_node and player_node.has_method("execute_item_swap"):
+		player_node.execute_item_swap()
+		
+	# Clientes:
+	# server_apply_equiped_item executa ambas: apply_visual_equip_on_player_node e execute_item_swap
+	for peer in round_data["players"]:
+		var peer_id: int = peer["id"]
+		if _is_peer_connected(peer_id):
+			network_manager.rpc_id(peer_id, "server_apply_equiped_item", player_id, item_data["id"], false, false, true)
+	
 @rpc("any_peer", "call_remote", "reliable")
 func _server_trainer_spawn_item(requesting_player_id: int, item_id: int):
 	"""Servidor recebe pedido de spawnar item na frente do player para testes"""
@@ -1441,7 +1448,7 @@ func _server_validate_drop_item(requesting_player_id: int, obj_id: int):
 		# Remove item do inentário do player
 		player_registry.remove_item_from_inventory(round_["round_id"], player["id"], obj_id)
 		
-		# Executa animação no player no servidor e em seus remotos nos clientes
+		# Executa ações referentes a isso no player no servidor e em seus remotos nos clientes
 		var round_players = player_registry.get_players_in_round(round_["round_id"])
 		for peer_id in round_players:
 			network_manager.server_apply_drop_item.rpc_id(peer_id, requesting_player_id, item_data["name"])

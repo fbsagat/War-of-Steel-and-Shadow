@@ -1414,6 +1414,10 @@ func execute_item_drop():
 	# Animação de drop
 	_execute_animation("Interact", "Common", "parameters/Interact/transition_request", "parameters/Interact_shot/request")
 
+func execute_item_swap():
+	# Animação de swap
+	_execute_animation("Interact", "Common", "parameters/Interact/transition_request", "parameters/Interact_shot/request")
+
 func action_equip_item_call(item_id, slot_type):
 	if not is_local_player:
 		return
