@@ -327,7 +327,7 @@ func get_nearest_enemy() -> CharacterBody3D:
 	var closest_in_360_dist_sq: float = INF
 
 	var enemies = get_tree().get_nodes_in_group("remote_player")
-
+	
 	if enemies.is_empty():
 		return null
 
@@ -1007,9 +1007,9 @@ func _interpolate_remote_player(delta: float):
 		#_log_debug("🎯 Modo remoto próximo: %.2fm (com física)" % distance_to_local)
 	
 	# ===== INTERPOLAÇÃO DE ROTAÇÃO =====
-	#visual_rotation_y = lerp_angle(visual_rotation_y, target_rotation_y, interpolation_speed * delta)
-	#rotation.y = visual_rotation_y
-	rotation.y = lerp_angle(rotation.y, target_rotation_y, interpolation_speed * delta)
+	visual_rotation_y = lerp_angle(visual_rotation_y, target_rotation_y, interpolation_speed * delta)
+	rotation.y = visual_rotation_y
+	#rotation.y = lerp_angle(rotation.y, target_rotation_y, interpolation_speed * delta)
 	
 	# ===== SNAP FINAL (APENAS PARA DISTANTES) =====
 	if is_distant and terrain_y != -INF:
@@ -1025,7 +1025,7 @@ func _interpolate_remote_player(delta: float):
 @rpc("authority", "call_remote", "unreliable")
 func _client_receive_state(pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
 	"""Recebe estado de outros jogadores e define alvos para interpolação"""
-	_log_debug("_client_receive_state: jumping: %s" % jumping)
+
 	if is_local_player:
 		return  # Ignora para si mesmo
 	
