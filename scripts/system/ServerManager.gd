@@ -1155,7 +1155,7 @@ func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 @rpc("any_peer", "call_remote", "reliable")
 func _server_validate_equip_item(requesting_player_id: int, object_id: int, _target_slot_type):
 	"""Servidor recebe pedido de equipar item, valida e redistribui"""
-	
+	print("_server_validate_equip_item")
 	var player = player_registry.get_player(requesting_player_id)
 	var round_ = round_registry.get_round_by_player_id(player["id"])
 	var item_id = item_database.get_item(object_manager.get_stored_object_item_name(round_["round_id"] ,object_id))["id"]
@@ -1181,12 +1181,12 @@ func _server_validate_equip_item(requesting_player_id: int, object_id: int, _tar
 	for peer in round_["players"]:
 		var peer_id = peer["id"]
 		if _is_peer_connected(peer_id):
-			network_manager.rpc_id(peer_id, "server_apply_equiped_item", requesting_player_id, item_id, true, true)
+			network_manager.rpc_id(peer_id, "server_apply_equiped_item", requesting_player_id, item_id, false, true)
 	
 	# Aplica visual tbm na cena do servidor
 	var player_node = players_node.get_node_or_null(str(requesting_player_id))
 	if player_node and player_node.has_method("apply_visual_equip_on_player_node"):
-			player_node.apply_visual_equip_on_player_node(item_id, true, true)
+			player_node.apply_visual_equip_on_player_node(item_id, false, true)
 			
 @rpc("any_peer", "call_remote", "reliable")
 func _server_validate_unequip_item(requesting_player_id: int, slot_type: String):
