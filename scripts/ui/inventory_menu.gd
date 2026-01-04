@@ -26,6 +26,8 @@ signal request_swap_items(item_id_1: String, item_id_2: String)
 # =============================================================================
 
 # Grupos principais
+@onready var debug: bool = false
+
 @onready var inventory_root = $Inventory
 @onready var background_canvas = $Inventory/CanvasLayer
 @onready var center_container = $Inventory/CenterContainer
@@ -441,7 +443,7 @@ func _handle_drop_in_slot(target_slot: Panel):
 	# =========================================================================
 	if target_is_equipment and !original_is_equipment:
 		_log_debug("⚔️ Equipando: %s → %s" % [dragged_item_id, target_slot_type])
-		request_equip_item.emit(dragged_item_id, target_slot_type, true)
+		request_equip_item.emit(dragged_item_id, target_slot_type)
 		return
 	
 	# =========================================================================
@@ -457,7 +459,7 @@ func _handle_drop_in_slot(target_slot: Panel):
 		dragged_item.modulate.a = 1.0
 		
 		var original_eq_type = original_slot.get_meta("slot_type", "")
-		request_unequip_item.emit(original_eq_type, true)
+		request_unequip_item.emit(original_eq_type)
 		
 		# ✅ Forçar sincronização imediata do quickbar
 		_sync_quickbar()
@@ -1007,4 +1009,5 @@ func add_test_items():
 
 func _log_debug(message: String):
 	"""Imprime mensagem de debug"""
-	print("[CLIENT][INVENTORY] %s" % message)
+	if debug:
+		print("[CLIENT][INVENTORY] %s" % message)

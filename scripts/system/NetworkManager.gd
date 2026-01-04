@@ -626,7 +626,7 @@ func server_apply_picked_up_item(player_id):
 		player_node.action_pick_up_item()
 
 @rpc("authority", "call_remote", "reliable")
-func server_apply_equiped_item(player_id: int, item_id: int, unnequip: bool = false):
+func server_apply_equiped_item(player_id: int, item_id: int, unnequip: bool = false, from_inv_men = false):
 	"""Cliente recebe comando de equipamento equipar ou desequipar"""
 	
 	if multiplayer.is_server():
@@ -635,7 +635,7 @@ func server_apply_equiped_item(player_id: int, item_id: int, unnequip: bool = fa
 	# Encontra o player e executa a mudança de item equipado
 	var player_node = game_manager.players_node.get_node_or_null(str(player_id))
 	if player_node and player_node.has_method("apply_visual_equip_on_player_node"):
-		player_node.apply_visual_equip_on_player_node(player_node, item_id, unnequip)
+		player_node.apply_visual_equip_on_player_node(item_id, unnequip, from_inv_men)
 
 @rpc("authority", "call_remote", "reliable")
 func server_apply_drop_item(player_id: int, item_name: String):

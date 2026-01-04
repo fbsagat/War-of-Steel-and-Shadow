@@ -1368,13 +1368,18 @@ func handle_test_drop_item_call() -> void:
 		network_manager.handle_test_drop_item_call(player_id)
 
 # Executa quando o player equipa algum item / muda visual do modelo
-func apply_visual_equip_on_player_node(player_node, item_mapped_id, unnequip = false):
+func apply_visual_equip_on_player_node(item_mapped_id, unnequip = false, from_inv_men = false):
+	"""Aplica mudança visual em itens equipéveis que estão como filhos no nó do player
+	item_mapped_id: Id do item, não do objeto, para obtenção de item_node_link.
+	unnequip: Comando para esconder visualmente este item e todos os seus outros irmãos manter escondidos.
+	from_inv_men: Se vier como comando de inventory_menu"""
 	
-	animation_tree.set("PickUp", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+	if from_inv_men:
+		_execute_animation("Interact", "Common", "parameters/Interact/transition_request", "parameters/Interact_shot/request")
 	
 	var item_node_link = item_database.get_item_by_id(int(item_mapped_id)).model_node_link
 	
-	_item_model_change_visibility(player_node, item_node_link, unnequip)
+	_item_model_change_visibility(self, item_node_link, unnequip)
 
 # Ações do player (Pegar item)
 func action_pick_up_item_call():
@@ -1399,7 +1404,7 @@ func action_pick_up_item():
 	_execute_animation("PickUp", "Common", "parameters/PickUp/transition_request", "parameters/Pickup_shot/request")
 	
 	#animation_tree.set("PickUp", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
-	
+
 # Ações do player (Dropar item)
 func action_drop_item_call(obj_id) -> void:
 	if not is_local_player:
@@ -1452,7 +1457,7 @@ func _item_model_change_visibility(player_node, node_link: String, unnequip = fa
 		Se visible=true, TODOS os filhos de "handslot_l" serão escondidos,
 		EXCETO "shield_2" que será mostrado
 		"""
-		
+
 	# VALIDAÇÃO: Verifica se node é válido
 	if not player_node or not is_instance_valid(player_node):
 		push_error("apply_item_visibility: node inválido ou null")

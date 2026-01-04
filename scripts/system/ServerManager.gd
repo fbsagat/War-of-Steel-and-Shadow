@@ -1150,7 +1150,7 @@ func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 	
 	# Aplica visual tbm na cena do servidor
 	if player_node and player_node.has_method("apply_visual_equip_on_player_node"):
-		player_node.apply_visual_equip_on_player_node(player_node, str(item["id"]))
+		player_node.apply_visual_equip_on_player_node(str(item["id"]))
 
 @rpc("any_peer", "call_remote", "reliable")
 func _server_validate_equip_item(requesting_player_id: int, object_id: int, _target_slot_type):
@@ -1181,17 +1181,17 @@ func _server_validate_equip_item(requesting_player_id: int, object_id: int, _tar
 	for peer in round_["players"]:
 		var peer_id = peer["id"]
 		if _is_peer_connected(peer_id):
-			network_manager.rpc_id(peer_id, "server_apply_equiped_item", requesting_player_id, item_id)
+			network_manager.rpc_id(peer_id, "server_apply_equiped_item", requesting_player_id, item_id, true, true)
 	
 	# Aplica visual tbm na cena do servidor
 	var player_node = players_node.get_node_or_null(str(requesting_player_id))
 	if player_node and player_node.has_method("apply_visual_equip_on_player_node"):
-			player_node.apply_visual_equip_on_player_node(player_node, item_id)
+			player_node.apply_visual_equip_on_player_node(item_id, true, true)
 			
 @rpc("any_peer", "call_remote", "reliable")
 func _server_validate_unequip_item(requesting_player_id: int, slot_type: String):
 	"""Servidor recebe pedido de desequipar item, valida e redistribui"""
-	
+
 	var player = player_registry.get_player(requesting_player_id)
 	var round_ = round_registry.get_round_by_player_id(player["id"])
 	var item_ = player_registry.get_equipped_item_in_slot(round_["round_id"], requesting_player_id, slot_type)
@@ -1209,12 +1209,12 @@ func _server_validate_unequip_item(requesting_player_id: int, slot_type: String)
 	for peer in round_["players"]:
 		var peer_id = peer["id"]
 		if _is_peer_connected(peer_id):
-			network_manager.rpc_id(peer_id, "server_apply_equiped_item", requesting_player_id, int(item_id), true)
+			network_manager.rpc_id(peer_id, "server_apply_equiped_item", requesting_player_id, int(item_id), true, true)
 	
 	# Aplica na cena do servidor (atualizar visual)
 	var player_node = players_node.get_node_or_null(str(requesting_player_id))
 	if player_node and player_node.has_method("apply_visual_equip_on_player_node"):
-			player_node.apply_visual_equip_on_player_node(player_node, item_id, true)
+			player_node.apply_visual_equip_on_player_node(item_id, true, true)
 
 @rpc("any_peer", "call_remote", "reliable")
 func _server_validate_swap_items(dragged_item_id: String, target_item_id: String):
@@ -1288,7 +1288,7 @@ func _server_validate_swap_items(dragged_item_id: String, target_item_id: String
 	
 	var player_node = players_node.get_node_or_null(str(player_id))
 	if player_node and player_node.has_method("apply_visual_equip_on_player_node"):
-		player_node.apply_visual_equip_on_player_node(player_node, item_data["id"])
+		player_node.apply_visual_equip_on_player_node(item_data["id"])
 
 @rpc("any_peer", "call_remote", "reliable")
 func _server_trainer_spawn_item(requesting_player_id: int, item_id: int):
@@ -1351,7 +1351,6 @@ func _server_trainer_drop_item(player_id):
 func _server_validate_drop_item(requesting_player_id: int, obj_id: int):
 	"""Servidor recebe pedido de drop, valida e spawna item executando drop_item()
 	IMPORTANTE: USA ESTADO DO SERVIDOR, não do cliente"""
-	
 	# Na hora do drop, se tiver um item equipado e for o item dropado, desequipar e dropar, se não for o mesmo, apenas dropar
 	# Se não tiver nenhum item equipado, apenas dropar se tiver no inventário
 	
@@ -1382,12 +1381,20 @@ func _server_validate_drop_item(requesting_player_id: int, obj_id: int):
 	# Se o item estiver equipado
 	if is_item_equipped:
 		var equiped_obj_id = player_registry.get_equipped_item_in_slot(round_["round_id"], requesting_player_id, item_slot)["object_id"]
-		if int(equiped_obj_id) == int(obj_id):
-			# O item dropado é o mesmo item que está equipado, pedir para desequipar
-			player_registry.unequip_item(round_["round_id"], requesting_player_id, item_slot, false)
 			
-		# Servidor manda desequipar obj item / mudança no visual do modelo
-		item_id = int(player_registry.get_inventory_items(round_["round_id"], requesting_player_id)[0]["item_id"])
+		# Pega o id do item para esconder no player
+		item_id = int(player_registry.get_equipped_item_in_slot(round_["round_id"], requesting_player_id, item_slot)["item_id"])
+		
+		# Verificar se o item dropado é o mesmo item que está equipado, se sim, pedir para desequipar
+		if int(equiped_obj_id) == int(obj_id):
+			player_registry.unequip_item(round_["round_id"], requesting_player_id, item_slot, false)
+		
+		# Aplica no nó do servidor
+		var player_node = player_registry.get_player_node(requesting_player_id)
+		if player_node and player_node.has_method("apply_visual_equip_on_player_node"):
+			player_node.apply_visual_equip_on_player_node(int(item_id), true)
+		
+		# Aplicar nos players remotos dos clientes
 		for peer in round_["players"]:
 			var peer_id = peer["id"]
 			if _is_peer_connected(peer_id):
@@ -1407,7 +1414,7 @@ func _server_validate_drop_item(requesting_player_id: int, obj_id: int):
 		push_warning("[ServerManager]: Player não tem nenhum item no inentário para dropar")
 		return
 		
-	_log_debug("[ITEM]📦Pedido válido! Player %s pediu para dropar item %d, no round %d" % [player["name"], item_id, round_["round_id"]])
+	_log_debug("[ITEM]📦 Pedido válido! Executando drop de item ObjId: %d tipo %s do player ID %s" % [obj_id, item_["name"], requesting_player_id])
 	
 	# Executar drop (o item deve estar no inventário do player / já verificado acima) \/
 	# Pegar o item_id do objeto referido

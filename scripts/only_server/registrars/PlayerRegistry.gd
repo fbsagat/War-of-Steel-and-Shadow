@@ -368,7 +368,6 @@ func add_item_to_inventory(round_id: int, player_id: int, item_id: String, objec
 	
 	# Atualizar o do player local também via rpc
 	network_manager.rpc_id(player_id, "local_add_item_to_inventory", item_id, object_id)
-	
 	return true
 
 func remove_item_from_inventory(round_id: int, player_id: int, object_id: int) -> bool:
