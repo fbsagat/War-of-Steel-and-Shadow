@@ -1124,6 +1124,14 @@ func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 	# Define objeto armazenado / sai do spawned objects
 	object_manager.store_object(round_["round_id"], object_id, player["id"])
 	
+	# Executa animação no player no servidor e em seus remotos nos clientes
+	for peer_id in round_players:
+		network_manager.server_apply_picked_up_item.rpc_id(peer_id, requesting_player_id)
+	
+	# Executa animação no nó do servidor tbm
+	if player_node and player_node.has_method("action_pick_up_item"):
+		player_node.action_pick_up_item()
+	
 	# Se o slot deste item estiver vazio, equipar este item lá automaticamente \/
 	if not player_registry.is_slot_empty(round_["round_id"], player['id'], item["type"]):
 		return
@@ -1131,14 +1139,6 @@ func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 	# Equipa o item no registro do player
 	player_registry.equip_item(round_["round_id"], player['id'], item["name"], object_id)
 	
-	# Executa animação no player no servidor e em seus remotos nos clientes
-	for peer_id in round_players:
-		network_manager.server_apply_picked_up_item.rpc_id(peer_id, requesting_player_id)
-	
-	# Aplica no nó do servidor
-	if player_node and player_node.has_method("action_pick_up_item"):
-		player_node.action_pick_up_item()
-		
 	_log_debug("[ITEM]📦 Item equipado validado: Player %d equipou item %d" % [requesting_player_id, item["id"]])
 	
 	# Envia para todos os clientes do round (para atualizar visual)

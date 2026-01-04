@@ -409,17 +409,39 @@ func _handle_drop_in_slot(target_slot: Panel):
 	if existing_item and existing_item != dragged_item:
 		var existing_item_id = existing_item.get_meta("item_id", "")
 		_log_debug("🔄 Swap detectado: %s ↔ %s" % [dragged_item_id, existing_item_id])
-		request_swap_items.emit(
-			dragged_item_id,
-			existing_item_id)
-		return
+		
+		# Verifica se pelo menos um dos itens está em slot de equipamento
+		
+		if original_is_equipment or target_is_equipment:
+			# Pelo menos um item está equipado → solicita swap ao servidor
+			request_swap_items.emit(dragged_item_id, existing_item_id)
+			return  # Mantém o comportamento original: return após RPC
+		else:
+			# Ambos os itens estão no inventário → swap visual local
+			_log_debug("📦 Swap local no inventário: %s ↔ %s" % [original_slot_type, target_slot.get_meta("slot_id", "")])
+			
+			# Remove ambos os itens dos slots
+			original_slot.remove_child(dragged_item)
+			target_slot.remove_child(existing_item)
+			
+			# Adiciona nos slots trocados
+			target_slot.add_child(dragged_item)
+			original_slot.add_child(existing_item)
+			
+			# Posiciona corretamente
+			_position_item_in_slot(dragged_item, target_slot)
+			_position_item_in_slot(existing_item, original_slot)
+			
+			# Restaura opacidade
+			dragged_item.modulate.a = 1.0
+			existing_item.modulate.a = 1.0
 	
 	# =========================================================================
 	# AÇÃO 2: EQUIPAR (mover para slot de equipamento)
 	# =========================================================================
 	if target_is_equipment and !original_is_equipment:
 		_log_debug("⚔️ Equipando: %s → %s" % [dragged_item_id, target_slot_type])
-		request_equip_item.emit(dragged_item_id, target_slot_type)
+		request_equip_item.emit(dragged_item_id, target_slot_type, true)
 		return
 	
 	# =========================================================================
@@ -435,7 +457,7 @@ func _handle_drop_in_slot(target_slot: Panel):
 		dragged_item.modulate.a = 1.0
 		
 		var original_eq_type = original_slot.get_meta("slot_type", "")
-		request_unequip_item.emit(original_eq_type)
+		request_unequip_item.emit(original_eq_type, true)
 		
 		# ✅ Forçar sincronização imediata do quickbar
 		_sync_quickbar()
