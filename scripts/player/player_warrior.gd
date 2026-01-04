@@ -30,8 +30,8 @@ extends CharacterBody3D
 @export var max_pickup_results: int = 10
 
 @export_category("Enemy detection")
-@export var detection_radius_fov: float = 14.0 # Raio para detecção no FOV
-@export var detection_radius_360: float = 6.0 # Raio menor (ou maior) para fallback 360°
+@export var detection_radius_fov: float = 20.0 # Raio para detecção no FOV
+@export var detection_radius_360: float = 12.0 # Raio menor (ou maior) para fallback 360°
 @export_range(0, 360) var field_of_view_degrees: float = 120.0
 @export var use_360_vision_as_backup: bool = true # Ativa a visão 360° como fallback
 @export var update_interval: float = 0.5 # atualização a cada X segundos (0 = cada frame)
@@ -113,13 +113,7 @@ var terrain : Terrain3D
 
 # Ready
 func _ready():
-	# Connect do Timer (attack_timer)
-	attack_timer.timeout.connect(Callable(self, "_on_attack_timer_timeout"))
-	
-	# Aplicador de tempo de detecção do inimigo
-	enemy_detection_timer()
-	
-	add_to_group("player")
+	pass
 	
 # Física geral
 func _physics_process(delta: float) -> void:
@@ -154,7 +148,7 @@ func _physics_process(delta: float) -> void:
 	
 	# Lógica de rotação e mira
 	if is_aiming:
-		if nearest_enemy:
+		if is_local_player and nearest_enemy:
 			var to_enemy = nearest_enemy.global_transform.origin - global_transform.origin
 			var flat_dir = Vector3(to_enemy.x, 0, to_enemy.z)
 			var target_angle = atan2(flat_dir.x, flat_dir.z)
@@ -178,7 +172,7 @@ func _physics_process(delta: float) -> void:
 		aiming_forward_direction = Vector3(-global_transform.basis.z.x, 0, -global_transform.basis.z.z).normalized()
 
 	# Atualiza detecção contínua de inimigos
-	if update_interval <= 0.0:
+	if is_local_player and update_interval <= 0.0:
 		_update_nearest_enemy()
 	
 	# Armazena direção para modo mira
@@ -319,6 +313,7 @@ func enemy_detection_timer():
 
 # Detectar inimigo mais próximo
 func get_nearest_enemy() -> CharacterBody3D:
+
 	var space_state = get_world_3d().direct_space_state
 	var closest_in_fov: CharacterBody3D = null
 	var closest_in_fov_dist_sq: float = INF
@@ -330,7 +325,7 @@ func get_nearest_enemy() -> CharacterBody3D:
 	
 	if enemies.is_empty():
 		return null
-
+	
 	var player_pos = global_transform.origin
 	var player_forward = Vector3(global_transform.basis.z.x, 0, global_transform.basis.z.z).normalized()
 
@@ -1009,7 +1004,6 @@ func _interpolate_remote_player(delta: float):
 	# ===== INTERPOLAÇÃO DE ROTAÇÃO =====
 	visual_rotation_y = lerp_angle(visual_rotation_y, target_rotation_y, interpolation_speed * delta)
 	rotation.y = visual_rotation_y
-	#rotation.y = lerp_angle(rotation.y, target_rotation_y, interpolation_speed * delta)
 	
 	# ===== SNAP FINAL (APENAS PARA DISTANTES) =====
 	if is_distant and terrain_y != -INF:
@@ -1283,6 +1277,14 @@ func set_as_local_player():
 	# APENAS JOGADOR LOCAL PROCESSA INPUT
 	set_process_input(true)
 	set_process_unhandled_input(true)
+	
+	# Connect do Timer (attack_timer)
+	attack_timer.timeout.connect(Callable(self, "_on_attack_timer_timeout"))
+	
+	# Aplicador de tempo de detecção do inimigo
+	enemy_detection_timer()
+	
+	add_to_group("player")
 
 func initialize(p_id: int, p_name: String, spawn_pos: Vector3):
 	"""Inicializa o player com dados multiplayer"""
