@@ -62,6 +62,7 @@
  	e cima, a partir do nada para o mapa, sem impulse, criar outros drops para inimigos mortos, baús e etc..
 56. 	Ok. Quando um item for equipado ou desequipado via inventpry_menu, animar o player com interact.
 57. 	Ok. Eficiência: Eliminar player_node de apply_visual_equip_on_player_node.
+58. Inventory_menu não deve pedir troca caso o item arrastado seja solto no lugar onde ele já estava, verificar no servidor também.
 
 Adicionar no modelo do player:
 	1. Anim interact com a outra mão.

@@ -629,27 +629,27 @@ func get_all_player_item_names(round_id: int, player_id: int) -> Array:
 		names.append(item_data["item_name"])
 	return names
 
-func has_item(round_id: int, player_id: int, item_name: String) -> bool:
+func has_item(round_id: int, player_id: int, object_id: int) -> bool:
 	"""Verifica se jogador possui um item especifico (em qualquer lugar)"""
-	return has_item_in_inventory(round_id, player_id, item_name) or is_item_equipped(round_id, player_id, item_name)
+	return has_item_in_inventory(round_id, player_id, object_id) or is_item_equipped(round_id, player_id, object_id)
 
 func has_any_item(round_id: int, player_id: int) -> bool:
 	"""Verifica se jogador possui algum item qualquer (em qualquer lugar)"""
 	var inventory = _get_player_inventory(round_id, player_id)
 	return not inventory["inventory"].is_empty()
 
-func has_item_in_inventory(round_id: int, player_id: int, item_name: String) -> bool:
+func has_item_in_inventory(round_id: int, player_id: int, object_id: int) -> bool:
 	"""Verifica se item está no inventário (não equipado)"""
 	var inventory = _get_player_inventory(round_id, player_id)
 	if inventory.is_empty():
 		return false
 	
 	for item_data in inventory["inventory"]:
-		if item_data["item_name"] == item_name:
+		if int(item_data["object_id"]) == object_id:
 			return true
 	return false
 
-func is_item_equipped(round_id: int, player_id: int, object_id: String) -> bool:
+func is_item_equipped(round_id: int, player_id: int, object_id: int) -> bool:
 	"""Verifica se item está equipado pelo id do objeto"""
 	var inventory = _get_player_inventory(round_id, player_id)
 	if inventory.is_empty():

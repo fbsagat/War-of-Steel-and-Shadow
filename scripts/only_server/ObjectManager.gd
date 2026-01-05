@@ -239,6 +239,33 @@ func spawn_item_in_front_of_player(objects_node, round_id: int, player_id: int, 
 	
 	return await spawn_item(objects_node, round_id, item_name, spawn_pos, spawn_rot, player_id)
 
+func spawn_item_over_of_player(objects_node, round_id: int, player_id: int, item_name: String) -> int:
+	"""
+	Spawna item na frente de um player
+	USA O ESTADO DO SERVIDOR (ServerManager.player_states)
+	
+	@return: object_id ou -1 se falhar
+	"""
+	
+	if not multiplayer.is_server():
+		return -1
+	
+	# Valida estado do player
+	if not server_manager.player_states.has(player_id):
+		push_error("ObjectManager: Player %d não tem estado no servidor" % player_id)
+		return -1
+	
+	var player_state = server_manager.player_states[player_id]
+	var player_pos = player_state["pos"]
+	
+	# Calcula posição na frente do player
+	var spawn_pos = Vector3(player_pos.x, player_pos.y + 3, player_pos.z)
+	var spawn_rot = Vector3.ZERO  # Rotação padrão
+
+	_log_debug("Spawn na frente do player %d: pos=%s" % [player_id, spawn_pos])
+	
+	return await spawn_item(objects_node, round_id, item_name, spawn_pos, spawn_rot, player_id)
+
 func spawn_item_at_random_position(objects_node, round_id: int, item_name: String, area_center: Vector3, area_radius: float, owner_id: int = -1) -> int:
 	"""Spawna item em posição aleatória dentro de uma área circular"""
 	

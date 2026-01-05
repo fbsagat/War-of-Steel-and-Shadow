@@ -30,8 +30,8 @@ extends CharacterBody3D
 @export var max_pickup_results: int = 10
 
 @export_category("Enemy detection")
-@export var detection_radius_fov: float = 14.0 # Raio para detecção no FOV
-@export var detection_radius_360: float = 6.0 # Raio menor (ou maior) para fallback 360°
+@export var detection_radius_fov: float = 20.0 # Raio para detecção no FOV
+@export var detection_radius_360: float = 12.0 # Raio menor (ou maior) para fallback 360°
 @export_range(0, 360) var field_of_view_degrees: float = 120.0
 @export var use_360_vision_as_backup: bool = true # Ativa a visão 360° como fallback
 @export var update_interval: float = 0.5 # atualização a cada X segundos (0 = cada frame)
@@ -44,6 +44,7 @@ extends CharacterBody3D
 @export var position_threshold: float = 0.01 # Distância mínima para sincronizar
 @export var rotation_threshold: float = 0.01 # Rotação mínima para sincronizar
 @export var anim_sync_rate: float = 0.1  # 10 updates/segundo (menos que posição)
+@export var visual_rotation_y: float = 0.0
 
 # referências
 @onready var animation_player: AnimationPlayer = $AnimationPlayer
@@ -112,13 +113,7 @@ var terrain : Terrain3D
 
 # Ready
 func _ready():
-	# Connect do Timer (attack_timer)
-	attack_timer.timeout.connect(Callable(self, "_on_attack_timer_timeout"))
-	
-	# Aplicador de tempo de detecção do inimigo
-	enemy_detection_timer()
-	
-	add_to_group("player")
+	pass
 	
 # Física geral
 func _physics_process(delta: float) -> void:
@@ -136,7 +131,6 @@ func _physics_process(delta: float) -> void:
 	if is_local_player:
 		# Jogador controlado pelo usuário
 		move_dir = _handle_movement_input(delta)
-		move_and_slide()
 		
 		# Sincronização de rede (se aplicável)
 		if has_network:
@@ -151,13 +145,15 @@ func _physics_process(delta: float) -> void:
 			# Jogador remoto no cliente
 			_interpolate_remote_player(delta)
 	
+	move_and_slide()
+	
 	# Lógica de rotação e mira
 	if is_aiming:
-		if nearest_enemy:
+		if is_local_player and nearest_enemy:
 			var to_enemy = nearest_enemy.global_transform.origin - global_transform.origin
 			var flat_dir = Vector3(to_enemy.x, 0, to_enemy.z)
 			var target_angle = atan2(flat_dir.x, flat_dir.z)
-			rotation.y = lerp_angle(rotation.y, target_angle, turn_speed * delta)
+			rotation.y = lerp_angle(rotation.y, target_angle, turn_speed * delta) # aqui é cancelado durante o pulo
 			aiming_forward_direction = Vector3(cos(target_angle), 0, sin(target_angle)).normalized()
 		else:
 			if camera_controller:
@@ -177,7 +173,7 @@ func _physics_process(delta: float) -> void:
 		aiming_forward_direction = Vector3(-global_transform.basis.z.x, 0, -global_transform.basis.z.z).normalized()
 
 	# Atualiza detecção contínua de inimigos
-	if update_interval <= 0.0:
+	if is_local_player and update_interval <= 0.0:
 		_update_nearest_enemy()
 	
 	# Armazena direção para modo mira
@@ -318,6 +314,7 @@ func enemy_detection_timer():
 
 # Detectar inimigo mais próximo
 func get_nearest_enemy() -> CharacterBody3D:
+
 	var space_state = get_world_3d().direct_space_state
 	var closest_in_fov: CharacterBody3D = null
 	var closest_in_fov_dist_sq: float = INF
@@ -325,10 +322,11 @@ func get_nearest_enemy() -> CharacterBody3D:
 	var closest_in_360: CharacterBody3D = null
 	var closest_in_360_dist_sq: float = INF
 
-	var enemies = get_tree().get_nodes_in_group("enemy")
+	var enemies = get_tree().get_nodes_in_group("remote_player")
+	
 	if enemies.is_empty():
 		return null
-
+	
 	var player_pos = global_transform.origin
 	var player_forward = Vector3(global_transform.basis.z.x, 0, global_transform.basis.z.z).normalized()
 
@@ -376,15 +374,15 @@ func get_nearest_enemy() -> CharacterBody3D:
 				
 	# --- Prioridade: FOV primeiro ---
 	if closest_in_fov != null:
-		_log_debug("Inimigo mais próximo (FOV): %s" % closest_in_fov)
+		#_log_debug("Inimigo mais próximo (FOV): %s" % closest_in_fov)
 		return closest_in_fov
 		
 	# --- Fallback: 360° (se ativado e dentro do raio menor) ---
 	if use_360_vision_as_backup and closest_in_360 != null:
-		_log_debug("Inimigo mais próximo (360° fallback): %s" % closest_in_360)
+		#_log_debug("Inimigo mais próximo (360° fallback): %s" % closest_in_360)
 		return closest_in_360
 		
-	_log_debug("Nenhum inimigo detectado.")
+	#_log_debug("Nenhum inimigo detectado.")
 	return null
 	
 func _update_nearest_enemy() -> void:
@@ -477,7 +475,7 @@ func _apply_movement(move_dir: Vector3, delta: float) -> void:
 	else:
 		if Input.is_action_just_pressed("jump") and is_on_floor() and not inventory_mode:
 			animation_tree.set("parameters/Jump_Full_Short/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
-			velocity.y = jump_velocity / 2.2
+			#velocity.y = jump_velocity / 2.2
 			is_jumping = true
 		
 	# Movimento no chão
@@ -799,7 +797,7 @@ func _send_state_to_server(delta: float):
 			target_position = global_position
 			target_rotation_y = rotation.y
 			
-			if NetworkManager and NetworkManager.is_connected:
+			if network_manager and network_manager.is_connected:
 				# APENAS SINCRONIZA X e Z se estiver longe da câmera
 				var camera_pos = camera_controller.global_position if camera_controller else global_position
 				var dist_to_camera = global_position.distance_to(camera_pos)
@@ -815,7 +813,7 @@ func _send_state_to_server(delta: float):
 				
 				network_manager.send_player_state(
 					player_id,
-					sync_pos,  # ← Usa posição ajustada
+					sync_pos,
 					rotation,
 					velocity,
 					is_running,
@@ -998,14 +996,15 @@ func _interpolate_remote_player(delta: float):
 		else:
 			velocity.y = 0
 		
-		move_and_slide()
+		#move_and_slide()
 		
 		remote_is_on_floor = is_on_floor()
 		
-		_log_debug("🎯 Modo remoto próximo: %.2fm (com física)" % distance_to_local)
+		#_log_debug("🎯 Modo remoto próximo: %.2fm (com física)" % distance_to_local)
 	
 	# ===== INTERPOLAÇÃO DE ROTAÇÃO =====
-	rotation.y = lerp_angle(rotation.y, target_rotation_y, interpolation_speed * delta)
+	visual_rotation_y = lerp_angle(visual_rotation_y, target_rotation_y, interpolation_speed * delta)
+	rotation.y = visual_rotation_y
 	
 	# ===== SNAP FINAL (APENAS PARA DISTANTES) =====
 	if is_distant and terrain_y != -INF:
@@ -1015,19 +1014,13 @@ func _interpolate_remote_player(delta: float):
 			global_position.y = terrain_y
 			velocity.y = 0
 			_log_debug("🔧 Snap final: %.2f -> %.2f" % [global_position.y + final_diff, terrain_y])
-
-
-# Parei nessa pergunta pro claudio:
-#Sobre a sincronização, prefiro a do script antigo, pois a sincronia é constante, não quero que os itens adormeçam, pois o mapa do jogo será pequeno, terá poucos itens e terá gráfico leve.
-#Os itens continuam, quando dropados longe da câmera do servidor, caindo pra baixo do chão, mas quando a câmera do servidor chega perto, eles aparecem para o cliente que dropou, no chão, caídos. A lógica é assim, o  servidor executa o drop, faz rpc pra dropar os modelos configurados nos clientes e cada item tem este script de sincronia. O servidor roda a cena do mapa também, com nós remotos de cada player sincronizados em tempo real, devemos aplicar a física do servidor nas áreas onde estes nós(remotos de clientes) estão? Mas e quando o servidor dropar um item longe de qualquer player?
-
-
+			
 # ===== RECEPÇÃO DE ESTADO (REMOTOS) =====
 
 @rpc("authority", "call_remote", "unreliable")
 func _client_receive_state(pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
 	"""Recebe estado de outros jogadores e define alvos para interpolação"""
-	
+
 	if is_local_player:
 		return  # Ignora para si mesmo
 	
@@ -1165,7 +1158,7 @@ func action_sword_attack_call():
 			return
 	
 		# Sincroniza ataque pela rede (Reliable = Garantido)
-		if NetworkManager and NetworkManager.is_connected:
+		if network_manager and network_manager.is_connected:
 			var anim_name = _determine_attack_from_input()
 			network_manager.send_player_action(player_id, "attack", item_equipado["name"], anim_name)
 			
@@ -1285,6 +1278,14 @@ func set_as_local_player():
 	# APENAS JOGADOR LOCAL PROCESSA INPUT
 	set_process_input(true)
 	set_process_unhandled_input(true)
+	
+	# Connect do Timer (attack_timer)
+	attack_timer.timeout.connect(Callable(self, "_on_attack_timer_timeout"))
+	
+	# Aplicador de tempo de detecção do inimigo
+	enemy_detection_timer()
+	
+	add_to_group("player")
 
 func initialize(p_id: int, p_name: String, spawn_pos: Vector3):
 	"""Inicializa o player com dados multiplayer"""
@@ -1373,7 +1374,7 @@ func apply_visual_equip_on_player_node(item_mapped_id, unnequip = false, from_in
 	item_mapped_id: Id do item, não do objeto, para obtenção de item_node_link.
 	unnequip: Comando para esconder visualmente este item e todos os seus outros irmãos manter escondidos.
 	from_inv_men: Se vier como comando de inventory_menu"""
-	print("apply_visual_equip_on_player_node", item_mapped_id, unnequip)
+
 	if from_inv_men:
 		_execute_animation("Interact", "Common", "parameters/Interact/transition_request", "parameters/Interact_shot/request")
 	
@@ -1415,6 +1416,10 @@ func action_drop_item_call(obj_id) -> void:
 		
 func execute_item_drop():
 	# Animação de drop
+	_execute_animation("Interact", "Common", "parameters/Interact/transition_request", "parameters/Interact_shot/request")
+
+func execute_item_swap():
+	# Animação de swap
 	_execute_animation("Interact", "Common", "parameters/Interact/transition_request", "parameters/Interact_shot/request")
 
 func action_equip_item_call(item_id, slot_type):
