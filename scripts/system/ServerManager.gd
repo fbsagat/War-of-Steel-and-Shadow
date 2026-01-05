@@ -1079,9 +1079,7 @@ func _rpc_despawn_on_clients(player_ids: Array, round_id: int, object_id: int):
 @rpc("any_peer", "call_remote", "reliable")
 func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 	"""Servidor recebe pedido de pegar item para o inventário, valida e redistribui"""
-	if not _is_peer_connected(requesting_player_id):
-		return
-		
+	
 	var player_node = player_registry.get_player_node(requesting_player_id)
 	var round_id = player_registry.get_player_round(requesting_player_id)
 	var object = _get_spawned_object(round_id ,object_id)
@@ -1091,12 +1089,16 @@ func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 	var item = item_database.get_item(object["item_name"]).to_dictionary()
 	var round_players = round_registry.get_active_players_ids(round_["round_id"])
 	
+	_log_debug("[ITEM] Player %s pediu para pegar item %d(%s), no round %d" % [player["name"], object_id, object["item_name"], round_["round_id"]])
+	
+	# Verificação se o player está conectado
+	if not _is_peer_connected(requesting_player_id):
+		return
+	
 	# Verificação se o item está perto do player na cena do servidor também
 	if not server_nearby.has(object["node"]):
 		_log_debug("O nó deste player no servidor não tem este item por perto para pickup, recusar!")
 		return
-	
-	_log_debug("[ITEM] Player %s pediu para pegar item %d, no round %d" % [player["name"], object_id, round_["round_id"]])
 	
 	# Verifica se o item que o player enviou é o mesmo que o server detectou
 	if object_id != server_nearby[0].object_id:
@@ -1140,7 +1142,7 @@ func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 	# Equipa o item no registro do player
 	player_registry.equip_item(round_["round_id"], player['id'], item["name"], object_id)
 	
-	_log_debug("[ITEM]📦 Item equipado validado: Player %d equipou item %d" % [requesting_player_id, item["id"]])
+	_log_debug("[ITEM]📦 Slot deste item está vazio, equipando automaticamente: Player %d equipou item %d" % [requesting_player_id, item["id"]])
 	
 	# Envia para todos os clientes do round (para atualizar visual)
 	
@@ -1164,17 +1166,25 @@ func _server_validate_equip_item(requesting_player_id: int, object_id: int, _tar
 	var item = item_database.get_item_by_id(item_id)
 	#var item_slot = item.get_slot()
 	
-	_log_debug("[ITEM]📦 Player %s pediu para equipar item %d, no round %d" % [player["name"], item_id, round_["round_id"]])
-	# FAZER TODAS AS VALIDAÇÕES DE EQUIPAR ITEM NO CLIENTE
+	# Verificação se o player está conectado
+	if not _is_peer_connected(requesting_player_id):
+		return
+	
+	_log_debug("[ITEM]📦 Player %s pediu para equipar item %d no slot %s, no round %d" % [player["name"], item_id, item["type"], round_["round_id"]])
 	
 	# Verifica se o id do item é válido
 	if not item_database.get_item_by_id(item_id):
 		return
 	
+	# Verifica se o slot está vazio no inventário do player
+	if not player_registry.is_slot_empty(round_["round_id"], player['id'], _target_slot_type):
+		push_warning("[ITEM]O Slot já está ocupado por outro item, pedido de equipamento cancelado pelo servidor")
+		return
+	
 	# Equipa o item no registro do player
 	player_registry.equip_item(round_["round_id"], player['id'], item["name"], object_id)
 	
-	_log_debug("[ITEM]📦 Item equipado validado: Player %d equipou item %d" % [requesting_player_id, item_id])
+	_log_debug("✓ Item equipado: %s em %s (Player %d, Rodada %d)" % [item["name"], item["type"], player['id'], round_["round_id"]])
 	
 	# Envia para todos os clientes do round (para atualizar visual)
 	
@@ -1197,7 +1207,7 @@ func _server_validate_unequip_item(requesting_player_id: int, slot_type: String)
 	var round_ = round_registry.get_round_by_player_id(player["id"])
 	var item_ = player_registry.get_equipped_item_in_slot(round_["round_id"], requesting_player_id, slot_type)
 	
-	if not item_.has("item_id"):
+	if not item_:
 		return
 		
 	var item_id = item_["item_id"]
@@ -1205,7 +1215,19 @@ func _server_validate_unequip_item(requesting_player_id: int, slot_type: String)
 	var item = item_database.get_item_by_id(int(item_id))
 	var item_slot = item.get_slot()
 	
+	_log_debug("[ITEM]📦 Player %s pediu para desequipar item %d no slot %s, no round %d" % [player["name"], item["id"], item["type"], round_["round_id"]])
+	
+	# Verificação se o player está conectado
+	if not _is_peer_connected(requesting_player_id):
+		return
+	
+	# Verificar se o slot_type recebido é válido
+	if not item_:
+		return
+	
 	player_registry.unequip_item(round_["round_id"], player["id"], item_slot)
+	
+	_log_debug("✓ Item desequipado: %s de %s (Player %d, Rodada %d)" % [item["name"], item["type"], player["id"], round_["round_id"]])
 	
 	for peer in round_["players"]:
 		var peer_id = peer["id"]
@@ -1232,11 +1254,25 @@ func _server_validate_swap_items(dragged_item_id: String, target_item_id: String
 	var player_id: int = multiplayer.get_remote_sender_id()
 	var round_id: int = player_registry.get_player_round(player_id)
 	var round_data = round_registry.get_round(round_id)
+	
+	# Verifica se o player tem pelo menos um destes itens equipado
+	var dragged_equipped := player_registry.is_item_equipped(round_id, player_id, int(dragged_item_id))
+	var target_equipped := player_registry.is_item_equipped(round_id, player_id, int(target_item_id))
 
+	# XOR: um true e o outro false
+	if dragged_equipped == target_equipped:
+		return
+		
+	# Verifica se o player tem pelo menos um destes itens no inventário
+	var dragged_in_inventory := player_registry.has_item_in_inventory(round_id, player_id, int(dragged_item_id))
+	var target_in_inventory := player_registry.has_item_in_inventory(round_id, player_id, int(target_item_id))
+	# XOR: um true e o outro false
+	if dragged_in_inventory == target_in_inventory:
+		return
+	
 	# PASSO 1: IDENTIFICAR QUAL ITEM VEM DO INVENTÁRIO (será equipado)
 	
-	var is_dragged_equipped: bool = player_registry.is_item_equipped(round_id, player_id, dragged_item_id)
-	#var is_target_equipped: bool = player_registry.is_item_equipped(round_id, player_id, target_item_id)
+	var is_dragged_equipped: bool = player_registry.is_item_equipped(round_id, player_id, int(dragged_item_id))
 	
 	# Determina qual ID representa o item do inventário (será o novo equipado)
 	var inventory_item_id: String
@@ -1380,7 +1416,7 @@ func _server_validate_drop_item(requesting_player_id: int, obj_id: int):
 		push_warning("[ServerManager]: Objeto inválido, não existe no ObjectManager stored_objects do player")
 		return
 	
-	var is_item_equipped = player_registry.is_item_equipped(round_["round_id"], requesting_player_id, str(obj_id))
+	var is_item_equipped = player_registry.is_item_equipped(round_["round_id"], requesting_player_id, obj_id)
 	var object_item_name = object_manager.get_stored_object_item_name(round_["round_id"], obj_id)
 	var item_ = item_database.get_item(object_item_name).to_dictionary()
 	var item_slot = item_database.get_slot(object_item_name)

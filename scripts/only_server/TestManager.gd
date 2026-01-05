@@ -377,6 +377,8 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 	player_instance.player_name = p_name
 	player_instance._is_server = true
 	player_instance.add_to_group("remote_player")
+	player_instance.add_to_group("player")
+	
 	
 	# IMPORTANTE: No servidor, nenhum player é "local"
 	player_instance.is_local_player = false

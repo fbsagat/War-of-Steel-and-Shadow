@@ -707,6 +707,7 @@ func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bo
 		camera_instance.set_as_active()
 		local_player = player_instance
 		
+		player_instance.add_to_group("player")
 		player_instance.add_to_group("myself_player")
 		
 		_log_debug("Jogador local spawnado: %s" % player_name_)
@@ -714,6 +715,7 @@ func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bo
 		# Jogador remoto: NÃO tem câmera atribuída
 		player_instance.camera_controller = null
 		
+		player_instance.add_to_group("player")
 		player_instance.add_to_group("remote_player")
 		
 		_log_debug("Jogador remoto spawnado: %s" % player_name_)

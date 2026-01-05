@@ -1374,7 +1374,7 @@ func apply_visual_equip_on_player_node(item_mapped_id, unnequip = false, from_in
 	item_mapped_id: Id do item, não do objeto, para obtenção de item_node_link.
 	unnequip: Comando para esconder visualmente este item e todos os seus outros irmãos manter escondidos.
 	from_inv_men: Se vier como comando de inventory_menu"""
-	print("apply_visual_equip_on_player_node", item_mapped_id, unnequip)
+
 	if from_inv_men:
 		_execute_animation("Interact", "Common", "parameters/Interact/transition_request", "parameters/Interact_shot/request")
 	

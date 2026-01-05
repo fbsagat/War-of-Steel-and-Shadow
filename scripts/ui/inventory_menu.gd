@@ -26,7 +26,7 @@ signal request_swap_items(item_id_1: String, item_id_2: String)
 # =============================================================================
 
 # Grupos principais
-@onready var debug: bool = false
+@onready var debug: bool = true
 
 @onready var inventory_root = $Inventory
 @onready var background_canvas = $Inventory/CanvasLayer
@@ -390,6 +390,8 @@ func _handle_drop_in_slot(target_slot: Panel):
 	
 	var original_is_equipment = original_slot.get_meta("is_equipment", false)
 	
+
+	
 	_log_debug("🎯 Drop detectado:")
 	_log_debug("  Item: %s (tipo: %s)" % [dragged_item_id, item_type])
 	_log_debug("  Origem: %s (equipamento: %s)" % [original_slot_type, original_is_equipment])
@@ -404,7 +406,12 @@ func _handle_drop_in_slot(target_slot: Panel):
 			_log_debug("⚠️ Item incompatível: %s ≠ %s" % [item_type, target_slot_type])
 			dragged_item.modulate.a = 1.0
 			return
-	
+	# =========================================================================
+	# VALIDAÇÃO: Verificar se o item já está no slot em que está sendo dropado
+	# =========================================================================
+	if existing_item and dragged_item.get_meta("item_id") == existing_item.get_meta("item_id"):
+		_log_debug("⚠️ Item dropado no mesmo slot, não fazer nada: %s / %s" % [dragged_item.get_meta("item_id"), existing_item.get_meta("item_id")])
+		return
 	# =========================================================================
 	# AÇÃO 1: SWAP (trocar com item existente)
 	# =========================================================================
