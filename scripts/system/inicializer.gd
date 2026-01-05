@@ -26,8 +26,9 @@ var map_manager: Node = null
 var main_menu: Control = null
 
 func _ready():
-	"""Inicializa servidor ou cliente baseando-se no argumento de inicialização
-	Se for servidor, pode inicializar com headless ativado ou desativado conforme comando"""
+	"""Inicializa servidor ou cliente baseando-se no argumento de inicialização.
+	Se for servidor, pode inicializar com headless ativado ou desativado conforme comando.
+	Injeta dependências em todos os scripts de inicialização, nomeia, inicializa e adiciona ao root"""
 	
 	var args := OS.get_cmdline_args()
 	var is_server := "--server" in args

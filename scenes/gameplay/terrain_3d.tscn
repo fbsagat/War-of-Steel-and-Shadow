@@ -1,4 +1,4 @@
-[gd_scene load_steps=18 format=3 uid="uid://3m24sag7gx5w"]
+[gd_scene load_steps=19 format=3 uid="uid://3m24sag7gx5w"]
 
 [ext_resource type="Terrain3DAssets" uid="uid://dal3jhw6241qg" path="res://demo/data/assets.tres" id="1_0rjur"]
 [ext_resource type="PackedScene" uid="uid://d3sr0a7dxfkr8" path="res://addons/terrain_3d/extras/particle_example/Terrain3DParticles.tscn" id="2_t70ke"]
@@ -8,6 +8,7 @@
 [ext_resource type="PackedScene" uid="uid://bbkexhq0m0ueo" path="res://scenes/static/arvore_3.tscn" id="6_1ice8"]
 [ext_resource type="PackedScene" uid="uid://c2bwrpol02yfw" path="res://models/VainerKit/stone_ground.tscn" id="7_mgaq5"]
 [ext_resource type="PackedScene" uid="uid://d34k8d0y7vk3b" path="res://models/VainerKit/stone_arc.tscn" id="8_rro5h"]
+[ext_resource type="PackedScene" uid="uid://drtoetvef4112" path="res://scenes/static/lamp_post.tscn" id="9_6jw5i"]
 [ext_resource type="PackedScene" uid="uid://x57b852buk6k" path="res://models/VainerKit/stone_brick_stairs.tscn" id="9_dxps6"]
 [ext_resource type="PackedScene" uid="uid://blch7pk3hv26u" path="res://models/VainerKit/stone_brick_wall.tscn" id="10_blrkw"]
 [ext_resource type="PackedScene" uid="uid://cxjgmxn0wye7i" path="res://models/VainerKit/wood_floor.tscn" id="11_tpv2i"]
@@ -849,7 +850,7 @@ metadata/_edit_lock_ = true
 
 [node name="Sky3D" parent="." instance=ExtResource("3_t70ke")]
 editor_time_enabled = false
-current_time = 14.3
+current_time = 7.09
 minutes_per_day = 7.0
 
 [node name="Terrain3DParticles" parent="." node_paths=PackedStringArray("terrain") instance=ExtResource("2_t70ke")]
@@ -861,21 +862,6 @@ mesh = SubResource("RibbonTrailMesh_kf5nm")
 shadow_mode = 1
 min_draw_distance = 132.0
 particle_count = 1115136
-
-[node name="Arvore_1" parent="." instance=ExtResource("4_xuisu")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -56.493565, 1.9010181, -1.8669891)
-
-[node name="arvore_2" parent="." instance=ExtResource("5_prcf3")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -74.132355, 21.368288, -114.49974)
-
-[node name="Arvore_2" parent="." instance=ExtResource("4_xuisu")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -26.670776, -0.9861183, 22.031082)
-
-[node name="Arvore_3" parent="." instance=ExtResource("4_xuisu")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -62.6378, 2.0359497, 23.898071)
-
-[node name="arvore_3" parent="." instance=ExtResource("6_1ice8")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -77.61543, 27.25246, -152.40535)
 
 [node name="Castle" type="Node3D" parent="."]
 transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -139.0621, 40.917664, -101.823456)
@@ -1070,3 +1056,31 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -24, 0, 0)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0, 0)
 
 [node name="Wood6" parent="Castle" instance=ExtResource("11_tpv2i")]
+
+[node name="lights" type="Node3D" parent="."]
+
+[node name="lamp_post" parent="lights" instance=ExtResource("9_6jw5i")]
+transform = Transform3D(-0.8230274, 0, -0.5680017, 0, 1, 0, 0.5680017, 0, -0.8230274, 6.7371264, 0.3832686, 11.758709)
+
+[node name="lamp_post2" parent="lights" instance=ExtResource("9_6jw5i")]
+transform = Transform3D(-0.06630873, 0, 0.99779916, 0, 1, 0, -0.99779916, 0, -0.06630873, -10.392186, 0.7103605, -3.6253595)
+
+[node name="lamp_post3" parent="lights" instance=ExtResource("9_6jw5i")]
+transform = Transform3D(0.55874425, 0, -0.82934, 0, 1, 0, 0.82934, 0, 0.55874425, 10.261575, 0.42300785, -9.0728655)
+
+[node name="nature" type="Node3D" parent="."]
+
+[node name="Arvore_1" parent="nature" instance=ExtResource("4_xuisu")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -56.493565, 1.9010181, -1.8669891)
+
+[node name="arvore_2" parent="nature" instance=ExtResource("5_prcf3")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -74.132355, 21.368288, -114.49974)
+
+[node name="Arvore_2" parent="nature" instance=ExtResource("4_xuisu")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -26.670776, -0.9861183, 22.031082)
+
+[node name="Arvore_3" parent="nature" instance=ExtResource("4_xuisu")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -62.6378, 2.0359497, 23.898071)
+
+[node name="arvore_3" parent="nature" instance=ExtResource("6_1ice8")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -77.61543, 27.25246, -152.40535)

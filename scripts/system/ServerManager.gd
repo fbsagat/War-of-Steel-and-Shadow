@@ -1316,7 +1316,7 @@ func _server_trainer_spawn_item(requesting_player_id: int, item_id: int):
 	var objects_node = round_["round_node"].get_node_or_null("Objects")
 	var item_name = item_database.get_item_by_id(item_id)
 	# ObjectManager cuida de spawnar E enviar RPC
-	object_manager.spawn_item_in_front_of_player(objects_node, round_["round_id"], requesting_player_id, item_name["name"])
+	object_manager.spawn_item_over_of_player(objects_node, round_["round_id"], requesting_player_id, item_name["name"])
 
 @rpc("any_peer", "call_remote", "reliable")
 func _server_trainer_drop_item(player_id):

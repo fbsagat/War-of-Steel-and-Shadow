@@ -1,0 +1,31 @@
+[gd_scene load_steps=5 format=3 uid="uid://drtoetvef4112"]
+
+[ext_resource type="ArrayMesh" uid="uid://diu7yx6q55is7" path="res://models/KayKit_DungeonRemastered_1.1_FREE/Assets/obj/column.obj" id="1_of5a1"]
+[ext_resource type="PackedScene" uid="uid://bdauskgxyyf0r" path="res://models/KayKit_DungeonRemastered_1.1_FREE/Assets/gltf/torch_mounted.gltf" id="2_lddk5"]
+[ext_resource type="PackedScene" uid="uid://xcxout2yu1n8" path="res://models/KayKit_DungeonRemastered_1.1_FREE/Assets/gltf/torch_lit.gltf" id="3_y0f0q"]
+[ext_resource type="Script" uid="uid://dqkeg7d4u1fl1" path="res://scripts/objects/torch_lit.gd" id="4_yse03"]
+
+[node name="lamp_post" type="Node3D"]
+
+[node name="Column" type="MeshInstance3D" parent="."]
+mesh = ExtResource("1_of5a1")
+
+[node name="torch_mounted2" parent="." instance=ExtResource("2_lddk5")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0224074, 0.35530412)
+
+[node name="torch_lit2" parent="." instance=ExtResource("3_y0f0q")]
+transform = Transform3D(1, 0, 0, 0, 0.9712133, -0.2382114, 0, 0.2382114, 0.9712133, 0, 1.0288467, 0.5556299)
+
+[node name="OmniLight3D" type="OmniLight3D" parent="."]
+transform = Transform3D(0.9996626, 0.02539173, -0.005479856, -0.025388658, 0.9996775, 0.00062919105, 0.0054940647, -0.00048985257, 0.9999848, 0.005884886, 2.1459165, 0.6797918)
+light_color = Color(1, 0.60784316, 0.18431373, 1)
+light_indirect_energy = 2.5
+light_size = 1.0
+light_specular = 4.0
+shadow_enabled = true
+shadow_bias = 0.0
+shadow_opacity = 0.75
+shadow_blur = 0.24
+omni_range = 14.0
+omni_attenuation = -0.4
+script = ExtResource("4_yse03")
