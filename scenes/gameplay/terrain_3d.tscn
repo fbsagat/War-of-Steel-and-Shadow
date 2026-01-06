@@ -1,4 +1,4 @@
-[gd_scene load_steps=19 format=3 uid="uid://3m24sag7gx5w"]
+[gd_scene load_steps=20 format=3 uid="uid://3m24sag7gx5w"]
 
 [ext_resource type="Terrain3DAssets" uid="uid://dal3jhw6241qg" path="res://demo/data/assets.tres" id="1_0rjur"]
 [ext_resource type="PackedScene" uid="uid://d3sr0a7dxfkr8" path="res://addons/terrain_3d/extras/particle_example/Terrain3DParticles.tscn" id="2_t70ke"]
@@ -12,6 +12,7 @@
 [ext_resource type="PackedScene" uid="uid://x57b852buk6k" path="res://models/VainerKit/stone_brick_stairs.tscn" id="9_dxps6"]
 [ext_resource type="PackedScene" uid="uid://blch7pk3hv26u" path="res://models/VainerKit/stone_brick_wall.tscn" id="10_blrkw"]
 [ext_resource type="PackedScene" uid="uid://cxjgmxn0wye7i" path="res://models/VainerKit/wood_floor.tscn" id="11_tpv2i"]
+[ext_resource type="PackedScene" uid="uid://meic021hpg4y" path="res://models/VainerKit/Maptest.glb" id="13_au1d7"]
 
 [sub_resource type="Gradient" id="Gradient_xuisu"]
 offsets = PackedFloat32Array(0.2, 1)
@@ -1060,13 +1061,25 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0, 0)
 [node name="lights" type="Node3D" parent="."]
 
 [node name="lamp_post" parent="lights" instance=ExtResource("9_6jw5i")]
-transform = Transform3D(-0.8230274, 0, -0.5680017, 0, 1, 0, 0.5680017, 0, -0.8230274, 6.7371264, 0.3832686, 11.758709)
+transform = Transform3D(-0.8230274, 0, -0.5680017, 0, 1, 0, 0.5680017, 0, -0.8230274, 6.7371264, 3.6370556, 9.578548)
 
 [node name="lamp_post2" parent="lights" instance=ExtResource("9_6jw5i")]
-transform = Transform3D(-0.06630873, 0, 0.99779916, 0, 1, 0, -0.99779916, 0, -0.06630873, -10.392186, 0.7103605, -3.6253595)
+transform = Transform3D(0.12082988, 0, 0.9926732, 0, 1, 0, -0.9926732, 0, 0.12082988, -24.733639, 7.576387, -5.0896373)
+
+[node name="lamp_post4" parent="lights" instance=ExtResource("9_6jw5i")]
+transform = Transform3D(0.12082988, 0, 0.9926732, 0, 1, 0, -0.9926732, 0, 0.12082988, -29.766724, 7.576387, 63.028732)
+
+[node name="lamp_post5" parent="lights" instance=ExtResource("9_6jw5i")]
+transform = Transform3D(-0.90314054, 0, 0.429345, 0, 1, 0, -0.429345, 0, -0.90314054, 3.5888476, 7.576387, 101.2581)
+
+[node name="lamp_post6" parent="lights" instance=ExtResource("9_6jw5i")]
+transform = Transform3D(-0.99946404, 0, 0.03273654, 0, 1, 0, -0.03273654, 0, -0.99946404, 52.10162, 7.576387, 107.13892)
+
+[node name="lamp_post7" parent="lights" instance=ExtResource("9_6jw5i")]
+transform = Transform3D(0.032736585, 0, 0.99946404, 0, 1, 0, -0.99946404, 0, 0.032736585, 42.528645, 7.576387, 24.066952)
 
 [node name="lamp_post3" parent="lights" instance=ExtResource("9_6jw5i")]
-transform = Transform3D(0.55874425, 0, -0.82934, 0, 1, 0, 0.82934, 0, 0.55874425, 10.261575, 0.42300785, -9.0728655)
+transform = Transform3D(-0.3783577, 0, 0.9256594, 0, 1, 0, -0.9256594, 0, -0.3783577, 52.369617, 3.1502266, 62.191525)
 
 [node name="nature" type="Node3D" parent="."]
 
@@ -1084,3 +1097,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -62.6378, 2.0359497, 23.89807
 
 [node name="arvore_3" parent="nature" instance=ExtResource("6_1ice8")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -77.61543, 27.25246, -152.40535)
+
+[node name="Maptest" parent="." instance=ExtResource("13_au1d7")]
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 13.825491, -9.185812, 48.44527)
