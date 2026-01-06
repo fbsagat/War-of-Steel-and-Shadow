@@ -14,10 +14,6 @@ class_name RoundRegistry
 
 # ===== CONFIGURAÇÕES =====
 
-@export_group("Round Duration")
-@export var max_round_duration: float = 600.0  # 10 minutos
-@export var results_display_time: float = 5.0
-
 @export_group("Auto-End Settings")
 @export var disconnect_check_interval: float = 2.0  # Verifica a cada 2s
 @export var auto_end_on_all_disconnected: bool = true
@@ -160,7 +156,7 @@ func create_round(room_id: int, room_name: String, players: Array, settings: Dic
 		"events": [],
 		"disconnected_players": [],
 		"end_reason": "",
-		"state": "loading",  # Estados: loading -> playing -> ending -> results
+		"state": "loading",
 		"round_node": null,
 		"map_manager": null,
 		"spawned_players": {},
@@ -220,22 +216,6 @@ func start_round(round_id: int):
 	# Muda estado
 	round_data["state"] = "playing"
 	round_data["start_time"] = Time.get_unix_time_from_system()
-	
-	# Cria timer de duração específico para esta rodada
-	if max_round_duration > 0:
-		var round_timer = Timer.new()
-		round_timer.wait_time = max_round_duration
-		round_timer.autostart = false
-		round_timer.one_shot = true
-		round_timer.timeout.connect(_on_round_timeout.bind(round_id))
-		add_child(round_timer)
-		round_data["round_timer"] = round_timer
-		round_timer.start()
-		_log_debug("  Timer de duração: %.1fs" % max_round_duration)
-	
-	# Ativa verificação global de desconexão
-	if disconnect_check_timer and not disconnect_check_timer.is_stopped():
-		disconnect_check_timer.start()
 	
 	_log_debug("▶ Rodada %d INICIADA" % round_id)
 	_add_event(round_id, "round_started", {})
@@ -575,18 +555,6 @@ func _check_all_disconnected():
 			if auto_end_on_all_disconnected:
 				end_round(round_id, "all_disconnected")
 
-func _on_round_timeout(round_id: int):
-	"""
-	Callback do timer de duração da rodada
-	Finaliza rodada por timeout
-	"""
-	if not rounds.has(round_id):
-		return
-	
-	_log_debug("⏱ Tempo máximo da rodada %d atingido!" % round_id)
-	round_timeout.emit(round_id)
-	end_round(round_id, "timeout")
-
 # ===== QUERIES DE ESTADO =====
 
 func is_round_active(round_id: int) -> bool:
@@ -823,36 +791,6 @@ func _gerar_paletas_cores() -> Array:
 			"ambient_ground": Color(0.3, 0.2, 0.1)
 		}
 	]
-
-func debug_print_all_rounds():
-	"""Imprime estado completo de todas as rodadas"""
-	print("\n========== ROUND REGISTRY ==========")
-	print("Rodadas ativas: %d" % rounds.size())
-	print("------------------------------------")
-	
-	for round_id in rounds:
-		var r = rounds[round_id]
-		print("\n[Rodada %d]" % round_id)
-		print("  Sala: %s (ID: %d)" % [r["room_name"], r["room_id"]])
-		print("  Estado: %s" % r["state"])
-		print("  Jogadores: %d (%d ativos)" % [r["players"].size(), get_active_player_count(round_id)])
-		print("  Duração: %.1fs" % get_round_duration(round_id))
-		
-		if r["state"] == "playing" and r["round_timer"]:
-			print("  Tempo restante: %.1fs" % r["round_timer"].time_left)
-		
-		print("  Spawnados: %d" % r["spawned_players"].size())
-		print("  Eventos: %d" % r["events"].size())
-		
-		if not r["disconnected_players"].is_empty():
-			print("  Desconectados: %s" % r["disconnected_players"])
-		
-		print("  Pontuações:")
-		var scores = get_leaderboard(round_id)
-		for entry in scores:
-			print("    %s: %d pts" % [entry["name"], entry["score"]])
-	
-	print("\n====================================\n")
 
 func _log_debug(message: String):
 	"""Função padrão de debug"""
