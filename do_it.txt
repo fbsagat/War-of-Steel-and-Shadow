@@ -36,6 +36,12 @@
 	Quando um cliente cair, resetar tudo dele na partida(no servidor(nos registros tbm) e nos cliente) e garantir que
 	quando voltar, virá como novo peer, com novos registros e etc... Entender todo o funcionamento. O mesmo para o servidor.
 	fique ok a partir do momento em que o cliente reinicia normalmente após uma queda de conexão e o servidor também.
+	Identidade persistente!: O cliente ao iniciar pela primeira vez, criar um uuid persistente(arquivo salvo na raiz),
+	Ao se conectar o cliente envia esse uuid para o servidor, que salva no player registry; agora o servidor sabe
+	que o cliente é o mesmo, então, se este retornar, depois de fechar ou uma perda de conexão, o servidor retoma
+	seu estado normalmente, se estava em partida, retorna à mesma partida e continua de onde parou.
+	UUID + secret token é mais seguro, cogitar.
+	
 41. 	Ok. Abrir o map manager logo na inicialização do servidor, não no inicio de uma rodada, 
 		matar o game manager no servidor para não sobrecarregar pois é inútil.
 42. Name label do player: Escolher cores no round e não aleatórias e adicionar transparência no distanciamento da camera.
@@ -62,7 +68,9 @@
  	e cima, a partir do nada para o mapa, sem impulse, criar outros drops para inimigos mortos, baús e etc..
 56. 	Ok. Quando um item for equipado ou desequipado via inventpry_menu, animar o player com interact.
 57. 	Ok. Eficiência: Eliminar player_node de apply_visual_equip_on_player_node.
-58. Inventory_menu não deve pedir troca caso o item arrastado seja solto no lugar onde ele já estava, verificar no servidor também.
+58. 	Ok. Inventory_menu não deve pedir troca caso o item arrastado seja solto no lugar onde ele já estava, verificar no servidor também.
+59. Fisica dos itens das mãos do player warrios ficam ligadas mesmo com os itens invisiveis, corrigir.
+
 
 Adicionar no modelo do player:
 	1. Anim interact com a outra mão.
@@ -72,6 +80,7 @@ Adicionar no modelo do player:
 
 Projeto:
 	1. Plugin de voz: https://github.com/goatchurchprime/two-voip-godot-4
+
 
 Idéias gerais pro jogo:
 	Provocações para os jogadores: A partida inicia com um nível aleatório de life para cada
