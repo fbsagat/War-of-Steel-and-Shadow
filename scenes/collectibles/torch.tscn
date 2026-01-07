@@ -1,8 +1,7 @@
 [gd_scene load_steps=8 format=4 uid="uid://chufflhkownuw"]
 
-[ext_resource type="Script" uid="uid://cifb4k6n8jnw3" path="res://scripts/gameplay/itens_coletaveis.gd" id="1_j8j46"]
-[ext_resource type="Texture2D" uid="uid://clfwngq5m8bqt" path="res://models/KayKit_DungeonRemastered_1.1_FREE/Assets/fbx/dungeon_texture.png" id="1_uplqx"]
-
+[ext_resource type="Script" uid="uid://16m0c3woxxpe" path="res://scripts/gameplay/itens_coletaveis.gd" id="1_j8j46"]
+[ext_resource type="Texture2D" uid="uid://dotr7u6xr2hbp" path="res://models/KayKit_DungeonRemastered_1.1_FREE/Assets/fbx/dungeon_texture.png" id="1_uplqx"]
 
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_j8j46"]
 rough = true

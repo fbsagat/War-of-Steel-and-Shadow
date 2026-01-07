@@ -19,7 +19,7 @@ class_name ServerManager
 @export var debug_mode: bool = true
 @export var debug_timer: bool = false
 ## [TESTES] Usa o TestManager para iniciar logo uma partida na execução
-@export var fast_round: bool = false
+@export var fast_round: bool = true
 ## [TESTES] Define a quantidade de instnacias de clientes para executar fast_round
 @export var simulador_players_qtd: int = 2
 ## [TESTES] Dropa itens perto dos players e ativa o trainer de cada player

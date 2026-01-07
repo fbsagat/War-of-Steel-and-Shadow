@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://d3sxgvl7reai3"]
 
-[ext_resource type="Script" uid="uid://cgc5t2uosculb" path="res://scripts/gameplay/camera_pivot.gd" id="1_8y15a"]
+[ext_resource type="Script" uid="uid://bhsedrp67bi6e" path="res://scripts/gameplay/camera_pivot.gd" id="1_8y15a"]
 
 [node name="CameraController" type="Node3D"]
 script = ExtResource("1_8y15a")

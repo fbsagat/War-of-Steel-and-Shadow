@@ -1,9 +1,9 @@
 [gd_scene load_steps=5 format=3 uid="uid://drtoetvef4112"]
 
-[ext_resource type="ArrayMesh" uid="uid://diu7yx6q55is7" path="res://models/KayKit_DungeonRemastered_1.1_FREE/Assets/obj/column.obj" id="1_of5a1"]
-[ext_resource type="PackedScene" uid="uid://bdauskgxyyf0r" path="res://models/KayKit_DungeonRemastered_1.1_FREE/Assets/gltf/torch_mounted.gltf" id="2_lddk5"]
-[ext_resource type="PackedScene" uid="uid://xcxout2yu1n8" path="res://models/KayKit_DungeonRemastered_1.1_FREE/Assets/gltf/torch_lit.gltf" id="3_y0f0q"]
-[ext_resource type="Script" uid="uid://dqkeg7d4u1fl1" path="res://scripts/objects/torch_lit.gd" id="4_yse03"]
+[ext_resource type="ArrayMesh" uid="uid://cikac8dyukmje" path="res://models/KayKit_DungeonRemastered_1.1_FREE/Assets/obj/column.obj" id="1_of5a1"]
+[ext_resource type="PackedScene" uid="uid://4aclu1fhlmb6" path="res://models/KayKit_DungeonRemastered_1.1_FREE/Assets/gltf/torch_mounted.gltf" id="2_lddk5"]
+[ext_resource type="PackedScene" uid="uid://cv7e5oqhu80pb" path="res://models/KayKit_DungeonRemastered_1.1_FREE/Assets/gltf/torch_lit.gltf" id="3_y0f0q"]
+[ext_resource type="Script" uid="uid://ywf7cbswl6sg" path="res://scripts/objects/torch_lit.gd" id="4_yse03"]
 
 [node name="lamp_post" type="Node3D"]
 

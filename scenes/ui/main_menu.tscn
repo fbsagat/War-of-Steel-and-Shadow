@@ -1,6 +1,6 @@
 [gd_scene load_steps=17 format=3 uid="uid://dwnsmgw3eenld"]
 
-[ext_resource type="Script" uid="uid://b3tbenlemms8m" path="res://scripts/ui/main_menu.gd" id="1_fe2o3"]
+[ext_resource type="Script" uid="uid://c773qjt8g51w8" path="res://scripts/ui/main_menu.gd" id="1_fe2o3"]
 [ext_resource type="FontFile" uid="uid://dd4sfrpxym83o" path="res://material/Medieval Scroll of Wisdom.ttf" id="2_1g8jr"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_fe2o3"]

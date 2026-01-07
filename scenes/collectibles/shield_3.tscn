@@ -1,8 +1,7 @@
 [gd_scene load_steps=8 format=4 uid="uid://bpp04ghkupe8c"]
 
-[ext_resource type="Script" uid="uid://cifb4k6n8jnw3" path="res://scripts/gameplay/itens_coletaveis.gd" id="1_3hmh7"]
-[ext_resource type="Texture2D" uid="uid://cq7xvwf735ryi" path="res://models/Character/Knight_knight_texture.png" id="2_13o4k"]
-
+[ext_resource type="Script" uid="uid://16m0c3woxxpe" path="res://scripts/gameplay/itens_coletaveis.gd" id="1_3hmh7"]
+[ext_resource type="Texture2D" uid="uid://dhvs3taulqfc2" path="res://models/Character/Knight_knight_texture.png" id="2_13o4k"]
 
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_3hmh7"]
 bounce = 0.3

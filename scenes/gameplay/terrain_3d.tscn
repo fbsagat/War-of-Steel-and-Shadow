@@ -851,8 +851,8 @@ metadata/_edit_lock_ = true
 
 [node name="Sky3D" parent="." instance=ExtResource("3_t70ke")]
 editor_time_enabled = false
-current_time = 7.09
-minutes_per_day = 7.0
+current_time = 7.851600000000008
+minutes_per_day = 15.0
 
 [node name="Terrain3DParticles" parent="." node_paths=PackedStringArray("terrain") instance=ExtResource("2_t70ke")]
 visible = false

@@ -1,8 +1,7 @@
 [gd_scene load_steps=6 format=3 uid="uid://cxjgmxn0wye7i"]
 
-[ext_resource type="ArrayMesh" uid="uid://ci0hcrf1t0615" path="res://models/VainerKit/Wood_floor.obj" id="1_y2wpf"]
+[ext_resource type="ArrayMesh" uid="uid://fbynjlgif8sx" path="res://models/VainerKit/Wood_floor.obj" id="1_y2wpf"]
 [ext_resource type="Texture2D" uid="uid://ctd55aaktiqie" path="res://models/VainerKit/wood_floor_texture.png" id="2_6ggag"]
-
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_su5dl"]
 albedo_texture = ExtResource("2_6ggag")

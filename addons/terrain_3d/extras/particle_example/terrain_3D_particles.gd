@@ -15,6 +15,7 @@ extends Node3D
 		terrain = value
 		_create_grid()
 
+
 ## Distance between instances
 @export_range(0.125, 2.0, 0.015625) var instance_spacing: float = 0.5:
 	set(value):
