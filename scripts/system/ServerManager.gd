@@ -129,7 +129,6 @@ func _connect_signals():
 	# Sinais de rodada
 	round_registry.round_ending.connect(_on_round_ending)
 	round_registry.all_players_disconnected.connect(_on_all_players_disconnected)
-	round_registry.round_timeout.connect(_on_round_timeout)
 
 func _setup_debug_timer():
 	"""Cria timer para imprimir estados periodicamente"""
@@ -867,16 +866,6 @@ func _on_all_players_disconnected(round_id: int):
 	
 	# Finaliza rodada imediatamente (sem aguardar)
 	round_registry.end_round(round_id, "all_disconnected")
-
-func _on_round_timeout(round_id: int):
-	"""
-	Callback quando o tempo máximo da rodada é atingido
-	Finaliza rodada por timeout
-	"""
-	_log_debug("⏱ Tempo máximo da rodada %d atingido" % round_id)
-	
-	# Finaliza rodada por timeout
-	round_registry.end_round(round_id, "timeout")
 
 # ===== FIM DE RODADA =====
 

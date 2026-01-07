@@ -45,7 +45,6 @@ signal round_started(round_id: int)
 signal round_ending(round_id: int, reason: String)
 signal round_ended(round_data: Dictionary)
 signal all_players_disconnected(round_id: int)
-signal round_timeout(round_id: int)
 signal player_spawned_in_round(round_id: int, peer_id: int, player_node: Node)
 signal player_despawned_from_round(round_id: int, peer_id: int)
 
