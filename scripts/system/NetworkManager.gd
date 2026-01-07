@@ -661,13 +661,15 @@ func send_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, runn
 	if not is_connected_:
 		return
 	
-	# RPC do NetworkManager → válido, pois NetworkManager é autoload
 	rpc_id(1, "_server_player_state", p_id, pos, rot, vel, running, jumping)
 
 @rpc("any_peer", "call_remote", "unreliable")
 func _server_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
-	"""RPC: Servidor recebe estado do jogador e redistribui"""
+	"""RPC: Servidor recebe estado do jogador e redistribui para os do mesmo round"""
 	# Verificação robusta de servidor
+	var round_id = round_registry.get_round_by_player_id(p_id)["round_id"]
+	var players_round = round_registry.get_active_players_ids(round_id)
+	
 	if not (multiplayer.has_multiplayer_peer() and multiplayer.get_unique_id() == 1):
 		return
 	
@@ -699,7 +701,7 @@ func _server_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, r
 	server_manager._apply_player_state_on_server(p_id, pos, rot, vel, running, jumping)
 	
 	# REDISTRIBUI PARA TODOS OS OUTROS CLIENTES
-	for peer_id in multiplayer.get_peers():
+	for peer_id in players_round:
 		if peer_id != p_id:
 			rpc_id(peer_id, "_client_player_state", p_id, pos, rot, vel, running, jumping)
 
@@ -722,8 +724,8 @@ func _client_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, r
 
 # ===== SINCRONIZAÇÃO DE ESTADOS DE ANIMAÇÕES =====
 
-func send_player_animation_state(p_id: int, speed: float, attacking: bool, defending: bool, 
-								 jumping: bool, aiming: bool, running: bool, block_attacking: bool, on_floor: bool):
+func send_player_animation_state(p_id: int, speed: float, attacking: bool, defending: bool,
+	jumping: bool, aiming: bool, running: bool, block_attacking: bool, on_floor: bool):
 	"""Envia estado de animação do jogador para o servidor (UNRELIABLE - menos frequente)"""
 	if not is_connected_:
 		return
@@ -734,7 +736,11 @@ func send_player_animation_state(p_id: int, speed: float, attacking: bool, defen
 @rpc("any_peer", "call_remote", "unreliable")
 func _server_player_animation_state(p_id: int, speed: float, attacking: bool, defending: bool,
 									jumping: bool, aiming: bool, running: bool, block_attacking: bool, on_floor: bool):
-	"""RPC: Servidor recebe estado de animação e redistribui"""
+	"""RPC: Servidor recebe estado de animação e redistribui para os do mesmo round"""
+	
+	var round_id = round_registry.get_round_by_player_id(p_id)["round_id"]
+	var players_round = round_registry.get_active_players_ids(round_id)
+	
 	if not (multiplayer.has_multiplayer_peer() and multiplayer.get_unique_id() == 1):
 		return
 	
@@ -743,7 +749,7 @@ func _server_player_animation_state(p_id: int, speed: float, attacking: bool, de
 		return
 	
 	# PROPAGA PARA TODOS OS OUTROS CLIENTES
-	for peer_id in multiplayer.get_peers():
+	for peer_id in players_round:
 		if peer_id != p_id:
 			rpc_id(peer_id, "_client_player_animation_state", p_id, speed, attacking, 
 				   defending, jumping, aiming, running, block_attacking, on_floor)

@@ -19,7 +19,7 @@ class_name ServerManager
 @export var debug_mode: bool = true
 @export var debug_timer: bool = false
 ## [TESTES] Usa o TestManager para iniciar logo uma partida na execução
-@export var fast_round: bool = true
+@export var fast_round: bool = false
 ## [TESTES] Define a quantidade de instnacias de clientes para executar fast_round
 @export var simulador_players_qtd: int = 2
 ## [TESTES] Dropa itens perto dos players e ativa o trainer de cada player
@@ -37,7 +37,7 @@ const server_camera : String = "res://scenes/server_scenes/server_camera.tscn"
 
 @export_category("Room Settings")
 @export var max_players_per_room: int = 12
-@export var min_players_to_start: int = 2
+@export var min_players_to_start: int = 1
 
 @export_category("Round Settings")
 ## Tempo de transição entre fim de rodada e volta à sala (segundos)
@@ -1514,10 +1514,11 @@ func attack_validation(group: String, player_id: int, actual_weapon: String, bod
 
 @rpc("any_peer", "call_remote", "reliable")
 func _server_player_action(p_id: int, action_type: String, item_equipado_nome, anim_name: String):
-	"""RPC: Servidor recebe ação do jogador e redistribui"""
+	"""RPC: Servidor recebe ação do jogador e redistribui para os do mesmo round"""
 	
-	_log_debug("_server_player_action: %s" % action_type)
 	var player = player_registry.get_player_round(p_id)
+	var round_id = round_registry.get_round_by_player_id(p_id)["round_id"]
+	var players_round = round_registry.get_active_players_ids(round_id)
 	
 	# Ignora pedidos do servidor (redundancia)
 	if not (multiplayer.has_multiplayer_peer() and multiplayer.get_unique_id() == 1):
@@ -1549,7 +1550,7 @@ func _server_player_action(p_id: int, action_type: String, item_equipado_nome, a
 			return
 	
 	# Propaga pra todos os outros clientes (Reliable = Garantido)
-	for peer_id in multiplayer.get_peers():
+	for peer_id in players_round:
 		if peer_id != p_id:
 			network_manager._client_player_action.rpc_id(peer_id, p_id, action_type, item_equipado_nome, anim_name)
 			# Dica: Outra forma de chamar rpc(quando está inacessível p o server mas existe no pc remoto):
