@@ -247,7 +247,7 @@ func _on_peer_connected(peer_id: int):
 	network_manager.rpc_id(peer_id, "update_client_info", configs)
 	
 	# Sistema de teste automático (se ativado)
-	if fast_round and (multiplayer.get_peers().size() >= simulador_players_qtd) and test_manager:
+	if fast_round and (multiplayer.get_peers().size() == simulador_players_qtd) and test_manager:
 		test_manager.criar_partida_teste()
 
 func _on_peer_disconnected(peer_id: int):
