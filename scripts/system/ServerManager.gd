@@ -92,8 +92,9 @@ func initialize():
 		_setup_debug_timer()
 	
 func _input(_event: InputEvent) -> void:
+	pass
 	# Se não for headless, transitar server_câmera entre as partidas em andamento ao pressionar tecla tab
-	_log_debug("Movendo câmera do servidor para a próxima partida")
+	#_log_debug("Movendo câmera do servidor para a próxima partida")
 	#var actual_round_cam_id = actual_round_cam.round_id
 	#var total_rounds_count = round_registry.get_active_rounds_count()
 	#
@@ -617,12 +618,12 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 	)
 	
 	# Criar cena de organização do round
-	var round_node = Node.new()
+	var round_node = SubViewport.new()
+	round_node.own_world_3d = true
 	round_node.name = "Round_%d_%d" % [room["id"], round_data["round_id"]]
 	
 	round_data["round_node"] = round_node
 	
-	# Adiciona à raiz
 	get_tree().root.get_node("All_Rounds").add_child(round_node)
 	
 	round_registry.set_round_node(round_data["round_id"], round_node)
@@ -701,11 +702,12 @@ func _server_instantiate_round(match_data: Dictionary, round_node, players_node)
 	Instancia a rodada no servidor (mapa e players)
 	Chamado após enviar comando para clientes carregarem
 	"""
-
+	
 	_log_debug("Instanciando rodada no servidor...")
 	
 	# Carrega o mapa
 	await map_manager.load_map(match_data["map_scene"], round_node, match_data["settings"])
+	var terrain_3d = round_node.get_node_or_null("Terrain3D")
 	
 	# Salva referência no RoundRegistry
 	if round_registry.rounds.has(match_data["round_id"]):
@@ -720,7 +722,7 @@ func _server_instantiate_round(match_data: Dictionary, round_node, players_node)
 	if not is_headless:
 		var debug_cam = preload(server_camera).instantiate()
 		
-		players_node.add_child(debug_cam)
+		round_node.add_child(debug_cam)
 		debug_cam.global_position = Vector3(0, 3, 5)  # X=0, Y=10 (altura), Z=15 (distância)
 		debug_cam.round_id = match_data["round_id"]
 		
@@ -729,6 +731,8 @@ func _server_instantiate_round(match_data: Dictionary, round_node, players_node)
 			actual_round_cam = debug_cam
 		else:
 			debug_cam.current = false
+		
+		terrain_3d.set_camera(debug_cam)
 	else:
 		# Se estiver em modo headless criar uma câmera dummy
 		var dummy_camera = Camera3D.new()
@@ -743,8 +747,6 @@ func _server_instantiate_round(match_data: Dictionary, round_node, players_node)
 		
 		# Aguarda um frame para garantir que tudo está inicializado
 		await get_tree().process_frame
-		
-		var terrain_3d = round_node.get_node_or_null("Terrain3D")
 		
 		# Configura o Terrain3D para usar essa câmera
 		if terrain_3d:
