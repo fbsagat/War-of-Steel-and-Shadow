@@ -1,0 +1,110 @@
+[gd_scene load_steps=17 format=3 uid="uid://b2arwhwqae68m"]
+
+[ext_resource type="Shader" uid="uid://y4m81ughafvf" path="res://vfx/fire/shader/s_special_shader.tres" id="1_lqls4"]
+[ext_resource type="Shader" uid="uid://cn4baexdjokbs" path="res://vfx/fire/shader/s_smoke_shader.tres" id="2_lbo5b"]
+[ext_resource type="Script" uid="uid://ywf7cbswl6sg" path="res://scripts/objects/torch_lit.gd" id="3_7gpcm"]
+[ext_resource type="Shader" uid="uid://w7vq34wwolki" path="res://vfx/fire/shader/ember.tres" id="4_pfwh2"]
+[ext_resource type="PackedScene" uid="uid://d2ys7i28bnk4e" path="res://models/VainerKit/props/campfire/campfire.glb" id="5_0cly2"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_xg87l"]
+render_priority = 0
+shader = ExtResource("1_lqls4")
+shader_parameter/Speed = Vector2(0, 1)
+
+[sub_resource type="QuadMesh" id="QuadMesh_ssr8q"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_di73u"]
+render_priority = 0
+shader = ExtResource("2_lbo5b")
+
+[sub_resource type="Gradient" id="Gradient_gq31s"]
+offsets = PackedFloat32Array(0, 0.41509435, 1)
+colors = PackedColorArray(0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_mdjyi"]
+gradient = SubResource("Gradient_gq31s")
+
+[sub_resource type="Curve" id="Curve_4smpg"]
+_data = [Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(1, 0.3146068), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="CurveTexture" id="CurveTexture_53r8a"]
+curve = SubResource("Curve_4smpg")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_luua3"]
+emission_shape = 1
+emission_sphere_radius = 0.2
+angle_min = -119.99999
+angle_max = 90.000015
+angular_velocity_min = -180.00002
+angular_velocity_max = 179.99998
+gravity = Vector3(0, 5, 0)
+damping_min = 1.5000001
+damping_max = 2.2
+scale_min = 0.29999998
+scale_max = 1.1999999
+scale_curve = SubResource("CurveTexture_53r8a")
+color = Color(0.5351205, 0.34064347, 0.15170373, 1)
+color_ramp = SubResource("GradientTexture1D_mdjyi")
+
+[sub_resource type="QuadMesh" id="QuadMesh_lrlyp"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_jc83t"]
+render_priority = 0
+shader = ExtResource("4_pfwh2")
+
+[sub_resource type="QuadMesh" id="QuadMesh_5i8ou"]
+
+[node name="vfx_fire" type="Node3D"]
+
+[node name="fire" type="CPUParticles3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+sorting_offset = 2.0
+material_override = SubResource("ShaderMaterial_xg87l")
+amount = 1
+mesh = SubResource("QuadMesh_ssr8q")
+gravity = Vector3(0, 0, 0)
+color = Color(5.3394923, 0.79992867, 1.9687282e-05, 1)
+
+[node name="smoke" type="GPUParticles3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5689768, 0)
+material_override = SubResource("ShaderMaterial_di73u")
+amount = 15
+lifetime = 1.6
+randomness = 0.1
+process_material = SubResource("ParticleProcessMaterial_luua3")
+draw_pass_1 = SubResource("QuadMesh_lrlyp")
+
+[node name="OmniLight3D" type="OmniLight3D" parent="."]
+transform = Transform3D(0.9996626, 0.025391728, -0.005479856, -0.025388658, 0.9996774, 0.00062919105, 0.0054940647, -0.0004898525, 0.9999848, 0.005884886, 1.1312413, 0.003924668)
+light_color = Color(1, 0.60784316, 0.18431373, 1)
+light_indirect_energy = 2.5
+light_size = 1.0
+light_specular = 1.0
+shadow_enabled = true
+shadow_bias = 0.0
+shadow_opacity = 0.75
+shadow_blur = 0.24
+omni_range = 7.5
+omni_attenuation = -0.4
+script = ExtResource("3_7gpcm")
+
+[node name="CPUParticles3D" type="CPUParticles3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25221494, 0)
+material_override = SubResource("ShaderMaterial_jc83t")
+lifetime = 5.0
+speed_scale = 0.7
+mesh = SubResource("QuadMesh_5i8ou")
+emission_shape = 1
+emission_sphere_radius = 0.3
+direction = Vector3(0, 0, 0)
+spread = 15.0
+gravity = Vector3(0, 1, 0)
+initial_velocity_min = 0.1
+initial_velocity_max = 0.5
+scale_amount_min = 0.0
+scale_amount_max = 0.1
+color = Color(10.317386, 3.57094, 0, 1)
+
+[node name="campfire" parent="." instance=ExtResource("5_0cly2")]
+transform = Transform3D(0.12, 0, 0, 0, 0.12, 0, 0, 0, 0.12, -0.17560378, 0, -0.05597587)
