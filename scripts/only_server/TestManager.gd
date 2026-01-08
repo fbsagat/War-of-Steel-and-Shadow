@@ -189,11 +189,17 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 	)
 	
 	# Criar cena de organização do round
-	var round_node = Node.new()
+	var round_node = SubViewport.new()
+	round_node.own_world_3d = true
 	round_node.name = "Round_%d_%d" % [room_data["id"], round_data["round_id"]]
 	
-	# Adiciona à raiz
-	get_tree().root.add_child(round_node)
+	round_data["round_node"] = round_node
+	
+	# Configurações para renderização fora de container
+	round_node.size = Vector2i(1920, 1080)  # ou resolução da janela
+	round_node.render_target_update_mode = SubViewport.UPDATE_ALWAYS  # ← força renderização
+	
+	server_manager.all_rounds_node.add_child(round_node)
 	
 	round_registry.set_round_node(round_data["round_id"], round_node)
 	
@@ -215,7 +221,7 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 	
 	# Gera spawn points
 	var players_qtd = round_registry.get_total_players(round_data["round_id"])
-	var spawn_points = server_manager._create_spawn_points(players_qtd)
+	var spawn_points = map_manager._create_spawn_points(players_qtd)
 	
 	# Gera dados de spawn para cada jogador
 	var spawn_data = {}
@@ -286,6 +292,7 @@ func _server_instantiate_round(match_data: Dictionary, players_node, round_node)
 	
 	# Carrega o mapa
 	await map_manager.load_map(match_data["map_scene"], round_node, match_data["settings"])
+	var terrain_3d = round_node.get_node_or_null("Terrain3D")
 	
 	# Salva referência no RoundRegistry
 	if round_registry.rounds.has(match_data["round_id"]):
@@ -297,37 +304,41 @@ func _server_instantiate_round(match_data: Dictionary, players_node, round_node)
 		_spawn_player_on_server(player_data, spawn_data, match_data["round_id"], players_node)
 	
 	# Cria câmera livre se não estiver em modo headless
+	var actual_camera: Camera3D = null
 	if not server_manager.is_headless:
-		var debug_cam = preload(server_manager.server_camera).instantiate()
-		
-		players_node.add_child(debug_cam)
-		debug_cam.global_position = Vector3(0, 3, 5)  # X=0, Y=10 (altura), Z=15 (distância)
+		actual_camera = preload(server_manager.server_camera).instantiate()
+		actual_camera.name = "FreeCamera"
+		round_node.add_child(actual_camera)
+		actual_camera.global_position = Vector3(0, 3, 5)  # X=0, Y=10 (altura), Z=15 (distância)
+		actual_camera.current = true
+		await get_tree().process_frame
 	else:
 		# Se estiver em modo headless criar uma câmera dummy
-		dummy_camera = Camera3D.new()
-		dummy_camera.name = "ServerCamera"
-		add_child(dummy_camera)
-		
-		# Posiciona em algum lugar (não importa muito)
-		dummy_camera.global_position = Vector3(0, 100, 0)
-		
-		# Define como câmera ativa
-		dummy_camera.current = true
-		
-		# Aguarda um frame para garantir que tudo está inicializado
+		actual_camera = Camera3D.new()
+		actual_camera.name = "DummyCamera"
+		round_node.add_child(actual_camera)
+		actual_camera.global_position = Vector3(0, 100, 0)
+		actual_camera.current = false
 		await get_tree().process_frame
-		
-		var terrain_3d = round_node.get_node_or_null("Terrain3D")
-		
-		# Configura o Terrain3D para usar essa câmera
-		if terrain_3d:
-			terrain_3d.set_camera(dummy_camera)
-			_log_debug("✓ is_headless = false, terrain3D configurado com câmera dummy")
+	
+	# Se for o primeiro round, esta é a câmera atual
+	if match_data["round_id"] != 1 and not server_manager.is_headless:
+		actual_camera.current = false
+	
+	# Configura o Terrain3D para usar actual_camera
+	if terrain_3d:
+		terrain_3d.set_camera(actual_camera)
+	else:
+		push_warning("terrain_3d não encontrado para configurar câmera")
 	
 	# Tira ui (desnecessária para o servidor)
 	var ui = get_tree().root.get_node_or_null("MainMenu")
 	if ui:
 		ui.queue_free()
+	
+	# Se não headless, joga este primeiro round para a camera do servidor
+	if not server_manager.is_headless and match_data["round_id"] <= 1:
+		server_manager._switch_camera_to_round(round_node)
 	
 	_log_debug("  ✓ Rodada instanciada no servidor")
 

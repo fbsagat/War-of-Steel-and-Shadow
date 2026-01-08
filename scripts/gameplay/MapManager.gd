@@ -6,7 +6,20 @@ class_name MapManager
 
 # ===== CONFIGURAÇÕES =====
 
-@export var debug_mode: bool = false
+@export var debug_mode: bool = true
+@export var is_server: bool = false
+
+@export_category("Spawn Settings")
+## Raio do círculo de spawn
+@export var spawn_radius: float = 5.0
+## Altura acima do chão
+@export var spawn_height: float = 1.0
+## Centro do círculo
+@export var spawn_center: Vector3 = Vector3.ZERO
+## Variação aleatória na posição (em unidades)
+@export var position_variance: float = 4.0
+## Variação na rotação (em radianos, ~5.7 graus)
+@export var rotation_variance: float = 0.2
 
 # ===== VARIÁVEIS INTERNAS =====
 
@@ -25,7 +38,6 @@ var map_settings: Dictionary = {}
 # ===== SINAIS =====
 
 signal map_loaded(map_node: Node)
-signal map_unloaded()
 signal spawn_points_ready(count: int)
 
 # ===== CARREGAMENTO DE MAPA =====
@@ -34,10 +46,6 @@ signal spawn_points_ready(count: int)
 func load_map(map_scene_path: String, round_node, settings: Dictionary = {}):
 	"""Carrega um mapa a partir do caminho da cena. 
 	_handle_start_round no ServerManager é quem envia informações(settings) para cá"""
-	if current_map != null:
-		_log_debug("Já existe um mapa carregado. Descarregando primeiro...")
-		unload_map()
-	
 	_log_debug("Carregando mapa: %s" % map_scene_path)
 	map_settings = settings
 	
@@ -78,26 +86,66 @@ func load_map(map_scene_path: String, round_node, settings: Dictionary = {}):
 	map_loaded.emit(current_map)
 	return true
 
-## Remove o mapa atual da cena
-func unload_map():
-	if current_map == null:
-		return
-	
-	_log_debug("Descarregando mapa...")
-	
-	# Remove o mapa da árvore
-	current_map.queue_free()
-	current_map = null
-	
-	# Limpa arrays
-	spawn_points.clear()
-	used_spawn_indices.clear()
-	map_settings = {}
-	
-	map_unloaded.emit()
-	_log_debug(" Mapa descarregado")
-
 # ===== GERENCIAMENTO DE SPAWN POINTS =====
+
+func _create_spawn_points(match_players_count: int) -> Array:
+	"""
+	Gera pontos de spawn em formação circular
+	Suporta de 1 a 14 jogadores com distribuição uniforme
+	
+	Retorna Array de Dictionaries: [{position: Vector3, rotation: Vector3}]
+	"""
+	spawn_points.clear()
+	
+	# Caso especial: apenas 1 jogador
+	if match_players_count == 1:
+
+		var spawn_data = {
+			"position": spawn_center + Vector3(0, spawn_height, spawn_radius),
+			"rotation": Vector3(0, PI, 0)  # Olhando para o centro
+		}
+		spawn_points.append(spawn_data)
+		_log_debug("✓ Spawn point único criado no centro")
+		return spawn_points
+		
+	# Limita entre 1 e 14 jogadores
+	match_players_count = clamp(match_players_count, 1, 14)
+	
+	# Gera pontos em círculo
+	for i in range(match_players_count):
+		# Distribui uniformemente em círculo
+		var angle = (i * 2.0 * PI) / match_players_count
+		
+		# Calcula posição base no círculo
+		var base_x = cos(angle) * spawn_radius
+		var base_z = sin(angle) * spawn_radius
+		
+		# Adiciona variação aleatória (se configurado)
+		var variance_x = randf_range(-position_variance, position_variance)
+		var variance_z = randf_range(-position_variance, position_variance)
+		
+		var final_position = spawn_center + Vector3(
+			base_x + variance_x,
+			spawn_height,
+			base_z + variance_z
+		)
+		
+		# Calcula rotação apontando PARA o centro
+		var to_center = spawn_center - final_position
+		var rotation_y = atan2(to_center.x, to_center.z)
+		
+		# Adiciona variação aleatória à rotação
+		rotation_y += randf_range(-rotation_variance, rotation_variance)
+		
+		var spawn_data = {
+			"position": final_position,
+			"rotation": Vector3(0, rotation_y, 0)
+		}
+
+		spawn_points.append(spawn_data)
+
+	_log_debug("✓ Spawn points criados: %d jogadores em círculo (raio: %.1f)" % [spawn_points.size(), spawn_radius])
+	return spawn_points
 
 ## Retorna a posição de spawn para um índice específico
 func get_spawn_position(player_index: int) -> Variant:
@@ -249,4 +297,5 @@ func apply_sky_configs(sky_node: Node, config: Dictionary) -> void:
 
 func _log_debug(message: String):
 	if debug_mode:
-		print("[SERVER][MapManager] " + message)
+		var server: String = "[SERVER]" if is_server else "[CLIENT]"
+		print("%s[MapManager]%s" % [server, message])

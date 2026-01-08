@@ -132,6 +132,7 @@ func _init_server(is_headless):
 	# configurações
 	network_manager._is_server = true
 	network_manager.server_is_headless = is_headless
+	map_manager.is_server = true
 	
 	# Aguarda até que os nós tenham sido adicionados à árvore
 	await get_tree().process_frame
