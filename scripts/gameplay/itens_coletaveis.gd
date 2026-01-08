@@ -159,7 +159,7 @@ func _start_collection_delay():
 	
 	if !is_collected:
 		can_be_collected = true
-		_log_debug("  Item pronto para coleta")
+		_log_debug("Item pronto para coleta")
 
 func _check_nearby_players():
 	if !auto_collect or !has_network():
