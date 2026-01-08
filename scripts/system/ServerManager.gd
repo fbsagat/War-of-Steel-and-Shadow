@@ -30,6 +30,7 @@ class_name ServerManager
 @export var max_clients: int = 32
 @export var is_headless : bool
 
+@export_category("Default Node References")
 const map_scene : String = "res://scenes/gameplay/terrain_3d.tscn"
 const player_scene : String = "res://scenes/gameplay/player_warrior.tscn"
 const camera_controller : String = "res://scenes/system/camera_controller.tscn"
@@ -53,6 +54,8 @@ const server_camera : String = "res://scenes/server_scenes/server_camera.tscn"
 ## Ativar validação anti-cheat
 @export var enable_anticheat: bool = false
 
+@export var actual_round_cam: Camera3D
+
 # ===== REGISTROS (Injetados pelo initializer.gd) =====
 
 var network_manager: NetworkManager = null
@@ -74,7 +77,12 @@ var next_room_id: int = 1
 var player_states: Dictionary = {}
 
 # ===== INICIALIZAÇÃO =====
-	
+
+func _ready() -> void:
+	var rounds_node = Node.new()
+	rounds_node.name = "All_Rounds"
+	get_tree().root.add_child(rounds_node)
+
 func initialize():
 	_start_server()
 	_connect_signals()
@@ -83,6 +91,25 @@ func initialize():
 	if debug_timer:
 		_setup_debug_timer()
 	
+func _input(_event: InputEvent) -> void:
+	# Se não for headless, transitar server_câmera entre as partidas em andamento ao pressionar tecla tab
+	_log_debug("Movendo câmera do servidor para a próxima partida")
+	#var actual_round_cam_id = actual_round_cam.round_id
+	#var total_rounds_count = round_registry.get_active_rounds_count()
+	#
+	#if not is_headless and Input.is_key_pressed(KEY_TAB):
+		#var all_active_rounds_ids = round_registry.get_all_rounds()
+		#for round_id in all_active_rounds_ids:
+			#if round_id == actual_round_cam_id:
+				#var round_node = round_registry.get_round(round_id)["round_node"]
+				#var players_node = round_node.get_node("Players")
+				#var server_camera_: Camera3D = players_node.get_node("ServerCamera")
+				#print("server_camera_ atual: ", server_camera_.round_id)
+				##server_camera_.current = true
+			#else:
+				#_log_debug("Movendo câmera do servidor: Partida %s não encontrada!" % actual_round_cam)
+		
+
 func _start_server():
 	"""Inicializa servidor dedicado e todos os subsistemas"""
 	var timestamp = Time.get_datetime_string_from_system()
@@ -596,7 +623,7 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 	round_data["round_node"] = round_node
 	
 	# Adiciona à raiz
-	get_tree().root.add_child(round_node)
+	get_tree().root.get_node("All_Rounds").add_child(round_node)
 	
 	round_registry.set_round_node(round_data["round_id"], round_node)
 	
@@ -691,10 +718,17 @@ func _server_instantiate_round(match_data: Dictionary, round_node, players_node)
 	
 	# Cria câmera livre se não estiver em modo headless
 	if not is_headless:
-		var debug_cam = preload(self.server_camera).instantiate()
+		var debug_cam = preload(server_camera).instantiate()
 		
 		players_node.add_child(debug_cam)
 		debug_cam.global_position = Vector3(0, 3, 5)  # X=0, Y=10 (altura), Z=15 (distância)
+		debug_cam.round_id = match_data["round_id"]
+		
+		if round_registry.get_active_rounds_count() <= 1:
+			debug_cam.current = true
+			actual_round_cam = debug_cam
+		else:
+			debug_cam.current = false
 	else:
 		# Se estiver em modo headless criar uma câmera dummy
 		var dummy_camera = Camera3D.new()
@@ -716,6 +750,8 @@ func _server_instantiate_round(match_data: Dictionary, round_node, players_node)
 		if terrain_3d:
 			terrain_3d.set_camera(dummy_camera)
 			_log_debug("✓ is_headless = false, terrain3D configurado com câmera dummy")
+		else:
+			push_warning("Nó de terrain_3d não encontrado para configurar câmera dummy")
 
 func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, players_node):
 	"""

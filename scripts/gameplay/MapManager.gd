@@ -46,8 +46,6 @@ signal spawn_points_ready(count: int)
 func load_map(map_scene_path: String, round_node, settings: Dictionary = {}):
 	"""Carrega um mapa a partir do caminho da cena. 
 	_handle_start_round no ServerManager é quem envia informações(settings) para cá"""
-	print("[111]load_map executado!")
-	
 	_log_debug("Carregando mapa: %s" % map_scene_path)
 	map_settings = settings
 	
@@ -91,14 +89,12 @@ func load_map(map_scene_path: String, round_node, settings: Dictionary = {}):
 # ===== GERENCIAMENTO DE SPAWN POINTS =====
 
 func _create_spawn_points(match_players_count: int) -> Array:
-	print("[111]_create_spawn_points executado!")
 	"""
 	Gera pontos de spawn em formação circular
 	Suporta de 1 a 14 jogadores com distribuição uniforme
 	
 	Retorna Array de Dictionaries: [{position: Vector3, rotation: Vector3}]
 	"""
-
 	spawn_points.clear()
 	
 	# Caso especial: apenas 1 jogador
@@ -153,7 +149,6 @@ func _create_spawn_points(match_players_count: int) -> Array:
 
 ## Retorna a posição de spawn para um índice específico
 func get_spawn_position(player_index: int) -> Variant:
-	print("[111]get_spawn_position executado!")
 	if spawn_points.is_empty():
 		push_warning("Nenhum spawn point disponível!")
 		return Vector3.ZERO
@@ -170,7 +165,6 @@ func get_spawn_position(player_index: int) -> Variant:
 
 ## Retorna dados completos de spawn (posição + rotação)
 func get_spawn_data(player_index: int) -> Dictionary:
-	print("[111]get_spawn_data executado!")
 	if spawn_points.is_empty():
 		return {
 			"position": Vector3.ZERO,
@@ -184,7 +178,6 @@ func get_spawn_data(player_index: int) -> Dictionary:
 
 ## Retorna um spawn point aleatório não utilizado
 func get_random_unused_spawn() -> Dictionary:
-	print("[111]get_random_unused_spawn executado!")
 	if spawn_points.is_empty():
 		return {
 			"position": Vector3.ZERO,
@@ -209,7 +202,6 @@ func get_random_unused_spawn() -> Dictionary:
 
 ## Reseta o tracking de spawns usados
 func reset_spawn_tracking():
-	print("[111]reset_spawn_tracking executado!")
 	used_spawn_indices.clear()
 	_log_debug("Spawn tracking resetado")
 

@@ -5,6 +5,8 @@ extends Camera3D
 @export var min_speed: float = 2.0
 @export var max_speed: float = 60.0
 @export var mouse_sensitivity: float = 0.002
+@export var round_id: int
+
 
 var current_speed: float = 5.0
 var rotation_y: float = 0.0
@@ -38,7 +40,7 @@ func _input(event):
 
 	if event.is_action_pressed("ui_cancel"):
 		_toggle_mouse_mode()
-
+		
 func _toggle_mouse_mode():
 	mouse_mode = not mouse_mode
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if not mouse_mode else Input.MOUSE_MODE_CAPTURED
