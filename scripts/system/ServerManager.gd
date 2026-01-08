@@ -19,7 +19,7 @@ class_name ServerManager
 @export var debug_mode: bool = true
 @export var debug_timer: bool = false
 ## [TESTES] Usa o TestManager para iniciar logo uma partida na execução
-@export var fast_round: bool = false
+@export var fast_round: bool = true
 ## [TESTES] Define a quantidade de instnacias de clientes para executar fast_round
 @export var simulador_players_qtd: int = 2
 ## [TESTES] Dropa itens perto dos players e ativa o trainer de cada player
@@ -54,8 +54,6 @@ const server_camera : String = "res://scenes/server_scenes/server_camera.tscn"
 ## Ativar validação anti-cheat
 @export var enable_anticheat: bool = false
 
-@export var actual_round_cam: Camera3D
-
 # ===== REGISTROS (Injetados pelo initializer.gd) =====
 
 var network_manager: NetworkManager = null
@@ -66,6 +64,13 @@ var item_database: ItemDatabase = null
 var object_manager: ObjectManager = null
 var test_manager: TestManager = null
 var map_manager: Node = null
+var all_rounds_node: Node = null
+var current_cam_round_index: int = -1
+var current_active_camera: Camera3D = null
+var mouse_mode: bool = true
+var current_active_viewport: SubViewport = null  # Adicione esta
+var viewport_display: TextureRect = null
+
 
 # ===== VARIÁVEIS INTERNAS =====
 
@@ -79,9 +84,7 @@ var player_states: Dictionary = {}
 # ===== INICIALIZAÇÃO =====
 
 func _ready() -> void:
-	var rounds_node = Node.new()
-	rounds_node.name = "All_Rounds"
-	get_tree().root.add_child(rounds_node)
+	pass
 
 func initialize():
 	_start_server()
@@ -91,25 +94,99 @@ func initialize():
 	if debug_timer:
 		_setup_debug_timer()
 	
-func _input(_event: InputEvent) -> void:
-	pass
-	# Se não for headless, transitar server_câmera entre as partidas em andamento ao pressionar tecla tab
-	#_log_debug("Movendo câmera do servidor para a próxima partida")
-	#var actual_round_cam_id = actual_round_cam.round_id
-	#var total_rounds_count = round_registry.get_active_rounds_count()
-	#
-	#if not is_headless and Input.is_key_pressed(KEY_TAB):
-		#var all_active_rounds_ids = round_registry.get_all_rounds()
-		#for round_id in all_active_rounds_ids:
-			#if round_id == actual_round_cam_id:
-				#var round_node = round_registry.get_round(round_id)["round_node"]
-				#var players_node = round_node.get_node("Players")
-				#var server_camera_: Camera3D = players_node.get_node("ServerCamera")
-				#print("server_camera_ atual: ", server_camera_.round_id)
-				##server_camera_.current = true
-			#else:
-				#_log_debug("Movendo câmera do servidor: Partida %s não encontrada!" % actual_round_cam)
+	# Cria nó organizacional para os Rounds
+	all_rounds_node = Node.new()
+	get_tree().root.add_child(all_rounds_node)
+	all_rounds_node.name = "All_Rounds"
+	
+	# Cria uma SubViewportContainer chamada ActiveRoundDisplay para exibir as câmeras(uma por vez)
+	# das rodadas em curso, se is_headless estiver desativado
+	if not is_headless:
+		_setup_viewport_display()
+
+func _setup_viewport_display():
+	"""Cria um TextureRect que mostra o viewport atual na tela"""
+	viewport_display = TextureRect.new()
+	viewport_display.name = "ViewportDisplay"
+	viewport_display.anchor_right = 1.0
+	viewport_display.anchor_bottom = 1.0
+	viewport_display.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	viewport_display.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
+	viewport_display.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	
+	# Adiciona como child direto da raiz para preencher a tela
+	get_tree().root.add_child(viewport_display)
+	
+	_log_debug("Display do viewport criado")
+
+func _unhandled_input(event: InputEvent) -> void:
+	"""Redireciona inputs para o viewport/câmera ativa"""
+	if is_headless or not current_active_viewport:
+		return
+	
+	# Não processa Tab (já é usado para trocar câmera)
+	if event is InputEventKey and event.keycode == KEY_TAB:
+		return
+	
+	# Envia o evento para o viewport ativo
+	current_active_viewport.push_input(event, true)
+	
+func _input(event: InputEvent) -> void:
+	if is_headless:
+		return
 		
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_TAB:
+		_log_debug("Movendo câmera do servidor para a próxima partida")
+		var round_nodes := all_rounds_node.get_children()
+		if round_nodes.is_empty():
+			return
+		# avança circularmente
+		current_cam_round_index = (current_cam_round_index + 1) % round_nodes.size()
+		var next_round := round_nodes[current_cam_round_index]
+		_switch_camera_to_round(next_round)
+	
+	if event.is_action_pressed("ui_cancel"):
+		_toggle_mouse_mode()
+		
+func _switch_camera_to_round(round_node: Node) -> void:
+	"""
+	Ativa a câmera de um round E atualiza o display
+	"""
+	if not round_node or not round_node is SubViewport:
+		push_warning("round_node inválido")
+		return
+	
+	# Desativa câmera anterior
+	if current_active_camera and is_instance_valid(current_active_camera):
+		current_active_camera.current = false
+		current_active_camera.set_process_input(false)
+		current_active_camera.set_process_unhandled_input(false)
+	
+	# Busca nova câmera
+	var new_camera = round_node.get_node_or_null("FreeCamera")
+	if not new_camera:
+		new_camera = round_node.get_node_or_null("DummyCamera")
+	
+	if new_camera and new_camera is Camera3D:
+		new_camera.current = true
+		current_active_camera = new_camera
+		current_active_viewport = round_node
+		
+		# ATUALIZA O DISPLAY COM A TEXTURA DESTE VIEWPORT
+		if viewport_display:
+			viewport_display.texture = round_node.get_texture()
+		
+		# ATIVA O PROCESSAMENTO DE INPUT DA CÂMERA
+		new_camera.set_process_input(true)
+		new_camera.set_process_unhandled_input(true)
+
+		_log_debug("✓ Câmera ativada: %s em %s" % [new_camera.name, round_node.name])
+	else:
+		push_warning("✗ Câmera não encontrada em %s" % round_node.name)
+
+func _toggle_mouse_mode():
+	mouse_mode = not mouse_mode
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if not mouse_mode else Input.MOUSE_MODE_CAPTURED
 
 func _start_server():
 	"""Inicializa servidor dedicado e todos os subsistemas"""
@@ -616,7 +693,7 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 		room["players"],
 		round_settings
 	)
-	
+
 	# Criar cena de organização do round
 	var round_node = SubViewport.new()
 	round_node.own_world_3d = true
@@ -624,7 +701,11 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 	
 	round_data["round_node"] = round_node
 	
-	get_tree().root.get_node("All_Rounds").add_child(round_node)
+	# Configurações para renderização fora de container
+	round_node.size = Vector2i(1920, 1080)  # ou resolução da janela
+	round_node.render_target_update_mode = SubViewport.UPDATE_ALWAYS  # ← força renderização
+	
+	all_rounds_node.add_child(round_node)
 	
 	round_registry.set_round_node(round_data["round_id"], round_node)
 	
@@ -694,6 +775,10 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 	
 	# Atualiza lista de salas (remove esta sala da lista de disponíveis)
 	_send_rooms_list_to_all()
+	
+	# Se não headless, joga este primeiro round para a camera do servidor
+	if not is_headless and round_data["round_id"] <= 1:
+		_switch_camera_to_round(round_node)
 
 # ===== INSTANCIAÇÃO NO SERVIDOR =====
 
@@ -719,41 +804,32 @@ func _server_instantiate_round(match_data: Dictionary, round_node, players_node)
 		_spawn_player_on_server(player_data, spawn_data, players_node)
 	
 	# Cria câmera livre se não estiver em modo headless
+	var actual_camera: Camera3D = null
 	if not is_headless:
-		var debug_cam = preload(server_camera).instantiate()
-		
-		round_node.add_child(debug_cam)
-		debug_cam.global_position = Vector3(0, 3, 5)  # X=0, Y=10 (altura), Z=15 (distância)
-		debug_cam.round_id = match_data["round_id"]
-		
-		if round_registry.get_active_rounds_count() <= 1:
-			debug_cam.current = true
-			actual_round_cam = debug_cam
-		else:
-			debug_cam.current = false
-		
-		terrain_3d.set_camera(debug_cam)
+		actual_camera = preload(server_camera).instantiate()
+		actual_camera.name = "FreeCamera"
+		round_node.add_child(actual_camera)
+		actual_camera.global_position = Vector3(0, 3, 5)  # X=0, Y=10 (altura), Z=15 (distância)
+		actual_camera.current = true
+		await get_tree().process_frame
 	else:
 		# Se estiver em modo headless criar uma câmera dummy
-		var dummy_camera = Camera3D.new()
-		dummy_camera.name = "ServerCamera"
-		add_child(dummy_camera)
-		
-		# Posiciona em algum lugar (não importa muito)
-		dummy_camera.global_position = Vector3(0, 100, 0)
-		
-		# Define como câmera ativa
-		dummy_camera.current = true
-		
-		# Aguarda um frame para garantir que tudo está inicializado
+		actual_camera = Camera3D.new()
+		actual_camera.name = "DummyCamera"
+		round_node.add_child(actual_camera)
+		actual_camera.global_position = Vector3(0, 100, 0)
+		actual_camera.current = false
 		await get_tree().process_frame
-		
-		# Configura o Terrain3D para usar essa câmera
-		if terrain_3d:
-			terrain_3d.set_camera(dummy_camera)
-			_log_debug("✓ is_headless = false, terrain3D configurado com câmera dummy")
-		else:
-			push_warning("Nó de terrain_3d não encontrado para configurar câmera dummy")
+	
+	# Se for o primeiro round, esta é a câmera atual
+	if match_data["round_id"] != 1 and not is_headless:
+		actual_camera.current = false
+	
+	# Configura o Terrain3D para usar actual_camera
+	if terrain_3d:
+		terrain_3d.set_camera(actual_camera)
+	else:
+		push_warning("terrain_3d não encontrado para configurar câmera")
 
 func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, players_node):
 	"""

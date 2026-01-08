@@ -5,7 +5,6 @@ extends Camera3D
 @export var min_speed: float = 2.0
 @export var max_speed: float = 60.0
 @export var mouse_sensitivity: float = 0.002
-@export var round_id: int
 
 
 var current_speed: float = 5.0
@@ -17,10 +16,13 @@ var debug: bool = true
 func _ready():
 	if not OS.has_feature("Server"):
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	else:
-		queue_free()
+	#else:
+		#queue_free()
 
 func _input(event):
+	if not current:
+		return
+		
 	if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		if event is InputEventMouseMotion:
 			rotation_y -= event.relative.x * mouse_sensitivity
@@ -48,6 +50,9 @@ func _toggle_mouse_mode():
 		print("[Player] Mouse %s." % ("liberado" if not mouse_mode else "capturado"))
 
 func _process(delta):
+	if not current:
+		return
+	
 	if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 		return
 
