@@ -1,4 +1,4 @@
-[gd_scene load_steps=21 format=3 uid="uid://3m24sag7gx5w"]
+[gd_scene load_steps=25 format=3 uid="uid://3m24sag7gx5w"]
 
 [ext_resource type="Terrain3DAssets" uid="uid://dal3jhw6241qg" path="res://demo/data/assets.tres" id="1_0rjur"]
 [ext_resource type="PackedScene" uid="uid://d3sr0a7dxfkr8" path="res://addons/terrain_3d/extras/particle_example/Terrain3DParticles.tscn" id="2_t70ke"]
@@ -14,6 +14,10 @@
 [ext_resource type="PackedScene" uid="uid://cxjgmxn0wye7i" path="res://models/VainerKit/wood_floor.tscn" id="11_tpv2i"]
 [ext_resource type="PackedScene" uid="uid://meic021hpg4y" path="res://models/VainerKit/Maptest.glb" id="13_au1d7"]
 [ext_resource type="PackedScene" uid="uid://b2arwhwqae68m" path="res://models/VainerKit/props/campfire/campfire.tscn" id="14_mste8"]
+[ext_resource type="PackedScene" uid="uid://chxt0mhjba7b3" path="res://models/VainerKit/props/logs/logs.glb" id="15_vxh85"]
+[ext_resource type="PackedScene" uid="uid://bvfssxlbbit5" path="res://models/VainerKit/props/woodcutter_axe/woodcutter_axe.glb" id="16_roe4s"]
+[ext_resource type="PackedScene" uid="uid://dnfta6gy8vs4h" path="res://models/VainerKit/props/wood_barrel/wood_barrel.glb" id="17_4hbqa"]
+[ext_resource type="PackedScene" uid="uid://bwljvk2k5byh" path="res://models/VainerKit/props/wood_bench/wood_bench.glb" id="18_6chjc"]
 
 [sub_resource type="Gradient" id="Gradient_xuisu"]
 offsets = PackedFloat32Array(0.2, 1)
@@ -1062,7 +1066,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0, 0)
 [node name="lights" type="Node3D" parent="."]
 
 [node name="lamp_post" parent="lights" instance=ExtResource("9_6jw5i")]
-transform = Transform3D(-0.8230274, 0, -0.5680017, 0, 1, 0, 0.5680017, 0, -0.8230274, 6.7371264, 3.6370556, 9.578548)
+transform = Transform3D(-0.8230274, 0, -0.5680017, 0, 1, 0, 0.5680017, 0, -0.8230274, 6.4524517, 3.3551962, 9.578548)
 
 [node name="lamp_post2" parent="lights" instance=ExtResource("9_6jw5i")]
 transform = Transform3D(0.12082988, 0, 0.9926732, 0, 1, 0, -0.9926732, 0, 0.12082988, -24.733639, 7.576387, -5.0896373)
@@ -1272,3 +1276,39 @@ transform = Transform3D(1, 0, 0, 0, 0.9979437, 0.064096875, 0, -0.064096875, 0.9
 
 [node name="vfx_fire2" parent="." instance=ExtResource("14_mste8")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.869938, 0.31682014, 134.43436)
+
+[node name="logs" parent="." instance=ExtResource("15_vxh85")]
+transform = Transform3D(-0.007897306, 0, 0.19984403, 0, 0.2, 0, -0.19984403, 0, -0.007897306, 55.379406, 1.9465525, -41.992462)
+
+[node name="woodcutter_axe2" parent="." instance=ExtResource("16_roe4s")]
+transform = Transform3D(0.29999998, 0, 0, 0, -0.24280046, 0.17620423, 0, -0.17620423, -0.24280046, 54.78713, 2.209528, -42.906685)
+
+[node name="logs2" parent="." instance=ExtResource("15_vxh85")]
+transform = Transform3D(0.19507849, 0, -0.044095233, 0, 0.20000003, 0, 0.044095233, 0, 0.19507849, -7.7964296, 0.41911185, 138.4119)
+
+[node name="woodcutter_axe3" parent="." instance=ExtResource("16_roe4s")]
+transform = Transform3D(-0.07764571, 0.17020021, 0.23452723, 0, -0.24280046, 0.17620423, 0.28977773, 0.04560501, 0.062841386, -6.760043, 0.6820873, 138.07642)
+
+[node name="wood_barrel" parent="." instance=ExtResource("17_4hbqa")]
+transform = Transform3D(0.9991453, 0.041335072, 0, -0.041335072, 0.9991453, 0, 0, 0, 1, 46.317284, 2.3774066, -44.93732)
+
+[node name="wood_barrel2" parent="." instance=ExtResource("17_4hbqa")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 37.384556, 2.4864335, 22.226765)
+
+[node name="wood_barrel3" parent="." instance=ExtResource("17_4hbqa")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 35.12567, 2.4864335, 22.226765)
+
+[node name="wood_barrel4" parent="." instance=ExtResource("17_4hbqa")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 36.240532, 4.4853015, 22.226765)
+
+[node name="wood_bench2" parent="." instance=ExtResource("18_6chjc")]
+transform = Transform3D(-0.5, 0, -7.54979e-08, 0, 0.5, 0, 7.54979e-08, 0, -0.5, 54.70527, 1.0040488, 1.1779377)
+
+[node name="wood_bench3" parent="." instance=ExtResource("18_6chjc")]
+transform = Transform3D(0.49946776, 0, 0.023065098, 0, 0.5, 0, -0.023065098, 0, 0.49946776, -28.475765, 0.97367036, 69.36585)
+
+[node name="wood_bench4" parent="." instance=ExtResource("18_6chjc")]
+transform = Transform3D(0.2692236, 0, 0.42132968, 0, 0.5, 0, -0.42132968, 0, 0.2692236, -28.475765, 0.97367036, -8.493038)
+
+[node name="wood_barrel5" parent="." instance=ExtResource("17_4hbqa")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -30.916252, 1.5638599, -10.479378)
