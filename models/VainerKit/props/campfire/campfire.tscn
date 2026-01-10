@@ -2,9 +2,9 @@
 
 [ext_resource type="Shader" uid="uid://y4m81ughafvf" path="res://vfx/fire/shader/s_special_shader.tres" id="1_lqls4"]
 [ext_resource type="Shader" uid="uid://cn4baexdjokbs" path="res://vfx/fire/shader/s_smoke_shader.tres" id="2_lbo5b"]
-[ext_resource type="Script" uid="uid://ywf7cbswl6sg" path="res://scripts/objects/torch_lit.gd" id="3_7gpcm"]
+[ext_resource type="Script" uid="uid://cwewmwywm382a" path="res://scripts/objects/torch_lit.gd" id="3_7gpcm"]
 [ext_resource type="Shader" uid="uid://w7vq34wwolki" path="res://vfx/fire/shader/ember.tres" id="4_pfwh2"]
-[ext_resource type="PackedScene" uid="uid://d2ys7i28bnk4e" path="res://models/VainerKit/props/campfire/campfire.glb" id="5_0cly2"]
+[ext_resource type="PackedScene" uid="uid://bfrcw6dl1in5o" path="res://models/VainerKit/props/campfire/campfire.glb" id="5_0cly2"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_xg87l"]
 render_priority = 0
@@ -107,4 +107,7 @@ scale_amount_max = 0.1
 color = Color(10.317386, 3.57094, 0, 1)
 
 [node name="campfire" parent="." instance=ExtResource("5_0cly2")]
-transform = Transform3D(0.12, 0, 0, 0, 0.12, 0, 0, 0, 0.12, -0.17560378, 0, -0.05597587)
+transform = Transform3D(0.25, 0, 0, 0, 0.25, 0, 0, 0, 0.25, -0.34171587, 0, -0.05597587)
+
+[node name="campfire2" parent="." instance=ExtResource("5_0cly2")]
+transform = Transform3D(-0.08, 0, -1.20796635e-08, 0, 0.08, 0, 1.20796635e-08, 0, -0.08, 0.09512991, 0, 0.049126104)

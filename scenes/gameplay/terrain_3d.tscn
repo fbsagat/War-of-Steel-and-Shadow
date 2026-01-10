@@ -1,4 +1,4 @@
-[gd_scene load_steps=20 format=3 uid="uid://3m24sag7gx5w"]
+[gd_scene load_steps=21 format=3 uid="uid://3m24sag7gx5w"]
 
 [ext_resource type="Terrain3DAssets" uid="uid://dal3jhw6241qg" path="res://demo/data/assets.tres" id="1_0rjur"]
 [ext_resource type="PackedScene" uid="uid://d3sr0a7dxfkr8" path="res://addons/terrain_3d/extras/particle_example/Terrain3DParticles.tscn" id="2_t70ke"]
@@ -13,6 +13,7 @@
 [ext_resource type="PackedScene" uid="uid://blch7pk3hv26u" path="res://models/VainerKit/stone_brick_wall.tscn" id="10_blrkw"]
 [ext_resource type="PackedScene" uid="uid://cxjgmxn0wye7i" path="res://models/VainerKit/wood_floor.tscn" id="11_tpv2i"]
 [ext_resource type="PackedScene" uid="uid://meic021hpg4y" path="res://models/VainerKit/Maptest.glb" id="13_au1d7"]
+[ext_resource type="PackedScene" uid="uid://b2arwhwqae68m" path="res://models/VainerKit/props/campfire/campfire.tscn" id="14_mste8"]
 
 [sub_resource type="Gradient" id="Gradient_xuisu"]
 offsets = PackedFloat32Array(0.2, 1)
@@ -1265,3 +1266,9 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18.75734, 0.8315468, 87.67011
 
 [node name="Maptest" parent="." instance=ExtResource("13_au1d7")]
 transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 13.8944, -9.185814, 48.333263)
+
+[node name="vfx_fire" parent="." instance=ExtResource("14_mste8")]
+transform = Transform3D(1, 0, 0, 0, 0.9979437, 0.064096875, 0, -0.064096875, 0.9979437, 50.075016, 1.5620184, -42.909)
+
+[node name="vfx_fire2" parent="." instance=ExtResource("14_mste8")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.869938, 0.31682014, 134.43436)
