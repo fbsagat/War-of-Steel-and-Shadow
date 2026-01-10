@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=3 uid="uid://b2arwhwqae68m"]
+[gd_scene load_steps=20 format=3 uid="uid://b2arwhwqae68m"]
 
 [ext_resource type="Shader" uid="uid://y4m81ughafvf" path="res://vfx/fire/shader/s_special_shader.tres" id="1_lqls4"]
 [ext_resource type="Shader" uid="uid://cn4baexdjokbs" path="res://vfx/fire/shader/s_smoke_shader.tres" id="2_lbo5b"]
@@ -55,6 +55,15 @@ shader = ExtResource("4_pfwh2")
 
 [sub_resource type="QuadMesh" id="QuadMesh_5i8ou"]
 
+[sub_resource type="ConvexPolygonShape3D" id="ConvexPolygonShape3D_lqls4"]
+points = PackedVector3Array(-0.9749279, -1, 0.22234368, -0.7819655, -1, -0.623565, -0.43402237, -1, 0.9009687, -0.9749279, 5.2581615, 0.22234368, -0.7819655, 5.2581615, -0.623565, -0.00019091368, -1, -1, 0.43383145, -1, 0.9009687, -0.43402237, 5.2581615, 0.9009687, -0.00019091368, 5.2581615, -1, 0.7817745, -1, -0.623565, 0.9749278, -1, 0.22234368, 0.43383145, 5.2581615, 0.9009687, 0.7817745, 5.2581615, -0.623565, 0.9749278, 5.2581615, 0.22234368)
+
+[sub_resource type="ConvexPolygonShape3D" id="ConvexPolygonShape3D_lbo5b"]
+points = PackedVector3Array(-0.9749279, -1, 0.22234368, -0.7819655, -1, -0.623565, -0.43402237, -1, 0.9009687, -0.9749279, 5.2581615, 0.22234368, -0.7819655, 5.2581615, -0.623565, -0.00019091368, -1, -1, 0.43383145, -1, 0.9009687, -0.43402237, 5.2581615, 0.9009687, -0.00019091368, 5.2581615, -1, 0.7817745, -1, -0.623565, 0.9749278, -1, 0.22234368, 0.43383145, 5.2581615, 0.9009687, 0.7817745, 5.2581615, -0.623565, 0.9749278, 5.2581615, 0.22234368)
+
+[sub_resource type="ConvexPolygonShape3D" id="ConvexPolygonShape3D_7gpcm"]
+points = PackedVector3Array(-0.9749279, -1, 0.22234368, -0.7819655, -1, -0.623565, -0.43402237, -1, 0.9009687, -0.9749279, 5.2581615, 0.22234368, -0.7819655, 5.2581615, -0.623565, -0.00019091368, -1, -1, 0.43383145, -1, 0.9009687, -0.43402237, 5.2581615, 0.9009687, -0.00019091368, 5.2581615, -1, 0.7817745, -1, -0.623565, 0.9749278, -1, 0.22234368, 0.43383145, 5.2581615, 0.9009687, 0.7817745, 5.2581615, -0.623565, 0.9749278, 5.2581615, 0.22234368)
+
 [node name="vfx_fire" type="Node3D"]
 
 [node name="fire" type="CPUParticles3D" parent="."]
@@ -109,5 +118,22 @@ color = Color(10.317386, 3.57094, 0, 1)
 [node name="campfire" parent="." instance=ExtResource("5_0cly2")]
 transform = Transform3D(0.25, 0, 0, 0, 0.25, 0, 0, 0, 0.25, -0.34171587, 0, -0.05597587)
 
+[node name="StaticBody3D" type="StaticBody3D" parent="campfire/Cylinder" index="0"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="campfire/Cylinder/StaticBody3D"]
+shape = SubResource("ConvexPolygonShape3D_lqls4")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="campfire/Cylinder_003" index="0"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="campfire/Cylinder_003/StaticBody3D"]
+shape = SubResource("ConvexPolygonShape3D_lbo5b")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="campfire/Cylinder_005" index="0"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="campfire/Cylinder_005/StaticBody3D"]
+shape = SubResource("ConvexPolygonShape3D_7gpcm")
+
 [node name="campfire2" parent="." instance=ExtResource("5_0cly2")]
 transform = Transform3D(-0.08, 0, -1.20796635e-08, 0, 0.08, 0, 1.20796635e-08, 0, -0.08, 0.09512991, 0, 0.049126104)
+
+[editable path="campfire"]
