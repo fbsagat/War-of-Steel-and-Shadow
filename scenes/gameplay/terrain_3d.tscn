@@ -1,4 +1,4 @@
-[gd_scene load_steps=27 format=3 uid="uid://3m24sag7gx5w"]
+[gd_scene load_steps=28 format=3 uid="uid://3m24sag7gx5w"]
 
 [ext_resource type="Terrain3DAssets" uid="uid://dal3jhw6241qg" path="res://demo/data/assets.tres" id="1_0rjur"]
 [ext_resource type="PackedScene" uid="uid://d3sr0a7dxfkr8" path="res://addons/terrain_3d/extras/particle_example/Terrain3DParticles.tscn" id="2_t70ke"]
@@ -20,6 +20,7 @@
 [ext_resource type="PackedScene" uid="uid://dend7qthe57wk" path="res://models/VainerKit/props/wood_barrel/wood_barrel.glb" id="17_4hbqa"]
 [ext_resource type="PackedScene" uid="uid://dyq3iprty7n72" path="res://models/VainerKit/props/wood_bench/wood_bench.glb" id="18_6chjc"]
 [ext_resource type="PackedScene" uid="uid://80wwsoav03hb" path="res://models/VainerKit/builds/shop.glb" id="19_6chjc"]
+[ext_resource type="PackedScene" uid="uid://dwmurdmawu7d0" path="res://models/VainerKit/builds/medieval_house/medieval_house.glb" id="21_17hnq"]
 
 [sub_resource type="Gradient" id="Gradient_xuisu"]
 offsets = PackedFloat32Array(0.2, 1)
@@ -1094,6 +1095,9 @@ transform = Transform3D(-0.99946404, 0, 0.03273654, -0.008472843, -0.9659258, -0
 [node name="lamp_post2" parent="lights" instance=ExtResource("9_6jw5i")]
 transform = Transform3D(0.12082988, 0, 0.9926732, 0, 1, 0, -0.9926732, 0, 0.12082988, -24.733639, 7.576387, -5.0896373)
 
+[node name="lamp_post3" parent="lights" instance=ExtResource("9_6jw5i")]
+transform = Transform3D(0.9587087, -0.065655015, -0.27670747, -0.05910784, 0.90573746, -0.41969737, 0.27817956, 0.41872314, 0.86445767, -7.1237607, 7.576387, -13.871308)
+
 [node name="torchpole" parent="lights" instance=ExtResource("10_6udw1")]
 transform = Transform3D(-0.9996592, 0, -0.026107118, 0, 1, 0, 0.026107118, 0, -0.9996592, 5.687392, 0.47515464, 9.551403)
 
@@ -1265,7 +1269,7 @@ transform = Transform3D(-0.09569364, 0, -1.4518498, 0, 1.455, 0, 1.4518498, 0, -
 transform = Transform3D(-0.09569364, 0, -1.4518498, 0, 1.455, 0, 1.4518498, 0, -0.09569364, -17.996292, 0.25166428, -26.460648)
 
 [node name="Arvore_46" parent="nature" instance=ExtResource("4_xuisu")]
-transform = Transform3D(-0.09569364, 0, -1.4518498, 0, 1.455, 0, 1.4518498, 0, -0.09569364, -6.5455856, 0.25166428, -25.705902)
+transform = Transform3D(-0.09569364, 0, -1.4518498, 0, 1.455, 0, 1.4518498, 0, -0.09569364, 6.038151, 0.25166428, -25.705902)
 
 [node name="arvore_3" parent="nature" instance=ExtResource("6_1ice8")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18.75734, 0.8315468, 87.67011)
@@ -1339,3 +1343,6 @@ transform = Transform3D(-0.5259317, 0, 0.8505267, 0, 1, 0, -0.8505267, 0, -0.525
 
 [node name="shop5" parent="shops" instance=ExtResource("19_6chjc")]
 transform = Transform3D(-0.6635344, 0, 0.7481457, 0, 1, 0, -0.7481457, 0, -0.6635344, -7.985542, 0.41923106, 83.77341)
+
+[node name="medieval_house" parent="." instance=ExtResource("21_17hnq")]
+transform = Transform3D(-0.9537117, 0, 0.30072248, 0, 1, 0, -0.30072248, 0, -0.9537117, -5.7543163, 0.48812103, -18.181849)
