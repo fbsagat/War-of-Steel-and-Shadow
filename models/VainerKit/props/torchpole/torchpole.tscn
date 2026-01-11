@@ -1,0 +1,18 @@
+[gd_scene load_steps=3 format=3 uid="uid://ce304l2fnlxbo"]
+
+[ext_resource type="PackedScene" uid="uid://du8611sbunyvx" path="res://models/VainerKit/props/torchpole/torchpole.glb" id="1_yq6vg"]
+[ext_resource type="PackedScene" uid="uid://6364jp77fcus" path="res://vfx/fire/vfx_fire.tscn" id="2_euanc"]
+
+[node name="torchpole" type="Node3D"]
+
+[node name="torchpole" parent="." instance=ExtResource("1_yq6vg")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.9976864, 0, 0)
+
+[node name="vfx_fire" parent="." instance=ExtResource("2_euanc")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0062054396, 5.5483913, 0.28664076)
+
+[node name="OmniLight3D" parent="vfx_fire" index="2"]
+light_specular = 4.0
+omni_range = 14.0
+
+[editable path="vfx_fire"]
