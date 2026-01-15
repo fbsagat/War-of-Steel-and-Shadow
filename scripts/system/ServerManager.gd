@@ -1063,7 +1063,7 @@ func _validate_player_movement(p_id: int, pos: Vector3, vel: Vector3, rot: Vecto
 	
 	return true
 
-func _apply_player_state_on_server(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
+func _apply_player_state_on_server(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool, moving: bool):
 	var node = player_registry.get_player_node(p_id)
 	if not (node and node.is_inside_tree()):
 		return
@@ -1071,12 +1071,17 @@ func _apply_player_state_on_server(p_id: int, pos: Vector3, rot: Vector3, vel: V
 	# Aplica no nó
 	node.global_position = pos
 	node.global_rotation = rot
+	
 	if node.has_method("set_velocity"):
 		node.set_velocity(vel)
 	
 	# Atualiza estado interno
 	if node.has_method("_set_state"):
 		node._set_state({"running": running, "jumping": jumping})
+	
+	node.is_moving = moving
+	node.is_running = running
+	node.is_jumping = jumping
 	
 	# Atualiza player_states para validação futura
 	player_states[p_id] = {
@@ -1727,18 +1732,19 @@ func _log_debug(message: String):
 
 func _print_player_states():
 	"""Debug: Imprime estados de todos os players para validação"""
-	_log_debug("========================================")
-	_log_debug("ESTADOS DOS JOGADORES NO SERVIDOR")
-	_log_debug("Total: %d" % player_states.size())
+	_log_debug("[PLAYSTATES]========================================")
+	_log_debug("[PLAYSTATES]ESTADOS DOS JOGADORES NO SERVIDOR")
+	_log_debug("[PLAYSTATES]Total: %d" % player_states.size())
 	
 	for p_id in player_states.keys():
 		var state = player_states[p_id]
 		var age = (Time.get_ticks_msec() - state["timestamp"]) / 1000.0
 		
-		_log_debug("Player %d:" % p_id)
-		_log_debug("Pos: %s" % str(state["pos"]))
-		_log_debug("Vel: %s (%.2f m/s)" % [str(state["vel"]), state["vel"].length()])
-		_log_debug("Rot: %s" % str(state["rot"]))
-		_log_debug("Última atualização: %.2f s atrás" % age)
+		_log_debug("[PLAYSTATES]Player %d:" % p_id)
+		_log_debug("[PLAYSTATES]Pos: %s" % str(state["pos"]))
+		_log_debug("[PLAYSTATES]Vel: %s (%.2f m/s)" % [str(state["vel"]), state["vel"].length()])
+		_log_debug("[PLAYSTATES]Rot: %s" % str(state["rot"]))
+		_log_debug("[PLAYSTATES]Última atualização: %.2f s atrás" % age)
+		_log_debug("[PLAYSTATES]------------")
 	
 	_log_debug("========================================")

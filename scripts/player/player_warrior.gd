@@ -5,7 +5,7 @@ extends CharacterBody3D
 @export_category("Debug")
 @export var debug: bool = true
 
-@export_category("Movement")
+@export_category("Movement Control")
 @export var max_speed: float = 5
 @export var walking_speed: float = 2.0
 @export var run_multiplier: float = 1.5
@@ -20,7 +20,7 @@ extends CharacterBody3D
 @export var gravity: float = 20.0
 @export var aiming_jump_multiplyer: float = 4.2
 
-@export_category("Player actions")
+@export_category("Player Actions")
 @export var hide_itens_on_start: bool = true
 @export var attack_time_tolerance: float = 0.8
 
@@ -29,7 +29,7 @@ extends CharacterBody3D
 @export var pickup_collision_mask: int = 1 << 2 # Layer 3
 @export var max_pickup_results: int = 10
 
-@export_category("Enemy detection")
+@export_category("Enemy Detection")
 @export var detection_radius_fov: float = 20.0 # Raio para detecção no FOV
 @export var detection_radius_360: float = 12.0 # Raio menor (ou maior) para fallback 360°
 @export_range(0, 360) var field_of_view_degrees: float = 120.0
@@ -51,7 +51,7 @@ extends CharacterBody3D
 @onready var animation_tree: AnimationTree = $AnimationTree
 @onready var attack_timer: Timer = $attack_timer
 @onready var name_label: Label3D = $NameLabel
-@export var inventory : Control
+@onready var inventory : Control
 
 # ===== REGISTROS (Injetados pelo initializer.gd) =====
 
@@ -76,21 +76,22 @@ var is_local_player: bool = false
 var _is_server: bool = false
 
 # Estados
-var is_attacking: bool = false
-var is_defending: bool = false
-var is_jumping: bool = false
-var is_aiming: bool = false
-var is_running: bool = false
-var mouse_mode: bool = true
-var inventory_mode: bool = false
+var is_attacking: bool = false # True se está Atacando
+var is_defending: bool = false # True se está defendendo
+var is_jumping: bool = false # True se está pulando
+var is_aiming: bool = false # true se estás mirando
+var is_running: bool = false # True se está pulando
+var is_moving: bool = false # True se está pulando ou atacando ou defendendo (para stamina)
+var mouse_mode: bool = true # Muda o modo de mouse na janela, capturado ou visivel
+var inventory_mode: bool = false # True se está com inventário aberto
 var run_on_jump: bool = false
-var nearest_enemy: CharacterBody3D = null
-var _detection_timer: Timer = null
 var last_simple_directions: Array = []
 var is_block_attacking: bool = false
-var actual_weapon : Node3D = null
-var actual_enabled_hitbox: Area3D = null
-const max_direction_history = 2
+var stamina_level: float = 100
+const MAX_STAMINA: float = 100.0
+const STAMINA_DEPLETION_RATE: float = 20.0  # por segundo
+const STAMINA_RECOVERY_RATE: float = 15.0   # por segundo
+const MAX_DIRECTION_HISTORY = 2
 
 # Variáveis de sincronização com terreno
 var terrain_height_cache: float = -INF
@@ -101,15 +102,19 @@ var disable_physics_distance: float = 30.0  # Desativa física se > 30m de dist�
 var remote_anim_speed: float = 0.0
 var remote_is_on_floor: bool = true
 
-# Dinâmicas
-var model: Node3D = null
-var skeleton: Skeleton3D = null
+# Referências
+var model: Node3D
+var skeleton: Skeleton3D
 var camera_controller: Node3D
 var aiming_forward_direction: Vector3 = Vector3.FORWARD
 var defense_target_angle: float = 0.0
 var hit_targets: Array = []
 var cair: bool = false
 var terrain : Terrain3D
+var actual_weapon : Node3D = null
+var nearest_enemy: CharacterBody3D = null
+var _detection_timer: Timer = null
+var actual_enabled_hitbox: Area3D = null
 
 # Ready
 func _ready():
@@ -117,36 +122,28 @@ func _ready():
 	
 # Física geral
 func _physics_process(delta: float) -> void:
-	"""
-	Versão final: clara, sem erros, com fallback para singleplayer
-	"""
 	var move_dir: Vector3 = Vector3.ZERO
 	
 	_handle_gravity(delta)
 	
-	# ✅ Verificação de segurança
-	var has_network = multiplayer and multiplayer.has_multiplayer_peer()
-	
-	# Processamento de movimento
-	if is_local_player and not _is_server:
-		# Jogador controlado pelo usuário
-		move_dir = _handle_movement_input(delta)
+	# ✅ No SERVIDOR, sempre processa física para TODOS os jogadores
+	if _is_server:
+		if is_local_player:
+			move_dir = _handle_movement_input(delta)
+		# ✅ Sempre executa move_and_slide() no servidor
+		move_and_slide()
 		
-		# Sincronização de rede (se aplicável)
-		if has_network:
+	# Cliente local
+	elif is_local_player:
+		move_dir = _handle_movement_input(delta)
+		if multiplayer and multiplayer.has_multiplayer_peer():
 			_send_state_to_server(delta)
 			_send_animation_state(delta)
-		
-		# Input de teste
-		handle_test_equip_inputs_call()
-	
-	elif verificar_rede() and has_network and multiplayer.has_multiplayer_peer():
-		if not _is_server:
-			# Jogador remoto no cliente
-			_interpolate_remote_player(delta)
-	
-	if not _is_server:
 		move_and_slide()
+		
+	# Cliente remoto (não servidor)
+	elif multiplayer and multiplayer.has_multiplayer_peer():
+		_interpolate_remote_player(delta)
 	
 	# Lógica de rotação e mira
 	if is_aiming:
@@ -183,12 +180,30 @@ func _physics_process(delta: float) -> void:
 		if dir in ["forward", "backward", "left", "right"]:
 			if last_simple_directions.is_empty() or last_simple_directions[-1] != dir:
 				last_simple_directions.append(dir)
-				if last_simple_directions.size() > max_direction_history:
+				if last_simple_directions.size() > MAX_DIRECTION_HISTORY:
 					last_simple_directions.pop_front()
 
 	# Animações (sempre server/client)
 	_handle_animations(move_dir)
-
+	
+	# Sistema de stamina (atualmente verificando em tudo, remoto/server e clientes)
+	# Se estiver se movimentando is_moving recebe true, se estiver totalmente parado is_moving = false
+	#_log_debug("[111]is_running: %s" % is_running)
+	#if is_attacking or is_defending or is_running:
+		#is_moving = true
+	#else:
+		#is_moving = false
+	#
+	#if is_moving and stamina_level > 0:
+		#stamina_level -= STAMINA_DEPLETION_RATE * delta
+		#stamina_level = clamp(stamina_level, 0, MAX_STAMINA)
+	#elif not is_moving:
+		#stamina_level += STAMINA_RECOVERY_RATE * delta
+		#stamina_level = min(stamina_level, MAX_STAMINA)
+	#
+	#_log_debug("[111]is_moving: %s" % is_moving)
+	#_log_debug("[111]STAMINA: %s" % stamina_level)
+	
 func _process(_delta: float) -> void:
 	pass
 
@@ -394,6 +409,7 @@ func _on_node_visibility_changed() -> void:
 	
 # Gravidade
 func _handle_gravity(delta: float) -> void:
+
 	if not is_on_floor():
 		velocity.y -= gravity * delta
 	else:
@@ -818,7 +834,8 @@ func _send_state_to_server(delta: float):
 					rotation,
 					velocity,
 					is_running,
-					is_jumping
+					is_jumping,
+					is_moving
 				)
 				
 # ===== ENVIO DE ANIMAÇÕES (MENOS FREQUENTE) =====
@@ -996,8 +1013,6 @@ func _interpolate_remote_player(delta: float):
 			velocity.y -= gravity * delta
 		else:
 			velocity.y = 0
-		
-		#move_and_slide()
 		
 		remote_is_on_floor = is_on_floor()
 		
@@ -1338,6 +1353,7 @@ func initialize(p_id: int, p_name: String, spawn_pos: Vector3):
 
 # Função para equipar itens magicamente (Trainer de testes / Remover em produção)
 func handle_test_equip_inputs_call():
+	print("handle_test_equip_inputs_call")
 	if not inventory_mode:
 		var mapped_id: int
 		var test_equip_map: Dictionary = {}

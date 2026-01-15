@@ -655,16 +655,16 @@ func server_apply_drop_item(player_id: int, item_name: String):
 
 # ===== ATUALIZAÇÕES DE ESTADOS DE CLIENTES =====
 
-func send_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
+func send_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool, moving:bool):
 	"""Envia estado do jogador para o servidor (UNRELIABLE - rápido)"""
 	
 	if not is_connected_:
 		return
 	
-	rpc_id(1, "_server_player_state", p_id, pos, rot, vel, running, jumping)
+	rpc_id(1, "_server_player_state", p_id, pos, rot, vel, running, jumping, moving)
 
 @rpc("any_peer", "call_remote", "unreliable")
-func _server_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
+func _server_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool, moving: bool):
 	"""RPC: Servidor recebe estado do jogador e redistribui para os do mesmo round"""
 	# Verificação robusta de servidor
 	var round_id = round_registry.get_round_by_player_id(p_id)["round_id"]
@@ -688,17 +688,18 @@ func _server_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, r
 			return
 	
 	# ATUALIZA ESTADO NO SERVIDOR (opcional, para autoridade)
-	if server_manager and server_manager.player_states:
-		server_manager.player_states[p_id] = {
-			"pos": pos,
-			"rot": rot,
-			"vel": vel,
-			"running": running,
-			"jumping": jumping,
-			"timestamp": Time.get_ticks_msec()
-		}
+	#if server_manager and server_manager.player_states:
+		#server_manager.player_states[p_id] = {
+			#"pos": pos,
+			#"rot": rot,
+			#"vel": vel,
+			#"running": running,
+			#"jumping": jumping,
+			#"moving": moving,
+			#"timestamp": Time.get_ticks_msec()
+		#}
 	
-	server_manager._apply_player_state_on_server(p_id, pos, rot, vel, running, jumping)
+	server_manager._apply_player_state_on_server(p_id, pos, rot, vel, running, jumping, moving)
 	
 	# REDISTRIBUI PARA TODOS OS OUTROS CLIENTES
 	for peer_id in players_round:
@@ -708,7 +709,11 @@ func _server_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, r
 @rpc("authority", "call_remote", "unreliable")
 func _client_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
 	"""RPC: Cliente recebe estado de OUTRO jogador"""
+<<<<<<< Updated upstream
 	# Só processa se NÃO for servidor (o servidor já processa em _apply_player_state_on_server em ServerManager)
+=======
+	# Só processa se NÃO for servidor pois o servidor atualiza via _apply_player_state_on_server no server manager
+>>>>>>> Stashed changes
 	if multiplayer.has_multiplayer_peer() and multiplayer.get_unique_id() == 1:
 		return
 	
