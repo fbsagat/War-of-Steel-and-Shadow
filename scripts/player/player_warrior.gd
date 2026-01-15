@@ -128,7 +128,7 @@ func _physics_process(delta: float) -> void:
 	var has_network = multiplayer and multiplayer.has_multiplayer_peer()
 	
 	# Processamento de movimento
-	if is_local_player:
+	if is_local_player and not _is_server:
 		# Jogador controlado pelo usuário
 		move_dir = _handle_movement_input(delta)
 		
@@ -141,11 +141,12 @@ func _physics_process(delta: float) -> void:
 		handle_test_equip_inputs_call()
 	
 	elif verificar_rede() and has_network and multiplayer.has_multiplayer_peer():
-		if not multiplayer.is_server():
+		if not _is_server:
 			# Jogador remoto no cliente
 			_interpolate_remote_player(delta)
 	
-	move_and_slide()
+	if not _is_server:
+		move_and_slide()
 	
 	# Lógica de rotação e mira
 	if is_aiming:
