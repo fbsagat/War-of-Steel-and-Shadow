@@ -28,7 +28,7 @@ enum CameraMode { FREE_LOOK, BEHIND_PLAYER }
 		if spring_arm:
 			spring_arm.spring_length = base_distance
 
-@export var collision_margin: float = 0.2
+@export var collision_margin: float = 0.3
 
 # ==============================
 # EXPORT — CONFIGURAÇÕES DO MODO LIVRE (FREE_LOOK)
