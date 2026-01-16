@@ -1072,16 +1072,10 @@ func _apply_player_state_on_server(p_id: int, pos: Vector3, rot: Vector3, vel: V
 	node.global_position = pos
 	node.global_rotation = rot
 	
-	if node.has_method("set_velocity"):
-		node.set_velocity(vel)
-	
-	# Atualiza estado interno
-	if node.has_method("_set_state"):
-		node._set_state({"running": running, "jumping": jumping})
-	
 	node.is_moving = moving
 	node.is_running = running
 	node.is_jumping = jumping
+	node.velocity = vel
 	
 	# Atualiza player_states para validação futura
 	player_states[p_id] = {

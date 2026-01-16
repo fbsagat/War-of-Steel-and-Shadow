@@ -687,18 +687,6 @@ func _server_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, r
 				server_manager._kick_player(p_id, "Movimento suspeito detectado")
 			return
 	
-	# ATUALIZA ESTADO NO SERVIDOR (opcional, para autoridade)
-	#if server_manager and server_manager.player_states:
-		#server_manager.player_states[p_id] = {
-			#"pos": pos,
-			#"rot": rot,
-			#"vel": vel,
-			#"running": running,
-			#"jumping": jumping,
-			#"moving": moving,
-			#"timestamp": Time.get_ticks_msec()
-		#}
-	
 	server_manager._apply_player_state_on_server(p_id, pos, rot, vel, running, jumping, moving)
 	
 	# REDISTRIBUI PARA TODOS OS OUTROS CLIENTES

@@ -421,7 +421,7 @@ func _handle_gravity(delta: float) -> void:
 # Animações
 func _handle_animations(move_dir):
 	"""Atualiza animações (funciona para local e remotos)"""
-	
+
 	# Calcula velocidade para animação
 	var speed = Vector2(velocity.x, velocity.z).length()
 	
@@ -466,6 +466,13 @@ func _handle_movement_input(delta: float):
 # Movimentos: Pulo e corrida
 func _apply_movement(move_dir: Vector3, delta: float) -> void:
 	# Pulo: Preserva velocidade horizontal EXATA do chão
+	
+	# Zera a velocidade do player para a cena dele no servidor quando não está recebendo 
+	# atualizações de estado do cliente (prevenção de arrasto)
+	if _is_server and not move_dir:
+		velocity = Vector3.ZERO
+		return
+		
 	if not is_aiming:
 		if Input.is_action_just_pressed("jump") and is_on_floor() and not inventory_mode:
 			velocity.y = jump_velocity
