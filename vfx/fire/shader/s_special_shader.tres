@@ -1,6 +1,6 @@
 [gd_resource type="VisualShader" load_steps=23 format=3 uid="uid://y4m81ughafvf"]
 
-[ext_resource type="Texture2D" uid="uid://3b4q31sojkwb" path="res://vfx/fire/texture/fire_texture_alt.png" id="1_lfsjg"]
+[ext_resource type="Texture2D" uid="uid://dhjqbfuyqaf6d" path="res://vfx/fire/texture/fire_texture_alt.png" id="1_lfsjg"]
 [ext_resource type="Texture2D" uid="uid://dx7qhn8ayyh2l" path="res://vfx/fire/texture/distortion_texture.png" id="2_jpn5r"]
 
 [sub_resource type="VisualShaderNodeVectorDecompose" id="VisualShaderNodeVectorDecompose_nmhx1"]
