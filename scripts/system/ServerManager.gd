@@ -1058,7 +1058,7 @@ func _validate_player_movement(p_id: int, pos: Vector3, vel: Vector3, rot: Vecto
 	
 	return true
 
-func _apply_player_state_on_server(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool, moving: bool):
+func _apply_player_state_on_server(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
 	var node = player_registry.get_player_node(p_id)
 	if not (node and node.is_inside_tree()):
 		return
@@ -1067,7 +1067,6 @@ func _apply_player_state_on_server(p_id: int, pos: Vector3, rot: Vector3, vel: V
 	node.global_position = pos
 	node.global_rotation = rot
 	
-	node.is_moving = moving
 	node.is_running = running
 	node.is_jumping = jumping
 	node.velocity = vel

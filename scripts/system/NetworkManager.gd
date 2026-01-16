@@ -655,16 +655,16 @@ func server_apply_drop_item(player_id: int, item_name: String):
 
 # ===== ATUALIZAÇÕES DE ESTADOS DE CLIENTES =====
 
-func send_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool, moving:bool):
+func send_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
 	"""Envia estado do jogador para o servidor (UNRELIABLE - rápido)"""
 	
 	if not is_connected_:
 		return
 	
-	rpc_id(1, "_server_player_state", p_id, pos, rot, vel, running, jumping, moving)
+	rpc_id(1, "_server_player_state", p_id, pos, rot, vel, running, jumping)
 
 @rpc("any_peer", "call_remote", "unreliable")
-func _server_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool, moving: bool):
+func _server_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
 	"""RPC: Servidor recebe estado do jogador e redistribui para os do mesmo round"""
 	# Verificação robusta de servidor
 	var round_id = round_registry.get_round_by_player_id(p_id)["round_id"]
@@ -687,7 +687,7 @@ func _server_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, r
 				server_manager._kick_player(p_id, "Movimento suspeito detectado")
 			return
 	
-	server_manager._apply_player_state_on_server(p_id, pos, rot, vel, running, jumping, moving)
+	server_manager._apply_player_state_on_server(p_id, pos, rot, vel, running, jumping)
 	
 	# REDISTRIBUI PARA TODOS OS OUTROS CLIENTES
 	for peer_id in players_round:

@@ -531,7 +531,8 @@ func _apply_movement(move_dir: Vector3, delta: float) -> void:
 			var multiplier = aiming_jump_multiplyer if is_aiming else 1.0
 			velocity.x += move_dir.x * air_speed * delta * multiplier
 			velocity.z += move_dir.z * air_speed * delta * multiplier
-	is_running = Input.is_action_pressed("run") and is_on_floor()
+	if is_local_player and not _is_server:
+		is_running = Input.is_action_pressed("run") and is_on_floor()
 	
 # Chama a câmera lockada e transiciona p/ movimentação strafe
 func camera_strafe_mode(ativar: bool = true):
@@ -839,7 +840,6 @@ func _send_state_to_server(delta: float):
 					velocity,
 					is_running,
 					is_jumping,
-					is_moving
 				)
 				
 # ===== ENVIO DE ANIMAÇÕES (MENOS FREQUENTE) =====
