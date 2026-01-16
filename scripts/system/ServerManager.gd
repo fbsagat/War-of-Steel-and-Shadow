@@ -271,14 +271,14 @@ func _on_peer_disconnected(peer_id: int):
 		round_registry.mark_player_disconnected(round_id, peer_id)
 		_log_debug("  Marcado como desconectado na rodada %d" % round_id)
 		
-		# Remove registro de spawn
-		round_registry.unregister_spawned_player(round_id, peer_id)
-		
 		# Remove node da cena do servidor
 		var player_node = round_registry.get_spawned_player(round_id, peer_id)
-		if player_node and is_instance_valid(player_node) and player_node.is_inside_tree():
+		if player_node and is_instance_valid(player_node):
 			player_node.queue_free()
 			_log_debug("Nó do player removido da cena")
+		
+		# Remove registro de spawn
+		round_registry.unregister_spawned_player(round_id, peer_id)
 		
 		# Verifica se todos desconectaram (auto-end)
 		if round_registry.get_active_player_count(round_id) == 0:
@@ -975,11 +975,6 @@ func _cleanup_round_objects(round_id: int):
 	for player_node in spawned_players:
 		if is_instance_valid(player_node) and player_node.is_inside_tree():
 			player_node.queue_free()
-	
-	# Remove mapa
-	if map_manager and is_instance_valid(map_manager):
-		map_manager.unload_map()
-		map_manager = null
 	
 	_log_debug("✓ Limpeza completa")
 

@@ -186,23 +186,24 @@ func _physics_process(delta: float) -> void:
 	# Animações (sempre server/client)
 	_handle_animations(move_dir)
 	
-	# Sistema de stamina (atualmente verificando em tudo, remoto/server e clientes)
-	# Se estiver se movimentando is_moving recebe true, se estiver totalmente parado is_moving = false
-	#_log_debug("[111]is_running: %s" % is_running)
-	#if is_attacking or is_defending or is_running:
-		#is_moving = true
-	#else:
-		#is_moving = false
-	#
-	#if is_moving and stamina_level > 0:
-		#stamina_level -= STAMINA_DEPLETION_RATE * delta
-		#stamina_level = clamp(stamina_level, 0, MAX_STAMINA)
-	#elif not is_moving:
-		#stamina_level += STAMINA_RECOVERY_RATE * delta
-		#stamina_level = min(stamina_level, MAX_STAMINA)
-	#
-	#_log_debug("[111]is_moving: %s" % is_moving)
-	#_log_debug("[111]STAMINA: %s" % stamina_level)
+	 #Sistema de stamina (atualmente verificando em tudo, remoto/server e clientes)
+	 #Se estiver se movimentando is_moving recebe true, se estiver totalmente parado is_moving = false
+	if is_attacking or is_defending or is_running or is_jumping:
+		is_moving = true
+	else:
+		is_moving = false
+	
+	if is_moving and stamina_level > 0:
+		stamina_level -= STAMINA_DEPLETION_RATE * delta
+		stamina_level = clamp(stamina_level, 0, MAX_STAMINA)
+	elif not is_moving:
+		stamina_level += STAMINA_RECOVERY_RATE * delta
+		stamina_level = min(stamina_level, MAX_STAMINA)
+	
+	if inventory:
+		inventory.set_stamina(stamina_level)
+	
+	#_log_debug("Stamina: %s" % stamina_level)
 	
 func _process(_delta: float) -> void:
 	pass
@@ -474,7 +475,7 @@ func _apply_movement(move_dir: Vector3, delta: float) -> void:
 		return
 		
 	if not is_aiming:
-		if Input.is_action_just_pressed("jump") and is_on_floor() and not inventory_mode:
+		if Input.is_action_just_pressed("jump") and is_on_floor() and not inventory_mode and stamina_level > 0:
 			velocity.y = jump_velocity
 			is_jumping = true
 			run_on_jump = Input.is_action_pressed("run")
@@ -497,7 +498,7 @@ func _apply_movement(move_dir: Vector3, delta: float) -> void:
 			animation_tree["parameters/final_transt/transition_request"] = "jump_land"
 			animation_tree["parameters/final_transt/transition_request"] = "walking_e_blends"
 	else:
-		if Input.is_action_just_pressed("jump") and is_on_floor() and not inventory_mode:
+		if Input.is_action_just_pressed("jump") and is_on_floor() and not inventory_mode and stamina_level > 0:
 			animation_tree.set("parameters/Jump_Full_Short/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 			#velocity.y = jump_velocity / 2.2
 			is_jumping = true
@@ -505,7 +506,7 @@ func _apply_movement(move_dir: Vector3, delta: float) -> void:
 	# Movimento no chão
 	if is_on_floor():
 		var speed: float = max_speed
-		if Input.is_action_pressed("run") and not is_aiming:
+		if Input.is_action_pressed("run") and not is_aiming and stamina_level > 0:
 			speed *= run_multiplier
 		elif Input.is_action_pressed("walking"):
 			speed = walking_speed
@@ -1162,6 +1163,10 @@ func action_sword_attack_call():
 	
 	# Não ataca enquanto estiver em um pulo
 	if is_jumping:
+		return
+	
+	# Não atacar com stamina zerada
+	if stamina_level <= 0:
 		return
 	
 	# Espera o atraque anterir, se estiver em curso, acabar
