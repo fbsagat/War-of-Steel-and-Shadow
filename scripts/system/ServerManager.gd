@@ -247,7 +247,7 @@ func _on_peer_connected(peer_id: int):
 	network_manager.rpc_id(peer_id, "update_client_info", configs)
 	
 	# Sistema de teste automático (se ativado)
-	if fast_round and (multiplayer.get_peers().size() == simulador_players_qtd) and test_manager:
+	if fast_round and (multiplayer.get_peers().size() >= simulador_players_qtd) and test_manager:
 		test_manager.criar_partida_teste()
 
 func _on_peer_disconnected(peer_id: int):
@@ -271,14 +271,14 @@ func _on_peer_disconnected(peer_id: int):
 		round_registry.mark_player_disconnected(round_id, peer_id)
 		_log_debug("  Marcado como desconectado na rodada %d" % round_id)
 		
-		# Remove node da cena do servidor
-		var player_node = round_registry.get_spawned_player(round_id, peer_id)
-		if player_node and is_instance_valid(player_node):
-			player_node.queue_free()
-			_log_debug("Nó do player removido da cena")
-		
 		# Remove registro de spawn
 		round_registry.unregister_spawned_player(round_id, peer_id)
+		
+		# Remove node da cena do servidor
+		var player_node = round_registry.get_spawned_player(round_id, peer_id)
+		if player_node and is_instance_valid(player_node) and player_node.is_inside_tree():
+			player_node.queue_free()
+			_log_debug("Nó do player removido da cena")
 		
 		# Verifica se todos desconectaram (auto-end)
 		if round_registry.get_active_player_count(round_id) == 0:
@@ -976,6 +976,11 @@ func _cleanup_round_objects(round_id: int):
 		if is_instance_valid(player_node) and player_node.is_inside_tree():
 			player_node.queue_free()
 	
+	# Remove mapa
+	if map_manager and is_instance_valid(map_manager):
+		map_manager.unload_map()
+		map_manager = null
+	
 	_log_debug("✓ Limpeza completa")
 
 # ===== VALIDAÇÃO ANTI-CHEAT =====
@@ -1066,10 +1071,12 @@ func _apply_player_state_on_server(p_id: int, pos: Vector3, rot: Vector3, vel: V
 	# Aplica no nó
 	node.global_position = pos
 	node.global_rotation = rot
+	if node.has_method("set_velocity"):
+		node.set_velocity(vel)
 	
-	node.is_running = running
-	node.is_jumping = jumping
-	node.velocity = vel
+	# Atualiza estado interno
+	if node.has_method("_set_state"):
+		node._set_state({"running": running, "jumping": jumping})
 	
 	# Atualiza player_states para validação futura
 	player_states[p_id] = {
@@ -1720,19 +1727,18 @@ func _log_debug(message: String):
 
 func _print_player_states():
 	"""Debug: Imprime estados de todos os players para validação"""
-	_log_debug("[PLAYSTATES]========================================")
-	_log_debug("[PLAYSTATES]ESTADOS DOS JOGADORES NO SERVIDOR")
-	_log_debug("[PLAYSTATES]Total: %d" % player_states.size())
+	_log_debug("========================================")
+	_log_debug("ESTADOS DOS JOGADORES NO SERVIDOR")
+	_log_debug("Total: %d" % player_states.size())
 	
 	for p_id in player_states.keys():
 		var state = player_states[p_id]
 		var age = (Time.get_ticks_msec() - state["timestamp"]) / 1000.0
 		
-		_log_debug("[PLAYSTATES]Player %d:" % p_id)
-		_log_debug("[PLAYSTATES]Pos: %s" % str(state["pos"]))
-		_log_debug("[PLAYSTATES]Vel: %s (%.2f m/s)" % [str(state["vel"]), state["vel"].length()])
-		_log_debug("[PLAYSTATES]Rot: %s" % str(state["rot"]))
-		_log_debug("[PLAYSTATES]Última atualização: %.2f s atrás" % age)
-		_log_debug("[PLAYSTATES]------------")
+		_log_debug("Player %d:" % p_id)
+		_log_debug("Pos: %s" % str(state["pos"]))
+		_log_debug("Vel: %s (%.2f m/s)" % [str(state["vel"]), state["vel"].length()])
+		_log_debug("Rot: %s" % str(state["rot"]))
+		_log_debug("Última atualização: %.2f s atrás" % age)
 	
 	_log_debug("========================================")
