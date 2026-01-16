@@ -128,7 +128,7 @@ func _physics_process(delta: float) -> void:
 	
 	# ✅ No SERVIDOR, sempre processa física para TODOS os jogadores
 	if _is_server:
-		if is_local_player:
+		if not is_local_player:
 			move_dir = _handle_movement_input(delta)
 		# ✅ Sempre executa move_and_slide() no servidor
 		move_and_slide()
@@ -457,22 +457,18 @@ func _handle_animations(move_dir):
 # Movimentos: Aplica conforme o modo ativado no momento: free_cam ou locked
 func _handle_movement_input(delta: float):
 	var move_dir: Vector3
-	if is_aiming:
-		move_dir = _get_movement_direction_locked()
-	else:
-		move_dir = _get_movement_direction_free_cam()
+	# move_dir zempre zerada para servidor, ele recebe movimentação via rpc, não via input
+	if not _is_server:
+		if is_aiming:
+			move_dir = _get_movement_direction_locked()
+		else:
+			move_dir = _get_movement_direction_free_cam()
 	_apply_movement(move_dir if not inventory_mode else Vector3(0, 0, 0), delta)
 	return move_dir
 	
 # Movimentos: Pulo e corrida
 func _apply_movement(move_dir: Vector3, delta: float) -> void:
 	# Pulo: Preserva velocidade horizontal EXATA do chão
-	
-	# Zera a velocidade do player para a cena dele no servidor quando não está recebendo 
-	# atualizações de estado do cliente (prevenção de arrasto)
-	if _is_server and not move_dir:
-		velocity = Vector3.ZERO
-		return
 		
 	if not is_aiming:
 		if Input.is_action_just_pressed("jump") and is_on_floor() and not inventory_mode and stamina_level > 0:
@@ -1365,7 +1361,6 @@ func initialize(p_id: int, p_name: String, spawn_pos: Vector3):
 
 # Função para equipar itens magicamente (Trainer de testes / Remover em produção)
 func handle_test_equip_inputs_call():
-	print("handle_test_equip_inputs_call")
 	if not inventory_mode:
 		var mapped_id: int
 		var test_equip_map: Dictionary = {}
