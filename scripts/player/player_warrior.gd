@@ -1363,7 +1363,7 @@ func initialize(p_id: int, p_name: String, spawn_pos: Vector3):
 
 # Função para equipar itens magicamente (Trainer de testes / Remover em produção)
 func handle_test_equip_inputs_call():
-	print("handle_test_equip_inputs_call")
+
 	if not inventory_mode:
 		var mapped_id: int
 		var test_equip_map: Dictionary = {}
