@@ -687,17 +687,6 @@ func _server_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, r
 				server_manager._kick_player(p_id, "Movimento suspeito detectado")
 			return
 	
-	# ATUALIZA ESTADO NO SERVIDOR (opcional, para autoridade)
-	if server_manager and server_manager.player_states:
-		server_manager.player_states[p_id] = {
-			"pos": pos,
-			"rot": rot,
-			"vel": vel,
-			"running": running,
-			"jumping": jumping,
-			"timestamp": Time.get_ticks_msec()
-		}
-	
 	server_manager._apply_player_state_on_server(p_id, pos, rot, vel, running, jumping)
 	
 	# REDISTRIBUI PARA TODOS OS OUTROS CLIENTES
@@ -708,9 +697,10 @@ func _server_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, r
 @rpc("authority", "call_remote", "unreliable")
 func _client_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
 	"""RPC: Cliente recebe estado de OUTRO jogador"""
-	# Só processa se NÃO for servidor VERIFICAR
-	#if multiplayer.has_multiplayer_peer() and multiplayer.get_unique_id() == 1:
-		#return
+
+	# Só processa se NÃO for servidor (o servidor já processa em _apply_player_state_on_server em ServerManager)
+	if multiplayer.has_multiplayer_peer() and multiplayer.get_unique_id() == 1:
+		return
 	
 	# ENCONTRA O PLAYER NA CENA (nome = player_id)
 	var player = game_manager.players_node.get_node_or_null(str(p_id))
@@ -727,6 +717,8 @@ func _client_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, r
 func send_player_animation_state(p_id: int, speed: float, attacking: bool, defending: bool,
 	jumping: bool, aiming: bool, running: bool, block_attacking: bool, on_floor: bool):
 	"""Envia estado de animação do jogador para o servidor (UNRELIABLE - menos frequente)"""
+	
+	# Verifica se está conectado
 	if not is_connected_:
 		return
 	
@@ -741,14 +733,16 @@ func _server_player_animation_state(p_id: int, speed: float, attacking: bool, de
 	var round_id = round_registry.get_round_by_player_id(p_id)["round_id"]
 	var players_round = round_registry.get_active_players_ids(round_id)
 	
+	# Se não for o servidor, não recebe
 	if not (multiplayer.has_multiplayer_peer() and multiplayer.get_unique_id() == 1):
 		return
 	
+	# Verificar se o sender é quem diz ser (outro player não pode enviar estado de outro/apenas o seu próprio)
 	var sender_id = multiplayer.get_remote_sender_id()
 	if sender_id != p_id:
 		return
 	
-	# PROPAGA PARA TODOS OS OUTROS CLIENTES
+	# Propaga para todos os outros cliente
 	for peer_id in players_round:
 		if peer_id != p_id:
 			rpc_id(peer_id, "_client_player_animation_state", p_id, speed, attacking, 
@@ -758,6 +752,8 @@ func _server_player_animation_state(p_id: int, speed: float, attacking: bool, de
 func _client_player_animation_state(p_id: int, speed: float, attacking: bool, defending: bool,
 									jumping: bool, aiming: bool, running: bool, block_attacking: bool, on_floor: bool):
 	"""RPC: Cliente recebe estado de animação de outro jogador"""
+	
+	# Servidor não recebe estado aqui
 	if multiplayer.has_multiplayer_peer() and multiplayer.get_unique_id() == 1:
 		return
 	

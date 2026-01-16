@@ -98,7 +98,6 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 	
 	# Registra jogadores no PlayerRegistry
 	var players: Array = []
-	
 	for i in range(num_players):
 		var peer_id = connected_peers[i]
 		
@@ -144,7 +143,7 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 		server_manager.min_players_to_start,
 		server_manager.max_players_per_room
 	)
-	
+
 	if room_data.is_empty():
 		_log_debug("❌ Falha ao criar sala!")
 		return
@@ -179,7 +178,7 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 	
 	# Obtém dados atualizados da sala
 	room_data = room_registry.get_room(room_id)
-	
+
 	# Cria rodada
 	var round_data = round_registry.create_round(
 		room_id,
@@ -251,7 +250,7 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 	_log_debug("  ✓ Enviando dados para clientes...")
 	
 	# Envia comando de início para todos os clientes
-	for room_player in room_data["players"]:
+	for room_player in match_data["players"]:
 		network_manager.rpc_id(room_player["id"], "_client_round_started", match_data)
 	
 	# Instancia rodada no servidor

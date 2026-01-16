@@ -1169,6 +1169,8 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 48.423798, 0.25166428, 39.744
 
 [node name="Arvore_9" parent="nature" instance=ExtResource("4_xuisu")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 48.423798, 0.25166428, 28.268715)
+collision_layer = 0
+collision_mask = 16
 
 [node name="Arvore_17" parent="nature" instance=ExtResource("4_xuisu")]
 transform = Transform3D(1.215, 0, 0, 0, 1.215, 0, 0, 0, 1.215, -48.01832, 0.70078623, 38.773434)
