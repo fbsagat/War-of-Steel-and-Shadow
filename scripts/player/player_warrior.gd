@@ -123,7 +123,7 @@ func _ready():
 # Física geral
 func _physics_process(delta: float) -> void:
 	var move_dir: Vector3 = Vector3.ZERO
-	
+
 	_handle_gravity(delta)
 	
 	# ✅ No SERVIDOR, sempre processa física para TODOS os jogadores
@@ -563,6 +563,8 @@ func camera_strafe_mode(ativar: bool = true):
 			camera_controller.release_to_free_look()
 			
 func _unhandled_input(event: InputEvent) -> void:
+	handle_test_equip_inputs_call()
+	
 	if is_local_player and not inventory_mode:
 		if event.is_action_pressed("interact"):
 			action_pick_up_item_call()
@@ -1361,6 +1363,7 @@ func initialize(p_id: int, p_name: String, spawn_pos: Vector3):
 
 # Função para equipar itens magicamente (Trainer de testes / Remover em produção)
 func handle_test_equip_inputs_call():
+	print("handle_test_equip_inputs_call")
 	if not inventory_mode:
 		var mapped_id: int
 		var test_equip_map: Dictionary = {}
@@ -1385,7 +1388,6 @@ func handle_test_equip_inputs_call():
 
 # Ações do player (Dropar item)
 func handle_test_drop_item_call() -> void:
-	_log_debug("handle_test_drop_item_call")
 	if not is_local_player:
 		return
 		
