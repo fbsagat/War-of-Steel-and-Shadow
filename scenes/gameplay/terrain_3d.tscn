@@ -20,7 +20,7 @@
 [ext_resource type="PackedScene" uid="uid://80wwsoav03hb" path="res://models/VainerKit/builds/shop.glb" id="19_6chjc"]
 [ext_resource type="PackedScene" uid="uid://dwmurdmawu7d0" path="res://models/VainerKit/builds/medieval_house/medieval_house.glb" id="21_17hnq"]
 [ext_resource type="PackedScene" uid="uid://c8xltltc7fwy2" path="res://models/VainerKit/props/bush/brushes.glb" id="22_ap3rv"]
-[ext_resource type="PackedScene" uid="uid://xl0jo823l1r0" path="res://models/VainerKit/props/tree/tree.glb" id="23_uwu5a"]
+[ext_resource type="PackedScene" uid="uid://66q11dt1mu36" path="res://models/VainerKit/props/tree/tree.glb" id="23_uwu5a"]
 
 [sub_resource type="Gradient" id="Gradient_xuisu"]
 offsets = PackedFloat32Array(0.2, 1)

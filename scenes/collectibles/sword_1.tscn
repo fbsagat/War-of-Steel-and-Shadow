@@ -1,6 +1,6 @@
 [gd_scene load_steps=8 format=4 uid="uid://n0a1enca2row"]
 
-[ext_resource type="Script" uid="uid://16m0c3woxxpe" path="res://scripts/gameplay/itens_coletaveis.gd" id="1_b6ki8"]
+[ext_resource type="Script" uid="uid://bfl717tl211j3" path="res://scripts/gameplay/itens_coletaveis.gd" id="1_b6ki8"]
 [ext_resource type="Texture2D" uid="uid://dhvs3taulqfc2" path="res://models/Character/Knight_knight_texture.png" id="2_yvkpt"]
 
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_fr844"]

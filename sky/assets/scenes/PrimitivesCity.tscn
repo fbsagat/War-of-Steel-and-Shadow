@@ -2,9 +2,9 @@
 
 [ext_resource type="PackedScene" uid="uid://bjmikbn4ac2lu" path="res://sky/assets/scenes/BuildingBlocks.tscn" id="1"]
 [ext_resource type="PackedScene" uid="uid://1ev4o7q8l4ey" path="res://sky/assets/meshes/Compass.tscn" id="2_gjkdl"]
-[ext_resource type="Texture2D" uid="uid://hl8w41k0t8ia" path="res://sky/assets/textures/ProtGrid0.jpg" id="8"]
-[ext_resource type="ArrayMesh" uid="uid://d137osfsks6c" path="res://sky/assets/meshes/Teapot.obj" id="9"]
-[ext_resource type="ArrayMesh" uid="uid://cr4asb0j76cfa" path="res://sky/assets/meshes/KnotTorus.obj" id="10"]
+[ext_resource type="Texture2D" uid="uid://dev2bqtu3jx5b" path="res://sky/assets/textures/ProtGrid0.jpg" id="8"]
+[ext_resource type="ArrayMesh" uid="uid://bvb6vhsm6bls" path="res://sky/assets/meshes/Teapot.obj" id="9"]
+[ext_resource type="ArrayMesh" uid="uid://b0o7jcqy4vbn6" path="res://sky/assets/meshes/KnotTorus.obj" id="10"]
 
 [sub_resource type="StandardMaterial3D" id="1"]
 albedo_color = Color(0.396078, 0.396078, 0.396078, 1)
