@@ -1115,6 +1115,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.427544, -0.15174103, 39.01
 
 [node name="water" type="MeshInstance3D" parent="."]
 transform = Transform3D(197.08347, 0, 0, 0, 10.115421, 0, 0, 0, 188.34369, -44.468224, -13.3905325, -28.809319)
+visible = false
 mesh = SubResource("BoxMesh_uwu5a")
 
 [node name="wood_bridge" parent="." instance=ExtResource("11_3txeo")]
