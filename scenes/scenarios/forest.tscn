@@ -1,0 +1,13 @@
+[gd_scene load_steps=2 format=3 uid="uid://0yuy536rv6ae"]
+
+[ext_resource type="PackedScene" uid="uid://dqsiixrp4kuwq" path="res://models/VainerKit/props/tree/forest.glb" id="1_isn7q"]
+
+[node name="forest" type="Node3D"]
+
+[node name="forest" parent="." instance=ExtResource("1_isn7q")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.7845459, 0)
+
+[node name="Mball_001" parent="forest" index="0"]
+lod_bias = 0.1
+
+[editable path="forest"]
