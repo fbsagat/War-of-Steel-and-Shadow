@@ -619,7 +619,8 @@ func _start_round_locally(match_data: Dictionary):
 	round_node.add_child(objects_node)
 	
 	# Carrega o mapa
-	await map_manager.load_map(match_data["map_scene"], round_node, match_data["settings"])
+	await map_manager.load_map(match_data["map_scene"], round_node)
+	await map_manager.apply_map_configs(match_data["settings"])
 
 	# Spawna todos os jogadores
 	for player_data in match_data["players"]:

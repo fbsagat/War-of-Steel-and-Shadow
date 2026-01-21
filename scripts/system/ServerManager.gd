@@ -729,6 +729,9 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 	var final_settings = round_data.get("settings", {})
 	var map_scene_ = final_settings.get("map_scene", map_scene)
 	
+	# Carrega o mapa
+	await map_manager.load_map(map_scene, round_node)
+	
 	# Gera spawn points para todos os jogadores
 	var players_count: int = round_registry.get_total_players(round_data["round_id"])
 	final_settings["round_players_count"] = players_count
@@ -790,8 +793,8 @@ func _server_instantiate_round(match_data: Dictionary, round_node, players_node)
 	
 	_log_debug("Instanciando rodada no servidor...")
 	
-	# Carrega o mapa
-	await map_manager.load_map(match_data["map_scene"], round_node, match_data["settings"])
+	# Aplica configurações de mapa
+	await map_manager.apply_map_configs(match_data["settings"])
 	var terrain_3d = round_node.get_node_or_null("Terrain3D")
 	
 	# Salva referência no RoundRegistry

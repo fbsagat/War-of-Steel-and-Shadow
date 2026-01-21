@@ -218,6 +218,9 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 	
 	_log_debug("  ✓ Rodada criada: ID %d" % round_data["round_id"])
 	
+	# Carrega o mapa
+	await map_manager.load_map(server_manager.map_scene, round_node)
+	
 	# Gera spawn points
 	var players_qtd = round_registry.get_total_players(round_data["round_id"])
 	var spawn_points = map_manager._create_spawn_points(players_qtd)
@@ -289,8 +292,8 @@ func _server_instantiate_round(match_data: Dictionary, players_node, round_node)
 	
 	_log_debug("  Instanciando rodada no servidor...")
 	
-	# Carrega o mapa
-	await map_manager.load_map(match_data["map_scene"], round_node, match_data["settings"])
+	# Aplica configurações de mapa
+	await map_manager.apply_map_configs(match_data["settings"])
 	var terrain_3d = round_node.get_node_or_null("Terrain3D")
 	
 	# Salva referência no RoundRegistry

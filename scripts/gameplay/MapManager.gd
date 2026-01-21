@@ -43,11 +43,10 @@ signal spawn_points_ready(count: int)
 # ===== CARREGAMENTO DE MAPA =====
 
 ## Carrega um mapa a partir do caminho da cena
-func load_map(map_scene_path: String, round_node, settings: Dictionary = {}):
+func load_map(map_scene_path: String, round_node):
 	"""Carrega um mapa a partir do caminho da cena. 
 	_handle_start_round no ServerManager é quem envia informações(settings) para cá"""
 	_log_debug("Carregando mapa: %s" % map_scene_path)
-	map_settings = settings
 	
 	# Carrega a cena do mapa
 	var map_scene = load(map_scene_path)
@@ -60,15 +59,17 @@ func load_map(map_scene_path: String, round_node, settings: Dictionary = {}):
 	if current_map == null:
 		push_error("Falha ao instanciar mapa")
 		return false
+		
+	# Adiciona o mapa à cena
+	round_node.add_child(current_map)
 	
+func apply_map_configs(settings: Dictionary = {}):
 	# Aplicar configurações do Terrain3D
+	# Ainda não aplica cada para Terrain3D
 	# Gerar um terreno novo com as configurações compartilhadas
 	
 	# Aplicar configurações do Sky3D
 	apply_sky_configs(current_map.get_node("Sky3D"), settings.get("sky_rand_configs"))
-	
-	# Adiciona o mapa à cena
-	round_node.add_child(current_map)
 	
 	# Aguarda um frame para garantir que tudo foi adicionado à árvore
 	await get_tree().process_frame
@@ -96,6 +97,15 @@ func _create_spawn_points(match_players_count: int) -> Array:
 	Retorna Array de Dictionaries: [{position: Vector3, rotation: Vector3}]
 	"""
 	spawn_points.clear()
+	
+	if current_map:
+		var central_spawn = current_map.get_node_or_null("central_spawn") as Node3D
+		if central_spawn:
+			spawn_center = central_spawn.global_position
+		else:
+			print("[''']central_spawn: ", central_spawn)
+	else:
+		print("['''] Sem current_map")
 	
 	# Caso especial: apenas 1 jogador
 	if match_players_count == 1:
