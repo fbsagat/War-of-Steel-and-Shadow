@@ -877,6 +877,9 @@ collision_mode = 3
 top_level = true
 metadata/_edit_lock_ = true
 
+[node name="central_spawn" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -44.70328, -0.6387582, -65.43645)
+
 [node name="Sky3D" parent="." instance=ExtResource("3_t70ke")]
 editor_time_enabled = false
 current_time = 7.851600000000008
