@@ -1,6 +1,6 @@
 [gd_scene load_steps=4 format=3 uid="uid://d1omd2jpgr742"]
 
-[ext_resource type="Script" uid="uid://dei66bc8vi4m6" path="res://scripts/gameplay/primitive_enemy.gd" id="1_btjxc"]
+[ext_resource type="Script" uid="uid://criwb1jvsj8vg" path="res://scripts/gameplay/primitive_enemy.gd" id="1_btjxc"]
 
 [sub_resource type="CapsuleMesh" id="CapsuleMesh_bbddy"]
 

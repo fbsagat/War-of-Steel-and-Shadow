@@ -2,7 +2,7 @@
 
 [ext_resource type="Shader" uid="uid://y4m81ughafvf" path="res://vfx/fire/shader/s_special_shader.tres" id="1_lqls4"]
 [ext_resource type="Shader" uid="uid://cn4baexdjokbs" path="res://vfx/fire/shader/s_smoke_shader.tres" id="2_lbo5b"]
-[ext_resource type="Script" uid="uid://cwewmwywm382a" path="res://scripts/objects/torch_lit.gd" id="3_7gpcm"]
+[ext_resource type="Script" uid="uid://ywf7cbswl6sg" path="res://scripts/objects/torch_lit.gd" id="3_7gpcm"]
 [ext_resource type="Shader" uid="uid://w7vq34wwolki" path="res://vfx/fire/shader/ember.tres" id="4_pfwh2"]
 [ext_resource type="PackedScene" uid="uid://bfrcw6dl1in5o" path="res://models/VainerKit/props/campfire/campfire.glb" id="5_0cly2"]
 

@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://0yuy536rv6ae"]
 
-[ext_resource type="PackedScene" uid="uid://bk0hy5d6yeyq" path="res://models/VainerKit/props/tree/forest.glb" id="1_isn7q"]
+[ext_resource type="PackedScene" uid="uid://dqsiixrp4kuwq" path="res://models/VainerKit/props/tree/forest.glb" id="1_isn7q"]
 
 [node name="forest" type="Node3D"]
 
