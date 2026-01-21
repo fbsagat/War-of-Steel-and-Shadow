@@ -122,9 +122,7 @@ var actual_enabled_hitbox: Area3D = null
 
 # Ready
 func _ready():
-	# Inicia o timer de detecção de abaixo do chão
-	underground_timer = $underground_timer
-	underground_timer.start()
+	pass
 	
 # Física geral
 func _physics_process(delta: float) -> void:
@@ -210,11 +208,9 @@ func _physics_process(delta: float) -> void:
 		inventory.set_stamina(stamina_level)
 	#_log_debug("Stamina: %s" % stamina_level)
 	
-func _on_underground_timer_timeout() -> void:
-	# Verificador de bug (player abaixo do chão = reset)
-	if terrain_ and central_spawn and position.y <= y_pos_catch:
-		global_position = central_spawn.global_position
-	
+func _respawn_player(_position : Vector3):
+	global_position = _position
+
 func _process(_delta: float) -> void:
 	pass
 	
@@ -588,6 +584,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			action_block_attack_call()
 		elif event.is_action_pressed("drop_test"):
 			handle_test_drop_item_call()
+		elif event.is_action_pressed("repawn_player"):
+			handle_test_repawn_player_call()
 	if event.is_action_pressed("ui_inventory"):
 		request_inventory_toggle()
 	if event.is_action_pressed("ui_cancel"):
@@ -1387,7 +1385,7 @@ func handle_test_equip_inputs_call():
 			# envia para o servidor (se conectado)
 			if network_manager and network_manager.is_connected:
 				network_manager.request_trainer_spawn_item(player_id, mapped_id)
-
+				
 # Ações do player (Dropar item)
 func handle_test_drop_item_call() -> void:
 	if not is_local_player:
@@ -1396,6 +1394,14 @@ func handle_test_drop_item_call() -> void:
 	if network_manager and network_manager.is_connected:
 		network_manager.handle_test_drop_item_call(player_id)
 
+# Ações do player (Respawnar novamente)
+func handle_test_repawn_player_call():
+	if not is_local_player:
+		return
+	
+	if network_manager and network_manager.is_connected:
+		network_manager.handle_test_repawn_player_call(player_id)
+	
 # Executa quando o player equipa algum item / muda visual do modelo
 func apply_visual_equip_on_player_node(item_mapped_id, unnequip = false, from_inv_men = false):
 	"""Aplica mudança visual em itens equipéveis que estão como filhos no nó do player

@@ -572,6 +572,11 @@ func handle_test_drop_item_call(player_id: int):
 	 na frente dele (trainer de testes, apenas se estiver no modo de testes)"""
 	rpc_id(1, "_server_trainer_drop_item", player_id)
 
+func handle_test_repawn_player_call(player_id: int):
+	"""Requisição do player: Chama RPC no servidor para pedir para respawnar novamente
+	(trainer de testes, apenas se estiver no modo de testes)"""
+	rpc_id(1, "_server_trainer_repawn_player", player_id)
+
 func request_drop_item(player_id, obj_id):
 	"""Requisição do player: Chama RPC no servidor para pedir para dropar um item"""
 	rpc_id(1, "_server_drop_player_item", player_id, obj_id)
@@ -613,6 +618,12 @@ func _server_trainer_drop_item(player_id):
 	server_manager._server_trainer_drop_item(player_id)
 
 @rpc("any_peer", "call_remote", "unreliable")
+func _server_trainer_repawn_player(player_id):
+	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
+		return
+	server_manager._server_trainer_repawn_player(player_id)
+
+@rpc("any_peer", "call_remote", "unreliable")
 func _server_drop_player_item(player_id, obj_id):
 	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
 		return
@@ -624,6 +635,13 @@ func server_apply_picked_up_item(player_id):
 	var player_node = game_manager.players_node.get_node_or_null(str(player_id))
 	if player_node and player_node.has_method("action_pick_up_item"):
 		player_node.action_pick_up_item()
+	
+@rpc("authority", "call_remote", "reliable")
+func server_apply_repawn_player(player_id, position: Vector3):
+	# Encontra o player e executa a mudança de respawn
+	var player_node = game_manager.players_node.get_node_or_null(str(player_id))
+	if player_node and player_node.has_method("_respawn_player"):
+		player_node._respawn_player(position)
 
 @rpc("authority", "call_remote", "reliable")
 func server_apply_equiped_item(player_id: int, item_id: int, unnequip: bool = false, from_inv_men = false, is_swap = false):

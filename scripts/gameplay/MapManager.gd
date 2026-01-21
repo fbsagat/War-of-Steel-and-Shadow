@@ -16,6 +16,8 @@ class_name MapManager
 @export var spawn_height: float = 1.0
 ## Centro do círculo
 @export var spawn_center: Vector3 = Vector3.ZERO
+## Nó filho do mapa que se existir definirá o ponto para adição de spawns
+@export var central_spawn: Node3D = null
 ## Variação aleatória na posição (em unidades)
 @export var position_variance: float = 4.0
 ## Variação na rotação (em radianos, ~5.7 graus)
@@ -98,14 +100,9 @@ func _create_spawn_points(match_players_count: int) -> Array:
 	"""
 	spawn_points.clear()
 	
-	if current_map:
-		var central_spawn = current_map.get_node_or_null("central_spawn") as Node3D
-		if central_spawn:
-			spawn_center = central_spawn.global_position
-		else:
-			print("[''']central_spawn: ", central_spawn)
-	else:
-		print("['''] Sem current_map")
+	central_spawn = current_map.get_node_or_null("central_spawn") as Node3D
+	if central_spawn:
+		spawn_center = central_spawn.global_position
 	
 	# Caso especial: apenas 1 jogador
 	if match_players_count == 1:

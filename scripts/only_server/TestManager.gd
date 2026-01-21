@@ -262,7 +262,7 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 	# Inicia rodada (ativa timers)
 	round_registry.start_round(round_data["round_id"])
 	
-	if server_manager.item_trainer:
+	if server_manager.test_trainer:
 		# Spawna alguns objetos
 		object_manager.spawn_item(objects_node, round_data["round_id"], "torch", Vector3(0, 2, 0), Vector3(0, 0, 0))
 		object_manager.spawn_item(objects_node, round_data["round_id"], "torch", Vector3(1, 4, 1), Vector3(0, 0, 0))
@@ -392,7 +392,6 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 	player_instance.add_to_group("remote_player")
 	player_instance.add_to_group("player")
 	
-	
 	# IMPORTANTE: No servidor, nenhum player é "local"
 	player_instance.is_local_player = false
 	
@@ -403,6 +402,10 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 	player_instance.item_database = item_database
 	player_instance.network_manager = network_manager
 	player_instance.server_manager = server_manager
+	
+	# Preenche terreno e central_spawn
+	player_instance.terrain_ = map_manager.current_map
+	player_instance.central_spawn = player_instance.terrain_.get_node_or_null("central_spawn")
 	
 	# AGUARDA PROCESSAMENTO COMPLETO
 	if not player_instance.is_node_ready():

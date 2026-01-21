@@ -23,7 +23,7 @@ class_name ServerManager
 ## [TESTES] Define a quantidade de instnacias de clientes para executar fast_round
 @export var simulador_players_qtd: int = 2
 ## [TESTES] Dropa itens perto dos players e ativa o trainer de cada player
-@export var item_trainer: bool = true
+@export var test_trainer: bool = true
 
 @export_category("Server Settings")
 @export var server_port: int = 7777
@@ -766,7 +766,7 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 	# INICIA a rodada (ativa timers e verificações)
 	round_registry.start_round(round_data["round_id"])
 	
-	if item_trainer:
+	if test_trainer:
 		# Spawna alguns objetos
 		object_manager.spawn_item(objects_node, round_data["round_id"], "torch", Vector3(0, 2, 0), Vector3(0, 0, 0))
 		object_manager.spawn_item(objects_node, round_data["round_id"], "torch", Vector3(1, 4, 1), Vector3(0, 0, 0))
@@ -859,6 +859,10 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, pl
 	player_instance.item_database = item_database
 	player_instance.network_manager = network_manager
 	player_instance.server_manager = self
+	
+	# Preenche terreno e central_spawn
+	player_instance.terrain_ = map_manager.current_map
+	player_instance.central_spawn = player_instance.terrain_.get_node_or_null("central_spawn")
 	
 	# Registra node no PlayerRegistry
 	player_registry.register_player_node(player_data["id"], player_instance)
@@ -1364,7 +1368,7 @@ func _server_validate_swap_items(dragged_item_id: String, target_item_id: String
 func _server_trainer_spawn_item(requesting_player_id: int, item_id: int):
 	"""Servidor recebe pedido de spawnar item na frente do player para testes"""
 	
-	if not item_trainer:
+	if not test_trainer:
 		return
 	
 	# Não quero o shield_3, quero a tocha
@@ -1389,7 +1393,7 @@ func _server_trainer_drop_item(player_id):
 	"""Servidor recebe pedido de dropar item do inventário(apenas do inventário) na frente do player para testes"""
 	_log_debug('_server_trainer_drop_item')
 	
-	if not item_trainer:
+	if not test_trainer:
 		return
 	
 	var round_ = round_registry.get_round_by_player_id(player_id)
@@ -1420,7 +1424,36 @@ func _server_trainer_drop_item(player_id):
 		# Retomar o nó do item de volta à cena no object manager
 		object_manager.retrieve_stored_object(objects_node, round_["round_id"], obj_id, spawn_pos, Vector3(0, 0, 0,), player_id)
 		player_registry.remove_item_from_inventory(round_["round_id"], player_id, obj_id)
+		
+@rpc("any_peer", "call_remote", "reliable")
+func _server_trainer_repawn_player(player_id):
+	"""Servidor recebe pedido de respawnar player para testes"""
 	
+	# Só passar se estiver com trainer ligado
+	if not test_trainer:
+		return
+	
+	var player = player_registry.get_player(player_id)
+	_log_debug("%s pediu para spawnar novamente" % player["name"])
+	
+	var round_id: int = player_registry.get_player_round(player_id)
+	var round_ = round_registry.get_round(round_id)
+	var round_data = round_registry.get_round(round_id)
+	
+	var players_node = round_data["round_node"].get_node_or_null("Players")
+	if not players_node:
+		return
+	
+	# Aplica na cena de player do servidor
+	var player_node = players_node.get_node_or_null(str(player_id))
+	if player_node and player_node.has_method("_respawn_player"):
+		player_node._respawn_player(map_manager.spawn_center)
+	
+	# Aplica nas cenas do players remotos
+	for peer in round_["players"]:
+		if _is_peer_connected(peer["id"]):
+			network_manager.rpc_id(peer["id"], "server_apply_repawn_player", player_id, map_manager.spawn_center)
+
 @rpc("any_peer", "call_remote", "reliable")
 func _server_validate_drop_item(requesting_player_id: int, obj_id: int):
 	"""Servidor recebe pedido de drop, valida e spawna item executando drop_item()
