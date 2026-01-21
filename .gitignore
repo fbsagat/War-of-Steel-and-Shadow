@@ -53,7 +53,7 @@ desktop.ini
 /build/
 
 # Pasta específica do projeto (dados gerados de terreno)
-/scenes/system/terrain_data/
+
 
 # Arquivos binários/gerados que não precisam ser versionados
 *.stackdump
