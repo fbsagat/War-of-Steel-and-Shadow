@@ -1369,19 +1369,19 @@ func handle_test_equip_inputs_call():
 		var test_equip_map: Dictionary = {}
 
 		# preenche o resto até 8 com o padrão action_n -> n
-		for i in range(1, 9):
+		for i in range(1, 10):
 			var key: String = "test_equip%d" % i
 			test_equip_map[key] = i
 
 		# Checa entradas em ordem de 1..8 e pega o primeiro pressionado
-		for i in range(1, 9):
+		for i in range(1, 10):
 			var key := "test_equip%d" % i
 			if Input.is_action_just_pressed(key):
 				mapped_id = i
 				break # evita sobrescrever com outra ação no mesmo frame
 
 		# Somente envie ao servidor / equipe se o mapped_id estiver no intervalo válido 1..8
-		if mapped_id >= 1 and mapped_id <= 8:
+		if mapped_id >= 1 and mapped_id <= 9:
 			# envia para o servidor (se conectado)
 			if network_manager and network_manager.is_connected:
 				network_manager.request_trainer_spawn_item(player_id, mapped_id)

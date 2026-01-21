@@ -1364,6 +1364,10 @@ func _server_trainer_spawn_item(requesting_player_id: int, item_id: int):
 	if not item_trainer:
 		return
 	
+	# Não quero o shield_3, quero a tocha
+	if item_id == 9:
+		item_id = 10
+	
 	var player = player_registry.get_player(requesting_player_id)
 	var round_ = round_registry.get_round_by_player_id(player["id"])
 	_log_debug("[ITEM]📦 Player %s: Trainer pediu para spawnar item %d na sua frente, no round %d" % [player["name"], item_id, round_["round_id"]])
