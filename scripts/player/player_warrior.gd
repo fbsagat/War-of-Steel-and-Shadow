@@ -19,6 +19,7 @@ extends CharacterBody3D
 @export var preserve_run_on_jump: bool = true
 @export var gravity: float = 20.0
 @export var aiming_jump_multiplyer: float = 4.2
+@export var y_pos_catch: int = -10 # Posição no eixo y para resgatar o nó para o respawn (antibug)
 
 @export_category("Player Actions")
 @export var hide_itens_on_start: bool = true
@@ -94,6 +95,9 @@ const STAMINA_RECOVERY_RATE: float = 15.0   # por segundo
 const MAX_DIRECTION_HISTORY = 2
 
 # Variáveis de sincronização com terreno
+var terrain_: Terrain3D = null
+var central_spawn: Node3D = null
+var underground_timer: Timer = null
 var terrain_height_cache: float = -INF
 var terrain_cache_timer: float = 0.0
 var terrain_cache_duration: float = 0.2  # Cacheia por 200ms
@@ -118,7 +122,9 @@ var actual_enabled_hitbox: Area3D = null
 
 # Ready
 func _ready():
-	pass
+	# Inicia o timer de detecção de abaixo do chão
+	underground_timer = $underground_timer
+	underground_timer.start()
 	
 # Física geral
 func _physics_process(delta: float) -> void:
@@ -202,12 +208,16 @@ func _physics_process(delta: float) -> void:
 	
 	if inventory:
 		inventory.set_stamina(stamina_level)
-	
 	#_log_debug("Stamina: %s" % stamina_level)
+	
+func _on_underground_timer_timeout() -> void:
+	# Verificador de bug (player abaixo do chão = reset)
+	if terrain_ and central_spawn and position.y <= y_pos_catch:
+		global_position = central_spawn.global_position
 	
 func _process(_delta: float) -> void:
 	pass
-
+	
 func connect_inventory_signals():
 	inventory.request_drop_item.connect(action_drop_item_call)
 	inventory.request_equip_item.connect(action_equip_item_call)
@@ -797,13 +807,6 @@ func _disable_attack_hitbox():
 		_log_debug("Hitbox de %s desativado! (%s %s)" % [actual_weapon.name, actual_enabled_hitbox, actual_enabled_hitbox.monitoring])
 	else:
 		_log_debug("_on_attack_timer_timeout: Não encontrado node de hitbox")
-	
-# ===== UTILS =====
-
-func teleport_to(new_position: Vector3):
-	"""Teleporta o player (apenas servidor)"""
-	if multiplayer.is_server():
-		global_position = new_position
 		
 # ===== FUNÇÕES DE REDE ====================
 # ===== ENVIO DE ESTADO PARA SERVIDOR (APENAS LOCAL) =====
@@ -911,7 +914,6 @@ func _get_terrain_height(x: float, z: float) -> float:
 	"""Versão melhorada com fallback para raycast"""
 	
 	# MÉTODO 1: Terrain3D direto
-	var terrain_ = get_tree().get_root().get_node_or_null("Round/Terrain3D")
 	if terrain_ and terrain_.data:
 		var h = terrain_.data.get_height(Vector3(x, 0, z))
 		
@@ -1305,7 +1307,7 @@ func set_as_local_player():
 	set_process_input(true)
 	set_process_unhandled_input(true)
 	
-	# Connect do Timer (attack_timer)
+	# Connect do Timer (attack_timer) (somente se for o local)
 	attack_timer.timeout.connect(Callable(self, "_on_attack_timer_timeout"))
 	
 	# Aplicador de tempo de detecção do inimigo
@@ -1599,4 +1601,3 @@ func verificar_rede():
 	if peer != null and peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED:
 		return true
 	return false
-	

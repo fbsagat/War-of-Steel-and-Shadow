@@ -710,6 +710,10 @@ func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bo
 		player_instance.add_to_group("player")
 		player_instance.add_to_group("myself_player")
 		
+		# Preenche terreno e central_spawn
+		player_instance.terrain_ = map_manager.current_map
+		player_instance.central_spawn = player_instance.terrain_.get_node_or_null("central_spawn")
+		
 		_log_debug("Jogador local spawnado: %s" % player_name_)
 	else:
 		# Jogador remoto: NÃO tem câmera atribuída
