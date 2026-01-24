@@ -19,6 +19,7 @@ signal quit_game_requested()
 @onready var match_list_menu: CenterContainer
 @onready var manual_join_menu: CenterContainer
 @onready var create_match_menu: CenterContainer
+@onready var create_local_match_menu: CenterContainer
 @onready var room_menu: CenterContainer
 @onready var how_to_play_menu: CenterContainer
 @onready var options_menu: CenterContainer
@@ -184,6 +185,7 @@ func _setup_menu_references():
 	match_list_menu = control_pai.get_node("MatchListMenu")
 	manual_join_menu = control_pai.get_node("ManualJoinMenu")
 	create_match_menu = control_pai.get_node("CreateMatchMenu")
+	create_local_match_menu = control_pai.get_node("CreateLocalMatchMenu")
 	room_menu = control_pai.get_node("RoomMenu")
 	how_to_play_menu = control_pai.get_node("HowToPlayMenu")
 	options_menu = control_pai.get_node("OptionsMenu")
@@ -258,6 +260,7 @@ func _setup_element_references():
 
 func _connect_button_signals():
 	# Menu principal
+	_connect_if_exists(main_menu, "JoinSinglePlayerButton", _on_join_singleplayer_pressed)
 	_connect_if_exists(main_menu, "JoinMatchButton", _on_join_match_pressed)
 	_connect_if_exists(main_menu, "CreateMatchButton", _on_create_match_pressed)
 	_connect_if_exists(main_menu, "HowToPlayButton", _on_how_to_play_pressed)
@@ -282,6 +285,10 @@ func _connect_button_signals():
 	# Criar partida
 	_connect_if_exists(create_match_menu, "ConfirmButton", _on_create_match_confirm_pressed)
 	_connect_if_exists(create_match_menu, "BackButton", _on_create_match_back_pressed)
+	
+	# Criar partida local
+	_connect_if_exists(create_local_match_menu, "ConfirmButton", _on_create_local_match_confirm_pressed)
+	_connect_if_exists(create_local_match_menu, "BackButton", _on_create_local_match_back_pressed)
 	
 	# Como jogar
 	_connect_if_exists(how_to_play_menu, "BackButton", _on_how_to_play_back_pressed)
@@ -393,6 +400,10 @@ func show_manual_join_menu():
 		manual_join_error_label.text = ""
 		manual_join_error_label.visible = false
 
+func show_create_local_match_menu():
+	hide_all_menus()
+	create_local_match_menu.visible = true
+
 func show_create_match_menu():
 	hide_all_menus()
 	create_match_menu.visible = true
@@ -446,6 +457,7 @@ func hide_all_menus():
 	match_list_menu.visible = false
 	manual_join_menu.visible = false
 	create_match_menu.visible = false
+	create_local_match_menu.visible = false
 	room_menu.visible = false
 	how_to_play_menu.visible = false
 	options_menu.visible = false
@@ -490,6 +502,9 @@ func _on_name_confirm_pressed():
 func _on_join_match_pressed():
 	show_match_list_menu()
 	game_manager.request_rooms_list()
+
+func _on_join_singleplayer_pressed():
+	show_create_local_match_menu()
 
 func _on_create_match_pressed():
 	show_create_match_menu()
@@ -601,6 +616,12 @@ func _on_create_match_confirm_pressed():
 		return
 	
 	game_manager.create_room(room_name, password)
+
+func _on_create_local_match_confirm_pressed():
+	game_manager.create_local_match()
+
+func _on_create_local_match_back_pressed():
+	show_main_menu()
 
 func _on_create_match_back_pressed():
 	show_main_menu()

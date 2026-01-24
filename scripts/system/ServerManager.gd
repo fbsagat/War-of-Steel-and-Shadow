@@ -14,12 +14,10 @@ class_name ServerManager
 ## IMPORTANTE: Este script só executa quando iniciado com --server ou --dedicated
 
 # ===== CONFIGURAÇÕES =====
-
 @export_category("Debug")
 @export var debug_mode: bool = true
 @export var debug_timer: bool = false
 ## [TESTES] Usa o TestManager para iniciar logo uma partida na execução
-@export var fast_round: bool = true
 @export var fast_round: bool = false
 ## [TESTES] Define a quantidade de instnacias de clientes para executar fast_round
 @export var simulador_players_qtd: int = 2

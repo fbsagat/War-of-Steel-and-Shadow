@@ -53,7 +53,6 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_fe2o3")
-debug_mode = false
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 follow_viewport_enabled = true
@@ -146,10 +145,15 @@ text = "War of Steel and Shadow"
 label_settings = SubResource("LabelSettings_6dd3c")
 horizontal_alignment = 1
 
+[node name="JoinSinglePlayerButton" type="Button" parent="CanvasLayer/CenterContainer/Control/MainMenu/VBoxContainer"]
+custom_minimum_size = Vector2(200, 40)
+layout_mode = 2
+text = "Partida local"
+
 [node name="JoinMatchButton" type="Button" parent="CanvasLayer/CenterContainer/Control/MainMenu/VBoxContainer"]
 custom_minimum_size = Vector2(200, 40)
 layout_mode = 2
-text = "Entrar em Partida"
+text = "Entrar em um servidor"
 
 [node name="CreateMatchButton" type="Button" parent="CanvasLayer/CenterContainer/Control/MainMenu/VBoxContainer"]
 custom_minimum_size = Vector2(200, 40)
@@ -411,6 +415,36 @@ text = "Voltar"
 
 [node name="ConfirmButton" type="Button" parent="CanvasLayer/CenterContainer/Control/ManualJoinMenu/VBoxContainer/ButtonsContainer"]
 custom_minimum_size = Vector2(150, 50)
+layout_mode = 2
+text = "Confirmar"
+
+[node name="CreateLocalMatchMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control"]
+visible = false
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/CreateLocalMatchMenu"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/CreateLocalMatchMenu/VBoxContainer"]
+layout_mode = 2
+text = "Criar Partia Local"
+horizontal_alignment = 1
+
+[node name="ButtonsContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/CreateLocalMatchMenu/VBoxContainer"]
+layout_mode = 2
+alignment = 1
+
+[node name="BackButton" type="Button" parent="CanvasLayer/CenterContainer/Control/CreateLocalMatchMenu/VBoxContainer/ButtonsContainer"]
+layout_mode = 2
+text = "Voltar"
+
+[node name="ConfirmButton" type="Button" parent="CanvasLayer/CenterContainer/Control/CreateLocalMatchMenu/VBoxContainer/ButtonsContainer"]
+custom_minimum_size = Vector2(200, 40)
 layout_mode = 2
 text = "Confirmar"
 

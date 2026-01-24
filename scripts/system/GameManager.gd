@@ -89,21 +89,31 @@ signal items_swapped(item_id_1: String, item_id_2: String)
 # ===== FUNÇÕES DE INICIALIZAÇÃO =====
 
 func _ready():
-	pass
+	# Configura os sinais e o timer de reconexão, mas NÃO conecta
+	initialize_connection()
 
 func initialize():
-	# Configuração do timer de reconexão (só para clientes)
-	reconnect_timer = Timer.new()
-	add_child(reconnect_timer)
-	reconnect_timer.one_shot = true
-	reconnect_timer.timeout.connect(_attempt_reconnection)
-		
-	_log_debug("Inicializando GameManager como cliente")
-	
-	# Conecta sinais de rede
+	if main_menu:
+		main_menu.show_main_menu()
+		#main_menu.update_name_e_connected(accepted_name)
+
+func initialize_connection():
+	if is_connecting or is_connected_to_server:
+		return  # Evita reconfiguração
+
+	# Só configura uma vez
+	if reconnect_timer == null:
+		reconnect_timer = Timer.new()
+		add_child(reconnect_timer)
+		reconnect_timer.one_shot = true
+		reconnect_timer.timeout.connect(_attempt_reconnection)
+
+	# Conecta sinais (só uma vez!)
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
 	multiplayer.connection_failed.connect(_on_connection_failed)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
+
+	_log_debug("Sinais de rede configurados")
 	
 func _process(_delta):
 	"""Verifica timeout de conexão"""
@@ -327,10 +337,6 @@ func _client_name_accepted(accepted_name: String):
 	player_name = accepted_name
 	_log_debug("Nome aceito pelo servidor: " + player_name)
 	
-	if main_menu:
-		main_menu.show_main_menu()
-		main_menu.update_name_e_connected(accepted_name)
-	
 	name_accepted.emit()
 
 func _client_name_rejected(reason: String):
@@ -372,11 +378,47 @@ func _client_room_not_found():
 # ===== GERENCIAMENTO DE SALAS =====
 
 func request_rooms_list():
-	"""Solicita lista de salas disponíveis"""
-	if not is_connected_to_server:
-		_show_error("Não conectado ao servidor")
+	"""Solicita lista de salas disponíveis. Conecta ao servidor se necessário."""
+	
+	# Inicializa conexão (só uma vez)
+	if not is_connected_to_server and not is_connecting:
+		network_manager.initialize()
+		#initialize_connection()
+	
+	# Se já estiver conectado, vai direto
+	if is_connected_to_server:
+		_request_rooms_list_internal()
 		return
 	
+	# Se estiver conectando, aguarda terminar (opcional: pode enfileirar, mas vamos simplificar)
+	if is_connecting:
+		_show_error("Aguarde: conexão em andamento...")
+		return
+	
+	# Caso contrário, inicia a conexão
+	_log_debug("Iniciando conexão antes de solicitar lista de salas...")
+	
+	# Conecta e, após sucesso, solicita a lista
+	var connected = await _connect_and_wait()
+	if connected:
+		_request_rooms_list_internal()
+	else:
+		_show_error("Falha ao conectar ao servidor")
+
+
+# Função auxiliar para conectar e esperar resultado
+func _connect_and_wait() -> bool:
+	connect_to_server()
+	
+	# Aguarda até que a conexão termine (sucesso ou falha)
+	while is_connecting:
+		await get_tree().process_frame
+	
+	return is_connected_to_server
+
+
+# Função interna que realmente faz a requisição (só quando conectado)
+func _request_rooms_list_internal():
 	if player_name.is_empty():
 		_show_error("Nome do jogador não definido")
 		return
@@ -419,6 +461,20 @@ func create_room(room_name: String, password: String = ""):
 		main_menu.show_loading_menu("Criando sala...")
 	
 	network_manager.create_room(room_name, password)
+
+func create_local_match():
+	"""Criar uma partida local"""
+	_log_debug("Iniciando uma partida local")
+	
+	# Carregar servidor por trás.
+	#await initializer._init_server(false)
+	
+	# Conectar neste servidor, não via rede e sim via conexão local(criar sistema).
+	
+	# Definir nome do player e da sala (no menu feito para isso) (não define senha pois é partida local).
+	
+	# Cria a sala automaticamente, pois só terá uma (jogador espera outros players entrarem).
+	# Menu padrão de sala(não o da lista de salas): Botão para iniciar partida pode ser clicado.
 
 func _client_room_created(room_data: Dictionary):
 	"""Callback quando sala é criada com sucesso"""
