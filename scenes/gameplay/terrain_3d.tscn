@@ -1,4 +1,4 @@
-[gd_scene load_steps=24 format=3 uid="uid://3m24sag7gx5w"]
+[gd_scene load_steps=25 format=3 uid="uid://3m24sag7gx5w"]
 
 [ext_resource type="Terrain3DAssets" uid="uid://dal3jhw6241qg" path="res://demo/data/assets.tres" id="1_0rjur"]
 [ext_resource type="PackedScene" uid="uid://d3sr0a7dxfkr8" path="res://addons/terrain_3d/extras/particle_example/Terrain3DParticles.tscn" id="2_t70ke"]
@@ -11,6 +11,7 @@
 [ext_resource type="PackedScene" uid="uid://crlowioh7ei41" path="res://models/VainerKit/builds/wood_bridge/wood_bridge.glb" id="11_3txeo"]
 [ext_resource type="PackedScene" uid="uid://cxjgmxn0wye7i" path="res://models/VainerKit/wood_floor.tscn" id="11_tpv2i"]
 [ext_resource type="PackedScene" uid="uid://0yuy536rv6ae" path="res://scenes/scenarios/forest.tscn" id="12_6jw5i"]
+[ext_resource type="PackedScene" uid="uid://bj0h7k5k2uqag" path="res://models/VainerKit/builds/medieval_tower_ruins/medieval_tower_ruins.glb" id="13_au1d7"]
 [ext_resource type="PackedScene" uid="uid://c0ngmife3um6s" path="res://scenes/scenarios/village.tscn" id="22_uwu5a"]
 
 [sub_resource type="Gradient" id="Gradient_xuisu"]
@@ -878,11 +879,11 @@ top_level = true
 metadata/_edit_lock_ = true
 
 [node name="central_spawn" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -44.70328, -0.6387582, -65.43645)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.6435513, 0.3050561, -91.41628)
 
 [node name="Sky3D" parent="." instance=ExtResource("3_t70ke")]
 editor_time_enabled = false
-current_time = 7.851600000000008
+current_time = 9.756026666666664
 minutes_per_day = 15.0
 
 [node name="Terrain3DParticles" parent="." node_paths=PackedStringArray("terrain") instance=ExtResource("2_t70ke")]
@@ -1130,29 +1131,14 @@ transform = Transform3D(-8.305164e-08, 0, -1.9, 0, 1.9, 0, 1.9, 0, -8.305164e-08
 [node name="wood_bridge2" parent="." instance=ExtResource("11_3txeo")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -41.4974, -0.40886438, -19.572985)
 
-[node name="forest" parent="." instance=ExtResource("12_6jw5i")]
-transform = Transform3D(-0.9952818, 0, -0.097026944, 0, 1, 0, 0.097026944, 0, -0.9952818, 28.514915, -0.31690025, 111.68811)
+[node name="Forest" parent="." instance=ExtResource("12_6jw5i")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 34.86126, -0.07295227, -98.05785)
 
-[node name="forest4" parent="." instance=ExtResource("12_6jw5i")]
-transform = Transform3D(-0.9952818, 0, -0.097026944, 0, 1, 0, 0.097026944, 0, -0.9952818, 22.330292, -0.31690025, -100.61251)
+[node name="Forest2" parent="." instance=ExtResource("12_6jw5i")]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -14.510935, -0.07295227, -95.05785)
 
-[node name="forest5" parent="." instance=ExtResource("12_6jw5i")]
-transform = Transform3D(0.9987968, 0, 0.049041413, 0, 1, 0, -0.049041413, 0, 0.9987968, -35.590504, -0.31690025, -115.81954)
+[node name="Forest3" parent="." instance=ExtResource("12_6jw5i")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 23.729733, -0.33137178, 90.53559)
 
-[node name="forest6" parent="." instance=ExtResource("12_6jw5i")]
-transform = Transform3D(-0.049041457, 0, 0.9987968, 0, 1, 0, -0.9987968, 0, -0.049041457, -119.322716, 10.809181, -42.025063)
-
-[node name="forest7" parent="." instance=ExtResource("12_6jw5i")]
-transform = Transform3D(-0.049041457, 0, 0.9987968, 0, 1, 0, -0.9987968, 0, -0.049041457, -116.220764, 9.209412, 21.15044)
-
-[node name="forest8" parent="." instance=ExtResource("12_6jw5i")]
-transform = Transform3D(-0.049041457, 0, 0.9987968, 0, 1, 0, -0.9987968, 0, -0.049041457, -125.97566, 17.31628, 80.22251)
-
-[node name="forest9" parent="." instance=ExtResource("12_6jw5i")]
-transform = Transform3D(-0.049041457, 0, 0.9987968, 0, 1, 0, -0.9987968, 0, -0.049041457, -122.74922, 20.26792, 145.93336)
-
-[node name="forest2" parent="." instance=ExtResource("12_6jw5i")]
-transform = Transform3D(-0.9952818, 0, -0.097026944, 0, 1, 0, 0.097026944, 0, -0.9952818, -32.11133, -0.31690025, 170.62206)
-
-[node name="forest3" parent="." instance=ExtResource("12_6jw5i")]
-transform = Transform3D(0.99877703, 0, 0.049442418, 0, 1, 0, -0.049442418, 0, 0.99877703, 49.854027, -0.31690025, 158.79126)
+[node name="medieval_tower_ruins" parent="." instance=ExtResource("13_au1d7")]
+transform = Transform3D(1.3113416e-07, 0, -1, 0, 1, 0, 1, 0, 1.3113416e-07, 56.083496, 0.018917322, -70.02586)
