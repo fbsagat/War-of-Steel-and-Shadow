@@ -42,7 +42,7 @@ extends CharacterBody3D
 @export_category("Network Sync")
 @export var sync_rate: float = 0.03 # 33 updates/segundo (melhor que 0.05)
 @export var interpolation_speed: float = 12.0 # Interpolação mais rápida
-@export var position_threshold: float = 0.01 # Distância mínima para sincronizar
+@export var position_threshold: float = 1.01 # Distância mínima para sincronizar
 @export var rotation_threshold: float = 0.01 # Rotação mínima para sincronizar
 @export var anim_sync_rate: float = 0.1  # 10 updates/segundo (menos que posição)
 @export var visual_rotation_y: float = 0.0
@@ -935,7 +935,7 @@ func _get_terrain_height(x: float, z: float) -> float:
 	return global_position.y
 
 func _interpolate_remote_player(delta: float):
-	"""Interpola suavemente a posição de jogadores remotos COM VALIDAÇÃO DE TERRENO SUAVIZADA"""
+	"""Interpola suavemente a posição de jogadores remotos SEM correção de terreno (confia na posição do servidor)"""
 	
 	# ===== CALCULA DISTÂNCIA ATÉ O JOGADOR LOCAL =====
 	var local_player = get_tree().get_first_node_in_group("local_player")
@@ -946,67 +946,21 @@ func _interpolate_remote_player(delta: float):
 	
 	var is_distant = distance_to_local > disable_physics_distance
 	
-	# ===== CACHE DE ALTURA DO TERRENO =====
-	terrain_cache_timer += delta
-	
-	if terrain_cache_timer >= terrain_cache_duration:
-		terrain_cache_timer = 0.0
-		terrain_height_cache = _get_terrain_height(target_position.x, target_position.z)
-	
-	# ===== CORREÇÃO DE ALTURA COM HYSTERESIS =====
-	var terrain_y = terrain_height_cache
-	
-	if terrain_y != -INF and is_distant:
-		var ground_offset = 0.0
-		var min_correction_threshold = 0.3
-		var severe_correction_threshold = 2.0
-		
-		var y_diff = target_position.y - (terrain_y + ground_offset)
-		
-		if y_diff < -severe_correction_threshold:
-			target_position.y = terrain_y + ground_offset
-			velocity.y = 0
-			_log_debug("🚨 Correção severa: player %.2fm abaixo do terreno" % abs(y_diff))
-		
-		elif y_diff < -min_correction_threshold:
-			last_terrain_correction += delta
-			
-			if last_terrain_correction > 0.15:
-				var correction_speed = 1.5
-				target_position.y += correction_speed * delta
-				target_position.y = min(target_position.y, terrain_y + ground_offset)
-				
-				last_terrain_correction = 0.0
-				_log_debug("🔧 Correção gradual Y: %.2f -> %.2f (diff: %.2f)" % [
-					global_position.y, 
-					target_position.y,
-					y_diff
-				])
-		else:
-			last_terrain_correction = 0.0
-	
 	# ===== INTERPOLAÇÃO SUAVE =====
 	if is_distant:
-		# DISTANTE: Interpolação direta SEM move_and_slide
+		# DISTANTE: Interpolação direta SEM física nem correção de terreno
 		var y_interp_speed = interpolation_speed * 0.3
 		
 		global_position.x = lerp(global_position.x, target_position.x, interpolation_speed * delta)
 		global_position.z = lerp(global_position.z, target_position.z, interpolation_speed * delta)
 		global_position.y = lerp(global_position.y, target_position.y, y_interp_speed * delta)
 		
-		# ✅ NÃO zera velocity - usa o valor recebido da rede para animações
-		# velocity já foi atualizado em _client_receive_state()
+		# Estimativa simples de is_on_floor: assume que está no chão se Y está próximo ao target Y
+		# (ou use uma margem pequena se quiser mais precisão)
+		remote_is_on_floor = abs(global_position.y - target_position.y) < 0.1
 		
-		# ✅ Simula is_on_floor() baseado na distância ao terreno
-		if terrain_y != -INF:
-			var distance_to_ground = abs(global_position.y - terrain_y)
-			remote_is_on_floor = distance_to_ground < 0.2  # Considera no chão se < 20cm
-		else:
-			remote_is_on_floor = true  # Assume no chão se não detectar terreno
-		
-		#_log_debug("🌐 Modo remoto distante: %.2fm (sem física, on_floor: %s)" % [distance_to_local, remote_is_on_floor])
 	else:
-		# PRÓXIMO: Usa física normal
+		# PRÓXIMO: Usa física normal (se necessário)
 		var new_x = lerp(global_position.x, target_position.x, interpolation_speed * delta)
 		var new_z = lerp(global_position.z, target_position.z, interpolation_speed * delta)
 		var y_interp_speed = interpolation_speed * 0.5
@@ -1014,28 +968,19 @@ func _interpolate_remote_player(delta: float):
 		
 		global_position = Vector3(new_x, new_y, new_z)
 		
-		# APLICA FÍSICA (gravidade + colisões)
+		# Aplica física local (gravidade, etc.)
 		if not is_on_floor():
 			velocity.y -= gravity * delta
 		else:
 			velocity.y = 0
 		
 		remote_is_on_floor = is_on_floor()
-		
-		#_log_debug("🎯 Modo remoto próximo: %.2fm (com física)" % distance_to_local)
 	
 	# ===== INTERPOLAÇÃO DE ROTAÇÃO =====
 	visual_rotation_y = lerp_angle(visual_rotation_y, target_rotation_y, interpolation_speed * delta)
 	rotation.y = visual_rotation_y
-	
-	# ===== SNAP FINAL (APENAS PARA DISTANTES) =====
-	if is_distant and terrain_y != -INF:
-		var final_diff = global_position.y - terrain_y
-		
-		if final_diff < -0.05:
-			global_position.y = terrain_y
-			velocity.y = 0
-			_log_debug("🔧 Snap final: %.2f -> %.2f" % [global_position.y + final_diff, terrain_y])
+
+	# ⚠️ REMOVIDO: todo o bloco de correção de altura com terreno, snap final, cache, etc.
 			
 # ===== RECEPÇÃO DE ESTADO (REMOTOS) =====
 
