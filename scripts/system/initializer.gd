@@ -41,7 +41,7 @@ func _ready():
 		
 func _init_server(is_headless):
 	# Instancia managers e registros
-	var network_manager_scene: PackedScene = load("res://scenes/system/network_manager.tscn")
+	var network_manager_scene: PackedScene = load("res://scenes/system/server_network_manager.tscn")
 	var server_manager_scene: PackedScene = load("res://scenes/system/server_manager.tscn")
 	player_registry = load("res://scripts/only_server/registrars/PlayerRegistry.gd").new()
 	room_registry = load("res://scripts/only_server/registrars/RoomRegistry.gd").new()
@@ -130,7 +130,6 @@ func _init_server(is_headless):
 	test_manager.map_manager = map_manager
 	
 	# configurações
-	network_manager._is_server = true
 	network_manager.server_is_headless = is_headless
 	map_manager.is_server = true
 	
@@ -149,7 +148,7 @@ func _init_server(is_headless):
 
 func _init_client():
 	# Instancia managers e registros
-	var network_manager_scene: PackedScene = load("res://scenes/system/network_manager.tscn")
+	var network_manager_scene: PackedScene = load("res://scenes/system/client_network_manager.tscn")
 	var game_manager_scene: PackedScene = load("res://scenes/system/game_manager.tscn")
 	var main_menu_scene: PackedScene = load("res://scenes/ui/main_menu.tscn")
 	item_database = load("res://scripts/gameplay/ItemDatabase.gd").new()
@@ -193,7 +192,10 @@ func _init_client():
 	await get_tree().process_frame
 	
 	# Inicializa tudo
-	network_manager.initialize()
+	
+	# INICIALIZAR EM OUTRO LUGAR
+	#network_manager.initialize()
+	
 	game_manager.initialize()
 	item_database.load_database()
 	
