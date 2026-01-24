@@ -193,9 +193,7 @@ func _init_client():
 	
 	# Inicializa tudo
 	
-	# INICIALIZAR EM OUTRO LUGAR
-	#network_manager.initialize()
-	
+	network_manager.initialize()
 	game_manager.initialize()
 	item_database.load_database()
 	
