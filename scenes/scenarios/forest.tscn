@@ -2,7 +2,7 @@
 
 [ext_resource type="PackedScene" uid="uid://cdyc158kwyss1" path="res://models/VainerKit/props/tree/tree.glb" id="1_isn7q"]
 [ext_resource type="PackedScene" uid="uid://32fdc44cucs" path="res://models/VainerKit/props/bush/bush.glb" id="2_5u6p0"]
-[ext_resource type="PackedScene" uid="uid://c8xltltc7fwy2" path="res://models/VainerKit/props/bush/brushes.glb" id="3_nd2tn"]
+[ext_resource type="PackedScene" uid="uid://c8xltltc7fwy2" path="res://models/VainerKit/props/bushes/brushes.glb" id="3_nd2tn"]
 
 [node name="Forest" type="Node3D"]
 
