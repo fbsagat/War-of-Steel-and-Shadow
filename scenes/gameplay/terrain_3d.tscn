@@ -3,10 +3,10 @@
 [ext_resource type="Terrain3DAssets" uid="uid://dal3jhw6241qg" path="res://demo/data/assets.tres" id="1_0rjur"]
 [ext_resource type="PackedScene" uid="uid://d3sr0a7dxfkr8" path="res://addons/terrain_3d/extras/particle_example/Terrain3DParticles.tscn" id="2_t70ke"]
 [ext_resource type="PackedScene" uid="uid://cwu8t6cp4qo1c" path="res://sky/sky_3d.tscn" id="3_t70ke"]
-[ext_resource type="PackedScene" uid="uid://c77jrqvu21euh" path="res://models/VainerKit/items/potion_glass/potion_glass.glb" id="8_l3dix"]
+[ext_resource type="PackedScene" uid="uid://c68soltskrjjw" path="res://models/VainerKit/items/potion_glass/potion_glass.glb" id="8_l3dix"]
 [ext_resource type="PackedScene" uid="uid://crlowioh7ei41" path="res://models/VainerKit/builds/wood_bridge/wood_bridge.glb" id="11_3txeo"]
 [ext_resource type="PackedScene" uid="uid://0yuy536rv6ae" path="res://scenes/scenarios/forest.tscn" id="12_6jw5i"]
-[ext_resource type="PackedScene" uid="uid://djjt3tskxsfm2" path="res://models/VainerKit/builds/medieval_tower_ruins/medieval_tower_ruins.glb" id="13_au1d7"]
+[ext_resource type="PackedScene" uid="uid://bihax2br6c5mr" path="res://models/VainerKit/builds/medieval_tower_ruins/medieval_tower_ruins.glb" id="13_au1d7"]
 [ext_resource type="PackedScene" uid="uid://c0ngmife3um6s" path="res://scenes/scenarios/village.tscn" id="22_uwu5a"]
 
 [sub_resource type="Gradient" id="Gradient_xuisu"]
