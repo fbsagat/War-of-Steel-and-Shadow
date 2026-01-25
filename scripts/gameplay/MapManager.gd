@@ -67,7 +67,7 @@ func load_map(map_scene_path: String, round_node):
 	
 func apply_map_configs(settings: Dictionary = {}):
 	# Aplicar configurações do Terrain3D
-	# Ainda não aplica cada para Terrain3D
+	# Ainda não aplica nada para Terrain3D
 	# Gerar um terreno novo com as configurações compartilhadas
 	
 	# Aplicar configurações do Sky3D

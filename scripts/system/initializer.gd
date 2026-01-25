@@ -182,6 +182,7 @@ func _init_client():
 	game_manager.item_database = item_database
 	game_manager.network_manager = network_manager
 	game_manager.map_manager = map_manager
+	game_manager.initializer = self
 	
 	# MainMenu precisa de:
 	main_menu.game_manager = game_manager
@@ -192,8 +193,7 @@ func _init_client():
 	await get_tree().process_frame
 	
 	# Inicializa tudo
-	
 	network_manager.initialize()
-	game_manager.initialize()
 	item_database.load_database()
+	game_manager.initialize()
 	
