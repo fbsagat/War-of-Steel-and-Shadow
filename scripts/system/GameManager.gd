@@ -7,7 +7,7 @@ class_name GameManager
 # ===== CONFIGURAÇÕES (Editáveis no Inspector) =====
 
 @export_category("Connection Settings")
-@export var server_address: String = "127.0.0.1"
+@export var server_address: String = "10.147.18.110"
 @export var server_port: int = 7777
 
 const map_scene : String = "res://scenes/system/terrain_3d.tscn"
