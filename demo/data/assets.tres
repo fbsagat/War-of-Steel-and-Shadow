@@ -3,7 +3,7 @@
 [ext_resource type="PackedScene" uid="uid://bn5nf4esciwex" path="res://demo/assets/models/LODExample.tscn" id="1_4jrdu"]
 [ext_resource type="Texture2D" uid="uid://udtwy1n1lx8" path="res://demo/assets/textures/rock023_alb_ht.png" id="2_pog6b"]
 [ext_resource type="Texture2D" uid="uid://c5cl3db31o6f5" path="res://demo/assets/textures/ground037_alb_ht.png" id="3_g8f2m"]
-[ext_resource type="Texture2D" uid="uid://dujm5fa3wjxfh" path="res://demo/assets/textures/rock023_nrm_rgh.png" id="3_wncaf"]
+[ext_resource type="Texture2D" uid="uid://5hx3hlx342lm" path="res://demo/assets/textures/rock023_nrm_rgh.png" id="3_wncaf"]
 [ext_resource type="Texture2D" uid="uid://bc4md4vwm3jk4" path="res://demo/assets/textures/ground037_nrm_rgh.png" id="4_aw5y1"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_b2vqk"]
