@@ -9,7 +9,6 @@ class_name GameManager
 @export_category("Connection Settings")
 @export var server_address: String = "127.0.0.1"
 @export var server_port: int = 7777
-@export var connection_timeout: float = 10.0
 
 const map_scene : String = "res://scenes/system/terrain_3d.tscn"
 const player_scene : String = "res://scenes/gameplay/player_warrior.tscn"
@@ -107,7 +106,7 @@ func join_server_by_ip(received_ip, received_port):
 
 func connect_to_server():
 	"""Conecta ao servidor dedicado"""
-	_log_debug("connect_to_server")
+	
 	if is_connected_to_server:
 		_log_debug("Já conectado ao servidor")
 		return
@@ -183,7 +182,10 @@ func _on_server_disconnected():
 	
 	is_connected_to_server = false
 	is_in_round = false
-
+	
+	# Reseta estado do cliente
+	_reset_client_state()
+	
 	# Inicia processo de reconexão
 	if main_menu:
 		main_menu.show_connecting_menu()
@@ -192,7 +194,6 @@ func _on_server_disconnected():
 	disconnected_from_server.emit()
 
 func _reset_client_state():
-	
 	# Limpa todos os objetos spawnados
 	for round_id in spawned_objects.keys():
 		for object_data in spawned_objects[round_id].values():
@@ -211,7 +212,7 @@ func _reset_client_state():
 	configs = {}
 	current_room = {}
 	current_round = {}
-	map_manager = null
+	#map_manager = null
 	local_player = null
 	is_in_round = false
 	
@@ -276,7 +277,7 @@ func _client_name_accepted(accepted_name: String):
 	_log_debug("Nome aceito pelo servidor: " + player_name)
 	
 	if main_menu:
-		main_menu.update_name_e_connected(accepted_name)
+		main_menu.update_name_e_connected(configs["server_name"], accepted_name)
 		
 	name_accepted.emit()
 
@@ -319,33 +320,13 @@ func _client_room_not_found():
 # ===== GERENCIAMENTO DE SALAS =====
 
 func request_rooms_list():
-	print("lista de salas requisitada!")
-	"""Solicita lista de salas disponíveis. Conecta ao servidor se necessário."""
+	_log_debug("📤 Solicitando lista de salas")
 	
-	# Se já estiver conectado, vai direto
-	if is_connected_to_server:
-		_request_rooms_list_internal()
-		return
-	
-	# Se estiver conectando, aguarda terminar (opcional: pode enfileirar, mas vamos simplificar)
-	if is_connecting:
-		_show_error("Aguarde: conexão em andamento...")
-		return
-	
-	# Caso contrário, inicia a conexão
-	_log_debug("Iniciando conexão antes de solicitar lista de salas...")
-	
-	# Conecta e, após sucesso, solicita a lista
-	_request_rooms_list_internal()
-
-# Função interna que realmente faz a requisição (só quando conectado)
-func _request_rooms_list_internal():
+	# Cancelar pedido se não ter nome do player
 	if player_name.is_empty():
 		_show_error("Nome do jogador não definido")
 		return
-	
-	_log_debug("Solicitando lista de salas...")
-	
+		
 	network_manager.request_rooms_list()
 
 func _client_receive_rooms_list(rooms: Array):
@@ -433,8 +414,8 @@ func _client_room_updated(room_data: Dictionary):
 	current_room = room_data
 	_log_debug("Sala atualizada: %s (%d jogadores)" % [room_data["name"], room_data["players"].size()])
 	
-	if main_menu:
-		main_menu.update_room_info(room_data)
+	#if main_menu:
+		#main_menu._update_room_display(room_data)
 	
 	room_updated.emit(room_data)
 
@@ -470,7 +451,7 @@ func _client_room_closed(reason: String):
 	current_room = {}
 	
 	if main_menu:
-		main_menu.show_match_list_menu()
+		main_menu.show_room_list_menu()
 		_show_error(reason)
 		# Arrumar algum dia
 

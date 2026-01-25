@@ -100,11 +100,6 @@ func _server_register_player(player_name: String):
 
 func _server_request_rooms_list():
 	"""RPC: Servidor recebe pedido de lista de salas"""
-	if not multiplayer.is_server():
-		return
-	
-	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
-		return
 	
 	var peer_id = multiplayer.get_remote_sender_id()
 	server_manager._handle_request_rooms_list(peer_id)

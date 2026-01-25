@@ -262,12 +262,8 @@ layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 max_text_lines = 2
-item_count = 3
 same_column_width = true
 icon_mode = 0
-item_0/text = "Servidor 1"
-item_1/text = "Servidor 2"
-item_2/text = "Servidor 3"
 
 [node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/ServerListMenu/VBoxContainer"]
 visible = false
@@ -323,12 +319,8 @@ layout_mode = 2
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-item_count = 3
 same_column_width = true
 icon_mode = 0
-item_0/text = "Partida 1"
-item_1/text = "Partida 2"
-item_2/text = "Partida 3"
 
 [node name="PasswordContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer"]
 layout_mode = 2

@@ -142,16 +142,8 @@ var is_loading = false
 var player_count = 0
 
 func _ready():
-	# Verifica se é servidor
-	var args = OS.get_cmdline_args()
-	var is_server = "--server" in args or "--dedicated" in args
+	_log_debug("Inicializando MainMenu")
 	
-	if is_server:
-		_log_debug("Sou o servidor - NÃO inicializando MainMenu")
-		return
-	
-	_log_debug("Sou o cliente - Inicializando MainMenu")
-		
 	# Configura o Control para preencher toda a tela
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	
@@ -419,7 +411,9 @@ func show_name_input_menu():
 		name_input_error_label.visible = false
 
 func show_room_list_menu():
+	game_manager.request_rooms_list()
 	hide_all_menus()
+	
 	room_list_menu.visible = true
 	if match_password_container:
 		match_password_container.visible = false
@@ -557,7 +551,6 @@ func _on_join_server_pressed():
 		# game_manager.request_server_list()
 		show_server_list_menu()
 	else:
-		game_manager.request_rooms_list()
 		show_room_list_menu()
 
 func _on_join_singleplayer_pressed():
@@ -674,8 +667,6 @@ func _on_manual_server_join_confirm_pressed():
 	game_manager.join_server_by_ip(server_ip, server_port)
 
 func _on_manual_room_join_back_pressed():
-	print("_on_manual_room_join_back_pressed")
-	game_manager.request_rooms_list()
 	show_room_list_menu()
 
 func _on_manual_server_join_back_pressed():
@@ -703,7 +694,6 @@ func _on_create_local_match_back_pressed():
 	show_main_menu()
 
 func _on_create_match_back_pressed():
-	game_manager.request_rooms_list()
 	show_room_list_menu()
 
 # ===== CALLBACKS DO MENU COMO JOGAR =====
@@ -727,7 +717,6 @@ func _on_cancel_cancel_pressed():
 func _on_loading_cancel_pressed():
 	show_main_menu()
 	game_manager.disconnect_from_server()
-	_log_debug("_on_loading_cancel_pressed")
 	
 func save_options():
 	_log_debug("Salvando configurações...")
@@ -920,7 +909,7 @@ func _apply_video_settings():
 			push_warning("FPS limit inválido: %s, usando 60 FPS" % fps_limit)
 			Engine.max_fps = 60
 	
-	print("Configurações de vídeo aplicadas com sucesso")
+	_log_debug("Configurações de vídeo aplicadas com sucesso")
 
 
 func _center_window():
@@ -968,7 +957,7 @@ func _move_to_primary_screen():
 	# Move para o monitor principal
 	DisplayServer.window_set_current_screen(primary_screen)
 	
-	print("Janela movida para o monitor principal")
+	_log_debug("Janela movida para o monitor principal")
 
 # FUNÇÃO AUXILIAR: Retorna lista de resoluções disponíveis para o monitor atual
 func get_available_resolutions() -> Array[Vector2i]:
@@ -992,26 +981,6 @@ func get_available_resolutions() -> Array[Vector2i]:
 	
 	return valid_resolutions
 
-
-# FUNÇÃO AUXILIAR: Debug de informações da tela
-func print_screen_info():
-	"""Imprime informações sobre os monitores disponíveis"""
-	var screen_count = DisplayServer.get_screen_count()
-	print("=== INFORMAÇÕES DE TELA ===")
-	print("Total de monitores: %d" % screen_count)
-	
-	for i in range(screen_count):
-		print("\nMonitor %d:" % i)
-		print("  Tamanho: %s" % DisplayServer.screen_get_size(i))
-		print("  Posição: %s" % DisplayServer.screen_get_position(i))
-		print("  DPI: %d" % DisplayServer.screen_get_dpi(i))
-		print("  Refresh rate: %d Hz" % DisplayServer.screen_get_refresh_rate(i))
-		
-		if i == DisplayServer.window_get_current_screen():
-			print("  [MONITOR ATUAL]")
-	
-	print("\n===========================")
-
 func _apply_audio_settings():
 	_apply_volume_realtime("Master", current_settings["audio"]["master_volume"])
 	_apply_volume_realtime("Music", current_settings["audio"]["music_volume"])
@@ -1027,7 +996,6 @@ func _on_room_close_pressed():
 
 func _on_room_leave_pressed():
 	game_manager.leave_room()
-	game_manager.request_rooms_list()
 	show_room_list_menu()
 
 # ===== ATUALIZAÇÃO DO MENU DE SALA =====
@@ -1092,16 +1060,11 @@ func _update_room_display(room_data: Dictionary):
 		room_error_label.text = ""
 		room_error_label.visible = false
 
-func update_room_info(room_data: Dictionary):
-	"""Atualiza informações da sala (chamado quando há mudanças)"""
-	if room_menu.visible:
-		_update_room_display(room_data)
-
-func update_name_e_connected(player_name: String):
+func update_name_e_connected(server_name: String, player_name: String):
 	if main_menu:
 		connect_name_label = main_menu.get_node_or_null("VBoxContainer/ConnecteName")
 		if connect_name_label:
-			connect_name_label.text = "Conectado 🌐🔗 - %s" % player_name
+			connect_name_label.text = '🌐🔗 Conectado em "%s" como %s' % [server_name, player_name]
 		
 # ===== FUNÇÕES DE MENSAGENS DE ERRO =====
 
@@ -1166,8 +1129,8 @@ func update_loading_message(message: String):
 
 func _on_game_manager_connected():
 	_log_debug("Conectado ao servidor com sucesso!")
-	# Mudar o nome do botão de "Entrar em um servidor" para "Entrar no servidor"
-	join_server_button.text = "Entrar no servidor"
+	# Mudar o nome do botão de "Entrar em um servidor" para "Salas do servidor"
+	join_server_button.text = "Salas do servidor"
 
 func _on_game_manager_connection_failed(reason: String):
 	_log_debug("Falha na conexão: " + reason)
@@ -1185,7 +1148,6 @@ func _on_game_manager_rooms_received(rooms: Array):
 
 func _on_game_manager_name_accepted():
 	_log_debug("Nome aceito pelo servidor")
-	game_manager.request_rooms_list()
 	show_room_list_menu()
 
 func _on_game_manager_name_rejected(reason: String):
@@ -1201,7 +1163,7 @@ func _on_game_manager_room_joined(room_data: Dictionary):
 
 func _on_game_manager_room_updated(room_data: Dictionary):
 	_log_debug("Sala atualizada: %d jogadores" % room_data.get("players", []).size())
-	update_room_info(room_data)
+	_update_room_display(room_data)
 
 func _on_game_manager_match_started():
 	_log_debug("Partida iniciada!")
