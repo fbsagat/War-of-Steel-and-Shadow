@@ -293,7 +293,7 @@ func _client_name_rejected(reason: String):
 func _client_wrong_password():
 	"""Callback quando a senha está incorreta"""
 	if main_menu:
-		main_menu.show_match_list_menu()
+		main_menu.show_room_list_menu()
 		main_menu.match_password_container.visible = true
 		_show_error("Senha incorreta")
 
@@ -319,6 +319,7 @@ func _client_room_not_found():
 # ===== GERENCIAMENTO DE SALAS =====
 
 func request_rooms_list():
+	print("lista de salas requisitada!")
 	"""Solicita lista de salas disponíveis. Conecta ao servidor se necessário."""
 	
 	# Se já estiver conectado, vai direto
@@ -755,10 +756,10 @@ func _show_error(message: String):
 			main_menu.show_error_room(message)
 		elif main_menu.room_list_menu and main_menu.room_list_menu.visible:
 			main_menu.show_error_room_list(message)
-		elif main_menu.manual_join_menu and main_menu.manual_join_menu.visible:
+		elif main_menu.manual_room_join_menu and main_menu.manual_room_join_menu.visible:
 			main_menu.show_error_manual_join(message)
-		elif main_menu.create_match_menu and main_menu.create_match_menu.visible:
-			main_menu.show_error_create_match(message)
+		elif main_menu.create_room_menu and main_menu.create_room_menu.visible:
+			main_menu.show_error_create_room(message)
 
 # ===== SISTEMA DE INVENTÁRIO POR RODADA =====
 	

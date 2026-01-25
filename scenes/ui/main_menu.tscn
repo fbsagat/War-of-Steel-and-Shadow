@@ -140,6 +140,13 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
+[node name="ReferenceRect" type="ReferenceRect" parent="CanvasLayer/CenterContainer/Control/NameInputMenu"]
+custom_minimum_size = Vector2(1100, 650)
+layout_mode = 2
+border_color = Color(0, 0, 0, 1)
+border_width = 2.0
+editor_only = false
+
 [node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/NameInputMenu"]
 layout_mode = 2
 alignment = 1
@@ -181,6 +188,7 @@ layout_mode = 2
 text = "Confirmar"
 
 [node name="ConnectingMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control"]
+visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -242,7 +250,7 @@ alignment = 1
 
 [node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/ServerListMenu/VBoxContainer"]
 layout_mode = 2
-text = "Lista de Servidores"
+text = "Servidores Disponíveis"
 horizontal_alignment = 1
 
 [node name="ScrollContainer" type="ScrollContainer" parent="CanvasLayer/CenterContainer/Control/ServerListMenu/VBoxContainer"]
@@ -336,9 +344,9 @@ placeholder_text = "Digite a senha"
 secret = true
 
 [node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer"]
-visible = false
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
+theme_override_colors/font_color = Color(0.7186991, 0.63327974, 0.2129727, 1)
 horizontal_alignment = 1
 autowrap_mode = 3
 
@@ -457,6 +465,13 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
+[node name="ReferenceRect" type="ReferenceRect" parent="CanvasLayer/CenterContainer/Control/ManualServerJoinMenu"]
+custom_minimum_size = Vector2(600, 500)
+layout_mode = 2
+border_color = Color(0, 0, 0, 1)
+border_width = 2.0
+editor_only = false
+
 [node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/ManualServerJoinMenu"]
 layout_mode = 2
 theme_override_constants/separation = 10
@@ -524,6 +539,13 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
+[node name="ReferenceRect" type="ReferenceRect" parent="CanvasLayer/CenterContainer/Control/ManualRoomJoinMenu"]
+custom_minimum_size = Vector2(600, 500)
+layout_mode = 2
+border_color = Color(0, 0, 0, 1)
+border_width = 2.0
+editor_only = false
+
 [node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/ManualRoomJoinMenu"]
 layout_mode = 2
 theme_override_constants/separation = 10
@@ -585,6 +607,13 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
+[node name="ReferenceRect" type="ReferenceRect" parent="CanvasLayer/CenterContainer/Control/CreateLocalMatchMenu"]
+custom_minimum_size = Vector2(600, 500)
+layout_mode = 2
+border_color = Color(0, 0, 0, 1)
+border_width = 2.0
+editor_only = false
+
 [node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/CreateLocalMatchMenu"]
 layout_mode = 2
 theme_override_constants/separation = 10
@@ -593,6 +622,19 @@ theme_override_constants/separation = 10
 layout_mode = 2
 text = "Criar Partia Local"
 horizontal_alignment = 1
+
+[node name="Label2" type="Label" parent="CanvasLayer/CenterContainer/Control/CreateLocalMatchMenu/VBoxContainer"]
+layout_mode = 2
+text = "Selecione o modo de jogo"
+horizontal_alignment = 1
+
+[node name="OptionButton" type="OptionButton" parent="CanvasLayer/CenterContainer/Control/CreateLocalMatchMenu/VBoxContainer"]
+layout_mode = 2
+item_count = 2
+popup/item_0/text = "Modo 1 exemplo"
+popup/item_0/id = 0
+popup/item_1/text = "Modo 2 exemplo"
+popup/item_1/id = 1
 
 [node name="ButtonsContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/CreateLocalMatchMenu/VBoxContainer"]
 layout_mode = 2
@@ -606,7 +648,7 @@ text = "Voltar"
 [node name="ConfirmButton" type="Button" parent="CanvasLayer/CenterContainer/Control/CreateLocalMatchMenu/VBoxContainer/ButtonsContainer"]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
-text = "Confirmar"
+text = "Iniciar"
 
 [node name="CreateRoomMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control"]
 visible = false
@@ -616,6 +658,13 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+
+[node name="ReferenceRect" type="ReferenceRect" parent="CanvasLayer/CenterContainer/Control/CreateRoomMenu"]
+custom_minimum_size = Vector2(600, 500)
+layout_mode = 2
+border_color = Color(0, 0, 0, 1)
+border_width = 2.0
+editor_only = false
 
 [node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/CreateRoomMenu"]
 layout_mode = 2
@@ -678,6 +727,13 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
+[node name="ReferenceRect" type="ReferenceRect" parent="CanvasLayer/CenterContainer/Control/HowToPlayMenu"]
+custom_minimum_size = Vector2(920, 650)
+layout_mode = 2
+border_color = Color(0, 0, 0, 1)
+border_width = 2.0
+editor_only = false
+
 [node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/HowToPlayMenu"]
 layout_mode = 2
 theme_override_constants/separation = 10
@@ -724,6 +780,13 @@ layout_mode = 0
 offset_right = 1410.0
 offset_bottom = 900.0
 scale = Vector2(0.9, 0.9)
+
+[node name="ReferenceRect" type="ReferenceRect" parent="CanvasLayer/CenterContainer/Control/OptionsMenu"]
+custom_minimum_size = Vector2(1210, 700)
+layout_mode = 2
+border_color = Color(0, 0, 0, 1)
+border_width = 2.0
+editor_only = false
 
 [node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu"]
 layout_mode = 2
