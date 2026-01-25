@@ -1,0 +1,29 @@
+[gd_scene load_steps=5 format=3 uid="uid://da8cxlgmx22ff"]
+
+[ext_resource type="Shader" uid="uid://p3udn7nj80y3" path="res://vfx/heal/s_heal_shader.tres" id="1_55hi1"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_2774k"]
+render_priority = 0
+shader = ExtResource("1_55hi1")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_y30oh"]
+angle_min = -44.99999
+angle_max = 45.00001
+direction = Vector3(0, 1, 0)
+spread = 20.0
+initial_velocity_min = 0.19999999
+initial_velocity_max = 0.29999998
+gravity = Vector3(0, 0, 0)
+scale_min = 0.19999999
+scale_max = 0.59999996
+
+[sub_resource type="QuadMesh" id="QuadMesh_q7xes"]
+
+[node name="vfx_heal" type="GPUParticles3D"]
+material_override = SubResource("ShaderMaterial_2774k")
+cast_shadow = 0
+amount = 4
+lifetime = 2.0
+randomness = 1.0
+process_material = SubResource("ParticleProcessMaterial_y30oh")
+draw_pass_1 = SubResource("QuadMesh_q7xes")
