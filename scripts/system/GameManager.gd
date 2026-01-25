@@ -5,6 +5,7 @@ class_name GameManager
 ## Responsável por conectar ao servidor dedicado e gerenciar o fluxo do jogo
 
 # ===== CONFIGURAÇÕES (Editáveis no Inspector) =====
+# ===== CONFIGURAÇÕES (Editáveis no Inspector) ======
 
 @export_category("Connection Settings")
 @export var server_address: String = "10.147.18.110"
@@ -297,6 +298,14 @@ func _client_wrong_password():
 		main_menu.show_room_list_menu()
 		main_menu.match_password_container.visible = true
 		_show_error("Senha incorreta")
+		
+		# FAZER AMANAHÃ !
+		
+		# Arrumar algum dia: _show_error não aparece lá
+		# Arrumar a sincronização de animação de andando e recepção de animação de dano
+		
+		# Criar sistema que salva servidores na lista de servidores
+		# Criar partida em rede local
 
 func _client_room_name_exists():
 	"""Callback de quando já existe uma sala com o nome escolhido"""
@@ -316,6 +325,7 @@ func _client_room_not_found():
 		main_menu.show_room_list_menu()
 		main_menu.match_password_container.visible = true
 		_show_error("Sala não encontrada")
+		# Arrumar algum dia
 
 # ===== GERENCIAMENTO DE SALAS =====
 

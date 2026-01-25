@@ -1,6 +1,6 @@
 [gd_scene load_steps=27 format=3 uid="uid://x34e4v60vdmy"]
 
-[ext_resource type="Script" uid="uid://chstoagn42gbr" path="res://demo/src/DemoScene.gd" id="1_po4vw"]
+[ext_resource type="Script" uid="uid://ba508qknm6m5" path="res://demo/src/DemoScene.gd" id="1_po4vw"]
 [ext_resource type="PackedScene" uid="uid://dwnhqfjq7v1pq" path="res://demo/components/Borders.tscn" id="3_3upu0"]
 [ext_resource type="Shader" uid="uid://dw1cefd46umfe" path="res://addons/sky_3d/shaders/SkyMaterial.gdshader" id="3_e4kas"]
 [ext_resource type="Texture2D" uid="uid://cfqk60lpl5ljv" path="res://addons/sky_3d/assets/resources/SNoise.tres" id="4_10bv2"]
@@ -70,8 +70,8 @@ shader_parameter/cirrus_sky_tint_fade = 0.5
 shader_parameter/cirrus_intensity = 10.0
 shader_parameter/cirrus_size = 1.0
 shader_parameter/cirrus_uv = Vector2(0.16, 0.11)
-shader_parameter/cirrus_position1 = Vector2(0.00063639606, 0.00063639606)
-shader_parameter/cirrus_position2 = Vector2(0.00063639606, 0.00063639606)
+shader_parameter/cirrus_position1 = Vector2(0, 0)
+shader_parameter/cirrus_position2 = Vector2(0, 0)
 shader_parameter/cirrus_day_color = Color(0.824, 0.875, 1, 1)
 shader_parameter/cirrus_horizon_light_color = Color(0.98, 0.43, 0.15, 1)
 shader_parameter/cirrus_night_color = Color(0.09, 0.094, 0.129, 1)
@@ -84,7 +84,7 @@ shader_parameter/cumulus_noise_freq = 2.7
 shader_parameter/cumulus_sky_tint_fade = 0.0
 shader_parameter/cumulus_intensity = 0.6
 shader_parameter/cumulus_size = 0.5
-shader_parameter/cumulus_position = Vector2(0.0031819816, 0.0031819816)
+shader_parameter/cumulus_position = Vector2(0, 0)
 shader_parameter/cumulus_texture = ExtResource("5_qxi3g")
 shader_parameter/cumulus_day_color = Color(0.823529, 0.87451, 1, 1)
 shader_parameter/cumulus_horizon_light_color = Color(0.98, 0.43, 0.15, 1)
@@ -107,7 +107,7 @@ background_mode = 2
 sky = SubResource("Sky_a6n5c")
 ambient_light_source = 3
 ambient_light_color = Color(1, 1, 1, 1)
-ambient_light_sky_contribution = 0.7455478
+ambient_light_sky_contribution = 0.7399966
 reflected_light_source = 2
 tonemap_mode = 3
 tonemap_white = 6.0
