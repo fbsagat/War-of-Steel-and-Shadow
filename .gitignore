@@ -1,10 +1,17 @@
+Veja esse git ignore de godot engine 4.5, verifique se pode estar causando problemas com envio de arquivos relacionados a material, transparência ou similares, pois quando o projeto é baixado iluminação do sol não atravessa as folhas das árvores.
+
 # .gitignore — Godot 4.5.1 (recomendações)
 # Ajuste conforme necessário para seu fluxo de trabalho
 
 # --- Godot editor / cache / machine-specific ---
 .godot/
+.import/
+*.import
+**/*.uid
+*.uid
 
 # Godot generated/converted/imported files
+*.import
 *.converted.*
 *.converted.scn
 *.converted.tres
@@ -47,6 +54,9 @@ desktop.ini
 /export/
 /build/
 
+# Pasta específica do projeto (dados gerados de terreno)
+
+
 # Arquivos binários/gerados que não precisam ser versionados
 *.stackdump
 *.crash
@@ -59,6 +69,7 @@ node_modules/
 .env.local
 
 # Fallback: ignore arquivos de backup/edição
+
 *~
 *.bak
 
