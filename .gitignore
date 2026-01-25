@@ -3,13 +3,8 @@
 
 # --- Godot editor / cache / machine-specific ---
 .godot/
-.import/
-*.import
-**/*.uid
-*.uid
 
 # Godot generated/converted/imported files
-*.import
 *.converted.*
 *.converted.scn
 *.converted.tres
@@ -52,9 +47,6 @@ desktop.ini
 /export/
 /build/
 
-# Pasta específica do projeto (dados gerados de terreno)
-
-
 # Arquivos binários/gerados que não precisam ser versionados
 *.stackdump
 *.crash
@@ -67,7 +59,6 @@ node_modules/
 .env.local
 
 # Fallback: ignore arquivos de backup/edição
-
 *~
 *.bak
 
