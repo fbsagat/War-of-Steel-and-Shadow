@@ -5,7 +5,6 @@ class_name GameManager
 ## Responsável por conectar ao servidor dedicado e gerenciar o fluxo do jogo
 
 # ===== CONFIGURAÇÕES (Editáveis no Inspector) =====
-# ===== CONFIGURAÇÕES (Editáveis no Inspector) ======
 
 @export_category("Connection Settings")
 @export var server_address: String = "10.147.18.110"

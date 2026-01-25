@@ -5,7 +5,6 @@ extends Control
 var game_manager: GameManager = null
 
 # ===== SINAIS =====
-# ===== SINAIS ======
 #signal join_match_requested()
 #signal create_match_requested(room_name: String, password: String)
 #signal match_selected(match_id: int, password: String)
