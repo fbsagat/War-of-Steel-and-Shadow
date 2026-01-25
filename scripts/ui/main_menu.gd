@@ -14,15 +14,26 @@ signal quit_game_requested()
 # Referências dos nós
 @onready var control_pai: Control
 @onready var connecting_menu: CenterContainer
+@onready var server_list_menu: CenterContainer
 @onready var name_input_menu: CenterContainer
 @onready var main_menu: CenterContainer
-@onready var match_list_menu: CenterContainer
-@onready var manual_join_menu: CenterContainer
-@onready var create_match_menu: CenterContainer
+@onready var room_list_menu: CenterContainer
+@onready var manual_room_join_menu: CenterContainer
+@onready var manual_server_join_menu: CenterContainer
+@onready var create_room_menu: CenterContainer
+@onready var create_local_match_menu: CenterContainer
 @onready var room_menu: CenterContainer
 @onready var how_to_play_menu: CenterContainer
 @onready var options_menu: CenterContainer
 @onready var loading_menu: CenterContainer
+
+# Menu principal
+@onready var connect_name_label: Label
+@onready var join_server_button: Button
+
+# Menu de lista de servidores
+@onready var server_list: ItemList
+@onready var server_list_error_label: Label
 
 # Menu de lista de partidas
 @onready var match_list: ItemList
@@ -38,15 +49,20 @@ signal quit_game_requested()
 @onready var player_name_input: LineEdit
 @onready var name_input_error_label: Label
 
-# Menu de entrada manual
+# Menu de entrada manual de sala
 @onready var manual_room_name_input: LineEdit
 @onready var manual_room_password_input: LineEdit
 @onready var manual_join_error_label: Label
 
+# Menu de entrada manual de servidor
+@onready var manual_server_ip_input: LineEdit
+@onready var manual_server_port_input: LineEdit
+@onready var manual_server_join_error_label: Label
+
 # Menu de criar partida
 @onready var room_name_input: LineEdit
 @onready var room_password_input: LineEdit
-@onready var create_match_error_label: Label
+@onready var create_room_error_label: Label
 
 # Menu de sala (lobby)
 @onready var room_name_label: Label
@@ -126,16 +142,8 @@ var is_loading = false
 var player_count = 0
 
 func _ready():
-	# Verifica se é servidor
-	var args = OS.get_cmdline_args()
-	var is_server = "--server" in args or "--dedicated" in args
+	_log_debug("Inicializando MainMenu")
 	
-	if is_server:
-		_log_debug("Sou o servidor - NÃO inicializando MainMenu")
-		return
-	
-	_log_debug("Sou o cliente - Inicializando MainMenu")
-		
 	# Configura o Control para preencher toda a tela
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	
@@ -161,14 +169,6 @@ func _ready():
 	if game_manager:
 		game_manager.set_main_menu(self)
 		_connect_game_manager_signals()
-		
-		# Mostra tela de conexão e conecta automaticamente ao servidor
-		show_connecting_menu()
-		game_manager.connect_to_server()
-	else:
-		push_warning("GameManager não encontrado! Certifique-se de que está configurado como Autoload.")
-		# Se não há GameManager, mostra o menu principal
-		show_main_menu()
 
 func _process(delta):
 	# Rotaciona o ícone de carregamento
@@ -179,11 +179,14 @@ func _process(delta):
 
 func _setup_menu_references():
 	connecting_menu = control_pai.get_node("ConnectingMenu")
+	server_list_menu = control_pai.get_node("ServerListMenu")
 	name_input_menu = control_pai.get_node("NameInputMenu")
 	main_menu = control_pai.get_node("MainMenu")
-	match_list_menu = control_pai.get_node("MatchListMenu")
-	manual_join_menu = control_pai.get_node("ManualJoinMenu")
-	create_match_menu = control_pai.get_node("CreateMatchMenu")
+	room_list_menu = control_pai.get_node("RoomListMenu")
+	manual_room_join_menu = control_pai.get_node("ManualRoomJoinMenu")
+	manual_server_join_menu = control_pai.get_node("ManualServerJoinMenu")
+	create_room_menu = control_pai.get_node("CreateRoomMenu")
+	create_local_match_menu = control_pai.get_node("CreateLocalMatchMenu")
 	room_menu = control_pai.get_node("RoomMenu")
 	how_to_play_menu = control_pai.get_node("HowToPlayMenu")
 	options_menu = control_pai.get_node("OptionsMenu")
@@ -212,6 +215,10 @@ func _setup_menu_references():
 	reset_button = options_menu.find_child("ResetButton", true, false)
 
 func _setup_element_references():
+	# Menu principal
+	connect_name_label = main_menu.find_child("ConnecteName", true, false)
+	join_server_button = main_menu.find_child("JoinServerButton", true, false)
+	
 	# Menu de conexão
 	connecting_label = connecting_menu.find_child("ConnectingLabel", true, false)
 	connecting_error_label = connecting_menu.find_child("ErrorLabel", true, false)
@@ -220,22 +227,31 @@ func _setup_element_references():
 	player_name_input = name_input_menu.find_child("PlayerNameInput", true, false)
 	name_input_error_label = name_input_menu.find_child("ErrorLabel", true, false)
 	
+	# Lista de servidores
+	server_list = server_list_menu.find_child("ServerList", true, false)
+	server_list_error_label = room_list_menu.find_child("ErrorLabel", true, false)
+	
 	# Lista de partidas
-	match_list = match_list_menu.find_child("MatchList", true, false)
-	match_password_container = match_list_menu.find_child("PasswordContainer", true, false)
+	match_list = room_list_menu.find_child("MatchList", true, false)
+	match_password_container = room_list_menu.find_child("PasswordContainer", true, false)
 	if match_password_container:
 		match_password_input = match_password_container.find_child("PasswordInput", true, false)
-	match_list_error_label = match_list_menu.find_child("ErrorLabel", true, false)
+	match_list_error_label = room_list_menu.find_child("ErrorLabel", true, false)
 	
-	# Entrada manual
-	manual_room_name_input = manual_join_menu.find_child("ManualRoomNameInput", true, false)
-	manual_room_password_input = manual_join_menu.find_child("ManualRoomPasswordInput", true, false)
-	manual_join_error_label = manual_join_menu.find_child("ErrorLabel", true, false)
+	# Entrada manual de sala
+	manual_room_name_input = manual_room_join_menu.find_child("ManualRoomNameInput", true, false)
+	manual_room_password_input = manual_room_join_menu.find_child("ManualRoomPasswordInput", true, false)
+	manual_join_error_label = manual_room_join_menu.find_child("ErrorLabel", true, false)
+	
+	# Entrada manual de servidor
+	manual_server_ip_input = manual_server_join_menu.find_child("ManualServerIpInput", true, false)
+	manual_server_port_input = manual_server_join_menu.find_child("ManualServerPortInput", true, false)
+	manual_server_join_error_label = manual_server_join_menu.find_child("ErrorLabel", true, false)
 	
 	# Criar partida
-	room_name_input = create_match_menu.find_child("RoomNameInput", true, false)
-	room_password_input = create_match_menu.find_child("RoomPasswordInput", true, false)
-	create_match_error_label = create_match_menu.find_child("ErrorLabel", true, false)
+	room_name_input = create_room_menu.find_child("RoomNameInput", true, false)
+	room_password_input = create_room_menu.find_child("RoomPasswordInput", true, false)
+	create_room_error_label = create_room_menu.find_child("ErrorLabel", true, false)
 	
 	# Menu de sala (lobby)
 	room_name_label = room_menu.find_child("RoomNameLabel", true, false)
@@ -258,8 +274,8 @@ func _setup_element_references():
 
 func _connect_button_signals():
 	# Menu principal
-	_connect_if_exists(main_menu, "JoinMatchButton", _on_join_match_pressed)
-	_connect_if_exists(main_menu, "CreateMatchButton", _on_create_match_pressed)
+	_connect_if_exists(main_menu, "JoinSinglePlayerButton", _on_join_singleplayer_pressed)
+	_connect_if_exists(main_menu, "JoinServerButton", _on_join_server_pressed)
 	_connect_if_exists(main_menu, "HowToPlayButton", _on_how_to_play_pressed)
 	_connect_if_exists(main_menu, "OptionsButton", _on_options_pressed)
 	_connect_if_exists(main_menu, "QuitButton", _on_quit_pressed)
@@ -267,21 +283,41 @@ func _connect_button_signals():
 	# Menu de nome
 	_connect_if_exists(name_input_menu, "ConfirmButton", _on_name_confirm_pressed)
 	
+	# Lista de servidores
+	_connect_if_exists(server_list_menu, "BackButton", _on_server_list_back_pressed)
+	_connect_if_exists(server_list_menu, "JoinButton", _on_server_list_enter_pressed)
+	_connect_if_exists(server_list_menu, "ManualJoinButton", _on_manual_server_join_button_pressed)
+	
 	# Lista de partidas
-	_connect_if_exists(match_list_menu, "BackButton", _on_match_list_back_pressed)
-	_connect_if_exists(match_list_menu, "JoinButton", _on_match_list_join_pressed)
-	_connect_if_exists(match_list_menu, "ManualJoinButton", _on_manual_join_button_pressed)
+	_connect_if_exists(room_list_menu, "JoinButton", _on_match_list_join_pressed)
+	_connect_if_exists(room_list_menu, "ManualJoinButton", _on_manual_join_button_pressed)
+	_connect_if_exists(room_list_menu, "CreateRoomButton", _on_create_room_pressed)
+	_connect_if_exists(room_list_menu, "BackButton", _on_match_list_back_pressed)
+	_connect_if_exists(room_list_menu, "ExitServerButton", _on_exit_server_pressed)
 	
 	if match_list:
 		match_list.item_selected.connect(_on_match_item_selected)
 	
-	# Entrada manual
-	_connect_if_exists(manual_join_menu, "ConfirmButton", _on_manual_join_confirm_pressed)
-	_connect_if_exists(manual_join_menu, "BackButton", _on_manual_join_back_pressed)
+	# Entrada manual de servidor
+	_connect_if_exists(manual_server_join_menu, "BackButton", _on_manual_server_join_back_pressed)
+	_connect_if_exists(manual_server_join_menu, "ConfirmButton", _on_manual_server_join_confirm_pressed)
+	
+	# Sala (Lobby)
+	_connect_if_exists(room_menu, "StartButton", _on_room_start_pressed)
+	_connect_if_exists(room_menu, "CloseButton", _on_room_close_pressed)
+	_connect_if_exists(room_menu, "LeaveButton", _on_room_leave_pressed)
+	
+	# Entrada manual de sala
+	_connect_if_exists(manual_room_join_menu, "BackButton", _on_manual_room_join_back_pressed)
+	_connect_if_exists(manual_room_join_menu, "ConfirmButton", _on_manual_room_join_confirm_pressed)
 	
 	# Criar partida
-	_connect_if_exists(create_match_menu, "ConfirmButton", _on_create_match_confirm_pressed)
-	_connect_if_exists(create_match_menu, "BackButton", _on_create_match_back_pressed)
+	_connect_if_exists(create_room_menu, "ConfirmButton", _on_create_match_confirm_pressed)
+	_connect_if_exists(create_room_menu, "BackButton", _on_create_match_back_pressed)
+	
+	# Criar partida local
+	_connect_if_exists(create_local_match_menu, "ConfirmButton", _on_create_local_match_confirm_pressed)
+	_connect_if_exists(create_local_match_menu, "BackButton", _on_create_local_match_back_pressed)
 	
 	# Como jogar
 	_connect_if_exists(how_to_play_menu, "BackButton", _on_how_to_play_back_pressed)
@@ -290,14 +326,12 @@ func _connect_button_signals():
 	_connect_if_exists(options_menu, "ConfirmButton", _on_options_confirm_pressed)
 	_connect_if_exists(options_menu, "BackButton", _on_options_back_pressed)
 	
-	# Sala (lobby)
-	if room_start_button:
-		room_start_button.pressed.connect(_on_room_start_pressed)
-	if room_close_button:
-		room_close_button.pressed.connect(_on_room_close_pressed)
-	if room_leave_button:
-		room_leave_button.pressed.connect(_on_room_leave_pressed)
-
+	# Connecting menu
+	_connect_if_exists(connecting_menu, "CancelButton", _on_cancel_cancel_pressed)
+	
+	# Loading menu
+	_connect_if_exists(loading_menu, "CancelButton", _on_loading_cancel_pressed)
+	
 func _connect_if_exists(parent: Node, button_name: String, callback: Callable):
 	var button = parent.find_child(button_name, true, false)
 	if button:
@@ -357,6 +391,11 @@ func show_connecting_menu():
 		connecting_error_label.text = ""
 		connecting_error_label.visible = false
 
+func show_server_list_menu():
+	hide_all_menus()
+	# Request de lista de servidores aqui
+	server_list_menu.visible = true
+	
 func show_main_menu():
 	hide_all_menus()
 	main_menu.visible = true
@@ -371,9 +410,11 @@ func show_name_input_menu():
 		name_input_error_label.text = ""
 		name_input_error_label.visible = false
 
-func show_match_list_menu():
+func show_room_list_menu():
+	game_manager.request_rooms_list()
 	hide_all_menus()
-	match_list_menu.visible = true
+	
+	room_list_menu.visible = true
 	if match_password_container:
 		match_password_container.visible = false
 	if match_password_input:
@@ -382,9 +423,9 @@ func show_match_list_menu():
 		match_list_error_label.text = ""
 		match_list_error_label.visible = false
 
-func show_manual_join_menu():
+func show_manual_room_join_menu():
 	hide_all_menus()
-	manual_join_menu.visible = true
+	manual_room_join_menu.visible = true
 	if manual_room_name_input:
 		manual_room_name_input.text = ""
 	if manual_room_password_input:
@@ -393,16 +434,31 @@ func show_manual_join_menu():
 		manual_join_error_label.text = ""
 		manual_join_error_label.visible = false
 
+func show_manual_server_join_menu():
+	hide_all_menus()
+	manual_server_join_menu.visible = true
+	if manual_server_ip_input:
+		manual_server_ip_input.text = "127.0.0.1"
+	if manual_server_port_input:
+		manual_server_port_input.text = "7777"
+	if manual_server_join_error_label:
+		manual_server_join_error_label.text = ""
+		manual_server_join_error_label.visible = false
+
+func show_create_local_match_menu():
+	hide_all_menus()
+	create_local_match_menu.visible = true
+
 func show_create_match_menu():
 	hide_all_menus()
-	create_match_menu.visible = true
+	create_room_menu.visible = true
 	if room_name_input:
 		room_name_input.text = ""
 	if room_password_input:
 		room_password_input.text = ""
-	if create_match_error_label:
-		create_match_error_label.text = ""
-		create_match_error_label.visible = false
+	if create_room_error_label:
+		create_room_error_label.text = ""
+		create_room_error_label.visible = false
 
 func show_how_to_play_menu():
 	hide_all_menus()
@@ -443,9 +499,12 @@ func hide_all_menus():
 	connecting_menu.visible = false
 	main_menu.visible = false
 	name_input_menu.visible = false
-	match_list_menu.visible = false
-	manual_join_menu.visible = false
-	create_match_menu.visible = false
+	server_list_menu.visible = false
+	room_list_menu.visible = false
+	manual_room_join_menu.visible = false
+	manual_server_join_menu.visible = false
+	create_room_menu.visible = false
+	create_local_match_menu.visible = false
 	room_menu.visible = false
 	how_to_play_menu.visible = false
 	options_menu.visible = false
@@ -455,9 +514,9 @@ func get_current_visible_menu() -> CenterContainer:
 	if connecting_menu.visible: return connecting_menu
 	if main_menu.visible: return main_menu
 	if name_input_menu.visible: return name_input_menu
-	if match_list_menu.visible: return match_list_menu
-	if manual_join_menu.visible: return manual_join_menu
-	if create_match_menu.visible: return create_match_menu
+	if room_list_menu.visible: return room_list_menu
+	if manual_room_join_menu.visible: return manual_room_join_menu
+	if create_room_menu.visible: return create_room_menu
 	if room_menu.visible: return room_menu
 	if how_to_play_menu.visible: return how_to_play_menu
 	if options_menu.visible: return options_menu
@@ -487,11 +546,17 @@ func _on_name_confirm_pressed():
 
 # ===== CALLBACKS DO MENU PRINCIPAL =====
 
-func _on_join_match_pressed():
-	show_match_list_menu()
-	game_manager.request_rooms_list()
+func _on_join_server_pressed():
+	if not game_manager.is_connected_to_server:
+		# game_manager.request_server_list()
+		show_server_list_menu()
+	else:
+		show_room_list_menu()
 
-func _on_create_match_pressed():
+func _on_join_singleplayer_pressed():
+	show_create_local_match_menu()
+
+func _on_create_room_pressed():
 	show_create_match_menu()
 
 func _on_how_to_play_pressed():
@@ -509,16 +574,19 @@ func _on_quit_pressed():
 func _on_match_list_back_pressed():
 	show_main_menu()
 
+func _on_exit_server_pressed():
+	game_manager.disconnect_from_server()
+
 func _on_match_list_join_pressed():
 	if selected_match_id == -1:
-		show_error_match_list("Nenhuma partida selecionada")
+		show_error_room_list("Nenhuma partida selecionada")
 		return
 	
 	var password = match_password_input.text if match_password_input else ""
 	game_manager.join_room(selected_match_id, password)
 
 func _on_manual_join_button_pressed():
-	show_manual_join_menu()
+	show_manual_room_join_menu()
 
 func _on_match_item_selected(index: int):
 	if index < 0 or index >= current_matches.size():
@@ -534,8 +602,7 @@ func _on_match_item_selected(index: int):
 	if match_list_error_label:
 		match_list_error_label.visible = false
 
-func populate_match_list(matches: Array):
-	
+func populate_room_list(matches: Array):
 	if not match_list:
 		push_warning("MatchList não está inicializado")
 		return
@@ -569,9 +636,19 @@ func populate_match_list(matches: Array):
 		text += " (%d/%d)" % [players, max_players]
 		match_list.add_item(text)
 
+# ===== CALLBACKS DO MENU DE LISTA DE SERVIDORES =====
+func _on_server_list_back_pressed():
+	show_main_menu()
+
+func _on_server_list_enter_pressed():
+	_log_debug("_on_server_list_enter_pressed!")
+
+func _on_manual_server_join_button_pressed():
+	show_manual_server_join_menu()
+
 # ===== CALLBACKS DO MENU DE ENTRADA MANUAL =====
 
-func _on_manual_join_confirm_pressed():
+func _on_manual_room_join_confirm_pressed():
 	if not manual_room_name_input:
 		return
 	
@@ -584,8 +661,16 @@ func _on_manual_join_confirm_pressed():
 	
 	game_manager.join_room_by_name(room_name, password)
 
-func _on_manual_join_back_pressed():
-	show_match_list_menu()
+func _on_manual_server_join_confirm_pressed():
+	var server_ip = manual_server_ip_input.text
+	var server_port = manual_server_port_input.text
+	game_manager.join_server_by_ip(server_ip, server_port)
+
+func _on_manual_room_join_back_pressed():
+	show_room_list_menu()
+
+func _on_manual_server_join_back_pressed():
+		show_server_list_menu()
 
 # ===== CALLBACKS DO MENU DE CRIAR PARTIDA =====
 
@@ -597,13 +682,19 @@ func _on_create_match_confirm_pressed():
 	var password = room_password_input.text if room_password_input else ""
 	
 	if room_name.is_empty():
-		show_error_create_match("Nome da sala não pode estar vazio")
+		show_error_create_room("Nome da sala não pode estar vazio")
 		return
 	
 	game_manager.create_room(room_name, password)
 
-func _on_create_match_back_pressed():
+func _on_create_local_match_confirm_pressed():
+	game_manager.create_local_match()
+
+func _on_create_local_match_back_pressed():
 	show_main_menu()
+
+func _on_create_match_back_pressed():
+	show_room_list_menu()
 
 # ===== CALLBACKS DO MENU COMO JOGAR =====
 
@@ -620,6 +711,13 @@ func _on_options_back_pressed():
 	load_options()
 	show_main_menu()
 
+func _on_cancel_cancel_pressed():
+	show_main_menu()
+
+func _on_loading_cancel_pressed():
+	show_main_menu()
+	game_manager.disconnect_from_server()
+	
 func save_options():
 	_log_debug("Salvando configurações...")
 	
@@ -811,7 +909,7 @@ func _apply_video_settings():
 			push_warning("FPS limit inválido: %s, usando 60 FPS" % fps_limit)
 			Engine.max_fps = 60
 	
-	print("Configurações de vídeo aplicadas com sucesso")
+	_log_debug("Configurações de vídeo aplicadas com sucesso")
 
 
 func _center_window():
@@ -859,7 +957,7 @@ func _move_to_primary_screen():
 	# Move para o monitor principal
 	DisplayServer.window_set_current_screen(primary_screen)
 	
-	print("Janela movida para o monitor principal")
+	_log_debug("Janela movida para o monitor principal")
 
 # FUNÇÃO AUXILIAR: Retorna lista de resoluções disponíveis para o monitor atual
 func get_available_resolutions() -> Array[Vector2i]:
@@ -883,26 +981,6 @@ func get_available_resolutions() -> Array[Vector2i]:
 	
 	return valid_resolutions
 
-
-# FUNÇÃO AUXILIAR: Debug de informações da tela
-func print_screen_info():
-	"""Imprime informações sobre os monitores disponíveis"""
-	var screen_count = DisplayServer.get_screen_count()
-	print("=== INFORMAÇÕES DE TELA ===")
-	print("Total de monitores: %d" % screen_count)
-	
-	for i in range(screen_count):
-		print("\nMonitor %d:" % i)
-		print("  Tamanho: %s" % DisplayServer.screen_get_size(i))
-		print("  Posição: %s" % DisplayServer.screen_get_position(i))
-		print("  DPI: %d" % DisplayServer.screen_get_dpi(i))
-		print("  Refresh rate: %d Hz" % DisplayServer.screen_get_refresh_rate(i))
-		
-		if i == DisplayServer.window_get_current_screen():
-			print("  [MONITOR ATUAL]")
-	
-	print("\n===========================")
-
 func _apply_audio_settings():
 	_apply_volume_realtime("Master", current_settings["audio"]["master_volume"])
 	_apply_volume_realtime("Music", current_settings["audio"]["music_volume"])
@@ -918,6 +996,7 @@ func _on_room_close_pressed():
 
 func _on_room_leave_pressed():
 	game_manager.leave_room()
+	show_room_list_menu()
 
 # ===== ATUALIZAÇÃO DO MENU DE SALA =====
 
@@ -981,20 +1060,15 @@ func _update_room_display(room_data: Dictionary):
 		room_error_label.text = ""
 		room_error_label.visible = false
 
-func update_room_info(room_data: Dictionary):
-	"""Atualiza informações da sala (chamado quando há mudanças)"""
-	if room_menu.visible:
-		_update_room_display(room_data)
-
-func update_name_e_connected(player_name: String):
+func update_name_e_connected(server_name: String, player_name: String):
 	if main_menu:
-		var label = main_menu.get_node_or_null("VBoxContainer/ConnecteName")
-		if label:
-			label.text = "%s  -  Conectado 🌐" % player_name
+		connect_name_label = main_menu.get_node_or_null("VBoxContainer/ConnecteName")
+		if connect_name_label:
+			connect_name_label.text = '🌐🔗 Conectado em "%s" como %s' % [server_name, player_name]
 		
 # ===== FUNÇÕES DE MENSAGENS DE ERRO =====
 
-func show_error_match_list(message: String):
+func show_error_room_list(message: String):
 	if match_list_error_label:
 		match_list_error_label.text = message
 		match_list_error_label.visible = true
@@ -1008,11 +1082,11 @@ func show_error_manual_join(message: String):
 		manual_join_error_label.modulate = Color(1.0, 0.3, 0.3)
 	push_warning("Entrada manual: " + message)
 
-func show_error_create_match(message: String):
-	if create_match_error_label:
-		create_match_error_label.text = message
-		create_match_error_label.visible = true
-		create_match_error_label.modulate = Color(1.0, 0.3, 0.3)
+func show_error_create_room(message: String):
+	if create_room_error_label:
+		create_room_error_label.text = message
+		create_room_error_label.visible = true
+		create_room_error_label.modulate = Color(1.0, 0.3, 0.3)
 	push_warning("Criar partida: " + message)
 
 func show_error_name_input(message: String):
@@ -1055,7 +1129,8 @@ func update_loading_message(message: String):
 
 func _on_game_manager_connected():
 	_log_debug("Conectado ao servidor com sucesso!")
-	# Não faz nada aqui, aguarda nome ser aceito
+	# Mudar o nome do botão de "Entrar em um servidor" para "Salas do servidor"
+	join_server_button.text = "Salas do servidor"
 
 func _on_game_manager_connection_failed(reason: String):
 	_log_debug("Falha na conexão: " + reason)
@@ -1063,15 +1138,17 @@ func _on_game_manager_connection_failed(reason: String):
 
 func _on_game_manager_disconnected():
 	_log_debug("Desconectado do servidor")
+	join_server_button.text = "Entrar em um servidor"
+	connect_name_label.text = "Desconectado 🌐⛓️‍💥"
 	show_main_menu()
 
 func _on_game_manager_rooms_received(rooms: Array):
 	_log_debug("Lista de salas recebida: %d salas" % rooms.size())
-	populate_match_list(rooms)
+	populate_room_list(rooms)
 
 func _on_game_manager_name_accepted():
 	_log_debug("Nome aceito pelo servidor")
-	show_main_menu()
+	show_room_list_menu()
 
 func _on_game_manager_name_rejected(reason: String):
 	_log_debug("Nome rejeitado: " + reason)
@@ -1086,7 +1163,7 @@ func _on_game_manager_room_joined(room_data: Dictionary):
 
 func _on_game_manager_room_updated(room_data: Dictionary):
 	_log_debug("Sala atualizada: %d jogadores" % room_data.get("players", []).size())
-	update_room_info(room_data)
+	_update_room_display(room_data)
 
 func _on_game_manager_match_started():
 	_log_debug("Partida iniciada!")
@@ -1098,11 +1175,11 @@ func _on_game_manager_error(error_message: String):
 	# Mostra erro no contexto apropriado
 	if room_menu.visible:
 		show_error_room(error_message)
-	elif match_list_menu.visible:
-		show_error_match_list(error_message)
-	elif create_match_menu.visible:
-		show_error_create_match(error_message)
-	elif manual_join_menu.visible:
+	elif room_list_menu.visible:
+		show_error_room_list(error_message)
+	elif create_room_menu.visible:
+		show_error_create_room(error_message)
+	elif manual_room_join_menu.visible:
 		show_error_manual_join(error_message)
 
 # ===== CALLBACKS DE VÍDEO =====

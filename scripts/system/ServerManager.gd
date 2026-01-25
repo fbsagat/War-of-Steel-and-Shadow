@@ -14,12 +14,11 @@ class_name ServerManager
 ## IMPORTANTE: Este script só executa quando iniciado com --server ou --dedicated
 
 # ===== CONFIGURAÇÕES =====
-
 @export_category("Debug")
 @export var debug_mode: bool = true
 @export var debug_timer: bool = false
 ## [TESTES] Usa o TestManager para iniciar logo uma partida na execução
-@export var fast_round: bool = true
+@export var fast_round: bool = false
 ## [TESTES] Define a quantidade de instnacias de clientes para executar fast_round
 @export var simulador_players_qtd: int = 2
 ## [TESTES] Dropa itens perto dos players e ativa o trainer de cada player
@@ -29,6 +28,7 @@ class_name ServerManager
 @export var server_port: int = 7777
 @export var max_clients: int = 32
 @export var is_headless : bool
+@export var public_server_name: String = "Games da PQP! Diversão garantida!"
 
 @export_category("Default Node References")
 const map_scene : String = "res://scenes/gameplay/terrain_3d.tscn"
@@ -241,9 +241,11 @@ func _on_peer_connected(peer_id: int):
 	var configs: Dictionary = {
 		"max_players_per_room": max_players_per_room,
 		"min_players_to_start": min_players_to_start,
+		"server_name": public_server_name,
 	}
 	
 	# Atualiza max_players_per_room e min_players_to_start para clientes
+	# atualiza nome do seridor
 	network_manager.rpc_id(peer_id, "update_client_info", configs)
 	
 	# Sistema de teste automático (se ativado)

@@ -9,7 +9,6 @@ class_name GameManager
 @export_category("Connection Settings")
 @export var server_address: String = "127.0.0.1"
 @export var server_port: int = 7777
-@export var connection_timeout: float = 10.0
 
 const map_scene : String = "res://scenes/system/terrain_3d.tscn"
 const player_scene : String = "res://scenes/gameplay/player_warrior.tscn"
@@ -29,6 +28,7 @@ const camera_controller : String = "res://scenes/gameplay/camera_controller.tscn
 
 var item_database: ItemDatabase = null
 var network_manager: NetworkManager = null
+var initializer = null
 
 # ===== VARIÁVEIS INTERNAS =====
 
@@ -55,16 +55,6 @@ var round_node: Node = null
 var players_node: Node = null
 var objects_node: Node = null
 
-# ===== VARIÁVEIS DE RECONEXÃO =====
-var reconnect_attempts: int = 0
-var max_reconnect_attempts: int = 5  # Tentativas máximas antes do reset
-var reconnect_delay: float = 2.0    # Segundos entre tentativas
-var reconnect_start_time: float = 0.0
-var max_reconnect_duration: float = 15.0  # Tempo máximo total para reconexão
-var is_reconnecting: bool = false
-var reconnect_timer: Timer = null
-var is_disconnecting_intentionally = false
-
 # ===== SINAIS =====
 
 signal connected_to_server()
@@ -87,41 +77,36 @@ signal item_unequipped(object_id: String)
 signal items_swapped(item_id_1: String, item_id_2: String)
 
 # ===== FUNÇÕES DE INICIALIZAÇÃO =====
-
 func _ready():
-	pass
-
-func initialize():
-	# Configuração do timer de reconexão (só para clientes)
-	reconnect_timer = Timer.new()
-	add_child(reconnect_timer)
-	reconnect_timer.one_shot = true
-	reconnect_timer.timeout.connect(_attempt_reconnection)
-		
-	_log_debug("Inicializando GameManager como cliente")
-	
-	# Conecta sinais de rede
+	# Conecta sinais (só uma vez!)
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
 	multiplayer.connection_failed.connect(_on_connection_failed)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
-	
-func _process(_delta):
-	"""Verifica timeout de conexão"""
-	if is_connecting:
-		if Time.get_ticks_msec() / 1000.0 - connection_start_time > connection_timeout:
-			_log_debug("Timeout de conexão excedido")
-			is_connecting = false
-			_handle_connection_error("Tempo de conexão esgotado")
-			
-	# Interrompe reconexão se usuário cancelar
-	if is_reconnecting and Input.is_action_just_pressed("ui_cancel"):
-		_reset_client_state()
-		is_reconnecting = false
+	_log_debug("Sinais de rede configurados")
+
+func initialize():
+	if main_menu:
+		main_menu.show_main_menu()
 
 # ===== CONEXÃO COM O SERVIDOR =====
+func join_server_by_ip(received_ip, received_port):
+	_log_debug("_on_manual_server_join_confirm_pressed")
+	# Fazer verificações aqui antes de prosseguir
+	
+	# Se o cliente enviou um endereço de ip, usar este, se não enviou nada, fica o padrão
+	if received_ip:
+		server_address = received_ip
+		
+	# Se o cliente enviou uma porta, usar esta, se não enviou nada, padrão
+	if received_port:
+		server_port = int(received_port)
+	
+	_log_debug("Conectado manualmente no servido enviado pelo cliente")
+	connect_to_server()
 
 func connect_to_server():
 	"""Conecta ao servidor dedicado"""
+	
 	if is_connected_to_server:
 		_log_debug("Já conectado ao servidor")
 		return
@@ -152,7 +137,6 @@ func connect_to_server():
 func disconnect_from_server():
 	"""Desconecta do servidor"""
 	# Marca desconexão intencional
-	is_disconnecting_intentionally = true
 	
 	if multiplayer.multiplayer_peer:
 		_log_debug("Desconectando do servidor...")
@@ -173,6 +157,7 @@ func disconnect_from_server():
 func _on_connected_to_server():
 	"""Callback quando conecta com sucesso ao servidor"""
 	# Só leia get_unique_id() quando o peer estiver ativo
+
 	if verificar_rede():
 		# garante que o peer foi realmente configurado
 		if multiplayer.has_multiplayer_peer():
@@ -190,71 +175,25 @@ func _on_connected_to_server():
 	connected_to_server.emit()
 
 func _on_connection_failed():
-	is_connecting = false
 	_log_debug("Falha ao conectar ao servidor")
-	
-	# Não mostra erro durante reconexão automática
-	if not is_reconnecting:
-		_handle_connection_error("Não foi possível conectar ao servidor")
 
 func _on_server_disconnected():
 	_log_debug("Desconectado do servidor")
 	
 	is_connected_to_server = false
 	is_in_round = false
-
+	
+	# Reseta estado do cliente
+	_reset_client_state()
+	
 	# Inicia processo de reconexão
 	if main_menu:
 		main_menu.show_connecting_menu()
 		main_menu.show_error_connecting("Conexão perdida. Tentando reconectar...")
 	
 	disconnected_from_server.emit()
-	_start_reconnection_process()
-	
-func _start_reconnection_process():
-	# Reseta contadores de reconexão
-	reconnect_attempts = 0
-	reconnect_start_time = Time.get_ticks_msec() / 1000.0
-	is_reconnecting = true
-	
-	_log_debug("Iniciando processo de reconexão")
-	_attempt_reconnection()
-
-func _attempt_reconnection():
-	# Verifica limite de tempo total
-	# Adicionar um botão "Cancelar" nesta tela de reconexão?
-	
-	var current_time = Time.get_ticks_msec() / 1000.0
-	if (current_time - reconnect_start_time) > max_reconnect_duration:
-		_log_debug("Limite de tempo de reconexão excedido. Resetando estado.")
-		_reset_client_state()
-		return
-
-	# Verifica limite de tentativas
-	if reconnect_attempts >= max_reconnect_attempts:
-		_log_debug("Máximo de tentativas de reconexão excedido. Resetando estado.")
-		_reset_client_state()
-		return
-
-	reconnect_attempts += 1
-	_log_debug("Tentativa de reconexão #%d" % reconnect_attempts)
-	
-	if main_menu:
-		main_menu.show_loading_menu("Tentando reconectar (%d/%d)..." % [reconnect_attempts, max_reconnect_attempts])
-	
-	connect_to_server()
-	
-	# Agenda próxima tentativa se falhar
-	await get_tree().create_timer(connection_timeout + 0.5).timeout
-	if not is_connected_to_server and is_reconnecting:
-		reconnect_timer.start(reconnect_delay)
 
 func _reset_client_state():
-	# Interrompe processos de reconexão
-	is_reconnecting = false
-	if reconnect_timer:
-		reconnect_timer.stop()
-	
 	# Limpa todos os objetos spawnados
 	for round_id in spawned_objects.keys():
 		for object_data in spawned_objects[round_id].values():
@@ -273,19 +212,13 @@ func _reset_client_state():
 	configs = {}
 	current_room = {}
 	current_round = {}
-	map_manager = null
+	#map_manager = null
 	local_player = null
 	is_in_round = false
-	reconnect_attempts = 0
 	
 	# Volta para tela inicial de conexão
 	if main_menu:
 		main_menu.show_loading_menu("Conectando ao servidor...")
-	
-	# Tenta nova conexão após pequeno delay
-	await get_tree().create_timer(1.0).timeout
-	reconnect_start_time = Time.get_ticks_msec() / 1000.0
-	connect_to_server()
 	
 func _handle_connection_error(message: String):
 	"""Trata erro de conexão"""
@@ -306,6 +239,22 @@ func update_client_info(info: Dictionary):
 			configs[key] = new_value
 			_log_debug("[UPDATED] %s: %s" % [str(key), str(new_value)])
 
+# ===== CRIAÇÃO DE REDE LOCAL =====
+
+func create_local_match():
+	"""Criar uma partida local"""
+	_log_debug("Iniciando uma partida local")
+	
+	# Carregar servidor por trás.
+	#await initializer._init_server(false)
+	
+	# Conectar neste servidor, não via rede e sim via conexão local(criar sistema).
+	#connect_to_server()
+	
+	# Definir nome do player e da sala (no menu feito para isso) (não define senha pois é partida local).
+	
+	# Cria a sala automaticamente, pois só terá uma (jogador espera outros players entrarem).
+	# Menu padrão de sala(não o da lista de salas): Botão para iniciar partida pode ser clicado.
 
 # ===== REGISTRO DE JOGADOR =====
 
@@ -328,9 +277,8 @@ func _client_name_accepted(accepted_name: String):
 	_log_debug("Nome aceito pelo servidor: " + player_name)
 	
 	if main_menu:
-		main_menu.show_main_menu()
-		main_menu.update_name_e_connected(accepted_name)
-	
+		main_menu.update_name_e_connected(configs["server_name"], accepted_name)
+		
 	name_accepted.emit()
 
 func _client_name_rejected(reason: String):
@@ -346,7 +294,7 @@ func _client_name_rejected(reason: String):
 func _client_wrong_password():
 	"""Callback quando a senha está incorreta"""
 	if main_menu:
-		main_menu.show_match_list_menu()
+		main_menu.show_room_list_menu()
 		main_menu.match_password_container.visible = true
 		_show_error("Senha incorreta")
 
@@ -365,37 +313,24 @@ func _client_room_name_error(error_msg : String):
 func _client_room_not_found():
 	"""Callback quando a sala não é encontrada"""
 	if main_menu:
-		main_menu.show_match_list_menu()
+		main_menu.show_room_list_menu()
 		main_menu.match_password_container.visible = true
 		_show_error("Sala não encontrada")
 
 # ===== GERENCIAMENTO DE SALAS =====
 
 func request_rooms_list():
-	"""Solicita lista de salas disponíveis"""
-	if not is_connected_to_server:
-		_show_error("Não conectado ao servidor")
-		return
+	_log_debug("📤 Solicitando lista de salas")
 	
+	# Cancelar pedido se não ter nome do player
 	if player_name.is_empty():
 		_show_error("Nome do jogador não definido")
 		return
-	
-	_log_debug("Solicitando lista de salas...")
-	
-	if main_menu:
-		main_menu.show_loading_menu("Buscando salas disponíveis...")
-	
+		
 	network_manager.request_rooms_list()
 
 func _client_receive_rooms_list(rooms: Array):
 	"""Callback quando recebe lista de salas"""
-	_log_debug("Lista de salas recebida: %d salas" % rooms.size())
-	
-	if main_menu:
-		main_menu.hide_loading_menu(true)
-		main_menu.populate_match_list(rooms)
-	
 	rooms_list_received.emit(rooms)
 
 func _client_receive_rooms_list_update(rooms: Array):
@@ -479,8 +414,8 @@ func _client_room_updated(room_data: Dictionary):
 	current_room = room_data
 	_log_debug("Sala atualizada: %s (%d jogadores)" % [room_data["name"], room_data["players"].size()])
 	
-	if main_menu:
-		main_menu.update_room_info(room_data)
+	#if main_menu:
+		#main_menu._update_room_display(room_data)
 	
 	room_updated.emit(room_data)
 
@@ -493,9 +428,6 @@ func leave_room():
 	_log_debug("Saindo da sala: %s" % current_room["name"])
 	network_manager.leave_room()
 	current_room = {}
-	
-	if main_menu:
-		main_menu.show_main_menu()
 
 func close_room():
 	"""Fecha a sala atual (apenas host)"""
@@ -519,7 +451,7 @@ func _client_room_closed(reason: String):
 	current_room = {}
 	
 	if main_menu:
-		main_menu.show_match_list_menu()
+		main_menu.show_room_list_menu()
 		_show_error(reason)
 		# Arrumar algum dia
 
@@ -803,12 +735,12 @@ func _show_error(message: String):
 			main_menu.show_error_connecting(message)
 		elif main_menu.room_menu and main_menu.room_menu.visible:
 			main_menu.show_error_room(message)
-		elif main_menu.match_list_menu and main_menu.match_list_menu.visible:
-			main_menu.show_error_match_list(message)
-		elif main_menu.manual_join_menu and main_menu.manual_join_menu.visible:
+		elif main_menu.room_list_menu and main_menu.room_list_menu.visible:
+			main_menu.show_error_room_list(message)
+		elif main_menu.manual_room_join_menu and main_menu.manual_room_join_menu.visible:
 			main_menu.show_error_manual_join(message)
-		elif main_menu.create_match_menu and main_menu.create_match_menu.visible:
-			main_menu.show_error_create_match(message)
+		elif main_menu.create_room_menu and main_menu.create_room_menu.visible:
+			main_menu.show_error_create_room(message)
 
 # ===== SISTEMA DE INVENTÁRIO POR RODADA =====
 	
