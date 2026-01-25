@@ -76,6 +76,7 @@ custom_minimum_size = Vector2(1200, 800)
 layout_mode = 2
 
 [node name="MainMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control"]
+visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -126,6 +127,7 @@ size_flags_vertical = 8
 theme = SubResource("Theme_fe2o3")
 theme_override_colors/font_color = Color(0.91, 0.6066667, 0, 1)
 theme_override_font_sizes/font_size = 15
+text = "Desconectado 🌐⛓️‍💥"
 horizontal_alignment = 1
 vertical_alignment = 2
 
@@ -179,17 +181,19 @@ layout_mode = 2
 text = "Confirmar"
 
 [node name="ConnectingMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control"]
-visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_top = 80.0
+offset_bottom = -120.0
 grow_horizontal = 2
 grow_vertical = 2
 
 [node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/ConnectingMenu"]
+custom_minimum_size = Vector2(500, 400)
 layout_mode = 2
-theme_override_constants/separation = 10
+theme_override_constants/separation = 4
 
 [node name="TextureRect" type="TextureRect" parent="CanvasLayer/CenterContainer/Control/ConnectingMenu/VBoxContainer"]
 custom_minimum_size = Vector2(128, 128)
@@ -208,6 +212,19 @@ custom_minimum_size = Vector2(500, 0)
 layout_mode = 2
 horizontal_alignment = 1
 autowrap_mode = 3
+
+[node name="TextureRect2" type="TextureRect" parent="CanvasLayer/CenterContainer/Control/ConnectingMenu/VBoxContainer"]
+custom_minimum_size = Vector2(128, 32)
+layout_mode = 2
+
+[node name="ButtonsContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/ConnectingMenu/VBoxContainer"]
+layout_mode = 2
+alignment = 1
+
+[node name="CancelButton" type="Button" parent="CanvasLayer/CenterContainer/Control/ConnectingMenu/VBoxContainer/ButtonsContainer"]
+custom_minimum_size = Vector2(150, 40)
+layout_mode = 2
+text = "Cancelar"
 
 [node name="ServerListMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control"]
 visible = false
@@ -270,7 +287,7 @@ custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 text = "Entrada Manual"
 
-[node name="MatchListMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control"]
+[node name="RoomListMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control"]
 visible = false
 layout_mode = 1
 anchors_preset = 15
@@ -279,22 +296,22 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/MatchListMenu"]
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/RoomListMenu"]
 custom_minimum_size = Vector2(1100, 800)
 layout_mode = 2
 theme_override_constants/separation = 10
 alignment = 1
 
-[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/MatchListMenu/VBoxContainer"]
+[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer"]
 layout_mode = 2
-text = "Lista de Partidas"
+text = "Salas Disponíveis"
 horizontal_alignment = 1
 
-[node name="ScrollContainer" type="ScrollContainer" parent="CanvasLayer/CenterContainer/Control/MatchListMenu/VBoxContainer"]
+[node name="ScrollContainer" type="ScrollContainer" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer"]
 custom_minimum_size = Vector2(1200, 450)
 layout_mode = 2
 
-[node name="MatchList" type="ItemList" parent="CanvasLayer/CenterContainer/Control/MatchListMenu/VBoxContainer/ScrollContainer"]
+[node name="MatchList" type="ItemList" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer/ScrollContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
@@ -305,55 +322,59 @@ item_0/text = "Partida 1"
 item_1/text = "Partida 2"
 item_2/text = "Partida 3"
 
-[node name="PasswordContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/MatchListMenu/VBoxContainer"]
-visible = false
+[node name="PasswordContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer"]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/MatchListMenu/VBoxContainer/PasswordContainer"]
+[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer/PasswordContainer"]
 layout_mode = 2
 text = "Senha"
 horizontal_alignment = 1
 
-[node name="PasswordInput" type="LineEdit" parent="CanvasLayer/CenterContainer/Control/MatchListMenu/VBoxContainer/PasswordContainer"]
+[node name="PasswordInput" type="LineEdit" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer/PasswordContainer"]
 layout_mode = 2
 placeholder_text = "Digite a senha"
 secret = true
 
-[node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/MatchListMenu/VBoxContainer"]
+[node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer"]
 visible = false
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 horizontal_alignment = 1
 autowrap_mode = 3
 
-[node name="ButtonsContainer2" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/MatchListMenu/VBoxContainer"]
+[node name="ButtonsContainer1" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer"]
 layout_mode = 2
 alignment = 1
 
-[node name="JoinButton" type="Button" parent="CanvasLayer/CenterContainer/Control/MatchListMenu/VBoxContainer/ButtonsContainer2"]
+[node name="JoinButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer/ButtonsContainer1"]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 text = "Entrar"
 
-[node name="ManualJoinButton" type="Button" parent="CanvasLayer/CenterContainer/Control/MatchListMenu/VBoxContainer/ButtonsContainer2"]
+[node name="ManualJoinButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer/ButtonsContainer1"]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 text = "Entrada Manual"
 
-[node name="CreateMatchButton" type="Button" parent="CanvasLayer/CenterContainer/Control/MatchListMenu/VBoxContainer/ButtonsContainer2"]
+[node name="CreateRoomButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer/ButtonsContainer1"]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
-text = "Criar Partida
+text = "Criar Sala
 "
 
-[node name="ButtonsContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/MatchListMenu/VBoxContainer"]
+[node name="ButtonsContainer2" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer"]
 layout_mode = 2
 alignment = 1
 
-[node name="BackButton" type="Button" parent="CanvasLayer/CenterContainer/Control/MatchListMenu/VBoxContainer/ButtonsContainer"]
+[node name="BackButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer/ButtonsContainer2"]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 text = "Voltar"
+
+[node name="ExitServerButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer/ButtonsContainer2"]
+custom_minimum_size = Vector2(150, 40)
+layout_mode = 2
+text = "Desconectar"
 
 [node name="RoomMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control"]
 visible = false
@@ -587,7 +608,7 @@ custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 text = "Confirmar"
 
-[node name="CreateMatchMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control"]
+[node name="CreateRoomMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control"]
 visible = false
 layout_mode = 1
 anchors_preset = 15
@@ -596,37 +617,37 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/CreateMatchMenu"]
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/CreateRoomMenu"]
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/CreateMatchMenu/VBoxContainer"]
+[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/CreateRoomMenu/VBoxContainer"]
 layout_mode = 2
 text = "Criar Partia"
 horizontal_alignment = 1
 
-[node name="Label2" type="Label" parent="CanvasLayer/CenterContainer/Control/CreateMatchMenu/VBoxContainer"]
+[node name="Label2" type="Label" parent="CanvasLayer/CenterContainer/Control/CreateRoomMenu/VBoxContainer"]
 layout_mode = 2
 text = "Nome da Sala"
 horizontal_alignment = 1
 
-[node name="RoomNameInput" type="LineEdit" parent="CanvasLayer/CenterContainer/Control/CreateMatchMenu/VBoxContainer"]
+[node name="RoomNameInput" type="LineEdit" parent="CanvasLayer/CenterContainer/Control/CreateRoomMenu/VBoxContainer"]
 layout_mode = 2
 placeholder_text = "Digite o nome da sala"
 alignment = 1
 
-[node name="Label3" type="Label" parent="CanvasLayer/CenterContainer/Control/CreateMatchMenu/VBoxContainer"]
+[node name="Label3" type="Label" parent="CanvasLayer/CenterContainer/Control/CreateRoomMenu/VBoxContainer"]
 layout_mode = 2
 text = "Senha (opcional)"
 horizontal_alignment = 1
 
-[node name="RoomPasswordInput" type="LineEdit" parent="CanvasLayer/CenterContainer/Control/CreateMatchMenu/VBoxContainer"]
+[node name="RoomPasswordInput" type="LineEdit" parent="CanvasLayer/CenterContainer/Control/CreateRoomMenu/VBoxContainer"]
 layout_mode = 2
 placeholder_text = "Deixe vazio para sala pública"
 alignment = 1
 secret = true
 
-[node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/CreateMatchMenu/VBoxContainer"]
+[node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/CreateRoomMenu/VBoxContainer"]
 visible = false
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
@@ -634,15 +655,15 @@ text = "Senha"
 horizontal_alignment = 1
 autowrap_mode = 3
 
-[node name="ButtonsContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/CreateMatchMenu/VBoxContainer"]
+[node name="ButtonsContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/CreateRoomMenu/VBoxContainer"]
 layout_mode = 2
 alignment = 1
 
-[node name="BackButton" type="Button" parent="CanvasLayer/CenterContainer/Control/CreateMatchMenu/VBoxContainer/ButtonsContainer"]
+[node name="BackButton" type="Button" parent="CanvasLayer/CenterContainer/Control/CreateRoomMenu/VBoxContainer/ButtonsContainer"]
 layout_mode = 2
 text = "Voltar"
 
-[node name="ConfirmButton" type="Button" parent="CanvasLayer/CenterContainer/Control/CreateMatchMenu/VBoxContainer/ButtonsContainer"]
+[node name="ConfirmButton" type="Button" parent="CanvasLayer/CenterContainer/Control/CreateRoomMenu/VBoxContainer/ButtonsContainer"]
 custom_minimum_size = Vector2(200, 40)
 layout_mode = 2
 text = "Confirmar"
@@ -960,6 +981,16 @@ label_settings = SubResource("LabelSettings_dhe1o")
 horizontal_alignment = 1
 
 [node name="LoadingProgress" type="ProgressBar" parent="CanvasLayer/CenterContainer/Control/LoadingMenu/VBoxContainer"]
+visible = false
 custom_minimum_size = Vector2(400, 30)
 layout_mode = 2
 theme_override_styles/fill = SubResource("StyleBoxFlat_6dd3c")
+
+[node name="ButtonsContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/LoadingMenu/VBoxContainer"]
+layout_mode = 2
+alignment = 1
+
+[node name="CancelButton" type="Button" parent="CanvasLayer/CenterContainer/Control/LoadingMenu/VBoxContainer/ButtonsContainer"]
+custom_minimum_size = Vector2(150, 40)
+layout_mode = 2
+text = "Cancelar"

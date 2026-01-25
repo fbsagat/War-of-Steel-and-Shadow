@@ -88,7 +88,6 @@ func _ready():
 func initialize():
 	if main_menu:
 		main_menu.show_main_menu()
-		#main_menu.update_name_e_connected(accepted_name)
 
 # ===== CONEXÃO COM O SERVIDOR =====
 func join_server_by_ip(received_ip, received_port):
@@ -276,6 +275,9 @@ func _client_name_accepted(accepted_name: String):
 	player_name = accepted_name
 	_log_debug("Nome aceito pelo servidor: " + player_name)
 	
+	if main_menu:
+		main_menu.update_name_e_connected(accepted_name)
+		
 	name_accepted.emit()
 
 func _client_name_rejected(reason: String):
@@ -310,7 +312,7 @@ func _client_room_name_error(error_msg : String):
 func _client_room_not_found():
 	"""Callback quando a sala não é encontrada"""
 	if main_menu:
-		main_menu.show_match_list_menu()
+		main_menu.show_room_list_menu()
 		main_menu.match_password_container.visible = true
 		_show_error("Sala não encontrada")
 
@@ -343,19 +345,10 @@ func _request_rooms_list_internal():
 	
 	_log_debug("Solicitando lista de salas...")
 	
-	if main_menu:
-		main_menu.show_loading_menu("Buscando salas disponíveis...")
-	
 	network_manager.request_rooms_list()
 
 func _client_receive_rooms_list(rooms: Array):
 	"""Callback quando recebe lista de salas"""
-	_log_debug("Lista de salas recebida: %d salas" % rooms.size())
-	
-	if main_menu:
-		main_menu.hide_loading_menu(true)
-		main_menu.populate_match_list(rooms)
-	
 	rooms_list_received.emit(rooms)
 
 func _client_receive_rooms_list_update(rooms: Array):
@@ -453,9 +446,6 @@ func leave_room():
 	_log_debug("Saindo da sala: %s" % current_room["name"])
 	network_manager.leave_room()
 	current_room = {}
-	
-	if main_menu:
-		main_menu.show_main_menu()
 
 func close_room():
 	"""Fecha a sala atual (apenas host)"""
@@ -763,8 +753,8 @@ func _show_error(message: String):
 			main_menu.show_error_connecting(message)
 		elif main_menu.room_menu and main_menu.room_menu.visible:
 			main_menu.show_error_room(message)
-		elif main_menu.match_list_menu and main_menu.match_list_menu.visible:
-			main_menu.show_error_match_list(message)
+		elif main_menu.room_list_menu and main_menu.room_list_menu.visible:
+			main_menu.show_error_room_list(message)
 		elif main_menu.manual_join_menu and main_menu.manual_join_menu.visible:
 			main_menu.show_error_manual_join(message)
 		elif main_menu.create_match_menu and main_menu.create_match_menu.visible:
