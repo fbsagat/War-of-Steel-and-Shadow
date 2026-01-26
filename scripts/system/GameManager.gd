@@ -388,17 +388,7 @@ func _client_wrong_password():
 		main_menu.show_manual_room_join_menu()
 		
 	_show_error("Senha incorreta")
-		
-		
-		# FAZER AMANAHÃ !
-		
-		# Arrumar a sincronização de animação de andando e recepção de animação de dano
-		
-		# Na branch correta:
-		# Criar sistema que salva servidores na lista de servidores
-		# Criar partida em rede local
-		
-		
+	
 func _client_room_name_exists():
 	"""Callback de quando já existe uma sala com o nome escolhido"""
 	if main_menu:
