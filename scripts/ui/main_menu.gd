@@ -410,8 +410,15 @@ func show_name_input_menu():
 		name_input_error_label.text = ""
 		name_input_error_label.visible = false
 
-func show_room_list_menu():
+func show_room_list_menu(error_visible: bool = false):
+	room_list_menu.visible = true
 	game_manager.request_rooms_list()
+	
+	var success : Array = await game_manager.rooms_list_received
+	if not success[0]:
+		_log_debug("Erro ao buscar salas")
+		return
+	
 	hide_all_menus()
 	
 	room_list_menu.visible = true
@@ -419,10 +426,13 @@ func show_room_list_menu():
 		match_password_container.visible = false
 	if match_password_input:
 		match_password_input.text = ""
-	if match_list_error_label:
+	if match_list_error_label and not error_visible:
 		match_list_error_label.text = ""
 		match_list_error_label.visible = false
-
+	elif error_visible:
+		match_list_error_label.visible = true
+		match_password_container.visible = true
+		
 func show_manual_room_join_menu():
 	hide_all_menus()
 	manual_room_join_menu.visible = true
@@ -549,8 +559,10 @@ func _on_name_confirm_pressed():
 func _on_join_server_pressed():
 	if not game_manager.is_connected_to_server:
 		# game_manager.request_server_list()
+		_log_debug("Join Server pressiondo! mostrar menu de list de servidor!")
 		show_server_list_menu()
 	else:
+		_log_debug("Join Server pressiondo, já conectado! mostrar menu de list de salas!")
 		show_room_list_menu()
 
 func _on_join_singleplayer_pressed():
@@ -657,6 +669,21 @@ func _on_manual_room_join_confirm_pressed():
 	
 	if room_name.is_empty():
 		show_error_manual_join("Nome da sala não pode estar vazio")
+		return
+	
+	game_manager.request_rooms_list()
+	var success : Array = await game_manager.rooms_list_received
+	if not success[0]:
+		show_error_manual_join("Erro ao buscar salas")
+		return
+	
+	var found: bool = false
+	for room in success[1]:
+		if room.get("name", "") == room_name:
+			found = true
+	
+	if not found:
+		show_error_manual_join("Sala não encontrada")
 		return
 	
 	game_manager.join_room_by_name(room_name, password)
@@ -1142,9 +1169,10 @@ func _on_game_manager_disconnected():
 	connect_name_label.text = "Desconectado 🌐⛓️‍💥"
 	show_main_menu()
 
-func _on_game_manager_rooms_received(rooms: Array):
-	_log_debug("Lista de salas recebida: %d salas" % rooms.size())
-	populate_room_list(rooms)
+func _on_game_manager_rooms_received(sucess: bool, rooms: Array):
+	if sucess:
+		populate_room_list(rooms)
+		_log_debug("Lista de salas recebida: %d salas" % rooms.size())
 
 func _on_game_manager_name_accepted():
 	_log_debug("Nome aceito pelo servidor")

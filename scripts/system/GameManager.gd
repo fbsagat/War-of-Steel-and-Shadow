@@ -60,7 +60,7 @@ var objects_node: Node = null
 signal connected_to_server()
 signal connection_failed(reason: String)
 signal disconnected_from_server()
-signal rooms_list_received(rooms: Array)
+signal rooms_list_received(success: bool, rooms: Array)
 signal joined_room(room_data: Dictionary)
 signal room_created(room_data: Dictionary)
 signal error_occurred(error_message: String)
@@ -293,18 +293,22 @@ func _client_name_rejected(reason: String):
 
 func _client_wrong_password():
 	"""Callback quando a senha está incorreta"""
+	
 	if main_menu:
-		main_menu.show_room_list_menu()
-		main_menu.match_password_container.visible = true
+		main_menu.show_room_list_menu(true)
+		main_menu.room_list_menu.visible = true
 		_show_error("Senha incorreta")
+		
+		
 		
 		# FAZER AMANAHÃ !
 		
-		# Arrumar algum dia: _show_error não aparece lá
 		# Arrumar a sincronização de animação de andando e recepção de animação de dano
 		
+		# Na branch correta:
 		# Criar sistema que salva servidores na lista de servidores
 		# Criar partida em rede local
+
 
 func _client_room_name_exists():
 	"""Callback de quando já existe uma sala com o nome escolhido"""
@@ -340,12 +344,12 @@ func request_rooms_list():
 
 func _client_receive_rooms_list(rooms: Array):
 	"""Callback quando recebe lista de salas"""
-	rooms_list_received.emit(rooms)
+	rooms_list_received.emit(true, rooms)
 
 func _client_receive_rooms_list_update(rooms: Array):
 	"""Callback quando recebe atualização de lista de salas"""
 	_log_debug("Lista de salas atualizada: %d salas" % rooms.size())
-	rooms_list_received.emit(rooms)
+	rooms_list_received.emit(true, rooms)
 
 func create_room(room_name: String, password: String = ""):
 	"""Cria uma nova sala"""
