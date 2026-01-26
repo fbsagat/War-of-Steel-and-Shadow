@@ -270,7 +270,7 @@ func set_player_name(p_name: String):
 		main_menu.show_loading_menu("Registrando jogador...")
 	
 	network_manager.register_player(p_name)
-
+	
 func _client_name_accepted(accepted_name: String):
 	"""Callback quando o nome é aceito pelo servidor"""
 	player_name = accepted_name
@@ -280,7 +280,7 @@ func _client_name_accepted(accepted_name: String):
 		main_menu.update_name_e_connected(configs["server_name"], accepted_name)
 		
 	name_accepted.emit()
-
+	
 func _client_name_rejected(reason: String):
 	"""Callback quando o nome é rejeitado"""
 	_log_debug("Nome rejeitado: " + reason)
@@ -290,7 +290,7 @@ func _client_name_rejected(reason: String):
 		main_menu.show_error_name_input(reason)
 	
 	name_rejected.emit(reason)
-
+	
 func _client_wrong_password():
 	"""Callback quando a senha está incorreta"""
 	
@@ -306,7 +306,6 @@ func _client_wrong_password():
 	_show_error("Senha incorreta")
 		
 		
-		
 		# FAZER AMANAHÃ !
 		
 		# Arrumar a sincronização de animação de andando e recepção de animação de dano
@@ -314,8 +313,8 @@ func _client_wrong_password():
 		# Na branch correta:
 		# Criar sistema que salva servidores na lista de servidores
 		# Criar partida em rede local
-
-
+		
+		
 func _client_room_name_exists():
 	"""Callback de quando já existe uma sala com o nome escolhido"""
 	if main_menu:

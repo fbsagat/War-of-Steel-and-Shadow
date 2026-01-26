@@ -338,7 +338,7 @@ func _connect_if_exists(parent: Node, button_name: String, callback: Callable):
 	if button:
 		button.pressed.connect(callback)
 	else:
-		push_warning("%s não encontrado em %s" % [button_name, parent.name])
+		_log_debug("%s não encontrado em %s" % [button_name, parent.name])
 
 func _connect_game_manager_signals():
 	game_manager.connected_to_server.connect(_on_game_manager_connected)
@@ -623,7 +623,7 @@ func _on_manual_join_button_pressed():
 
 func _on_match_item_selected(index: int):
 	if index < 0 or index >= current_matches.size():
-		push_warning("Índice de partida inválido: " + str(index))
+		_log_debug("Índice de partida inválido: " + str(index))
 		selected_match_id = -1
 		return
 	
@@ -637,7 +637,7 @@ func _on_match_item_selected(index: int):
 
 func populate_room_list(matches: Array):
 	if not match_list:
-		push_warning("MatchList não está inicializado")
+		_log_debug("MatchList não está inicializado")
 		return
 	
 	current_matches = matches
@@ -923,13 +923,13 @@ func _apply_video_settings():
 		# Valida resolução mínima
 		var min_size = Vector2i(800, 600)
 		if target_resolution.x < min_size.x or target_resolution.y < min_size.y:
-			push_warning("Resolução muito pequena, usando mínimo: %s" % min_size)
+			_log_debug("Resolução muito pequena, usando mínimo: %s" % min_size)
 			target_resolution = min_size
 		
 		# Valida resolução máxima (tamanho da tela)
 		var screen_size = DisplayServer.screen_get_size(DisplayServer.window_get_current_screen())
 		if target_resolution.x > screen_size.x or target_resolution.y > screen_size.y:
-			push_warning("Resolução maior que a tela, ajustando...")
+			_log_debug("Resolução maior que a tela, ajustando...")
 			target_resolution = screen_size * 0.9  # 90% do tamanho da tela
 		
 		window.size = target_resolution
@@ -954,7 +954,7 @@ func _apply_video_settings():
 		3:  Engine.max_fps = 144
 		4:  Engine.max_fps = 0  # Ilimitado
 		_:  
-			push_warning("FPS limit inválido: %s, usando 60 FPS" % fps_limit)
+			_log_debug("FPS limit inválido: %s, usando 60 FPS" % fps_limit)
 			Engine.max_fps = 60
 	
 	_log_debug("Configurações de vídeo aplicadas com sucesso")
@@ -1050,7 +1050,7 @@ func _on_room_leave_pressed():
 
 func _update_room_display(room_data: Dictionary):
 	if not room_data:
-		push_warning("Dados da sala vazios")
+		_log_debug("Dados da sala vazios")
 		return
 	
 	var _player_count = room_data.get("players", []).size()
@@ -1121,42 +1121,42 @@ func show_error_room_list(message: String):
 		match_list_error_label.text = message
 		match_list_error_label.visible = true
 		match_list_error_label.modulate = Color(1.0, 0.3, 0.3)
-	push_warning("Lista de partidas: " + message)
+	_log_debug("Lista de partidas: " + message)
 
 func show_error_manual_join(message: String):
 	if manual_join_error_label:
 		manual_join_error_label.text = message
 		manual_join_error_label.visible = true
 		manual_join_error_label.modulate = Color(1.0, 0.3, 0.3)
-	push_warning("Entrada manual: " + message)
+	_log_debug("Entrada manual: " + message)
 
 func show_error_create_room(message: String):
 	if create_room_error_label:
 		create_room_error_label.text = message
 		create_room_error_label.visible = true
 		create_room_error_label.modulate = Color(1.0, 0.3, 0.3)
-	push_warning("Criar partida: " + message)
+	_log_debug("Criar partida: " + message)
 
 func show_error_name_input(message: String):
 	if name_input_error_label:
 		name_input_error_label.text = message
 		name_input_error_label.visible = true
 		name_input_error_label.modulate = Color(1.0, 0.3, 0.3)
-	push_warning("Escolha de nome: " + message)
+	_log_debug("Escolha de nome: " + message)
 
 func show_error_connecting(message: String):
 	if connecting_error_label:
 		connecting_error_label.text = message
 		connecting_error_label.visible = true
 		connecting_error_label.modulate = Color(1.0, 0.3, 0.3)
-	push_warning("Conexão: " + message)
+	_log_debug("Conexão: " + message)
 
 func show_error_room(message: String):
 	if room_error_label:
 		room_error_label.text = message
 		room_error_label.visible = true
 		room_error_label.modulate = Color(1.0, 0.3, 0.3)
-	push_warning("Sala: " + message)
+	_log_debug("Sala: " + message)
 
 # ===== FUNÇÕES DE CONTROLE DE CARREGAMENTO =====
 
