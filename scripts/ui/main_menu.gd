@@ -135,6 +135,7 @@ var resolutions = [
 	Vector2i(800, 600)     # SVGA
 ]
 
+var current_menu_visible: CenterContainer = null
 var current_matches = []
 var selected_match_id = -1
 var previous_menu: CenterContainer = null
@@ -385,6 +386,7 @@ func _connect_game_manager_signals():
 func show_connecting_menu():
 	hide_all_menus()
 	connecting_menu.visible = true
+	current_menu_visible = connecting_menu
 	if connecting_label:
 		connecting_label.text = "Conectando ao servidor"
 	if connecting_error_label:
@@ -395,14 +397,17 @@ func show_server_list_menu():
 	hide_all_menus()
 	# Request de lista de servidores aqui
 	server_list_menu.visible = true
+	current_menu_visible = server_list_menu
 	
 func show_main_menu():
 	hide_all_menus()
 	main_menu.visible = true
+	current_menu_visible = main_menu
 
 func show_name_input_menu():
 	hide_all_menus()
 	name_input_menu.visible = true
+	current_menu_visible = name_input_menu
 	if player_name_input:
 		player_name_input.text = ""
 		player_name_input.grab_focus()
@@ -412,6 +417,7 @@ func show_name_input_menu():
 
 func show_room_list_menu(error_visible: bool = false):
 	room_list_menu.visible = true
+	current_menu_visible = room_list_menu
 	game_manager.request_rooms_list()
 	
 	var success : Array = await game_manager.rooms_list_received
@@ -422,6 +428,8 @@ func show_room_list_menu(error_visible: bool = false):
 	hide_all_menus()
 	
 	room_list_menu.visible = true
+	current_menu_visible = room_list_menu
+	
 	if match_password_container:
 		match_password_container.visible = false
 	if match_password_input:
@@ -436,6 +444,8 @@ func show_room_list_menu(error_visible: bool = false):
 func show_manual_room_join_menu():
 	hide_all_menus()
 	manual_room_join_menu.visible = true
+	current_menu_visible = manual_room_join_menu
+	
 	if manual_room_name_input:
 		manual_room_name_input.text = ""
 	if manual_room_password_input:
@@ -447,6 +457,8 @@ func show_manual_room_join_menu():
 func show_manual_server_join_menu():
 	hide_all_menus()
 	manual_server_join_menu.visible = true
+	current_menu_visible = manual_server_join_menu
+	
 	if manual_server_ip_input:
 		manual_server_ip_input.text = "127.0.0.1"
 	if manual_server_port_input:
@@ -458,10 +470,13 @@ func show_manual_server_join_menu():
 func show_create_local_match_menu():
 	hide_all_menus()
 	create_local_match_menu.visible = true
+	current_menu_visible = create_local_match_menu
 
 func show_create_match_menu():
 	hide_all_menus()
 	create_room_menu.visible = true
+	current_menu_visible = create_room_menu
+	
 	if room_name_input:
 		room_name_input.text = ""
 	if room_password_input:
@@ -473,15 +488,19 @@ func show_create_match_menu():
 func show_how_to_play_menu():
 	hide_all_menus()
 	how_to_play_menu.visible = true
+	current_menu_visible = how_to_play_menu
 
 func show_options_menu():
 	hide_all_menus()
 	options_menu.visible = true
+	current_menu_visible = options_menu
+	
 	_center_window()  # Força centralização ao abrir
 
 func show_room_menu(room_data: Dictionary):
 	hide_all_menus()
 	room_menu.visible = true
+	current_menu_visible = room_menu
 	_update_room_display(room_data)
 
 func show_loading_menu(message: String = "Carregando..."):
@@ -489,6 +508,7 @@ func show_loading_menu(message: String = "Carregando..."):
 	previous_menu = get_current_visible_menu()
 	hide_all_menus()
 	loading_menu.visible = true
+	
 	is_loading = true
 	if loading_label:
 		loading_label.text = message
@@ -499,6 +519,7 @@ func show_loading_menu(message: String = "Carregando..."):
 
 func hide_loading_menu(return_to_previous: bool = false):
 	loading_menu.visible = false
+	
 	is_loading = false
 	if return_to_previous and previous_menu:
 		previous_menu.visible = true

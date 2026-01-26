@@ -294,10 +294,16 @@ func _client_name_rejected(reason: String):
 func _client_wrong_password():
 	"""Callback quando a senha está incorreta"""
 	
-	if main_menu:
+	var current_menu_visible_name = main_menu.current_menu_visible.name
+	
+	if main_menu and current_menu_visible_name == "RoomListMenu":
 		main_menu.show_room_list_menu(true)
 		main_menu.room_list_menu.visible = true
-		_show_error("Senha incorreta")
+	
+	if main_menu and current_menu_visible_name == "ManualRoomJoinMenu":
+		main_menu.show_manual_room_join_menu()
+		
+	_show_error("Senha incorreta")
 		
 		
 		
