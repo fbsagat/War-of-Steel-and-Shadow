@@ -7,8 +7,11 @@ class_name GameManager
 # ===== CONFIGURAÇÕES (Editáveis no Inspector) =====
 
 @export_category("Connection Settings")
-@export var server_address: String = "10.147.18.110"
-@export var server_port: int = 7777
+const DEFAULT_SERVER_ADDRESS: String = "127.0.0.1"
+const DEFAULT_SERVER_PORT: int = 7777
+@export var server_address: String = DEFAULT_SERVER_ADDRESS
+@export var server_port: int = DEFAULT_SERVER_PORT
+@export var localhost_auto_connect: bool = true
 
 const map_scene : String = "res://scenes/system/terrain_3d.tscn"
 const player_scene : String = "res://scenes/gameplay/player_warrior.tscn"
@@ -60,7 +63,7 @@ var objects_node: Node = null
 signal connected_to_server()
 signal connection_failed(reason: String)
 signal disconnected_from_server()
-signal rooms_list_received(rooms: Array)
+signal rooms_list_received(success: bool, rooms: Array)
 signal joined_room(room_data: Dictionary)
 signal room_created(room_data: Dictionary)
 signal error_occurred(error_message: String)
@@ -87,22 +90,103 @@ func _ready():
 func initialize():
 	if main_menu:
 		main_menu.show_main_menu()
+	
+	if localhost_auto_connect:
+		await get_tree().create_timer(0.25).timeout
+		join_server_by_ip(server_address, str(server_port))
 
 # ===== CONEXÃO COM O SERVIDOR =====
-func join_server_by_ip(received_ip, received_port):
-	_log_debug("_on_manual_server_join_confirm_pressed")
-	# Fazer verificações aqui antes de prosseguir
-	
-	# Se o cliente enviou um endereço de ip, usar este, se não enviou nada, fica o padrão
-	if received_ip:
-		server_address = received_ip
+func join_server_by_ip(received_ip: String, received_port: String) -> bool:
+	# Validar IP/hostname
+	if received_ip and received_ip.strip_edges() != "":
+		var trimmed_ip: String = received_ip.strip_edges()
 		
-	# Se o cliente enviou uma porta, usar esta, se não enviou nada, padrão
-	if received_port:
-		server_port = int(received_port)
+		if not _is_valid_address(trimmed_ip):
+			_log_debug("Endereço inválido: " + trimmed_ip)
+			return false
+		
+		server_address = trimmed_ip
 	
-	_log_debug("Conectado manualmente no servido enviado pelo cliente")
+	# Validar porta
+	if received_port and received_port.strip_edges() != "":
+		var trimmed_port: String = received_port.strip_edges()
+		
+		if not trimmed_port.is_valid_int():
+			_log_debug("Porta inválida: não é um número")
+			return false
+		
+		var port_number: int = int(trimmed_port)
+		
+		if port_number < 1 or port_number > 65535:
+			_log_debug("Porta inválida: deve estar entre 1 e 65535")
+			return false
+		
+		server_port = port_number
+	
+	_log_debug("Conectando manualmente no servidor: " + server_address + ":" + str(server_port))
 	connect_to_server()
+	return true
+
+func _is_valid_address(address: String) -> bool:
+	# Validar localhost
+	if address.to_lower() in ["localhost", "::1"]:
+		return true
+	
+	# Validar IPv4
+	if _is_valid_ipv4(address):
+		return true
+	
+	# Validar hostname (formato básico)
+	if _is_valid_hostname(address):
+		return true
+	
+	return false
+
+func _is_valid_ipv4(ip: String) -> bool:
+	var parts: PackedStringArray = ip.split(".")
+	
+	if parts.size() != 4:
+		return false
+	
+	for part in parts:
+		if not part.is_valid_int():
+			return false
+		
+		var num: int = int(part)
+		if num < 0 or num > 255:
+			return false
+	
+	return true
+	
+func _is_valid_hostname(hostname: String) -> bool:
+	# Hostname não pode estar vazio ou ser muito longo
+	if hostname.length() == 0 or hostname.length() > 253:
+		return false
+	
+	# Não pode começar ou terminar com hífen ou ponto
+	if hostname.begins_with("-") or hostname.ends_with("-") or hostname.begins_with(".") or hostname.ends_with("."):
+		return false
+	
+	# Validar cada label (parte separada por ponto)
+	var labels: PackedStringArray = hostname.split(".")
+	
+	for label in labels:
+		if label.length() == 0 or label.length() > 63:
+			return false
+		
+		# Verificar se contém apenas caracteres válidos (a-z, A-Z, 0-9, hífen)
+		for i in range(label.length()):
+			var c: String = label[i]
+			var is_valid: bool = (c >= 'a' and c <= 'z') or (c >= 'A' and c <= 'Z') or (c >= '0' and c <= '9') or c == '-'
+			
+			if not is_valid:
+				return false
+		
+		# Label não pode começar ou terminar com hífen
+		if label.begins_with("-") or label.ends_with("-"):
+			return false
+	
+	return true
 
 func connect_to_server():
 	"""Conecta ao servidor dedicado"""
@@ -270,7 +354,7 @@ func set_player_name(p_name: String):
 		main_menu.show_loading_menu("Registrando jogador...")
 	
 	network_manager.register_player(p_name)
-
+	
 func _client_name_accepted(accepted_name: String):
 	"""Callback quando o nome é aceito pelo servidor"""
 	player_name = accepted_name
@@ -280,7 +364,7 @@ func _client_name_accepted(accepted_name: String):
 		main_menu.update_name_e_connected(configs["server_name"], accepted_name)
 		
 	name_accepted.emit()
-
+	
 func _client_name_rejected(reason: String):
 	"""Callback quando o nome é rejeitado"""
 	_log_debug("Nome rejeitado: " + reason)
@@ -290,14 +374,21 @@ func _client_name_rejected(reason: String):
 		main_menu.show_error_name_input(reason)
 	
 	name_rejected.emit(reason)
-
+	
 func _client_wrong_password():
 	"""Callback quando a senha está incorreta"""
-	if main_menu:
-		main_menu.show_room_list_menu()
-		main_menu.match_password_container.visible = true
-		_show_error("Senha incorreta")
-
+	
+	var current_menu_visible_name = main_menu.current_menu_visible.name
+	
+	if main_menu and current_menu_visible_name == "RoomListMenu":
+		main_menu.show_room_list_menu(true)
+		main_menu.room_list_menu.visible = true
+	
+	if main_menu and current_menu_visible_name == "ManualRoomJoinMenu":
+		main_menu.show_manual_room_join_menu()
+		
+	_show_error("Senha incorreta")
+	
 func _client_room_name_exists():
 	"""Callback de quando já existe uma sala com o nome escolhido"""
 	if main_menu:
@@ -316,6 +407,7 @@ func _client_room_not_found():
 		main_menu.show_room_list_menu()
 		main_menu.match_password_container.visible = true
 		_show_error("Sala não encontrada")
+		# Arrumar algum dia
 
 # ===== GERENCIAMENTO DE SALAS =====
 
@@ -331,12 +423,12 @@ func request_rooms_list():
 
 func _client_receive_rooms_list(rooms: Array):
 	"""Callback quando recebe lista de salas"""
-	rooms_list_received.emit(rooms)
+	rooms_list_received.emit(true, rooms)
 
 func _client_receive_rooms_list_update(rooms: Array):
 	"""Callback quando recebe atualização de lista de salas"""
 	_log_debug("Lista de salas atualizada: %d salas" % rooms.size())
-	rooms_list_received.emit(rooms)
+	rooms_list_received.emit(true, rooms)
 
 func create_room(room_name: String, password: String = ""):
 	"""Cria uma nova sala"""

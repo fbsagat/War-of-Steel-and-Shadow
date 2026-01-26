@@ -7,7 +7,7 @@
 [ext_resource type="PackedScene" uid="uid://cribhhvg03u8g" path="res://demo/assets/models/CrystalC.tscn" id="5_bb2w0"]
 [ext_resource type="Material" uid="uid://cso4f2iyuxpmc" path="res://demo/assets/materials/M_crystal_purple.tres" id="6_s6twx"]
 [ext_resource type="Material" uid="uid://ickkffutwcvo" path="res://demo/assets/materials/M_crystal_red.tres" id="7_7fkm2"]
-[ext_resource type="Script" uid="uid://c444j1ucmv5ti" path="res://demo/src/CaveEntrance.gd" id="9_fn2ke"]
+[ext_resource type="Script" uid="uid://bv0d25a3xdxh" path="res://demo/src/CaveEntrance.gd" id="9_fn2ke"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_goiy4"]
 size = Vector3(530.482, 38.6343, 235.603)

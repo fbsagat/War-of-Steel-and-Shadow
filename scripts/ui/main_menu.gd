@@ -135,6 +135,7 @@ var resolutions = [
 	Vector2i(800, 600)     # SVGA
 ]
 
+var current_menu_visible: CenterContainer = null
 var current_matches = []
 var selected_match_id = -1
 var previous_menu: CenterContainer = null
@@ -337,7 +338,7 @@ func _connect_if_exists(parent: Node, button_name: String, callback: Callable):
 	if button:
 		button.pressed.connect(callback)
 	else:
-		push_warning("%s não encontrado em %s" % [button_name, parent.name])
+		_log_debug("%s não encontrado em %s" % [button_name, parent.name])
 
 func _connect_game_manager_signals():
 	game_manager.connected_to_server.connect(_on_game_manager_connected)
@@ -385,6 +386,7 @@ func _connect_game_manager_signals():
 func show_connecting_menu():
 	hide_all_menus()
 	connecting_menu.visible = true
+	current_menu_visible = connecting_menu
 	if connecting_label:
 		connecting_label.text = "Conectando ao servidor"
 	if connecting_error_label:
@@ -395,14 +397,17 @@ func show_server_list_menu():
 	hide_all_menus()
 	# Request de lista de servidores aqui
 	server_list_menu.visible = true
+	current_menu_visible = server_list_menu
 	
 func show_main_menu():
 	hide_all_menus()
 	main_menu.visible = true
+	current_menu_visible = main_menu
 
 func show_name_input_menu():
 	hide_all_menus()
 	name_input_menu.visible = true
+	current_menu_visible = name_input_menu
 	if player_name_input:
 		player_name_input.text = ""
 		player_name_input.grab_focus()
@@ -410,22 +415,37 @@ func show_name_input_menu():
 		name_input_error_label.text = ""
 		name_input_error_label.visible = false
 
-func show_room_list_menu():
+func show_room_list_menu(error_visible: bool = false):
+	room_list_menu.visible = true
+	current_menu_visible = room_list_menu
 	game_manager.request_rooms_list()
+	
+	var success : Array = await game_manager.rooms_list_received
+	if not success[0]:
+		_log_debug("Erro ao buscar salas")
+		return
+	
 	hide_all_menus()
 	
 	room_list_menu.visible = true
+	current_menu_visible = room_list_menu
+	
 	if match_password_container:
 		match_password_container.visible = false
 	if match_password_input:
 		match_password_input.text = ""
-	if match_list_error_label:
+	if match_list_error_label and not error_visible:
 		match_list_error_label.text = ""
 		match_list_error_label.visible = false
-
+	elif error_visible:
+		match_list_error_label.visible = true
+		match_password_container.visible = true
+		
 func show_manual_room_join_menu():
 	hide_all_menus()
 	manual_room_join_menu.visible = true
+	current_menu_visible = manual_room_join_menu
+	
 	if manual_room_name_input:
 		manual_room_name_input.text = ""
 	if manual_room_password_input:
@@ -437,6 +457,8 @@ func show_manual_room_join_menu():
 func show_manual_server_join_menu():
 	hide_all_menus()
 	manual_server_join_menu.visible = true
+	current_menu_visible = manual_server_join_menu
+	
 	if manual_server_ip_input:
 		manual_server_ip_input.text = "127.0.0.1"
 	if manual_server_port_input:
@@ -448,10 +470,13 @@ func show_manual_server_join_menu():
 func show_create_local_match_menu():
 	hide_all_menus()
 	create_local_match_menu.visible = true
+	current_menu_visible = create_local_match_menu
 
 func show_create_match_menu():
 	hide_all_menus()
 	create_room_menu.visible = true
+	current_menu_visible = create_room_menu
+	
 	if room_name_input:
 		room_name_input.text = ""
 	if room_password_input:
@@ -463,15 +488,19 @@ func show_create_match_menu():
 func show_how_to_play_menu():
 	hide_all_menus()
 	how_to_play_menu.visible = true
+	current_menu_visible = how_to_play_menu
 
 func show_options_menu():
 	hide_all_menus()
 	options_menu.visible = true
+	current_menu_visible = options_menu
+	
 	_center_window()  # Força centralização ao abrir
 
 func show_room_menu(room_data: Dictionary):
 	hide_all_menus()
 	room_menu.visible = true
+	current_menu_visible = room_menu
 	_update_room_display(room_data)
 
 func show_loading_menu(message: String = "Carregando..."):
@@ -479,6 +508,7 @@ func show_loading_menu(message: String = "Carregando..."):
 	previous_menu = get_current_visible_menu()
 	hide_all_menus()
 	loading_menu.visible = true
+	
 	is_loading = true
 	if loading_label:
 		loading_label.text = message
@@ -489,6 +519,7 @@ func show_loading_menu(message: String = "Carregando..."):
 
 func hide_loading_menu(return_to_previous: bool = false):
 	loading_menu.visible = false
+	
 	is_loading = false
 	if return_to_previous and previous_menu:
 		previous_menu.visible = true
@@ -549,8 +580,10 @@ func _on_name_confirm_pressed():
 func _on_join_server_pressed():
 	if not game_manager.is_connected_to_server:
 		# game_manager.request_server_list()
+		_log_debug("Join Server pressiondo! mostrar menu de list de servidor!")
 		show_server_list_menu()
 	else:
+		_log_debug("Join Server pressiondo, já conectado! mostrar menu de list de salas!")
 		show_room_list_menu()
 
 func _on_join_singleplayer_pressed():
@@ -590,7 +623,7 @@ func _on_manual_join_button_pressed():
 
 func _on_match_item_selected(index: int):
 	if index < 0 or index >= current_matches.size():
-		push_warning("Índice de partida inválido: " + str(index))
+		_log_debug("Índice de partida inválido: " + str(index))
 		selected_match_id = -1
 		return
 	
@@ -604,7 +637,7 @@ func _on_match_item_selected(index: int):
 
 func populate_room_list(matches: Array):
 	if not match_list:
-		push_warning("MatchList não está inicializado")
+		_log_debug("MatchList não está inicializado")
 		return
 	
 	current_matches = matches
@@ -657,6 +690,21 @@ func _on_manual_room_join_confirm_pressed():
 	
 	if room_name.is_empty():
 		show_error_manual_join("Nome da sala não pode estar vazio")
+		return
+	
+	game_manager.request_rooms_list()
+	var success : Array = await game_manager.rooms_list_received
+	if not success[0]:
+		show_error_manual_join("Erro ao buscar salas")
+		return
+	
+	var found: bool = false
+	for room in success[1]:
+		if room.get("name", "") == room_name:
+			found = true
+	
+	if not found:
+		show_error_manual_join("Sala não encontrada")
 		return
 	
 	game_manager.join_room_by_name(room_name, password)
@@ -875,13 +923,13 @@ func _apply_video_settings():
 		# Valida resolução mínima
 		var min_size = Vector2i(800, 600)
 		if target_resolution.x < min_size.x or target_resolution.y < min_size.y:
-			push_warning("Resolução muito pequena, usando mínimo: %s" % min_size)
+			_log_debug("Resolução muito pequena, usando mínimo: %s" % min_size)
 			target_resolution = min_size
 		
 		# Valida resolução máxima (tamanho da tela)
 		var screen_size = DisplayServer.screen_get_size(DisplayServer.window_get_current_screen())
 		if target_resolution.x > screen_size.x or target_resolution.y > screen_size.y:
-			push_warning("Resolução maior que a tela, ajustando...")
+			_log_debug("Resolução maior que a tela, ajustando...")
 			target_resolution = screen_size * 0.9  # 90% do tamanho da tela
 		
 		window.size = target_resolution
@@ -906,7 +954,7 @@ func _apply_video_settings():
 		3:  Engine.max_fps = 144
 		4:  Engine.max_fps = 0  # Ilimitado
 		_:  
-			push_warning("FPS limit inválido: %s, usando 60 FPS" % fps_limit)
+			_log_debug("FPS limit inválido: %s, usando 60 FPS" % fps_limit)
 			Engine.max_fps = 60
 	
 	_log_debug("Configurações de vídeo aplicadas com sucesso")
@@ -1002,7 +1050,7 @@ func _on_room_leave_pressed():
 
 func _update_room_display(room_data: Dictionary):
 	if not room_data:
-		push_warning("Dados da sala vazios")
+		_log_debug("Dados da sala vazios")
 		return
 	
 	var _player_count = room_data.get("players", []).size()
@@ -1073,42 +1121,42 @@ func show_error_room_list(message: String):
 		match_list_error_label.text = message
 		match_list_error_label.visible = true
 		match_list_error_label.modulate = Color(1.0, 0.3, 0.3)
-	push_warning("Lista de partidas: " + message)
+	_log_debug("Lista de partidas: " + message)
 
 func show_error_manual_join(message: String):
 	if manual_join_error_label:
 		manual_join_error_label.text = message
 		manual_join_error_label.visible = true
 		manual_join_error_label.modulate = Color(1.0, 0.3, 0.3)
-	push_warning("Entrada manual: " + message)
+	_log_debug("Entrada manual: " + message)
 
 func show_error_create_room(message: String):
 	if create_room_error_label:
 		create_room_error_label.text = message
 		create_room_error_label.visible = true
 		create_room_error_label.modulate = Color(1.0, 0.3, 0.3)
-	push_warning("Criar partida: " + message)
+	_log_debug("Criar partida: " + message)
 
 func show_error_name_input(message: String):
 	if name_input_error_label:
 		name_input_error_label.text = message
 		name_input_error_label.visible = true
 		name_input_error_label.modulate = Color(1.0, 0.3, 0.3)
-	push_warning("Escolha de nome: " + message)
+	_log_debug("Escolha de nome: " + message)
 
 func show_error_connecting(message: String):
 	if connecting_error_label:
 		connecting_error_label.text = message
 		connecting_error_label.visible = true
 		connecting_error_label.modulate = Color(1.0, 0.3, 0.3)
-	push_warning("Conexão: " + message)
+	_log_debug("Conexão: " + message)
 
 func show_error_room(message: String):
 	if room_error_label:
 		room_error_label.text = message
 		room_error_label.visible = true
 		room_error_label.modulate = Color(1.0, 0.3, 0.3)
-	push_warning("Sala: " + message)
+	_log_debug("Sala: " + message)
 
 # ===== FUNÇÕES DE CONTROLE DE CARREGAMENTO =====
 
@@ -1142,9 +1190,10 @@ func _on_game_manager_disconnected():
 	connect_name_label.text = "Desconectado 🌐⛓️‍💥"
 	show_main_menu()
 
-func _on_game_manager_rooms_received(rooms: Array):
-	_log_debug("Lista de salas recebida: %d salas" % rooms.size())
-	populate_room_list(rooms)
+func _on_game_manager_rooms_received(sucess: bool, rooms: Array):
+	if sucess:
+		populate_room_list(rooms)
+		_log_debug("Lista de salas recebida: %d salas" % rooms.size())
 
 func _on_game_manager_name_accepted():
 	_log_debug("Nome aceito pelo servidor")

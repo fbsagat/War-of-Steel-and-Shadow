@@ -1,6 +1,6 @@
 [gd_scene load_steps=26 format=3 uid="uid://chol2xlfbq7cu"]
 
-[ext_resource type="Script" uid="uid://chstoagn42gbr" path="res://demo/src/DemoScene.gd" id="1_k7qca"]
+[ext_resource type="Script" uid="uid://ba508qknm6m5" path="res://demo/src/DemoScene.gd" id="1_k7qca"]
 [ext_resource type="PackedScene" uid="uid://d2jihfohphuue" path="res://demo/components/UI.tscn" id="2_nqak5"]
 [ext_resource type="Shader" uid="uid://dw1cefd46umfe" path="res://addons/sky_3d/shaders/SkyMaterial.gdshader" id="3_a7o2t"]
 [ext_resource type="PackedScene" uid="uid://dwnhqfjq7v1pq" path="res://demo/components/Borders.tscn" id="3_cw38j"]
@@ -69,8 +69,8 @@ shader_parameter/cirrus_sky_tint_fade = 0.5
 shader_parameter/cirrus_intensity = 10.0
 shader_parameter/cirrus_size = 1.0
 shader_parameter/cirrus_uv = Vector2(0.16, 0.11)
-shader_parameter/cirrus_position1 = Vector2(0.00068353646, 0.00068353646)
-shader_parameter/cirrus_position2 = Vector2(0.00068353646, 0.00068353646)
+shader_parameter/cirrus_position1 = Vector2(0.00058925565, 0.00058925565)
+shader_parameter/cirrus_position2 = Vector2(0.00058925565, 0.00058925565)
 shader_parameter/cirrus_day_color = Color(0.824, 0.875, 1, 1)
 shader_parameter/cirrus_horizon_light_color = Color(0.98, 0.43, 0.15, 1)
 shader_parameter/cirrus_night_color = Color(0.09, 0.094, 0.129, 1)
@@ -83,7 +83,7 @@ shader_parameter/cumulus_noise_freq = 2.7
 shader_parameter/cumulus_sky_tint_fade = 0.0
 shader_parameter/cumulus_intensity = 0.6
 shader_parameter/cumulus_size = 0.5
-shader_parameter/cumulus_position = Vector2(0.003417684, 0.003417684)
+shader_parameter/cumulus_position = Vector2(0.0029462792, 0.0029462792)
 shader_parameter/cumulus_texture = ExtResource("5_cjhqh")
 shader_parameter/cumulus_day_color = Color(0.823529, 0.87451, 1, 1)
 shader_parameter/cumulus_horizon_light_color = Color(0.98, 0.43, 0.15, 1)
@@ -106,7 +106,7 @@ background_mode = 2
 sky = SubResource("Sky_mw3q6")
 ambient_light_source = 3
 ambient_light_color = Color(1, 1, 1, 1)
-ambient_light_sky_contribution = 0.7874815
+ambient_light_sky_contribution = 0.7417746
 reflected_light_source = 2
 tonemap_mode = 3
 tonemap_white = 6.0
