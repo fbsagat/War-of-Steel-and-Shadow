@@ -1,6 +1,6 @@
 [gd_resource type="VisualShader" load_steps=5 format=3 uid="uid://p3udn7nj80y3"]
 
-[ext_resource type="Texture2D" uid="uid://cfoh1w0r7liog" path="res://vfx/heal/heal_vfx.png" id="1_0vxcl"]
+[ext_resource type="Texture2D" uid="uid://b3wxdv2o8f71l" path="res://vfx/heal/heal_vfx.png" id="1_0vxcl"]
 
 [sub_resource type="VisualShaderNodeVectorDecompose" id="VisualShaderNodeVectorDecompose_6sfky"]
 output_port_for_preview = 1

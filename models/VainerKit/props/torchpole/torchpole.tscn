@@ -1,6 +1,6 @@
 [gd_scene load_steps=3 format=3 uid="uid://ce304l2fnlxbo"]
 
-[ext_resource type="PackedScene" uid="uid://du8611sbunyvx" path="res://models/VainerKit/props/torchpole/torchpole.glb" id="1_yq6vg"]
+[ext_resource type="PackedScene" uid="uid://bxg0ap8f2kwal" path="res://models/VainerKit/props/torchpole/torchpole.glb" id="1_yq6vg"]
 [ext_resource type="PackedScene" uid="uid://6364jp77fcus" path="res://vfx/fire/vfx_fire.tscn" id="2_euanc"]
 
 [node name="torchpole" type="Node3D"]

@@ -1,7 +1,7 @@
 [gd_scene load_steps=14 format=4 uid="uid://cb26och8280fn"]
 
 [ext_resource type="Material" uid="uid://dyf3texhrr1fx" path="res://models/VainerKit/items/potion_glass/potion_glass.material" id="1_on2en"]
-[ext_resource type="Texture2D" uid="uid://bno0nq0h8d8bl" path="res://models/VainerKit/items/potion_glass/potion_glass_log_texture.png" id="1_wecpa"]
+[ext_resource type="Texture2D" uid="uid://bp5wuo72n453k" path="res://models/VainerKit/items/potion_glass/potion_glass_log_texture.png" id="1_wecpa"]
 [ext_resource type="Material" uid="uid://dc3cu6hrbrk5h" path="res://models/VainerKit/items/potion_glass/Liquid.material" id="2_47bsv"]
 [ext_resource type="PackedScene" uid="uid://da8cxlgmx22ff" path="res://vfx/heal/vfx_heal.tscn" id="4_47bsv"]
 

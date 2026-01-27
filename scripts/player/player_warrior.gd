@@ -46,6 +46,8 @@ extends CharacterBody3D
 @export var rotation_threshold: float = 0.01 # Rotação mínima para sincronizar
 @export var anim_sync_rate: float = 0.1  # 10 updates/segundo (menos que posição)
 @export var visual_rotation_y: float = 0.0
+@export var initial_sync_duration: float = 1.0
+@export var initial_sync_elapsed: float = 0.0
 
 # referências
 @onready var animation_player: AnimationPlayer = $AnimationPlayer
@@ -811,31 +813,40 @@ func _disable_attack_hitbox():
 
 func _send_state_to_server(delta: float):
 	sync_timer += delta
-	
+	initial_sync_elapsed += delta  # acumula tempo desde o início
+
 	if sync_timer >= sync_rate:
 		sync_timer = 0.0
-		
-		var pos_changed = global_position.distance_to(target_position) > position_threshold
-		var rot_changed = abs(rotation.y - target_rotation_y) > rotation_threshold
-		
-		if pos_changed or rot_changed:
+
+		var should_send = false
+
+		# Força envio nos primeiros `initial_sync_duration` segundos
+		if initial_sync_elapsed < initial_sync_duration:
+			should_send = true
+			_log_debug("📡 Enviando estado forçado (inicialização: %.2fs)" % initial_sync_elapsed)
+		else:
+			# Comportamento normal: só envia se houver mudança
+			var pos_changed = global_position.distance_to(target_position) > position_threshold
+			var rot_changed = abs(rotation.y - target_rotation_y) > rotation_threshold
+			should_send = pos_changed or rot_changed
+
+		if should_send:
 			target_position = global_position
 			target_rotation_y = rotation.y
-			
+
 			if network_manager and network_manager.is_connected:
-				# APENAS SINCRONIZA X e Z se estiver longe da câmera
-				var camera_pos = camera_controller.global_position if camera_controller else global_position
-				var dist_to_camera = global_position.distance_to(camera_pos)
-				
 				var sync_pos = global_position
-				
-				# Se longe (> 50m), envia Y do terreno ao invés de Y real
-				if dist_to_camera > 50.0:
-					var terrain_y = _get_terrain_height(global_position.x, global_position.z)
-					if terrain_y != -INF:
-						sync_pos.y = terrain_y + 0.1
-						_log_debug("📡 Enviando Y do terreno: %.2f (dist: %.2f)" % [sync_pos.y, dist_to_camera])
-				
+
+				# Ajuste de Y para longe da câmera (mantido)
+				if camera_controller:
+					var camera_pos = camera_controller.global_position
+					var dist_to_camera = global_position.distance_to(camera_pos)
+					if dist_to_camera > 50.0:
+						var terrain_y = _get_terrain_height(global_position.x, global_position.z)
+						if terrain_y != -INF:
+							sync_pos.y = terrain_y + 0.1
+							_log_debug("📡 Enviando Y do terreno: %.2f (dist: %.2f)" % [sync_pos.y, dist_to_camera])
+
 				network_manager.send_player_state(
 					player_id,
 					sync_pos,

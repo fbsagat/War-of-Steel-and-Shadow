@@ -7,13 +7,13 @@
 [ext_resource type="PackedScene" uid="uid://domhm87hbhbg1" path="res://demo/components/Player.tscn" id="3_ht63y"]
 [ext_resource type="PackedScene" uid="uid://djhl3foqkj4e2" path="res://demo/components/Tunnel.tscn" id="3_kdh0b"]
 [ext_resource type="Texture2D" uid="uid://cfqk60lpl5ljv" path="res://addons/sky_3d/assets/resources/SNoise.tres" id="4_jl7my"]
-[ext_resource type="Texture2D" uid="uid://dlqjcd5n0npvr" path="res://addons/sky_3d/assets/textures/noiseClouds.png" id="5_cjhqh"]
-[ext_resource type="Texture2D" uid="uid://u1v8yyb1myrs" path="res://addons/sky_3d/assets/thirdparty/textures/moon/MoonMap.png" id="6_a51m0"]
-[ext_resource type="Texture2D" uid="uid://duouhha3p8le4" path="res://addons/sky_3d/assets/textures/noise.jpg" id="7_3tty7"]
-[ext_resource type="Texture2D" uid="uid://gfe6qeys0cj6" path="res://addons/sky_3d/assets/thirdparty/textures/milkyway/StarField.jpg" id="8_56mel"]
+[ext_resource type="Texture2D" uid="uid://mo6emlvn0a1x" path="res://addons/sky_3d/assets/textures/noiseClouds.png" id="5_cjhqh"]
+[ext_resource type="Texture2D" uid="uid://03s2mulp6jff" path="res://addons/sky_3d/assets/thirdparty/textures/moon/MoonMap.png" id="6_a51m0"]
+[ext_resource type="Texture2D" uid="uid://d2woysd0c1ck6" path="res://addons/sky_3d/assets/textures/noise.jpg" id="7_3tty7"]
+[ext_resource type="Texture2D" uid="uid://63jy4sjke7i6" path="res://addons/sky_3d/assets/thirdparty/textures/milkyway/StarField.jpg" id="8_56mel"]
 [ext_resource type="PackedScene" uid="uid://d3sr0a7dxfkr8" path="res://addons/terrain_3d/extras/particle_example/Terrain3DParticles.tscn" id="8_fwrtk"]
 [ext_resource type="Terrain3DAssets" uid="uid://dal3jhw6241qg" path="res://demo/data/assets.tres" id="8_g2of2"]
-[ext_resource type="Texture2D" uid="uid://dy6iiuvsbk67m" path="res://addons/sky_3d/assets/thirdparty/textures/milkyway/Milkyway.jpg" id="9_fe7ng"]
+[ext_resource type="Texture2D" uid="uid://b6q5qe6q000m7" path="res://addons/sky_3d/assets/thirdparty/textures/milkyway/Milkyway.jpg" id="9_fe7ng"]
 [ext_resource type="Script" uid="uid://b551jsaemg3qo" path="res://addons/sky_3d/src/Sky3D.gd" id="10_cachs"]
 [ext_resource type="Script" uid="uid://b0ml57ff1ehx6" path="res://addons/sky_3d/src/SkyDome.gd" id="11_aph5u"]
 [ext_resource type="Script" uid="uid://ckck8wyfsjci3" path="res://addons/sky_3d/src/TimeOfDay.gd" id="12_jxpui"]
@@ -69,8 +69,8 @@ shader_parameter/cirrus_sky_tint_fade = 0.5
 shader_parameter/cirrus_intensity = 10.0
 shader_parameter/cirrus_size = 1.0
 shader_parameter/cirrus_uv = Vector2(0.16, 0.11)
-shader_parameter/cirrus_position1 = Vector2(0.00058925565, 0.00058925565)
-shader_parameter/cirrus_position2 = Vector2(0.00058925565, 0.00058925565)
+shader_parameter/cirrus_position1 = Vector2(0.00068353646, 0.00068353646)
+shader_parameter/cirrus_position2 = Vector2(0.00068353646, 0.00068353646)
 shader_parameter/cirrus_day_color = Color(0.824, 0.875, 1, 1)
 shader_parameter/cirrus_horizon_light_color = Color(0.98, 0.43, 0.15, 1)
 shader_parameter/cirrus_night_color = Color(0.09, 0.094, 0.129, 1)
@@ -83,7 +83,7 @@ shader_parameter/cumulus_noise_freq = 2.7
 shader_parameter/cumulus_sky_tint_fade = 0.0
 shader_parameter/cumulus_intensity = 0.6
 shader_parameter/cumulus_size = 0.5
-shader_parameter/cumulus_position = Vector2(0.0029462792, 0.0029462792)
+shader_parameter/cumulus_position = Vector2(0.003417684, 0.003417684)
 shader_parameter/cumulus_texture = ExtResource("5_cjhqh")
 shader_parameter/cumulus_day_color = Color(0.823529, 0.87451, 1, 1)
 shader_parameter/cumulus_horizon_light_color = Color(0.98, 0.43, 0.15, 1)
@@ -106,7 +106,7 @@ background_mode = 2
 sky = SubResource("Sky_mw3q6")
 ambient_light_source = 3
 ambient_light_color = Color(1, 1, 1, 1)
-ambient_light_sky_contribution = 0.7417746
+ambient_light_sky_contribution = 0.74794453
 reflected_light_source = 2
 tonemap_mode = 3
 tonemap_white = 6.0

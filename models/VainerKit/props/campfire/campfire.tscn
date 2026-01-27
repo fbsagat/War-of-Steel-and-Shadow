@@ -4,7 +4,7 @@
 [ext_resource type="Shader" uid="uid://cn4baexdjokbs" path="res://vfx/fire/shader/s_smoke_shader.tres" id="2_lbo5b"]
 [ext_resource type="Script" uid="uid://ywf7cbswl6sg" path="res://scripts/objects/torch_lit.gd" id="3_7gpcm"]
 [ext_resource type="Shader" uid="uid://w7vq34wwolki" path="res://vfx/fire/shader/ember.tres" id="4_pfwh2"]
-[ext_resource type="PackedScene" uid="uid://bfrcw6dl1in5o" path="res://models/VainerKit/props/campfire/campfire.glb" id="5_0cly2"]
+[ext_resource type="PackedScene" uid="uid://dx2pjun68ln1" path="res://models/VainerKit/props/campfire/campfire.glb" id="5_0cly2"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_xg87l"]
 render_priority = 0

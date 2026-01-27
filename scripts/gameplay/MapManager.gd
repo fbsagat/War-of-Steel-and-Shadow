@@ -11,9 +11,9 @@ class_name MapManager
 
 @export_category("Spawn Settings")
 ## Raio do círculo de spawn
-@export var spawn_radius: float = 5.0
+@export var spawn_radius: float = 3.0
 ## Altura acima do chão
-@export var spawn_height: float = 1.0
+@export var spawn_height: float = 0.0
 ## Centro do círculo
 @export var spawn_center: Vector3 = Vector3.ZERO
 ## Nó filho do mapa que se existir definirá o ponto para adição de spawns

@@ -2,7 +2,7 @@ extends Node
 
 # Configurações
 @export var test_mode: bool = true
-@export var trainer: bool = false
+@export var trainer: bool = true
 
 ## Manager de rede, gerencia comunicação entre servidor e clientes
 var network_manager: NetworkManager = null

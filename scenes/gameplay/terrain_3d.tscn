@@ -4,9 +4,9 @@
 [ext_resource type="PackedScene" uid="uid://d3sr0a7dxfkr8" path="res://addons/terrain_3d/extras/particle_example/Terrain3DParticles.tscn" id="2_t70ke"]
 [ext_resource type="PackedScene" uid="uid://cwu8t6cp4qo1c" path="res://sky/sky_3d.tscn" id="3_t70ke"]
 [ext_resource type="PackedScene" uid="uid://bl8c62gm66ba5" path="res://models/VainerKit/props/tree/tree.tscn" id="8_l3dix"]
-[ext_resource type="PackedScene" uid="uid://crlowioh7ei41" path="res://models/VainerKit/builds/wood_bridge/wood_bridge.glb" id="11_3txeo"]
+[ext_resource type="PackedScene" uid="uid://cuncihjkfu1ya" path="res://models/VainerKit/builds/wood_bridge/wood_bridge.glb" id="11_3txeo"]
 [ext_resource type="PackedScene" uid="uid://0yuy536rv6ae" path="res://scenes/scenarios/forest.tscn" id="12_6jw5i"]
-[ext_resource type="PackedScene" uid="uid://bihax2br6c5mr" path="res://models/VainerKit/builds/medieval_tower_ruins/medieval_tower_ruins.glb" id="13_au1d7"]
+[ext_resource type="PackedScene" uid="uid://b5yktcibltwu3" path="res://models/VainerKit/builds/medieval_tower_ruins/medieval_tower_ruins.glb" id="13_au1d7"]
 [ext_resource type="PackedScene" uid="uid://c0ngmife3um6s" path="res://scenes/scenarios/village.tscn" id="22_uwu5a"]
 
 [sub_resource type="Gradient" id="Gradient_xuisu"]
@@ -874,7 +874,7 @@ top_level = true
 metadata/_edit_lock_ = true
 
 [node name="central_spawn" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.38564134, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.466239, 0.38564134, -4.0823317)
 
 [node name="Sky3D" parent="." instance=ExtResource("3_t70ke")]
 editor_time_enabled = false

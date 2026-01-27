@@ -1,8 +1,8 @@
 [gd_scene load_steps=167 format=4 uid="uid://cipt7fox4023t"]
 
-[ext_resource type="Script" uid="uid://d3kfcdwq2u86i" path="res://scripts/player/player_warrior.gd" id="1_dwlr8"]
-[ext_resource type="Texture2D" uid="uid://dhvs3taulqfc2" path="res://models/Character/Knight_knight_texture.png" id="2_h7b2a"]
-[ext_resource type="Texture2D" uid="uid://dotr7u6xr2hbp" path="res://models/KayKit_DungeonRemastered_1.1_FREE/Assets/fbx/dungeon_texture.png" id="3_gc6vf"]
+[ext_resource type="Script" uid="uid://dagmuimgg8hfj" path="res://scripts/player/player_warrior.gd" id="1_dwlr8"]
+[ext_resource type="Texture2D" uid="uid://ci4tvi7xq6rde" path="res://models/Character/Knight_knight_texture.png" id="2_h7b2a"]
+[ext_resource type="Texture2D" uid="uid://d2avxl0nxmgdx" path="res://models/KayKit_DungeonRemastered_1.1_FREE/Assets/fbx/dungeon_texture.png" id="3_gc6vf"]
 [ext_resource type="Script" uid="uid://ywf7cbswl6sg" path="res://scripts/objects/torch_lit.gd" id="4_yfsmr"]
 [ext_resource type="Material" uid="uid://bn5hj4a80drmh" path="res://tres/steel_helmet.tres" id="5_lrju0"]
 
