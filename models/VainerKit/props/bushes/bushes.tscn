@@ -1,0 +1,96 @@
+[gd_scene load_steps=5 format=4 uid="uid://btmu1dctxc3q5"]
+
+[ext_resource type="Material" uid="uid://ceqw3g4jdh1vh" path="res://models/VainerKit/props/bushes/branches_texture.material" id="1_m04fg"]
+[ext_resource type="Material" uid="uid://c3fvueeafw25t" path="res://models/VainerKit/props/bushes/bush_texture.material" id="2_xo6mn"]
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_61ncg"]
+_surfaces = [{
+"aabb": AABB(-0.5, 0, -0.5, 1, 1e-05, 1),
+"format": 34896613377,
+"index_count": 6,
+"index_data": PackedByteArray("AAABAAIAAAADAAEA"),
+"name": "branches_texture",
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray("AAAAAP//AAD//wAAAAAAAP//AAD//wAAAAAAAAAAAAA=")
+}, {
+"aabb": AABB(-0.39261177, -0.11058509, -0.45865726, 0.8989974, 0.22117008, 1.1617918),
+"format": 34896613377,
+"index_count": 42,
+"index_data": PackedByteArray("AAABAAIAAAADAAEABAAFAAYABAAHAAUACAAJAAoACAALAAkADAANAA4ADAAPAA0AEAARABIAEAATABEAFAAVABYAFAAXABUAGAAZABoAGAAbABkA"),
+"name": "bush_texture",
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 28,
+"vertex_data": PackedByteArray("LRyCRbQrAAC8h7nRtCsAAPRRnotoVwAA9FGeiwAAAAA9cvhuvT0AADLj+G69PQAAuKqFl8FoAAC4qmtGuRIAAGiSZsngfAAA//8SWuB8AAAzybyRlKgAADPJvJEsUQAAuTVYnmhoAACrprmXaGgAADJuCZsclAAAMm4Jm7Q8AAAKYP//PKgAAM+9AAA8qAAA7I7/f/DTAADsjv9/iHwAAAAAkGMolQAAbWt28SiVAAC2NYOq3MAAALY1g6p0aQAAgx3wqUrUAAB4jvCpStQAAP1V8Kn//wAA/VXwqZaoAAA=")
+}]
+blend_shape_mode = 0
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_mckri"]
+resource_name = "brushes_branches_texture_001"
+_surfaces = [{
+"aabb": AABB(-0.5, 0, -0.5, 1, 1e-05, 1),
+"attribute_data": PackedByteArray("AAD/////AAD/////AAAAAA=="),
+"format": 34896613399,
+"index_count": 6,
+"index_data": PackedByteArray("AAABAAIAAAADAAEA"),
+"material": ExtResource("1_m04fg"),
+"name": "branches_texture",
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray("AAAAAP///7///wAAAAD/v///AAD///+/AAAAAAAA/7////9/////f////3////9/")
+}, {
+"aabb": AABB(-0.39261177, -0.11058509, -0.45865726, 0.8989974, 0.22117008, 1.1617918),
+"attribute_data": PackedByteArray("AAD/////AAD/////AAAAAAAA/////wAA/////wAAAAAAAP////8AAP////8AAAAAAAD/////AAD/////AAAAAAAA/////wAA/////wAAAAAAAP////8AAP////8AAAAAAAD/////AAD/////AAAAAA=="),
+"format": 34896613399,
+"index_count": 42,
+"index_data": PackedByteArray("AAABAAIAAAADAAEABAAFAAYABAAHAAUACAAJAAoACAALAAkADAANAA4ADAAPAA0AEAARABIAEAATABEAFAAVABYAFAAXABUAGAAZABoAGAAbABkA"),
+"material": ExtResource("2_xo6mn"),
+"name": "bush_texture",
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 28,
+"vertex_data": PackedByteArray("LRyCRbQrQMK8h7nRtCtAwvRRnotoV0DC9FGeiwAAQMI9cvhuvT1KzDLj+G69PUrMuKqFl8FoSsy4qmtGuRJKzGiSZsngfPzJ//8SWuB8/MkzybyRlKj8yTPJvJEsUfzJuTVYnmhoMsarprmXaGgyxjJuCZsclDLGMm4Jm7Q8MsYKYP//PKjt0M+9AAA8qO3Q7I7/f/DT7dDsjv9/iHzt0AAAkGMolTfCbWt28SiVN8K2NYOq3MA3wrY1g6p0aTfCgx3wqUrU/MV4jvCpStT8xf1V8Kn///zF/VXwqZao/MXfw2qp38Nqqd/Daqnfw2qpscgcnrHIHJ6xyByescgcnpPH05OTx9OTk8fTk5PH05MYxnGcGMZxnBjGcZwYxnGcv8krh7/JK4e/ySuHv8krh9fDlKnXw5Sp18OUqdfDlKkAxv6cAMb+nADG/pwAxv6c")
+}]
+blend_shape_mode = 0
+shadow_mesh = SubResource("ArrayMesh_61ncg")
+
+[node name="bushes" type="Node3D"]
+transform = Transform3D(2.5, 0, 0, 0, 2.5, 0, 0, 0, 2.5, 0, 0, 0)
+
+[node name="branches001" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0.48002768, 0.5, -0.009081453)
+mesh = SubResource("ArrayMesh_mckri")
+skeleton = NodePath("")
+
+[node name="branches007" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.7071067, -0.70710677, 0, 0, 0, -1, 0.70710677, 0.7071067, 0, 0.42643452, 0.5, 0.32681444)
+mesh = SubResource("ArrayMesh_mckri")
+skeleton = NodePath("")
+
+[node name="branches002" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.8660254, 0.5, 0, 0, 0, -1, -0.5, 0.8660254, 0, 0.40707278, 0.5, -0.24650186)
+mesh = SubResource("ArrayMesh_mckri")
+skeleton = NodePath("")
+
+[node name="branches003" type="MeshInstance3D" parent="."]
+transform = Transform3D(-1, 5.9604645e-08, 0, 0, 0, -1, -5.9604645e-08, -1, 0, -0.48777118, 0.5, -0.004723996)
+mesh = SubResource("ArrayMesh_mckri")
+skeleton = NodePath("")
+
+[node name="branches006" type="MeshInstance3D" parent="."]
+transform = Transform3D(-0.25881913, -0.9659258, 0, 0, 0, -1, 0.9659258, -0.25881913, 0, -0.12262413, 0.5, 0.46784684)
+mesh = SubResource("ArrayMesh_mckri")
+skeleton = NodePath("")
+
+[node name="branches004" type="MeshInstance3D" parent="."]
+transform = Transform3D(-0.5, -0.70710677, -0.49999997, 0.70710677, -4.2146848e-08, -0.70710677, 0.49999994, -0.70710677, 0.49999997, -0.044624686, 0.72362536, -0.004723996)
+mesh = SubResource("ArrayMesh_mckri")
+skeleton = NodePath("")
+
+[node name="branches005" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.6830128, 0.258819, 0.6830127, 0.729952, -0.27485502, -0.6257992, 0.025760785, 0.92599547, -0.37665492, -0.044624686, 0.72362536, 0.27044678)
+mesh = SubResource("ArrayMesh_mckri")
+skeleton = NodePath("")
