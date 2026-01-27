@@ -3,6 +3,7 @@ extends Control
 # ===== REGISTROS (Injetados pelo initializer.gd) =====
 
 var game_manager: GameManager = null
+var server_list_manager: ServerListManager = null
 
 # ===== SINAIS =====
 #signal join_match_requested()
@@ -15,6 +16,8 @@ signal quit_game_requested()
 @onready var control_pai: Control
 @onready var connecting_menu: CenterContainer
 @onready var server_list_menu: CenterContainer
+@onready var add_server_menu: CenterContainer
+@onready var delete_server_menu: CenterContainer
 @onready var name_input_menu: CenterContainer
 @onready var main_menu: CenterContainer
 @onready var room_list_menu: CenterContainer
@@ -34,6 +37,12 @@ signal quit_game_requested()
 # Menu de lista de servidores
 @onready var server_list: ItemList
 @onready var server_list_error_label: Label
+
+# Menu de adicionar servidor na lista
+@onready var add_server_name_input: LineEdit
+@onready var add_server_ip_input: LineEdit
+@onready var add_server_port_input: LineEdit
+@onready var add_server_error_label: Label
 
 # Menu de lista de partidas
 @onready var match_list: ItemList
@@ -137,7 +146,9 @@ var resolutions = [
 
 var current_menu_visible: CenterContainer = null
 var current_matches = []
+var current_servers = []
 var selected_match_id = -1
+var selected_server_id = -1
 var previous_menu: CenterContainer = null
 var is_loading = false
 var player_count = 0
@@ -181,6 +192,8 @@ func _process(delta):
 func _setup_menu_references():
 	connecting_menu = control_pai.get_node("ConnectingMenu")
 	server_list_menu = control_pai.get_node("ServerListMenu")
+	add_server_menu = control_pai.get_node("AddServerMenu")
+	delete_server_menu = control_pai.get_node("DeleteServerConfirmMenu")
 	name_input_menu = control_pai.get_node("NameInputMenu")
 	main_menu = control_pai.get_node("MainMenu")
 	room_list_menu = control_pai.get_node("RoomListMenu")
@@ -230,7 +243,13 @@ func _setup_element_references():
 	
 	# Lista de servidores
 	server_list = server_list_menu.find_child("ServerList", true, false)
-	server_list_error_label = room_list_menu.find_child("ErrorLabel", true, false)
+	server_list_error_label = server_list_menu.find_child("ErrorLabel", true, false)
+	
+	# Adicionar servidor
+	add_server_name_input = add_server_menu.find_child("AddServerNameInput", true, false)
+	add_server_ip_input = add_server_menu.find_child("AddServerIpInput", true, false)
+	add_server_port_input = add_server_menu.find_child("AddServerPortInput", true, false)
+	add_server_error_label = add_server_menu.find_child("ErrorLabel", true, false)
 	
 	# Lista de partidas
 	match_list = room_list_menu.find_child("MatchList", true, false)
@@ -287,7 +306,20 @@ func _connect_button_signals():
 	# Lista de servidores
 	_connect_if_exists(server_list_menu, "BackButton", _on_server_list_back_pressed)
 	_connect_if_exists(server_list_menu, "JoinButton", _on_server_list_enter_pressed)
+	_connect_if_exists(server_list_menu, "AddButton", _on_server_list_add_pressed)
+	_connect_if_exists(server_list_menu, "DeleteButton", _on_server_list_delete_pressed)
 	_connect_if_exists(server_list_menu, "ManualJoinButton", _on_manual_server_join_button_pressed)
+	
+	if server_list:
+		server_list.item_selected.connect(_on_server_item_selected)
+	
+	# Adicionar servidor
+	_connect_if_exists(add_server_menu, "BackButton", _on_add_server_back_pressed)
+	_connect_if_exists(add_server_menu, "ConfirmButton", _on_confirm_add_server_pressed)
+	
+	# Apagar servidor
+	_connect_if_exists(delete_server_menu, "BackButton", _on_delete_server_back_pressed)
+	_connect_if_exists(delete_server_menu, "DeleteButton", _on_confirm_delete_server_pressed)
 	
 	# Lista de partidas
 	_connect_if_exists(room_list_menu, "JoinButton", _on_match_list_join_pressed)
@@ -393,12 +425,28 @@ func show_connecting_menu():
 		connecting_error_label.text = ""
 		connecting_error_label.visible = false
 
-func show_server_list_menu():
+func show_server_list_menu(servers: Array):
+	populate_server_list(servers)
+	
 	hide_all_menus()
 	# Request de lista de servidores aqui
 	server_list_menu.visible = true
 	current_menu_visible = server_list_menu
 	
+	if server_list_error_label:
+		server_list_error_label.text = ""
+		server_list_error_label.visible = false
+
+func show_add_server_menu():
+	hide_all_menus()
+	add_server_menu.visible = true
+	current_menu_visible = add_server_menu
+
+func show_delete_server_menu():
+	hide_all_menus()
+	delete_server_menu.visible = true
+	current_menu_visible = delete_server_menu
+
 func show_main_menu():
 	hide_all_menus()
 	main_menu.visible = true
@@ -531,6 +579,8 @@ func hide_all_menus():
 	main_menu.visible = false
 	name_input_menu.visible = false
 	server_list_menu.visible = false
+	add_server_menu.visible = false
+	delete_server_menu.visible = false
 	room_list_menu.visible = false
 	manual_room_join_menu.visible = false
 	manual_server_join_menu.visible = false
@@ -581,7 +631,7 @@ func _on_join_server_pressed():
 	if not game_manager.is_connected_to_server:
 		# game_manager.request_server_list()
 		_log_debug("Join Server pressiondo! mostrar menu de list de servidor!")
-		show_server_list_menu()
+		show_server_list_menu(server_list_manager.get_items())
 	else:
 		_log_debug("Join Server pressiondo, já conectado! mostrar menu de list de salas!")
 		show_room_list_menu()
@@ -611,7 +661,7 @@ func _on_exit_server_pressed():
 	game_manager.disconnect_from_server()
 
 func _on_match_list_join_pressed():
-	if selected_match_id == -1:
+	if selected_match_id <= -1:
 		show_error_room_list("Nenhuma partida selecionada")
 		return
 	
@@ -634,6 +684,24 @@ func _on_match_item_selected(index: int):
 		match_password_container.visible = has_password
 	if match_list_error_label:
 		match_list_error_label.visible = false
+
+func populate_server_list(servers: Array):
+	current_servers = servers
+	server_list.clear()
+	selected_server_id = -1
+	
+	if servers.is_empty():
+		if server_list_error_label:
+			server_list_error_label.text = "Nenhum servidor disponível no momento"
+			server_list_error_label.visible = true
+		return
+	
+	for server_data in servers:
+		var server_name = server_data.get("nome", "Nome não inserido")
+		var server_ip = server_data.get("ip", "Não colocou IP")
+		var server_port = server_data.get("porta", "Não colocou IP")
+		var text = "%s - %s:%s" % [server_name, server_ip, server_port]
+		server_list.add_item(text)
 
 func populate_room_list(matches: Array):
 	if not match_list:
@@ -673,11 +741,59 @@ func populate_room_list(matches: Array):
 func _on_server_list_back_pressed():
 	show_main_menu()
 
+func _on_server_item_selected(index: int):
+	if index < 0 or index >= current_servers.size():
+		_log_debug("Índice de servidores inválido: " + str(index))
+		selected_server_id = -1
+		return
+	
+	selected_server_id = current_servers[index]["id"]
+
+func _on_server_list_add_pressed():
+	show_add_server_menu()
+	_log_debug("Entrando na tela para adicionar servidor para a lista")
+	
+func _on_server_list_delete_pressed():
+	if selected_server_id <= 0:
+		show_error_server_list("Nenhum servidor selecionado")
+		return
+		
+	show_delete_server_menu()
+	_log_debug("Entrando na tela para confirmar exclusão de servidor da lista")
+
 func _on_server_list_enter_pressed():
-	_log_debug("_on_server_list_enter_pressed!")
+	# Não faz nada se não selecionar nenhum
+	if selected_server_id <= 0:
+		show_error_server_list("Nenhum servidor selecionado")
+		return
+	
+	var item = server_list_manager.get_item_by_id(selected_server_id)
+	game_manager.join_server_by_ip(item["ip"], str(item["porta"]))
+	_log_debug("Entrando no servidor selecionado")
 
 func _on_manual_server_join_button_pressed():
+	_log_debug("Carregando tela de entrada manual de servidor")
 	show_manual_server_join_menu()
+
+func _on_add_server_back_pressed():
+	show_server_list_menu(server_list_manager.get_items())
+	_log_debug("Voltar! não vou mais adicionar servidor na lista de servidores")
+
+func _on_confirm_add_server_pressed():
+	if server_list_manager:
+		server_list_manager.add_item(add_server_name_input.text, add_server_ip_input.text, int(add_server_port_input.text))
+	show_server_list_menu(server_list_manager.get_items())
+	
+	_log_debug("Adicionando servidor na lista de servidores")
+
+func _on_delete_server_back_pressed():
+	show_server_list_menu(server_list_manager.get_items())
+	_log_debug("Voltar! não vou mais apagar este servidor da lista")
+
+func _on_confirm_delete_server_pressed():
+	server_list_manager.remove_item(selected_server_id)
+	show_server_list_menu(server_list_manager.get_items())
+	_log_debug("Apagando este servidor da lista")
 
 # ===== CALLBACKS DO MENU DE ENTRADA MANUAL =====
 
@@ -718,7 +834,7 @@ func _on_manual_room_join_back_pressed():
 	show_room_list_menu()
 
 func _on_manual_server_join_back_pressed():
-		show_server_list_menu()
+		show_server_list_menu(server_list_manager.get_items())
 
 # ===== CALLBACKS DO MENU DE CRIAR PARTIDA =====
 
@@ -1122,6 +1238,13 @@ func show_error_room_list(message: String):
 		match_list_error_label.visible = true
 		match_list_error_label.modulate = Color(1.0, 0.3, 0.3)
 	_log_debug("Lista de partidas: " + message)
+
+func show_error_server_list(message: String):
+	if server_list_error_label:
+		server_list_error_label.text = message
+		server_list_error_label.visible = true
+		server_list_error_label.modulate = Color(1.0, 0.3, 0.3)
+	_log_debug("Lista de servidores: " + message)
 
 func show_error_manual_join(message: String):
 	if manual_join_error_label:

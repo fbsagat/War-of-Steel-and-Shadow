@@ -329,16 +329,10 @@ func create_local_match():
 	"""Criar uma partida local"""
 	_log_debug("Iniciando uma partida local")
 	
-	# Carregar servidor por trás.
-	#await initializer._init_server(false)
-	
-	# Conectar neste servidor, não via rede e sim via conexão local(criar sistema).
-	#connect_to_server()
-	
-	# Definir nome do player e da sala (no menu feito para isso) (não define senha pois é partida local).
-	
-	# Cria a sala automaticamente, pois só terá uma (jogador espera outros players entrarem nesta sala única).
-	# Menu padrão de sala(não o da lista de salas): Botão para iniciar partida pode ser clicado.
+	# Executar build do servidor.
+	#var server_pid := -1
+	#var server_path = ProjectSettings.globalize_path("res://server/server.exe")
+	#server_pid = OS.create_process(server_path, ["--port", "7777"])
 
 # ===== REGISTRO DE JOGADOR =====
 

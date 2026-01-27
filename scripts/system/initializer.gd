@@ -1,7 +1,7 @@
 extends Node
 
 # Configurações
-@export var test_mode: bool = true
+@export var test_mode: bool = false
 @export var trainer: bool = true
 
 ## Manager de rede, gerencia comunicação entre servidor e clientes
@@ -12,6 +12,9 @@ var server_manager: ServerManager = null
 
 ## Manager principal dos clientes
 var game_manager: Node = null
+
+## Manager que gerencia lista de servidores salvos em persistência
+var server_list_manager: ServerListManager = null
 
 ## Carrega a base de dados de itens de gameplay, comum entre servidor e clientes
 var item_database: ItemDatabase = null
@@ -162,7 +165,8 @@ func _init_client():
 	var game_manager_scene: PackedScene = load("res://scenes/system/game_manager.tscn")
 	var main_menu_scene: PackedScene = load("res://scenes/ui/main_menu.tscn")
 	item_database = load("res://scripts/gameplay/ItemDatabase.gd").new()
-	map_manager = preload("res://scripts/gameplay/MapManager.gd").new()
+	map_manager = load("res://scripts/gameplay/MapManager.gd").new()
+	server_list_manager = load("res://scripts/system/client_serverlist_manager.gd").new()
 
 	network_manager = network_manager_scene.instantiate()
 	game_manager = game_manager_scene.instantiate()
@@ -174,6 +178,7 @@ func _init_client():
 	item_database.name = "ItemDatabase"
 	main_menu.name = "MainMenu"
 	map_manager.name = "MapManager"
+	server_list_manager.name = "ServerListManager"
 	
 	# Adiciona à árvore
 	get_tree().root.add_child.call_deferred(network_manager)
@@ -181,6 +186,7 @@ func _init_client():
 	get_tree().root.add_child.call_deferred(item_database)
 	get_tree().root.add_child.call_deferred(main_menu)
 	get_tree().root.add_child.call_deferred(map_manager)
+	get_tree().root.add_child.call_deferred(server_list_manager)
 	
 	# Injeta dependências cruzadas:
 	
@@ -196,6 +202,7 @@ func _init_client():
 	
 	# MainMenu precisa de:
 	main_menu.game_manager = game_manager
+	main_menu.server_list_manager = server_list_manager
 	
 	# Configurações
 	

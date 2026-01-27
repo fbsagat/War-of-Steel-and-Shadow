@@ -46,7 +46,7 @@ extends CharacterBody3D
 @export var rotation_threshold: float = 0.01 # Rotação mínima para sincronizar
 @export var anim_sync_rate: float = 0.1  # 10 updates/segundo (menos que posição)
 @export var visual_rotation_y: float = 0.0
-@export var initial_sync_duration: float = 1.0
+@export var initial_sync_duration: float = 3.0
 @export var initial_sync_elapsed: float = 0.0
 
 # referências
