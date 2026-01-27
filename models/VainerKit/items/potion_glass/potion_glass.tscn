@@ -1,8 +1,9 @@
-[gd_scene load_steps=13 format=4 uid="uid://cb26och8280fn"]
+[gd_scene load_steps=14 format=4 uid="uid://cb26och8280fn"]
 
 [ext_resource type="Material" uid="uid://dyf3texhrr1fx" path="res://models/VainerKit/items/potion_glass/potion_glass.material" id="1_on2en"]
 [ext_resource type="Texture2D" uid="uid://bno0nq0h8d8bl" path="res://models/VainerKit/items/potion_glass/potion_glass_log_texture.png" id="1_wecpa"]
 [ext_resource type="Material" uid="uid://dc3cu6hrbrk5h" path="res://models/VainerKit/items/potion_glass/Liquid.material" id="2_47bsv"]
+[ext_resource type="PackedScene" uid="uid://da8cxlgmx22ff" path="res://vfx/heal/vfx_heal.tscn" id="4_47bsv"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ulu25"]
 resource_name = "potion_glass"
@@ -138,3 +139,6 @@ surface_material_override/0 = ExtResource("2_47bsv")
 transform = Transform3D(0.24000001, 0, 0, 0, 0.24000001, 0, 0, 0, 0.24000001, 0, 0.55459994, 0)
 mesh = SubResource("ArrayMesh_6dylx")
 skeleton = NodePath("")
+
+[node name="vfx_heal" parent="." instance=ExtResource("4_47bsv")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6561486, 0)

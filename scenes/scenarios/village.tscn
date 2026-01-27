@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3 uid="uid://c0ngmife3um6s"]
+[gd_scene load_steps=17 format=3 uid="uid://c0ngmife3um6s"]
 
 [ext_resource type="PackedScene" uid="uid://dwmurdmawu7d0" path="res://models/VainerKit/builds/medieval_house/medieval_house.glb" id="1_q0c0d"]
 [ext_resource type="PackedScene" uid="uid://3kouyv5n4iom" path="res://models/VainerKit/props/well/well.glb" id="2_dhhkg"]
@@ -10,6 +10,7 @@
 [ext_resource type="PackedScene" uid="uid://dfqtni6o2gtas" path="res://models/VainerKit/builds/shop/shop.glb" id="6_i76jp"]
 [ext_resource type="PackedScene" uid="uid://cioodi1130fm" path="res://models/VainerKit/props/bush/bush.glb" id="6_jttmf"]
 [ext_resource type="PackedScene" uid="uid://ce304l2fnlxbo" path="res://models/VainerKit/props/torchpole/torchpole.tscn" id="7_bttwp"]
+[ext_resource type="PackedScene" uid="uid://cb26och8280fn" path="res://models/VainerKit/items/potion_glass/potion_glass.tscn" id="7_jttmf"]
 
 [sub_resource type="FastNoiseLite" id="FastNoiseLite_ap3rv"]
 
@@ -221,6 +222,9 @@ transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0.48604488, -0.25591183, -38.
 
 [node name="bush3" parent="nature" instance=ExtResource("6_jttmf")]
 transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 3.6710334, -0.25591183, -27.43998)
+
+[node name="potion_glass" parent="nature" instance=ExtResource("7_jttmf")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18.524048, 1.0883449, -49.34202)
 
 [node name="wells" type="Node3D" parent="."]
 
