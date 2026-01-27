@@ -1,18 +1,14 @@
-[gd_resource type="VisualShader" load_steps=6 format=3 uid="uid://p3udn7nj80y3"]
+[gd_resource type="VisualShader" load_steps=5 format=3 uid="uid://p3udn7nj80y3"]
 
 [ext_resource type="Texture2D" uid="uid://cfoh1w0r7liog" path="res://vfx/heal/heal_vfx.png" id="1_0vxcl"]
 
 [sub_resource type="VisualShaderNodeVectorDecompose" id="VisualShaderNodeVectorDecompose_6sfky"]
-output_port_for_preview = 3
+output_port_for_preview = 1
 default_input_values = [0, Quaternion(0, 0, 0, 0)]
 op_type = 2
 
 [sub_resource type="VisualShaderNodeTexture" id="VisualShaderNodeTexture_nrnfy"]
 texture = ExtResource("1_0vxcl")
-
-[sub_resource type="VisualShaderNodeColorConstant" id="VisualShaderNodeColorConstant_x7ax4"]
-output_port_for_preview = 0
-constant = Color(3.2944162, 0, 0, 0.60784316)
 
 [sub_resource type="VisualShaderNodeBillboard" id="VisualShaderNodeBillboard_hk7mt"]
 billboard_type = 2
@@ -20,7 +16,7 @@ keep_scale = true
 
 [resource]
 code = "shader_type spatial;
-render_mode blend_mix, depth_draw_opaque, depth_test_default, cull_back, diffuse_lambert, specular_schlick_ggx;
+render_mode blend_mix, depth_draw_opaque, depth_test_default, cull_disabled, diffuse_lambert, specular_schlick_ggx, unshaded, shadows_disabled;
 
 uniform sampler2D tex_frg_4;
 
@@ -61,6 +57,9 @@ void fragment() {
 
 }
 "
+modes/cull = 2
+flags/unshaded = true
+flags/shadows_disabled = true
 nodes/vertex/2/node = SubResource("VisualShaderNodeBillboard_hk7mt")
 nodes/vertex/2/position = Vector2(0, 320)
 nodes/vertex/connections = PackedInt32Array(2, 0, 0, 10)
@@ -68,6 +67,4 @@ nodes/fragment/3/node = SubResource("VisualShaderNodeVectorDecompose_6sfky")
 nodes/fragment/3/position = Vector2(-140, 280)
 nodes/fragment/4/node = SubResource("VisualShaderNodeTexture_nrnfy")
 nodes/fragment/4/position = Vector2(-480, 80)
-nodes/fragment/5/node = SubResource("VisualShaderNodeColorConstant_x7ax4")
-nodes/fragment/5/position = Vector2(-20, 60)
-nodes/fragment/connections = PackedInt32Array(3, 3, 0, 1, 4, 0, 3, 0, 4, 0, 0, 0)
+nodes/fragment/connections = PackedInt32Array(4, 0, 3, 0, 3, 3, 0, 1, 4, 0, 0, 0)

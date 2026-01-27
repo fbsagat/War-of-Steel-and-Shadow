@@ -1,10 +1,9 @@
-[gd_scene load_steps=21 format=3 uid="uid://3m24sag7gx5w"]
+[gd_scene load_steps=20 format=3 uid="uid://3m24sag7gx5w"]
 
 [ext_resource type="Terrain3DAssets" uid="uid://dal3jhw6241qg" path="res://demo/data/assets.tres" id="1_0rjur"]
 [ext_resource type="PackedScene" uid="uid://d3sr0a7dxfkr8" path="res://addons/terrain_3d/extras/particle_example/Terrain3DParticles.tscn" id="2_t70ke"]
 [ext_resource type="PackedScene" uid="uid://cwu8t6cp4qo1c" path="res://sky/sky_3d.tscn" id="3_t70ke"]
-[ext_resource type="PackedScene" uid="uid://c68soltskrjjw" path="res://models/VainerKit/items/potion_glass/potion_glass.glb" id="8_l3dix"]
-[ext_resource type="PackedScene" uid="uid://d05wfghk7rfho" path="res://models/VainerKit/props/tree/tree.glb" id="9_qeakp"]
+[ext_resource type="PackedScene" uid="uid://bl8c62gm66ba5" path="res://models/VainerKit/props/tree/tree.tscn" id="8_l3dix"]
 [ext_resource type="PackedScene" uid="uid://crlowioh7ei41" path="res://models/VainerKit/builds/wood_bridge/wood_bridge.glb" id="11_3txeo"]
 [ext_resource type="PackedScene" uid="uid://0yuy536rv6ae" path="res://scenes/scenarios/forest.tscn" id="12_6jw5i"]
 [ext_resource type="PackedScene" uid="uid://bihax2br6c5mr" path="res://models/VainerKit/builds/medieval_tower_ruins/medieval_tower_ruins.glb" id="13_au1d7"]
@@ -921,11 +920,5 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 23.729733, -0.33137178, 90.53
 [node name="medieval_tower_ruins" parent="." instance=ExtResource("13_au1d7")]
 transform = Transform3D(1.3113416e-07, 0, -1, 0, 1, 0, 1, 0, 1.3113416e-07, 56.083496, 0.018917322, -70.02586)
 
-[node name="potion_glass" parent="." instance=ExtResource("8_l3dix")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.096503, 0.936604, -11.607915)
-
-[node name="tree" parent="." instance=ExtResource("9_qeakp")]
-transform = Transform3D(-1.7484555e-07, 0, 4, 0, 4, 0, -4, 0, -1.7484555e-07, -47.544365, -1.3162317, 1.5296851)
-
-[node name="potion_glass2" parent="." instance=ExtResource("8_l3dix")]
-transform = Transform3D(8.555, 0, 0, 0, 8.555, 0, 0, 0, 8.555, 13.210999, -0.059847295, 111.16424)
+[node name="tree" parent="." instance=ExtResource("8_l3dix")]
+transform = Transform3D(-0.77645713, 0, -2.8977776, 0, 3, 0, 2.8977776, 0, -0.77645713, -40.941517, -1.1128595, 0.9311943)
