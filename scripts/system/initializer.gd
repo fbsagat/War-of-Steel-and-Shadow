@@ -1,5 +1,9 @@
 extends Node
 
+# Configurações
+@export var test_mode: bool = true
+@export var trainer: bool = false
+
 ## Manager de rede, gerencia comunicação entre servidor e clientes
 var network_manager: NetworkManager = null
 
@@ -133,6 +137,12 @@ func _init_server(is_headless):
 	network_manager.server_is_headless = is_headless
 	map_manager.is_server = true
 	
+	# Configurar modo de testes
+	if test_mode:
+		server_manager.fast_round = true
+	if trainer:
+		server_manager.test_trainer = true
+	
 	# Aguarda até que os nós tenham sido adicionados à árvore
 	await get_tree().process_frame
 	
@@ -188,6 +198,10 @@ func _init_client():
 	main_menu.game_manager = game_manager
 	
 	# Configurações
+	
+	# Configurar modo de testes
+	if test_mode:
+		game_manager.localhost_auto_connect = true
 	
 	# Aguarda até que os nós tenham sido adicionados à árvore
 	await get_tree().process_frame

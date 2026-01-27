@@ -11,7 +11,7 @@ const DEFAULT_SERVER_ADDRESS: String = "127.0.0.1"
 const DEFAULT_SERVER_PORT: int = 7777
 @export var server_address: String = DEFAULT_SERVER_ADDRESS
 @export var server_port: int = DEFAULT_SERVER_PORT
-@export var localhost_auto_connect: bool = true
+@export var localhost_auto_connect: bool = false
 
 const map_scene : String = "res://scenes/system/terrain_3d.tscn"
 const player_scene : String = "res://scenes/gameplay/player_warrior.tscn"
