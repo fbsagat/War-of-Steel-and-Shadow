@@ -456,6 +456,8 @@ func show_add_server_menu():
 	add_server_name_input.text = ""
 	add_server_ip_input.text = ""
 	add_server_port_input.text = ""
+	add_server_error_label.text = ""
+	add_server_error_label.visible = false
 
 func show_delete_server_menu():
 	hide_all_menus()
@@ -805,6 +807,53 @@ func _on_add_server_back_pressed():
 	_log_debug("Voltar! não vou mais adicionar servidor na lista de servidores")
 
 func _on_confirm_add_server_pressed():
+	# Validados para campos vazios
+	if add_server_ip_input.text.is_empty() or add_server_name_input.text.is_empty() or add_server_port_input.text.is_empty():
+		show_error_add_server("Campo não pode estar vazio")
+		return
+	
+	# Validador para nome do servidor
+	if add_server_name_input.text.length() <= 3:
+		show_error_add_server("Nome do servidor deve ter mais de 3 caracteres")
+		return
+	
+	# Validador para IPs
+	var ip = add_server_ip_input.text
+	for c in ip:
+		if not (c >= "0" and c <= "9" or c == "."):
+			show_error_add_server("IP inválido")
+			return
+
+	var parts: PackedStringArray = ip.split(".")
+	if parts.size() != 4:
+		show_error_add_server("IP inválido")
+		return
+
+	for part in parts:
+		if part.is_empty():
+			show_error_add_server("IP inválido")
+			return
+
+		if not part.is_valid_int():
+			show_error_add_server("IP inválido")
+			return
+
+		var value := part.to_int()
+		if value < 0 or value > 255:
+			show_error_add_server("IP inválido")
+			return
+	
+	# Validador para porta: bloqueia letras e qualquer coisa que não seja número
+	if not add_server_port_input.text.is_valid_int():
+		show_error_add_server("Porta inválida")
+		return
+	
+	# Validador para porta: Bloqueia porta menor que 1 e maior que 65535
+	var port_number := add_server_port_input.text.to_int()
+	if port_number < 1 or port_number > 65535:
+		show_error_add_server("Porta inválida")
+		return
+	
 	if server_list_manager:
 		server_list_manager.add_item(add_server_name_input.text, add_server_ip_input.text, int(add_server_port_input.text))
 	show_server_list_menu(server_list_manager.get_items())
@@ -1305,6 +1354,13 @@ func show_error_room(message: String):
 		room_error_label.visible = true
 		room_error_label.modulate = Color(1.0, 0.3, 0.3)
 	_log_debug("Sala: " + message)
+
+func show_error_add_server(message: String):
+	if add_server_error_label:
+		add_server_error_label.text = message
+		add_server_error_label.visible = true
+		add_server_error_label.modulate = Color(1.0, 0.3, 0.3)
+	_log_debug("Add server: " + message)
 
 # ===== FUNÇÕES DE CONTROLE DE CARREGAMENTO =====
 

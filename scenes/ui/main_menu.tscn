@@ -240,7 +240,7 @@ alignment = 1
 [node name="CancelButton" type="Button" parent="CanvasLayer/CenterContainer/Control/ConnectingMenu/VBoxContainer/ButtonsContainer" unique_id=1767557064]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
-text = "Cancelar"
+text = "Voltar"
 
 [node name="ServerListMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=1788849445]
 visible = false
@@ -378,6 +378,7 @@ text = "Porta:"
 [node name="AddServerPortInput" type="LineEdit" parent="CanvasLayer/CenterContainer/Control/AddServerMenu/VBoxContainer" unique_id=331417765]
 custom_minimum_size = Vector2(300, 40)
 layout_mode = 2
+max_length = 5
 
 [node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/AddServerMenu/VBoxContainer" unique_id=545644132]
 visible = false
