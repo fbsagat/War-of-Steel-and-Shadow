@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=3 uid="uid://dwnsmgw3eenld"]
+[gd_scene format=3 uid="uid://dwnsmgw3eenld"]
 
 [ext_resource type="Script" uid="uid://d1lqocmg5iias" path="res://scripts/ui/main_menu.gd" id="1_fe2o3"]
 [ext_resource type="FontFile" uid="uid://5c6j1uickvu3" path="res://material/Medieval Scroll of Wisdom.ttf" id="2_1g8jr"]
@@ -44,7 +44,7 @@ font_size = 24
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_6dd3c"]
 bg_color = Color(0.13, 0.81149995, 1, 1)
 
-[node name="MainMenu" type="Control"]
+[node name="MainMenu" type="Control" unique_id=1416588749]
 visible = false
 layout_mode = 3
 anchors_preset = 15
@@ -54,10 +54,10 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_fe2o3")
 
-[node name="CanvasLayer" type="CanvasLayer" parent="."]
+[node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=2047922715]
 follow_viewport_enabled = true
 
-[node name="ColorRect" type="ColorRect" parent="CanvasLayer"]
+[node name="ColorRect" type="ColorRect" parent="CanvasLayer" unique_id=1181165871]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -65,7 +65,7 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0.3157442, 0.18199122, 0.09572428, 1)
 
-[node name="CenterContainer" type="CenterContainer" parent="CanvasLayer"]
+[node name="CenterContainer" type="CenterContainer" parent="CanvasLayer" unique_id=1706959951]
 custom_minimum_size = Vector2(800, 600)
 anchors_preset = 15
 anchor_right = 1.0
@@ -73,11 +73,11 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Control" type="Control" parent="CanvasLayer/CenterContainer"]
+[node name="Control" type="Control" parent="CanvasLayer/CenterContainer" unique_id=1416934518]
 custom_minimum_size = Vector2(1200, 800)
 layout_mode = 2
 
-[node name="MainMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control"]
+[node name="MainMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=272160322]
 visible = false
 layout_mode = 1
 anchors_preset = 15
@@ -86,43 +86,43 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/MainMenu"]
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/MainMenu" unique_id=1689088448]
 layout_mode = 2
 theme_override_constants/separation = 25
 
-[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/MainMenu/VBoxContainer"]
+[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/MainMenu/VBoxContainer" unique_id=298010116]
 layout_mode = 2
 theme = SubResource("Theme_q0uhn")
 text = "War of Steel and Shadow"
 label_settings = SubResource("LabelSettings_6dd3c")
 horizontal_alignment = 1
 
-[node name="JoinSinglePlayerButton" type="Button" parent="CanvasLayer/CenterContainer/Control/MainMenu/VBoxContainer"]
+[node name="JoinSinglePlayerButton" type="Button" parent="CanvasLayer/CenterContainer/Control/MainMenu/VBoxContainer" unique_id=1020980416]
 custom_minimum_size = Vector2(200, 40)
 layout_mode = 2
 text = "Partida em rede local"
 
-[node name="JoinServerButton" type="Button" parent="CanvasLayer/CenterContainer/Control/MainMenu/VBoxContainer"]
+[node name="JoinServerButton" type="Button" parent="CanvasLayer/CenterContainer/Control/MainMenu/VBoxContainer" unique_id=1065787096]
 custom_minimum_size = Vector2(200, 40)
 layout_mode = 2
 text = "Entrar em um servidor"
 
-[node name="HowToPlayButton" type="Button" parent="CanvasLayer/CenterContainer/Control/MainMenu/VBoxContainer"]
+[node name="HowToPlayButton" type="Button" parent="CanvasLayer/CenterContainer/Control/MainMenu/VBoxContainer" unique_id=868583881]
 custom_minimum_size = Vector2(200, 40)
 layout_mode = 2
 text = "Como Jogar"
 
-[node name="OptionsButton" type="Button" parent="CanvasLayer/CenterContainer/Control/MainMenu/VBoxContainer"]
+[node name="OptionsButton" type="Button" parent="CanvasLayer/CenterContainer/Control/MainMenu/VBoxContainer" unique_id=557766913]
 custom_minimum_size = Vector2(200, 40)
 layout_mode = 2
 text = "Opções"
 
-[node name="QuitButton" type="Button" parent="CanvasLayer/CenterContainer/Control/MainMenu/VBoxContainer"]
+[node name="QuitButton" type="Button" parent="CanvasLayer/CenterContainer/Control/MainMenu/VBoxContainer" unique_id=447537858]
 custom_minimum_size = Vector2(200, 40)
 layout_mode = 2
 text = "Sair"
 
-[node name="ConnecteName" type="Label" parent="CanvasLayer/CenterContainer/Control/MainMenu/VBoxContainer"]
+[node name="ConnecteName" type="Label" parent="CanvasLayer/CenterContainer/Control/MainMenu/VBoxContainer" unique_id=1663335740]
 layout_mode = 2
 size_flags_horizontal = 8
 size_flags_vertical = 8
@@ -133,7 +133,7 @@ text = "Desconectado 🌐⛓️‍💥"
 horizontal_alignment = 1
 vertical_alignment = 2
 
-[node name="NameInputMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control"]
+[node name="NameInputMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=7578943]
 visible = false
 layout_mode = 1
 anchors_preset = 15
@@ -142,43 +142,43 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="ReferenceRect" type="ReferenceRect" parent="CanvasLayer/CenterContainer/Control/NameInputMenu"]
+[node name="ReferenceRect" type="ReferenceRect" parent="CanvasLayer/CenterContainer/Control/NameInputMenu" unique_id=775072264]
 custom_minimum_size = Vector2(1100, 650)
 layout_mode = 2
 border_color = Color(0, 0, 0, 1)
 border_width = 2.0
 editor_only = false
 
-[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/NameInputMenu"]
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/NameInputMenu" unique_id=451332373]
 layout_mode = 2
 alignment = 1
 
-[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/NameInputMenu/VBoxContainer"]
+[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/NameInputMenu/VBoxContainer" unique_id=741002981]
 layout_mode = 2
 text = "Bem vindo!"
 label_settings = SubResource("LabelSettings_fe2o3")
 horizontal_alignment = 1
 
-[node name="Label2" type="Label" parent="CanvasLayer/CenterContainer/Control/NameInputMenu/VBoxContainer"]
+[node name="Label2" type="Label" parent="CanvasLayer/CenterContainer/Control/NameInputMenu/VBoxContainer" unique_id=1733892402]
 layout_mode = 2
 text = "Escolha seu nome"
 label_settings = SubResource("LabelSettings_1g8jr")
 horizontal_alignment = 1
 
-[node name="PlayerNameInput" type="LineEdit" parent="CanvasLayer/CenterContainer/Control/NameInputMenu/VBoxContainer"]
+[node name="PlayerNameInput" type="LineEdit" parent="CanvasLayer/CenterContainer/Control/NameInputMenu/VBoxContainer" unique_id=816621867]
 custom_minimum_size = Vector2(400, 50)
 layout_mode = 2
 placeholder_text = "Digite seu nome (3-20 caracteres)"
 alignment = 1
 max_length = 20
 
-[node name="Label3" type="Label" parent="CanvasLayer/CenterContainer/Control/NameInputMenu/VBoxContainer"]
+[node name="Label3" type="Label" parent="CanvasLayer/CenterContainer/Control/NameInputMenu/VBoxContainer" unique_id=565056397]
 layout_mode = 2
 text = "• 3 a 20 caracteres\\n• Letras, números, espaços e _"
 label_settings = SubResource("LabelSettings_m1kxf")
 horizontal_alignment = 1
 
-[node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/NameInputMenu/VBoxContainer"]
+[node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/NameInputMenu/VBoxContainer" unique_id=443092279]
 visible = false
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
@@ -188,12 +188,12 @@ text = "Deu cagada!"
 horizontal_alignment = 1
 autowrap_mode = 3
 
-[node name="ConfirmButton" type="Button" parent="CanvasLayer/CenterContainer/Control/NameInputMenu/VBoxContainer"]
+[node name="ConfirmButton" type="Button" parent="CanvasLayer/CenterContainer/Control/NameInputMenu/VBoxContainer" unique_id=540576604]
 custom_minimum_size = Vector2(200, 50)
 layout_mode = 2
 text = "Confirmar"
 
-[node name="ConnectingMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control"]
+[node name="ConnectingMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=1585650634]
 visible = false
 layout_mode = 1
 anchors_preset = 15
@@ -204,22 +204,22 @@ offset_bottom = -120.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/ConnectingMenu"]
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/ConnectingMenu" unique_id=2015776977]
 custom_minimum_size = Vector2(500, 400)
 layout_mode = 2
 theme_override_constants/separation = 4
 
-[node name="TextureRect" type="TextureRect" parent="CanvasLayer/CenterContainer/Control/ConnectingMenu/VBoxContainer"]
+[node name="TextureRect" type="TextureRect" parent="CanvasLayer/CenterContainer/Control/ConnectingMenu/VBoxContainer" unique_id=327145348]
 custom_minimum_size = Vector2(128, 128)
 layout_mode = 2
 
-[node name="ConnectingLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/ConnectingMenu/VBoxContainer"]
+[node name="ConnectingLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/ConnectingMenu/VBoxContainer" unique_id=794348334]
 layout_mode = 2
 theme_override_font_sizes/font_size = 24
 text = "Conectando ao servidor..."
 horizontal_alignment = 1
 
-[node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/ConnectingMenu/VBoxContainer"]
+[node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/ConnectingMenu/VBoxContainer" unique_id=1565524780]
 visible = false
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
@@ -229,20 +229,20 @@ text = "Deu cagada!"
 horizontal_alignment = 1
 autowrap_mode = 3
 
-[node name="TextureRect2" type="TextureRect" parent="CanvasLayer/CenterContainer/Control/ConnectingMenu/VBoxContainer"]
+[node name="TextureRect2" type="TextureRect" parent="CanvasLayer/CenterContainer/Control/ConnectingMenu/VBoxContainer" unique_id=831695815]
 custom_minimum_size = Vector2(128, 32)
 layout_mode = 2
 
-[node name="ButtonsContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/ConnectingMenu/VBoxContainer"]
+[node name="ButtonsContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/ConnectingMenu/VBoxContainer" unique_id=294606013]
 layout_mode = 2
 alignment = 1
 
-[node name="CancelButton" type="Button" parent="CanvasLayer/CenterContainer/Control/ConnectingMenu/VBoxContainer/ButtonsContainer"]
+[node name="CancelButton" type="Button" parent="CanvasLayer/CenterContainer/Control/ConnectingMenu/VBoxContainer/ButtonsContainer" unique_id=1767557064]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 text = "Cancelar"
 
-[node name="ServerListMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control"]
+[node name="ServerListMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=1788849445]
 visible = false
 layout_mode = 1
 anchors_preset = 15
@@ -251,28 +251,28 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/ServerListMenu"]
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/ServerListMenu" unique_id=1216197297]
 layout_mode = 2
 alignment = 1
 
-[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/ServerListMenu/VBoxContainer"]
+[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/ServerListMenu/VBoxContainer" unique_id=1607255056]
 layout_mode = 2
 text = "Servidores Disponíveis"
 horizontal_alignment = 1
 
-[node name="VBoxContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/ServerListMenu/VBoxContainer"]
+[node name="VBoxContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/ServerListMenu/VBoxContainer" unique_id=1355290236]
 layout_mode = 2
 alignment = 1
 
-[node name="HBoxContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/ServerListMenu/VBoxContainer/VBoxContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/ServerListMenu/VBoxContainer/VBoxContainer" unique_id=991578765]
 layout_mode = 2
 alignment = 1
 
-[node name="ScrollContainer" type="ScrollContainer" parent="CanvasLayer/CenterContainer/Control/ServerListMenu/VBoxContainer/VBoxContainer/HBoxContainer"]
+[node name="ScrollContainer" type="ScrollContainer" parent="CanvasLayer/CenterContainer/Control/ServerListMenu/VBoxContainer/VBoxContainer/HBoxContainer" unique_id=362251061]
 custom_minimum_size = Vector2(1100, 600)
 layout_mode = 2
 
-[node name="ServerList" type="ItemList" parent="CanvasLayer/CenterContainer/Control/ServerListMenu/VBoxContainer/VBoxContainer/HBoxContainer/ScrollContainer"]
+[node name="ServerList" type="ItemList" parent="CanvasLayer/CenterContainer/Control/ServerListMenu/VBoxContainer/VBoxContainer/HBoxContainer/ScrollContainer" unique_id=1842728486]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
@@ -281,23 +281,24 @@ icon_mode = 0
 item_0/text = "sdfsdffsf"
 item_1/text = "sdfsdfsfsffsdfsdfdfs"
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/ServerListMenu/VBoxContainer/VBoxContainer"]
+[node name="HBoxContainer2" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/ServerListMenu/VBoxContainer/VBoxContainer" unique_id=151939742]
 layout_mode = 2
 
-[node name="ButtonsContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/ServerListMenu/VBoxContainer/VBoxContainer/HBoxContainer2"]
+[node name="ButtonsContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/ServerListMenu/VBoxContainer/VBoxContainer/HBoxContainer2" unique_id=28933050]
 layout_mode = 2
 
-[node name="AddButton" type="Button" parent="CanvasLayer/CenterContainer/Control/ServerListMenu/VBoxContainer/VBoxContainer/HBoxContainer2/ButtonsContainer"]
+[node name="AddButton" type="Button" parent="CanvasLayer/CenterContainer/Control/ServerListMenu/VBoxContainer/VBoxContainer/HBoxContainer2/ButtonsContainer" unique_id=1931230154]
 custom_minimum_size = Vector2(90, 40)
 layout_mode = 2
 text = "Adicionar"
 
-[node name="DeleteButton" type="Button" parent="CanvasLayer/CenterContainer/Control/ServerListMenu/VBoxContainer/VBoxContainer/HBoxContainer2/ButtonsContainer"]
+[node name="DeleteButton" type="Button" parent="CanvasLayer/CenterContainer/Control/ServerListMenu/VBoxContainer/VBoxContainer/HBoxContainer2/ButtonsContainer" unique_id=1583022713]
 custom_minimum_size = Vector2(90, 40)
 layout_mode = 2
+disabled = true
 text = "Apagar"
 
-[node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/ServerListMenu/VBoxContainer"]
+[node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/ServerListMenu/VBoxContainer" unique_id=1220290634]
 visible = false
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
@@ -307,26 +308,27 @@ text = "Deu cagada!"
 horizontal_alignment = 1
 autowrap_mode = 3
 
-[node name="ButtonsContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/ServerListMenu/VBoxContainer"]
+[node name="ButtonsContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/ServerListMenu/VBoxContainer" unique_id=861902751]
 layout_mode = 2
 alignment = 1
 
-[node name="BackButton" type="Button" parent="CanvasLayer/CenterContainer/Control/ServerListMenu/VBoxContainer/ButtonsContainer"]
+[node name="BackButton" type="Button" parent="CanvasLayer/CenterContainer/Control/ServerListMenu/VBoxContainer/ButtonsContainer" unique_id=954028707]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 text = "Voltar"
 
-[node name="JoinButton" type="Button" parent="CanvasLayer/CenterContainer/Control/ServerListMenu/VBoxContainer/ButtonsContainer"]
+[node name="JoinButton" type="Button" parent="CanvasLayer/CenterContainer/Control/ServerListMenu/VBoxContainer/ButtonsContainer" unique_id=96816504]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
+disabled = true
 text = "Entrar"
 
-[node name="ManualJoinButton" type="Button" parent="CanvasLayer/CenterContainer/Control/ServerListMenu/VBoxContainer/ButtonsContainer"]
+[node name="ManualJoinButton" type="Button" parent="CanvasLayer/CenterContainer/Control/ServerListMenu/VBoxContainer/ButtonsContainer" unique_id=830731295]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 text = "Entrada Manual"
 
-[node name="AddServerMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control"]
+[node name="AddServerMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=1839885574]
 visible = false
 layout_mode = 1
 anchors_preset = 15
@@ -335,49 +337,49 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="ReferenceRect" type="ReferenceRect" parent="CanvasLayer/CenterContainer/Control/AddServerMenu"]
+[node name="ReferenceRect" type="ReferenceRect" parent="CanvasLayer/CenterContainer/Control/AddServerMenu" unique_id=353648761]
 custom_minimum_size = Vector2(600, 500)
 layout_mode = 2
 border_color = Color(0, 0, 0, 1)
 border_width = 2.0
 editor_only = false
 
-[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/AddServerMenu"]
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/AddServerMenu" unique_id=1710853028]
 layout_mode = 2
 theme_override_constants/separation = 10
 alignment = 1
 
-[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/AddServerMenu/VBoxContainer"]
+[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/AddServerMenu/VBoxContainer" unique_id=900540095]
 layout_mode = 2
 text = "Adicionar Servidor
 "
 horizontal_alignment = 1
 
-[node name="Label2" type="Label" parent="CanvasLayer/CenterContainer/Control/AddServerMenu/VBoxContainer"]
+[node name="Label2" type="Label" parent="CanvasLayer/CenterContainer/Control/AddServerMenu/VBoxContainer" unique_id=1416534043]
 layout_mode = 2
 text = "Nome do Servidor:"
 
-[node name="AddServerNameInput" type="LineEdit" parent="CanvasLayer/CenterContainer/Control/AddServerMenu/VBoxContainer"]
+[node name="AddServerNameInput" type="LineEdit" parent="CanvasLayer/CenterContainer/Control/AddServerMenu/VBoxContainer" unique_id=171974612]
 custom_minimum_size = Vector2(300, 40)
 layout_mode = 2
 
-[node name="Label3" type="Label" parent="CanvasLayer/CenterContainer/Control/AddServerMenu/VBoxContainer"]
+[node name="Label3" type="Label" parent="CanvasLayer/CenterContainer/Control/AddServerMenu/VBoxContainer" unique_id=1132029861]
 layout_mode = 2
 text = "IP:"
 
-[node name="AddServerIpInput" type="LineEdit" parent="CanvasLayer/CenterContainer/Control/AddServerMenu/VBoxContainer"]
+[node name="AddServerIpInput" type="LineEdit" parent="CanvasLayer/CenterContainer/Control/AddServerMenu/VBoxContainer" unique_id=1534974954]
 custom_minimum_size = Vector2(300, 40)
 layout_mode = 2
 
-[node name="Label4" type="Label" parent="CanvasLayer/CenterContainer/Control/AddServerMenu/VBoxContainer"]
+[node name="Label4" type="Label" parent="CanvasLayer/CenterContainer/Control/AddServerMenu/VBoxContainer" unique_id=1655861015]
 layout_mode = 2
 text = "Porta:"
 
-[node name="AddServerPortInput" type="LineEdit" parent="CanvasLayer/CenterContainer/Control/AddServerMenu/VBoxContainer"]
+[node name="AddServerPortInput" type="LineEdit" parent="CanvasLayer/CenterContainer/Control/AddServerMenu/VBoxContainer" unique_id=331417765]
 custom_minimum_size = Vector2(300, 40)
 layout_mode = 2
 
-[node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/AddServerMenu/VBoxContainer"]
+[node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/AddServerMenu/VBoxContainer" unique_id=545644132]
 visible = false
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
@@ -387,22 +389,22 @@ text = "Deu cagada!"
 horizontal_alignment = 1
 autowrap_mode = 3
 
-[node name="ButtonsContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/AddServerMenu/VBoxContainer"]
+[node name="ButtonsContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/AddServerMenu/VBoxContainer" unique_id=489363838]
 layout_mode = 2
 theme_override_constants/separation = 20
 alignment = 1
 
-[node name="BackButton" type="Button" parent="CanvasLayer/CenterContainer/Control/AddServerMenu/VBoxContainer/ButtonsContainer"]
+[node name="BackButton" type="Button" parent="CanvasLayer/CenterContainer/Control/AddServerMenu/VBoxContainer/ButtonsContainer" unique_id=1105778539]
 custom_minimum_size = Vector2(150, 50)
 layout_mode = 2
 text = "Voltar"
 
-[node name="ConfirmButton" type="Button" parent="CanvasLayer/CenterContainer/Control/AddServerMenu/VBoxContainer/ButtonsContainer"]
+[node name="ConfirmButton" type="Button" parent="CanvasLayer/CenterContainer/Control/AddServerMenu/VBoxContainer/ButtonsContainer" unique_id=1404526899]
 custom_minimum_size = Vector2(150, 50)
 layout_mode = 2
 text = "Adicionar"
 
-[node name="DeleteServerConfirmMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control"]
+[node name="DeleteServerConfirmMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=1187120610]
 visible = false
 layout_mode = 1
 anchors_preset = 15
@@ -411,41 +413,41 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="ReferenceRect" type="ReferenceRect" parent="CanvasLayer/CenterContainer/Control/DeleteServerConfirmMenu"]
+[node name="ReferenceRect" type="ReferenceRect" parent="CanvasLayer/CenterContainer/Control/DeleteServerConfirmMenu" unique_id=1575361748]
 custom_minimum_size = Vector2(600, 300)
 layout_mode = 2
 border_color = Color(0, 0, 0, 1)
 border_width = 2.0
 editor_only = false
 
-[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/DeleteServerConfirmMenu"]
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/DeleteServerConfirmMenu" unique_id=1941524750]
 layout_mode = 2
 theme_override_constants/separation = 10
 alignment = 1
 
-[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/DeleteServerConfirmMenu/VBoxContainer"]
+[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/DeleteServerConfirmMenu/VBoxContainer" unique_id=1227985573]
 layout_mode = 2
 text = "Apagar servidor da lista?
 "
 horizontal_alignment = 1
 
-[node name="ButtonsContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/DeleteServerConfirmMenu/VBoxContainer"]
+[node name="ButtonsContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/DeleteServerConfirmMenu/VBoxContainer" unique_id=1524816064]
 layout_mode = 2
 theme_override_constants/separation = 20
 alignment = 1
 
-[node name="BackButton" type="Button" parent="CanvasLayer/CenterContainer/Control/DeleteServerConfirmMenu/VBoxContainer/ButtonsContainer"]
+[node name="BackButton" type="Button" parent="CanvasLayer/CenterContainer/Control/DeleteServerConfirmMenu/VBoxContainer/ButtonsContainer" unique_id=492710644]
 custom_minimum_size = Vector2(150, 50)
 layout_mode = 2
 text = "Voltar"
 
-[node name="DeleteButton" type="Button" parent="CanvasLayer/CenterContainer/Control/DeleteServerConfirmMenu/VBoxContainer/ButtonsContainer"]
+[node name="DeleteButton" type="Button" parent="CanvasLayer/CenterContainer/Control/DeleteServerConfirmMenu/VBoxContainer/ButtonsContainer" unique_id=453739744]
 custom_minimum_size = Vector2(150, 50)
 layout_mode = 2
 theme = SubResource("Theme_1g8jr")
 text = "Apagar"
 
-[node name="RoomListMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control"]
+[node name="RoomListMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=1613751584]
 visible = false
 layout_mode = 1
 anchors_preset = 15
@@ -454,45 +456,45 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/RoomListMenu"]
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/RoomListMenu" unique_id=27423448]
 custom_minimum_size = Vector2(1100, 800)
 layout_mode = 2
 theme_override_constants/separation = 10
 alignment = 1
 
-[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer"]
+[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer" unique_id=2130359538]
 layout_mode = 2
 text = "Salas Disponíveis"
 horizontal_alignment = 1
 
-[node name="ScrollContainer" type="ScrollContainer" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer"]
+[node name="ScrollContainer" type="ScrollContainer" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer" unique_id=1362046874]
 custom_minimum_size = Vector2(1200, 450)
 layout_mode = 2
 
-[node name="MatchList" type="ItemList" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer/ScrollContainer"]
+[node name="MatchList" type="ItemList" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer/ScrollContainer" unique_id=260636405]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 same_column_width = true
 icon_mode = 0
 
-[node name="PasswordContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer"]
+[node name="PasswordContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer" unique_id=498518652]
 custom_minimum_size = Vector2(250, 0)
 layout_mode = 2
 size_flags_horizontal = 4
 
-[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer/PasswordContainer"]
+[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer/PasswordContainer" unique_id=1547080905]
 layout_mode = 2
 text = "Senha"
 horizontal_alignment = 1
 
-[node name="PasswordInput" type="LineEdit" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer/PasswordContainer"]
+[node name="PasswordInput" type="LineEdit" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer/PasswordContainer" unique_id=915770031]
 layout_mode = 2
 placeholder_text = "Digite a senha"
 alignment = 1
 secret = true
 
-[node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer"]
+[node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer" unique_id=1980915856]
 visible = false
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
@@ -502,41 +504,42 @@ text = "Deu cagada!"
 horizontal_alignment = 1
 autowrap_mode = 3
 
-[node name="ButtonsContainer1" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer"]
+[node name="ButtonsContainer1" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer" unique_id=272949498]
 layout_mode = 2
 alignment = 1
 
-[node name="JoinButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer/ButtonsContainer1"]
+[node name="JoinButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer/ButtonsContainer1" unique_id=911196915]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
+disabled = true
 text = "Entrar"
 
-[node name="ManualJoinButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer/ButtonsContainer1"]
+[node name="ManualJoinButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer/ButtonsContainer1" unique_id=1450865729]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 text = "Entrada Manual"
 
-[node name="CreateRoomButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer/ButtonsContainer1"]
+[node name="CreateRoomButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer/ButtonsContainer1" unique_id=343451675]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 text = "Criar Sala
 "
 
-[node name="ButtonsContainer2" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer"]
+[node name="ButtonsContainer2" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer" unique_id=2096999428]
 layout_mode = 2
 alignment = 1
 
-[node name="BackButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer/ButtonsContainer2"]
+[node name="BackButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer/ButtonsContainer2" unique_id=597805212]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 text = "Voltar"
 
-[node name="ExitServerButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer/ButtonsContainer2"]
+[node name="ExitServerButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer/ButtonsContainer2" unique_id=713213911]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 text = "Desconectar"
 
-[node name="RoomMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control"]
+[node name="RoomMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=1954665922]
 visible = false
 custom_minimum_size = Vector2(1200, 600)
 layout_mode = 1
@@ -546,29 +549,29 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/RoomMenu"]
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/RoomMenu" unique_id=1433697248]
 custom_minimum_size = Vector2(800, 600)
 layout_mode = 2
 theme_override_constants/separation = 10
 alignment = 1
 
-[node name="RoomNameLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer"]
+[node name="RoomNameLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer" unique_id=866476156]
 layout_mode = 2
 text = "Nome da Sala"
 label_settings = SubResource("LabelSettings_x2yvf")
 horizontal_alignment = 1
 
-[node name="StatusLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer"]
+[node name="StatusLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer" unique_id=1663278502]
 layout_mode = 2
 text = "Jogadores: 0/8 (Mínimo: 2)"
 label_settings = SubResource("LabelSettings_uhagc")
 horizontal_alignment = 1
 
-[node name="ScrollContainer" type="ScrollContainer" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer"]
+[node name="ScrollContainer" type="ScrollContainer" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer" unique_id=377148629]
 custom_minimum_size = Vector2(800, 450)
 layout_mode = 2
 
-[node name="PlayersList" type="ItemList" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer/ScrollContainer"]
+[node name="PlayersList" type="ItemList" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer/ScrollContainer" unique_id=1673682770]
 custom_minimum_size = Vector2(800, 600)
 layout_mode = 2
 allow_search = false
@@ -580,7 +583,7 @@ item_1/selectable = false
 item_2/text = "Fulano 3"
 item_2/selectable = false
 
-[node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer"]
+[node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer" unique_id=462777944]
 visible = false
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
@@ -590,28 +593,28 @@ text = "Deu cagada!"
 horizontal_alignment = 1
 autowrap_mode = 3
 
-[node name="ButtonsContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer"]
+[node name="ButtonsContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer" unique_id=2086374708]
 layout_mode = 2
 theme_override_constants/separation = 20
 alignment = 1
 
-[node name="StartButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer/ButtonsContainer"]
+[node name="StartButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer/ButtonsContainer" unique_id=149495508]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 text = "Iniciar Partida"
 
-[node name="CloseButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer/ButtonsContainer"]
+[node name="CloseButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer/ButtonsContainer" unique_id=1171284964]
 visible = false
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 text = "Fechar Sala"
 
-[node name="LeaveButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer/ButtonsContainer"]
+[node name="LeaveButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer/ButtonsContainer" unique_id=1735648984]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 text = "Sair da Sala"
 
-[node name="ManualServerJoinMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control"]
+[node name="ManualServerJoinMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=720256835]
 visible = false
 layout_mode = 1
 anchors_preset = 15
@@ -620,29 +623,29 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="ReferenceRect" type="ReferenceRect" parent="CanvasLayer/CenterContainer/Control/ManualServerJoinMenu"]
+[node name="ReferenceRect" type="ReferenceRect" parent="CanvasLayer/CenterContainer/Control/ManualServerJoinMenu" unique_id=602788416]
 custom_minimum_size = Vector2(600, 500)
 layout_mode = 2
 border_color = Color(0, 0, 0, 1)
 border_width = 2.0
 editor_only = false
 
-[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/ManualServerJoinMenu"]
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/ManualServerJoinMenu" unique_id=661934731]
 layout_mode = 2
 theme_override_constants/separation = 10
 alignment = 1
 
-[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/ManualServerJoinMenu/VBoxContainer"]
+[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/ManualServerJoinMenu/VBoxContainer" unique_id=582332061]
 layout_mode = 2
 text = "Entrada Manual de Servidor
 "
 horizontal_alignment = 1
 
-[node name="Label2" type="Label" parent="CanvasLayer/CenterContainer/Control/ManualServerJoinMenu/VBoxContainer"]
+[node name="Label2" type="Label" parent="CanvasLayer/CenterContainer/Control/ManualServerJoinMenu/VBoxContainer" unique_id=1420022667]
 layout_mode = 2
 text = "Digite o endereço do servidor:"
 
-[node name="ManualServerIpInput" type="LineEdit" parent="CanvasLayer/CenterContainer/Control/ManualServerJoinMenu/VBoxContainer"]
+[node name="ManualServerIpInput" type="LineEdit" parent="CanvasLayer/CenterContainer/Control/ManualServerJoinMenu/VBoxContainer" unique_id=1378689375]
 custom_minimum_size = Vector2(300, 40)
 layout_mode = 2
 text = "127.0.0.1"
@@ -650,11 +653,11 @@ placeholder_text = "127.0.0.1"
 alignment = 1
 virtual_keyboard_type = 2
 
-[node name="Label3" type="Label" parent="CanvasLayer/CenterContainer/Control/ManualServerJoinMenu/VBoxContainer"]
+[node name="Label3" type="Label" parent="CanvasLayer/CenterContainer/Control/ManualServerJoinMenu/VBoxContainer" unique_id=1902775502]
 layout_mode = 2
 text = "Porta:"
 
-[node name="ManualServerPortInput" type="LineEdit" parent="CanvasLayer/CenterContainer/Control/ManualServerJoinMenu/VBoxContainer"]
+[node name="ManualServerPortInput" type="LineEdit" parent="CanvasLayer/CenterContainer/Control/ManualServerJoinMenu/VBoxContainer" unique_id=1348770352]
 custom_minimum_size = Vector2(300, 40)
 layout_mode = 2
 text = "7777"
@@ -663,7 +666,7 @@ alignment = 1
 max_length = 5
 virtual_keyboard_type = 2
 
-[node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/ManualServerJoinMenu/VBoxContainer"]
+[node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/ManualServerJoinMenu/VBoxContainer" unique_id=777535074]
 visible = false
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
@@ -673,22 +676,22 @@ text = "Deu cagada!"
 horizontal_alignment = 1
 autowrap_mode = 3
 
-[node name="ButtonsContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/ManualServerJoinMenu/VBoxContainer"]
+[node name="ButtonsContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/ManualServerJoinMenu/VBoxContainer" unique_id=1798242631]
 layout_mode = 2
 theme_override_constants/separation = 20
 alignment = 1
 
-[node name="BackButton" type="Button" parent="CanvasLayer/CenterContainer/Control/ManualServerJoinMenu/VBoxContainer/ButtonsContainer"]
+[node name="BackButton" type="Button" parent="CanvasLayer/CenterContainer/Control/ManualServerJoinMenu/VBoxContainer/ButtonsContainer" unique_id=217568649]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 text = "Voltar"
 
-[node name="ConfirmButton" type="Button" parent="CanvasLayer/CenterContainer/Control/ManualServerJoinMenu/VBoxContainer/ButtonsContainer"]
+[node name="ConfirmButton" type="Button" parent="CanvasLayer/CenterContainer/Control/ManualServerJoinMenu/VBoxContainer/ButtonsContainer" unique_id=590088500]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 text = "Confirmar"
 
-[node name="ManualRoomJoinMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control"]
+[node name="ManualRoomJoinMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=25468261]
 visible = false
 layout_mode = 1
 anchors_preset = 15
@@ -697,44 +700,44 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="ReferenceRect" type="ReferenceRect" parent="CanvasLayer/CenterContainer/Control/ManualRoomJoinMenu"]
+[node name="ReferenceRect" type="ReferenceRect" parent="CanvasLayer/CenterContainer/Control/ManualRoomJoinMenu" unique_id=1745657504]
 custom_minimum_size = Vector2(600, 500)
 layout_mode = 2
 border_color = Color(0, 0, 0, 1)
 border_width = 2.0
 editor_only = false
 
-[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/ManualRoomJoinMenu"]
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/ManualRoomJoinMenu" unique_id=136159631]
 layout_mode = 2
 theme_override_constants/separation = 10
 alignment = 1
 
-[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/ManualRoomJoinMenu/VBoxContainer"]
+[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/ManualRoomJoinMenu/VBoxContainer" unique_id=1597944445]
 layout_mode = 2
 text = "Entrada Manual de Sala
 "
 horizontal_alignment = 1
 
-[node name="Label2" type="Label" parent="CanvasLayer/CenterContainer/Control/ManualRoomJoinMenu/VBoxContainer"]
+[node name="Label2" type="Label" parent="CanvasLayer/CenterContainer/Control/ManualRoomJoinMenu/VBoxContainer" unique_id=883695528]
 layout_mode = 2
 text = "Nome da Sala:"
 
-[node name="ManualRoomNameInput" type="LineEdit" parent="CanvasLayer/CenterContainer/Control/ManualRoomJoinMenu/VBoxContainer"]
+[node name="ManualRoomNameInput" type="LineEdit" parent="CanvasLayer/CenterContainer/Control/ManualRoomJoinMenu/VBoxContainer" unique_id=1307436010]
 custom_minimum_size = Vector2(300, 40)
 layout_mode = 2
 placeholder_text = "Digite o nome da sala"
 
-[node name="Label3" type="Label" parent="CanvasLayer/CenterContainer/Control/ManualRoomJoinMenu/VBoxContainer"]
+[node name="Label3" type="Label" parent="CanvasLayer/CenterContainer/Control/ManualRoomJoinMenu/VBoxContainer" unique_id=906727088]
 layout_mode = 2
 text = "Senha:"
 
-[node name="ManualRoomPasswordInput" type="LineEdit" parent="CanvasLayer/CenterContainer/Control/ManualRoomJoinMenu/VBoxContainer"]
+[node name="ManualRoomPasswordInput" type="LineEdit" parent="CanvasLayer/CenterContainer/Control/ManualRoomJoinMenu/VBoxContainer" unique_id=2104958938]
 custom_minimum_size = Vector2(300, 40)
 layout_mode = 2
 placeholder_text = "Deixe vazio se não tiver senha"
 secret = true
 
-[node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/ManualRoomJoinMenu/VBoxContainer"]
+[node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/ManualRoomJoinMenu/VBoxContainer" unique_id=1721544639]
 visible = false
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
@@ -744,22 +747,22 @@ text = "Deu cagada!"
 horizontal_alignment = 1
 autowrap_mode = 3
 
-[node name="ButtonsContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/ManualRoomJoinMenu/VBoxContainer"]
+[node name="ButtonsContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/ManualRoomJoinMenu/VBoxContainer" unique_id=1432049726]
 layout_mode = 2
 theme_override_constants/separation = 20
 alignment = 1
 
-[node name="BackButton" type="Button" parent="CanvasLayer/CenterContainer/Control/ManualRoomJoinMenu/VBoxContainer/ButtonsContainer"]
+[node name="BackButton" type="Button" parent="CanvasLayer/CenterContainer/Control/ManualRoomJoinMenu/VBoxContainer/ButtonsContainer" unique_id=1702745949]
 custom_minimum_size = Vector2(150, 50)
 layout_mode = 2
 text = "Voltar"
 
-[node name="ConfirmButton" type="Button" parent="CanvasLayer/CenterContainer/Control/ManualRoomJoinMenu/VBoxContainer/ButtonsContainer"]
+[node name="ConfirmButton" type="Button" parent="CanvasLayer/CenterContainer/Control/ManualRoomJoinMenu/VBoxContainer/ButtonsContainer" unique_id=1949389062]
 custom_minimum_size = Vector2(150, 50)
 layout_mode = 2
 text = "Confirmar"
 
-[node name="CreateLocalMatchMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control"]
+[node name="CreateLocalMatchMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=496196873]
 visible = false
 layout_mode = 0
 anchor_right = 1.0
@@ -767,28 +770,28 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="ReferenceRect" type="ReferenceRect" parent="CanvasLayer/CenterContainer/Control/CreateLocalMatchMenu"]
+[node name="ReferenceRect" type="ReferenceRect" parent="CanvasLayer/CenterContainer/Control/CreateLocalMatchMenu" unique_id=1722821067]
 custom_minimum_size = Vector2(600, 500)
 layout_mode = 2
 border_color = Color(0, 0, 0, 1)
 border_width = 2.0
 editor_only = false
 
-[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/CreateLocalMatchMenu"]
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/CreateLocalMatchMenu" unique_id=1293439646]
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/CreateLocalMatchMenu/VBoxContainer"]
+[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/CreateLocalMatchMenu/VBoxContainer" unique_id=2033207797]
 layout_mode = 2
 text = "Criar Partia Local"
 horizontal_alignment = 1
 
-[node name="Label2" type="Label" parent="CanvasLayer/CenterContainer/Control/CreateLocalMatchMenu/VBoxContainer"]
+[node name="Label2" type="Label" parent="CanvasLayer/CenterContainer/Control/CreateLocalMatchMenu/VBoxContainer" unique_id=2023778109]
 layout_mode = 2
 text = "Selecione o modo de jogo"
 horizontal_alignment = 1
 
-[node name="OptionButton" type="OptionButton" parent="CanvasLayer/CenterContainer/Control/CreateLocalMatchMenu/VBoxContainer"]
+[node name="OptionButton" type="OptionButton" parent="CanvasLayer/CenterContainer/Control/CreateLocalMatchMenu/VBoxContainer" unique_id=1158370934]
 layout_mode = 2
 item_count = 2
 popup/item_0/text = "Modo 1 exemplo"
@@ -796,21 +799,21 @@ popup/item_0/id = 0
 popup/item_1/text = "Modo 2 exemplo"
 popup/item_1/id = 1
 
-[node name="ButtonsContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/CreateLocalMatchMenu/VBoxContainer"]
+[node name="ButtonsContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/CreateLocalMatchMenu/VBoxContainer" unique_id=1656747740]
 layout_mode = 2
 alignment = 1
 
-[node name="BackButton" type="Button" parent="CanvasLayer/CenterContainer/Control/CreateLocalMatchMenu/VBoxContainer/ButtonsContainer"]
+[node name="BackButton" type="Button" parent="CanvasLayer/CenterContainer/Control/CreateLocalMatchMenu/VBoxContainer/ButtonsContainer" unique_id=2108484275]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 text = "Voltar"
 
-[node name="ConfirmButton" type="Button" parent="CanvasLayer/CenterContainer/Control/CreateLocalMatchMenu/VBoxContainer/ButtonsContainer"]
+[node name="ConfirmButton" type="Button" parent="CanvasLayer/CenterContainer/Control/CreateLocalMatchMenu/VBoxContainer/ButtonsContainer" unique_id=1042803092]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 text = "Iniciar"
 
-[node name="CreateRoomMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control"]
+[node name="CreateRoomMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=765356564]
 visible = false
 layout_mode = 1
 anchors_preset = 15
@@ -819,44 +822,44 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="ReferenceRect" type="ReferenceRect" parent="CanvasLayer/CenterContainer/Control/CreateRoomMenu"]
+[node name="ReferenceRect" type="ReferenceRect" parent="CanvasLayer/CenterContainer/Control/CreateRoomMenu" unique_id=1078081307]
 custom_minimum_size = Vector2(600, 500)
 layout_mode = 2
 border_color = Color(0, 0, 0, 1)
 border_width = 2.0
 editor_only = false
 
-[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/CreateRoomMenu"]
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/CreateRoomMenu" unique_id=2086862436]
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/CreateRoomMenu/VBoxContainer"]
+[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/CreateRoomMenu/VBoxContainer" unique_id=1135651519]
 layout_mode = 2
 text = "Criar Partia"
 horizontal_alignment = 1
 
-[node name="Label2" type="Label" parent="CanvasLayer/CenterContainer/Control/CreateRoomMenu/VBoxContainer"]
+[node name="Label2" type="Label" parent="CanvasLayer/CenterContainer/Control/CreateRoomMenu/VBoxContainer" unique_id=1560603365]
 layout_mode = 2
 text = "Nome da Sala"
 horizontal_alignment = 1
 
-[node name="RoomNameInput" type="LineEdit" parent="CanvasLayer/CenterContainer/Control/CreateRoomMenu/VBoxContainer"]
+[node name="RoomNameInput" type="LineEdit" parent="CanvasLayer/CenterContainer/Control/CreateRoomMenu/VBoxContainer" unique_id=579890697]
 layout_mode = 2
 placeholder_text = "Digite o nome da sala"
 alignment = 1
 
-[node name="Label3" type="Label" parent="CanvasLayer/CenterContainer/Control/CreateRoomMenu/VBoxContainer"]
+[node name="Label3" type="Label" parent="CanvasLayer/CenterContainer/Control/CreateRoomMenu/VBoxContainer" unique_id=899732854]
 layout_mode = 2
 text = "Senha (opcional)"
 horizontal_alignment = 1
 
-[node name="RoomPasswordInput" type="LineEdit" parent="CanvasLayer/CenterContainer/Control/CreateRoomMenu/VBoxContainer"]
+[node name="RoomPasswordInput" type="LineEdit" parent="CanvasLayer/CenterContainer/Control/CreateRoomMenu/VBoxContainer" unique_id=1638361824]
 layout_mode = 2
 placeholder_text = "Deixe vazio para sala pública"
 alignment = 1
 secret = true
 
-[node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/CreateRoomMenu/VBoxContainer"]
+[node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/CreateRoomMenu/VBoxContainer" unique_id=1697487319]
 visible = false
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
@@ -866,20 +869,20 @@ text = "Deu cagada!"
 horizontal_alignment = 1
 autowrap_mode = 3
 
-[node name="ButtonsContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/CreateRoomMenu/VBoxContainer"]
+[node name="ButtonsContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/CreateRoomMenu/VBoxContainer" unique_id=444123485]
 layout_mode = 2
 alignment = 1
 
-[node name="BackButton" type="Button" parent="CanvasLayer/CenterContainer/Control/CreateRoomMenu/VBoxContainer/ButtonsContainer"]
+[node name="BackButton" type="Button" parent="CanvasLayer/CenterContainer/Control/CreateRoomMenu/VBoxContainer/ButtonsContainer" unique_id=1358814080]
 layout_mode = 2
 text = "Voltar"
 
-[node name="ConfirmButton" type="Button" parent="CanvasLayer/CenterContainer/Control/CreateRoomMenu/VBoxContainer/ButtonsContainer"]
+[node name="ConfirmButton" type="Button" parent="CanvasLayer/CenterContainer/Control/CreateRoomMenu/VBoxContainer/ButtonsContainer" unique_id=1446033951]
 custom_minimum_size = Vector2(200, 40)
 layout_mode = 2
 text = "Confirmar"
 
-[node name="HowToPlayMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control"]
+[node name="HowToPlayMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=411613940]
 visible = false
 custom_minimum_size = Vector2(1200, 800)
 layout_mode = 1
@@ -889,30 +892,30 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="ReferenceRect" type="ReferenceRect" parent="CanvasLayer/CenterContainer/Control/HowToPlayMenu"]
+[node name="ReferenceRect" type="ReferenceRect" parent="CanvasLayer/CenterContainer/Control/HowToPlayMenu" unique_id=909999879]
 custom_minimum_size = Vector2(920, 650)
 layout_mode = 2
 border_color = Color(0, 0, 0, 1)
 border_width = 2.0
 editor_only = false
 
-[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/HowToPlayMenu"]
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/HowToPlayMenu" unique_id=1056733169]
 layout_mode = 2
 theme_override_constants/separation = 10
 alignment = 1
 
-[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/HowToPlayMenu/VBoxContainer"]
+[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/HowToPlayMenu/VBoxContainer" unique_id=1143361555]
 layout_mode = 2
 text = "Como Jogar"
 horizontal_alignment = 1
 
-[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/HowToPlayMenu/VBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/HowToPlayMenu/VBoxContainer" unique_id=1969514101]
 custom_minimum_size = Vector2(800, 500)
 layout_mode = 2
 theme_override_constants/separation = 10
 alignment = 1
 
-[node name="RichTextLabel" type="RichTextLabel" parent="CanvasLayer/CenterContainer/Control/HowToPlayMenu/VBoxContainer/VBoxContainer"]
+[node name="RichTextLabel" type="RichTextLabel" parent="CanvasLayer/CenterContainer/Control/HowToPlayMenu/VBoxContainer/VBoxContainer" unique_id=375466110]
 custom_minimum_size = Vector2(800, 0)
 layout_mode = 2
 text = "Em um reino devastado pela escuridão, um grupo de guerreiros são enviados para purificar uma antiga cidade corrompida. No entanto, entre eles se esconde um impostor — um servo das sombras, disfarçado sob o mesmo juramento de luz. Cada jogador deve explorar as ruínas, coletar recursos, preparar alimentos e fortalecer o grupo contra as criaturas que assolam as ruas. Mas a confiança é uma arma de dois gumes: o verdadeiro inimigo pode estar ao seu lado.
@@ -927,70 +930,70 @@ Vença unindo coragem, desconfiança e astúcia. Confie, mas verifique. Lute, ma
 "
 fit_content = true
 
-[node name="ButtonsContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/HowToPlayMenu/VBoxContainer"]
+[node name="ButtonsContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/HowToPlayMenu/VBoxContainer" unique_id=1624248402]
 layout_mode = 2
 alignment = 1
 
-[node name="BackButton" type="Button" parent="CanvasLayer/CenterContainer/Control/HowToPlayMenu/VBoxContainer/ButtonsContainer"]
+[node name="BackButton" type="Button" parent="CanvasLayer/CenterContainer/Control/HowToPlayMenu/VBoxContainer/ButtonsContainer" unique_id=485984092]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 text = "Voltar"
 
-[node name="OptionsMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control"]
+[node name="OptionsMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=1682622035]
 visible = false
 layout_mode = 0
 offset_right = 1410.0
 offset_bottom = 900.0
 scale = Vector2(0.9, 0.9)
 
-[node name="ReferenceRect" type="ReferenceRect" parent="CanvasLayer/CenterContainer/Control/OptionsMenu"]
+[node name="ReferenceRect" type="ReferenceRect" parent="CanvasLayer/CenterContainer/Control/OptionsMenu" unique_id=85754387]
 custom_minimum_size = Vector2(1210, 700)
 layout_mode = 2
 border_color = Color(0, 0, 0, 1)
 border_width = 2.0
 editor_only = false
 
-[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu"]
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu" unique_id=1892658574]
 layout_mode = 2
 theme_override_constants/separation = 15
 alignment = 1
 
-[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer"]
+[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer" unique_id=1762679417]
 layout_mode = 2
 text = "Opções"
 label_settings = SubResource("LabelSettings_7suek")
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="VÍDEO" type="Label" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer"]
+[node name="VÍDEO" type="Label" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer" unique_id=1409800583]
 layout_mode = 2
 text = "Vídeo"
 horizontal_alignment = 1
 
-[node name="VideoVbox" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer"]
+[node name="VideoVbox" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer" unique_id=692576266]
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_constants/separation = 4
 alignment = 1
 
-[node name="Checks" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/VideoVbox"]
+[node name="Checks" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/VideoVbox" unique_id=48198746]
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="VsyncCheck" type="CheckBox" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/VideoVbox/Checks"]
+[node name="VsyncCheck" type="CheckBox" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/VideoVbox/Checks" unique_id=741328243]
 layout_mode = 2
 text = "Vsync"
 
-[node name="Resolution" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/VideoVbox"]
+[node name="Resolution" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/VideoVbox" unique_id=1338341027]
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/VideoVbox/Resolution"]
+[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/VideoVbox/Resolution" unique_id=617824953]
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
 text = "Resolução"
 
-[node name="ResolutionOption" type="OptionButton" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/VideoVbox/Resolution"]
+[node name="ResolutionOption" type="OptionButton" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/VideoVbox/Resolution" unique_id=1678304586]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 item_count = 8
@@ -1011,16 +1014,16 @@ popup/item_6/id = 6
 popup/item_7/text = "800x600"
 popup/item_7/id = 7
 
-[node name="WindowMode" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/VideoVbox"]
+[node name="WindowMode" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/VideoVbox" unique_id=858186659]
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="Label2" type="Label" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/VideoVbox/WindowMode"]
+[node name="Label2" type="Label" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/VideoVbox/WindowMode" unique_id=18887985]
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
 text = "Modo de Janela:"
 
-[node name="WindowModeOption" type="OptionButton" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/VideoVbox/WindowMode"]
+[node name="WindowModeOption" type="OptionButton" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/VideoVbox/WindowMode" unique_id=1567010983]
 custom_minimum_size = Vector2(250, 40)
 layout_mode = 2
 item_count = 3
@@ -1031,15 +1034,15 @@ popup/item_1/id = 1
 popup/item_2/text = "Sem Bordas"
 popup/item_2/id = 2
 
-[node name="FPSLimit" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/VideoVbox"]
+[node name="FPSLimit" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/VideoVbox" unique_id=250068402]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/VideoVbox/FPSLimit"]
+[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/VideoVbox/FPSLimit" unique_id=378386827]
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
 text = "Limite de FPS:"
 
-[node name="FPSLimitOption" type="OptionButton" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/VideoVbox/FPSLimit"]
+[node name="FPSLimitOption" type="OptionButton" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/VideoVbox/FPSLimit" unique_id=1548308189]
 custom_minimum_size = Vector2(250, 40)
 layout_mode = 2
 item_count = 5
@@ -1054,134 +1057,134 @@ popup/item_3/id = 3
 popup/item_4/text = "Ilimitado"
 popup/item_4/id = 4
 
-[node name="ÁUDIO" type="Label" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer"]
+[node name="ÁUDIO" type="Label" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer" unique_id=619793753]
 layout_mode = 2
 text = "Áudio"
 label_settings = SubResource("LabelSettings_8g5eo")
 horizontal_alignment = 1
 
-[node name="Audio" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer"]
+[node name="Audio" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer" unique_id=398893917]
 layout_mode = 2
 theme_override_constants/separation = 10
 alignment = 1
 
-[node name="MasterVolume" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/Audio"]
+[node name="MasterVolume" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/Audio" unique_id=853327176]
 layout_mode = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/Audio/MasterVolume"]
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/Audio/MasterVolume" unique_id=833268453]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/Audio/MasterVolume/VBoxContainer"]
+[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/Audio/MasterVolume/VBoxContainer" unique_id=1186811163]
 layout_mode = 2
 text = "Volume Principal"
 
-[node name="MasterVolumeLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/Audio/MasterVolume/VBoxContainer"]
+[node name="MasterVolumeLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/Audio/MasterVolume/VBoxContainer" unique_id=852415724]
 layout_mode = 2
 text = "100%
 "
 
-[node name="MasterVolumeSlider" type="HSlider" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/Audio/MasterVolume"]
+[node name="MasterVolumeSlider" type="HSlider" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/Audio/MasterVolume" unique_id=274272160]
 custom_minimum_size = Vector2(250, 30)
 layout_mode = 2
 value = 100.0
 
-[node name="MusicVolume" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/Audio"]
+[node name="MusicVolume" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/Audio" unique_id=1994038766]
 layout_mode = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/Audio/MusicVolume"]
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/Audio/MusicVolume" unique_id=1697355453]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/Audio/MusicVolume/VBoxContainer"]
+[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/Audio/MusicVolume/VBoxContainer" unique_id=2049309658]
 layout_mode = 2
 text = "Volume da Música"
 
-[node name="MusicVolumeLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/Audio/MusicVolume/VBoxContainer"]
+[node name="MusicVolumeLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/Audio/MusicVolume/VBoxContainer" unique_id=736210935]
 layout_mode = 2
 text = "100%
 "
 
-[node name="MasterVolumeSlider" type="HSlider" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/Audio/MusicVolume"]
+[node name="MasterVolumeSlider" type="HSlider" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/Audio/MusicVolume" unique_id=305892409]
 custom_minimum_size = Vector2(250, 30)
 layout_mode = 2
 value = 100.0
 
-[node name="SFXVolume" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/Audio"]
+[node name="SFXVolume" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/Audio" unique_id=138076691]
 layout_mode = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/Audio/SFXVolume"]
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/Audio/SFXVolume" unique_id=1375350237]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/Audio/SFXVolume/VBoxContainer"]
+[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/Audio/SFXVolume/VBoxContainer" unique_id=1897766563]
 layout_mode = 2
 text = "Volume de Efeitos"
 
-[node name="SFXVolumeLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/Audio/SFXVolume/VBoxContainer"]
+[node name="SFXVolumeLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/Audio/SFXVolume/VBoxContainer" unique_id=1990538966]
 layout_mode = 2
 text = "100%
 "
 
-[node name="MasterVolumeSlider" type="HSlider" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/Audio/SFXVolume"]
+[node name="MasterVolumeSlider" type="HSlider" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/Audio/SFXVolume" unique_id=528399956]
 custom_minimum_size = Vector2(250, 30)
 layout_mode = 2
 value = 100.0
 
-[node name="CONTROLES" type="Label" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer"]
+[node name="CONTROLES" type="Label" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer" unique_id=70101053]
 layout_mode = 2
 text = "Controles"
 label_settings = SubResource("LabelSettings_q85j6")
 horizontal_alignment = 1
 
-[node name="MouseSensitivity" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer"]
+[node name="MouseSensitivity" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer" unique_id=389550615]
 layout_mode = 2
 alignment = 1
 
-[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/MouseSensitivity"]
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/MouseSensitivity" unique_id=333414570]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/MouseSensitivity/VBoxContainer"]
+[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/MouseSensitivity/VBoxContainer" unique_id=207453654]
 layout_mode = 2
 text = "Sensibilidade do Mouse"
 
-[node name="MouseSensitivityLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/MouseSensitivity/VBoxContainer"]
+[node name="MouseSensitivityLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/MouseSensitivity/VBoxContainer" unique_id=24865818]
 layout_mode = 2
 text = "50%"
 
-[node name="MouseSensitivitySlider" type="HSlider" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/MouseSensitivity"]
+[node name="MouseSensitivitySlider" type="HSlider" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/MouseSensitivity" unique_id=1071557814]
 custom_minimum_size = Vector2(300, 30)
 layout_mode = 2
 min_value = 10.0
 value = 50.0
 
-[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer" unique_id=1335959435]
 layout_mode = 2
 size_flags_horizontal = 4
 alignment = 1
 
-[node name="InvertYCheck" type="CheckBox" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/VBoxContainer"]
+[node name="InvertYCheck" type="CheckBox" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/VBoxContainer" unique_id=1438035175]
 layout_mode = 2
 text = "Inverter Eixo Y"
 
-[node name="ButtonsContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer"]
+[node name="ButtonsContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer" unique_id=309630939]
 layout_mode = 2
 theme_override_constants/separation = 60
 alignment = 1
 
-[node name="ResetButton" type="Button" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/ButtonsContainer"]
+[node name="ResetButton" type="Button" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/ButtonsContainer" unique_id=336451353]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 text = "Resetar"
 
-[node name="BackButton" type="Button" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/ButtonsContainer"]
+[node name="BackButton" type="Button" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/ButtonsContainer" unique_id=1782227287]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 text = "Voltar"
 
-[node name="ConfirmButton" type="Button" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/ButtonsContainer"]
+[node name="ConfirmButton" type="Button" parent="CanvasLayer/CenterContainer/Control/OptionsMenu/VBoxContainer/ButtonsContainer" unique_id=835170198]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 text = "Confirmar"
 
-[node name="LoadingMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control"]
+[node name="LoadingMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=756344685]
 visible = false
 layout_mode = 1
 anchors_preset = 15
@@ -1190,32 +1193,32 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/LoadingMenu"]
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/LoadingMenu" unique_id=887860114]
 layout_mode = 2
 theme_override_constants/separation = 30
 alignment = 1
 
-[node name="LoadingAnimation" type="TextureRect" parent="CanvasLayer/CenterContainer/Control/LoadingMenu/VBoxContainer"]
+[node name="LoadingAnimation" type="TextureRect" parent="CanvasLayer/CenterContainer/Control/LoadingMenu/VBoxContainer" unique_id=341728435]
 custom_minimum_size = Vector2(128, 128)
 layout_mode = 2
 
-[node name="LoadingLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/LoadingMenu/VBoxContainer"]
+[node name="LoadingLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/LoadingMenu/VBoxContainer" unique_id=922239257]
 layout_mode = 2
 text = "Carregando..."
 label_settings = SubResource("LabelSettings_dhe1o")
 horizontal_alignment = 1
 
-[node name="LoadingProgress" type="ProgressBar" parent="CanvasLayer/CenterContainer/Control/LoadingMenu/VBoxContainer"]
+[node name="LoadingProgress" type="ProgressBar" parent="CanvasLayer/CenterContainer/Control/LoadingMenu/VBoxContainer" unique_id=511705864]
 visible = false
 custom_minimum_size = Vector2(400, 30)
 layout_mode = 2
 theme_override_styles/fill = SubResource("StyleBoxFlat_6dd3c")
 
-[node name="ButtonsContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/LoadingMenu/VBoxContainer"]
+[node name="ButtonsContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/LoadingMenu/VBoxContainer" unique_id=236060267]
 layout_mode = 2
 alignment = 1
 
-[node name="CancelButton" type="Button" parent="CanvasLayer/CenterContainer/Control/LoadingMenu/VBoxContainer/ButtonsContainer"]
+[node name="CancelButton" type="Button" parent="CanvasLayer/CenterContainer/Control/LoadingMenu/VBoxContainer/ButtonsContainer" unique_id=1246334812]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 text = "Cancelar"

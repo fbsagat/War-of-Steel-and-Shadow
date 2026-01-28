@@ -37,6 +37,8 @@ signal quit_game_requested()
 # Menu de lista de servidores
 @onready var server_list: ItemList
 @onready var server_list_error_label: Label
+@export var server_list_delete_button: Button
+@export var server_list_join_button: Button
 
 # Menu de adicionar servidor na lista
 @onready var add_server_name_input: LineEdit
@@ -49,6 +51,7 @@ signal quit_game_requested()
 @onready var match_password_input: LineEdit
 @onready var match_password_container: VBoxContainer
 @onready var match_list_error_label: Label
+@export var match_list_join_button: Button
 
 # Menu de conexão
 @onready var connecting_label: Label
@@ -244,6 +247,8 @@ func _setup_element_references():
 	# Lista de servidores
 	server_list = server_list_menu.find_child("ServerList", true, false)
 	server_list_error_label = server_list_menu.find_child("ErrorLabel", true, false)
+	server_list_delete_button = server_list_menu.find_child("DeleteButton", true, false)
+	server_list_join_button = server_list_menu.find_child("JoinButton", true, false)
 	
 	# Adicionar servidor
 	add_server_name_input = add_server_menu.find_child("AddServerNameInput", true, false)
@@ -251,12 +256,13 @@ func _setup_element_references():
 	add_server_port_input = add_server_menu.find_child("AddServerPortInput", true, false)
 	add_server_error_label = add_server_menu.find_child("ErrorLabel", true, false)
 	
-	# Lista de partidas
+	# Lista de salas
 	match_list = room_list_menu.find_child("MatchList", true, false)
 	match_password_container = room_list_menu.find_child("PasswordContainer", true, false)
 	if match_password_container:
 		match_password_input = match_password_container.find_child("PasswordInput", true, false)
 	match_list_error_label = room_list_menu.find_child("ErrorLabel", true, false)
+	match_list_join_button = room_list_menu.find_child("JoinButton", true, false)
 	
 	# Entrada manual de sala
 	manual_room_name_input = manual_room_join_menu.find_child("ManualRoomNameInput", true, false)
@@ -436,11 +442,20 @@ func show_server_list_menu(servers: Array):
 	if server_list_error_label:
 		server_list_error_label.text = ""
 		server_list_error_label.visible = false
+	
+	# desabilita botões quando carrega o menu
+	server_list_join_button.disabled = true
+	server_list_delete_button.disabled = true
 
 func show_add_server_menu():
 	hide_all_menus()
 	add_server_menu.visible = true
 	current_menu_visible = add_server_menu
+	
+	# Limpar campos sempre que o menu é carregado
+	add_server_name_input.text = ""
+	add_server_ip_input.text = ""
+	add_server_port_input.text = ""
 
 func show_delete_server_menu():
 	hide_all_menus()
@@ -488,6 +503,9 @@ func show_room_list_menu(error_visible: bool = false):
 	elif error_visible:
 		match_list_error_label.visible = true
 		match_password_container.visible = true
+	
+	# Desativa o botão quando carrega o menu
+	match_list_join_button.disabled = true
 		
 func show_manual_room_join_menu():
 	hide_all_menus()
@@ -684,6 +702,9 @@ func _on_match_item_selected(index: int):
 		match_password_container.visible = has_password
 	if match_list_error_label:
 		match_list_error_label.visible = false
+	
+	# Ativa o botão quando seleciona alguma sala
+	match_list_join_button.disabled = false
 
 func populate_server_list(servers: Array):
 	current_servers = servers
@@ -748,6 +769,10 @@ func _on_server_item_selected(index: int):
 		return
 	
 	selected_server_id = current_servers[index]["id"]
+	
+	# Habilita os botões de deletar e join quando algum selecionado
+	server_list_delete_button.disabled = false
+	server_list_join_button.disabled = false
 
 func _on_server_list_add_pressed():
 	show_add_server_menu()
