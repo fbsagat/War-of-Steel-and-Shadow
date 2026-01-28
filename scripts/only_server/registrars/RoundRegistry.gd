@@ -23,7 +23,7 @@ class_name RoundRegistry
 
 # ===== REGISTROS (Injetados pelo initializer.gd) =====
 
-var player_registry = null
+var client_registry = null
 var room_registry = null
 var object_manager = null
 
@@ -174,10 +174,10 @@ func create_round(room_id: int, room_name: String, players: Array, settings: Dic
 	# Armazena rodada
 	rounds[round_id] = round_data
 	
-	# Registra jogadores na rodada (PlayerRegistry)
-	if player_registry:
+	# Registra jogadores na rodada (ClientRegistry)
+	if client_registry:
 		for player in players:
-			player_registry.join_round(player["id"], round_id)
+			client_registry.join_round(player["id"], round_id)
 	
 	_log_debug("✓ Rodada criada: ID %d, Sala '%s', %d players" % [round_id, room_name, players.size()])
 	_add_event(round_id, "round_created", {"room_id": room_id})
@@ -290,12 +290,12 @@ func complete_round_end(round_id: int) -> Dictionary:
 	if room_registry:
 		room_registry.add_round_to_history(round_data["room_id"], round_data)
 	
-	# Remove jogadores da rodada (PlayerRegistry)
-	if player_registry:
+	# Remove jogadores da rodada (ClientRegistry)
+	if client_registry:
 		for player in round_data["players"]:
-			player_registry.leave_round(player["id"])
+			client_registry.leave_round(player["id"])
 			# Limpa inventário
-			player_registry.clear_player_inventory(round_id, player["id"])
+			client_registry.clear_player_inventory(round_id, player["id"])
 	
 	_log_debug("✓ Rodada %d FINALIZADA" % round_id)
 	round_ended.emit(round_data.duplicate(true))

@@ -856,7 +856,7 @@ func add_item_to_inventory(item_id: String, object_id: int) -> bool:
 	
 	# Valida item no ItemDatabase se disponível
 	if item_database and not item_database.item_exists_by_id(int(item_id)):
-		push_error("PlayerRegistry: Item inválido: %s" % item_id)
+		push_error("ClientRegistry: Item inválido: %s" % item_id)
 		return false
 	
 	var item_name = item_database.get_item_by_id(int(item_id))["name"]
@@ -930,17 +930,17 @@ func equip_item(item_name: String, object_id, item_slot: String = "") -> bool:
 		if item_database:
 			item_slot = item_database.get_slot(item_name)
 		if item_slot.is_empty():
-			push_error("PlayerRegistry: Não foi possível detectar slot para item: %s" % item_name)
+			push_error("ClientRegistry: Não foi possível detectar slot para item: %s" % item_name)
 			return false
 	
 	# Valida slot
 	if not local_inventory["equipped"].has(item_slot):
-		push_error("PlayerRegistry: Slot inválido: %s" % item_slot)
+		push_error("ClientRegistry: Slot inválido: %s" % item_slot)
 		return false
 	
 	# Valida se item pode ser equipado neste slot
 	if item_database and not item_database.can_equip_in_slot(item_name, item_slot):
-		push_error("PlayerRegistry: Item %s não pode ser equipado em %s" % [item_name, item_slot])
+		push_error("ClientRegistry: Item %s não pode ser equipado em %s" % [item_name, item_slot])
 		return false
 	
 	# Desequipa item atual se houver
@@ -967,7 +967,7 @@ func unequip_item(_object_id: int, item_slot: String, verify: bool = true) -> bo
 		return false
 	
 	if not local_inventory["equipped"].has(item_slot):
-		push_error("PlayerRegistry: Slot inválido: %s" % item_slot)
+		push_error("ClientRegistry: Slot inválido: %s" % item_slot)
 		return false
 	
 	var item_data = local_inventory["equipped"][item_slot]
@@ -1006,12 +1006,12 @@ func swap_equipped_item(new_item_name: String, dragged_item: Dictionary, existin
 		return false
 	
 	if not local_inventory["equipped"].has(target_slot):
-		push_error("PlayerRegistry: Slot inválido para swap: %s" % target_slot)
+		push_error("ClientRegistry: Slot inválido para swap: %s" % target_slot)
 		return false
 	
 	var old_item_data = local_inventory["equipped"][target_slot]
 	if old_item_data.is_empty():
-		push_error("PlayerRegistry: Nenhum item equipado no slot %s para trocar" % target_slot)
+		push_error("ClientRegistry: Nenhum item equipado no slot %s para trocar" % target_slot)
 		return false
 	
 	# Verifica se o dragged_item realmente está no inventário
@@ -1022,7 +1022,7 @@ func swap_equipped_item(new_item_name: String, dragged_item: Dictionary, existin
 			break
 	
 	if new_item_idx == -1:
-		push_error("PlayerRegistry: Item arrastado não encontrado no inventário")
+		push_error("ClientRegistry: Item arrastado não encontrado no inventário")
 		return false
 	
 	var new_item_data = local_inventory["inventory"][new_item_idx]

@@ -25,7 +25,7 @@ var server_list_manager: ServerListManager = null
 var item_database: ItemDatabase = null
 
 ## Registro do servidor, classe de players, classe de salas e classe de partidas
-var player_registry : PlayerRegistry = null
+var client_registry : ClientRegistry = null
 var room_registry: RoomRegistry = null
 var round_registry: RoundRegistry = null
 
@@ -55,7 +55,7 @@ func _init_server(is_headless):
 	# Instancia managers e registros
 	var network_manager_scene: PackedScene = load("res://scenes/system/server_network_manager.tscn")
 	var server_manager_scene: PackedScene = load("res://scenes/system/server_manager.tscn")
-	player_registry = load("res://scripts/only_server/registrars/PlayerRegistry.gd").new()
+	client_registry = load("res://scripts/only_server/registrars/ClientRegistry.gd").new()
 	room_registry = load("res://scripts/only_server/registrars/RoomRegistry.gd").new()
 	round_registry = load("res://scripts/only_server/registrars/RoundRegistry.gd").new()
 	map_manager = load("res://scripts/gameplay/MapManager.gd").new()
@@ -69,7 +69,7 @@ func _init_server(is_headless):
 	# Nomeia para facilitar visualização
 	network_manager.name = "NetworkManager"
 	server_manager.name = "ServerManager"
-	player_registry.name = "PlayerRegistry"
+	client_registry.name = "ClientRegistry"
 	room_registry.name = "RoomRegistry"
 	round_registry.name = "RoundRegistry"
 	map_manager.name = "MapManager"
@@ -80,7 +80,7 @@ func _init_server(is_headless):
 	# Adiciona à árvore
 	get_tree().root.add_child.call_deferred(network_manager)
 	get_tree().root.add_child.call_deferred(server_manager)
-	get_tree().root.add_child.call_deferred(player_registry)
+	get_tree().root.add_child.call_deferred(client_registry)
 	get_tree().root.add_child.call_deferred(room_registry)
 	get_tree().root.add_child.call_deferred(round_registry)
 	get_tree().root.add_child.call_deferred(map_manager)
@@ -92,7 +92,7 @@ func _init_server(is_headless):
 	
 	# ServerManager precisa de:
 	server_manager.network_manager = network_manager
-	server_manager.player_registry = player_registry
+	server_manager.client_registry = client_registry
 	server_manager.room_registry = room_registry
 	server_manager.round_registry = round_registry
 	server_manager.item_database = item_database
@@ -102,32 +102,32 @@ func _init_server(is_headless):
 	
 	# Networkmanager precisa de:
 	network_manager.server_manager = server_manager
-	network_manager.player_registry = player_registry
+	network_manager.client_registry = client_registry
 	network_manager.room_registry = room_registry
 	network_manager.round_registry = round_registry
 	network_manager.object_manager = object_manager
 	
-	# PlayerRegistry precisa de:
-	player_registry.network_manager = network_manager
-	player_registry.room_registry = room_registry
-	player_registry.round_registry = round_registry
-	player_registry.object_manager = object_manager
-	player_registry.item_database = item_database
+	# ClientRegistry precisa de:
+	client_registry.network_manager = network_manager
+	client_registry.room_registry = room_registry
+	client_registry.round_registry = round_registry
+	client_registry.object_manager = object_manager
+	client_registry.item_database = item_database
 	
 	# RoomRegistry precisa de:
-	room_registry.player_registry = player_registry
+	room_registry.client_registry = client_registry
 	room_registry.round_registry = round_registry
 	room_registry.object_manager = object_manager
 	
 	# RoundRegistry precisa de:
-	round_registry.player_registry = player_registry
+	round_registry.client_registry = client_registry
 	round_registry.room_registry = room_registry
 	round_registry.object_manager = object_manager
 	
 	# ObjectManager precisa de:
 	object_manager.server_manager = server_manager
 	object_manager.network_manager = network_manager
-	object_manager.player_registry = player_registry
+	object_manager.client_registry = client_registry
 	object_manager.round_registry = round_registry
 	object_manager.item_database = item_database
 	
@@ -135,7 +135,7 @@ func _init_server(is_headless):
 	test_manager.server_manager = server_manager
 	test_manager.network_manager = network_manager
 	test_manager.item_database = item_database
-	test_manager.player_registry = player_registry
+	test_manager.client_registry = client_registry
 	test_manager.room_registry = room_registry
 	test_manager.round_registry = round_registry
 	test_manager.object_manager = object_manager
@@ -158,7 +158,7 @@ func _init_server(is_headless):
 	# Inicializa tudo
 	server_manager.initialize()
 	network_manager.initialize()
-	player_registry.initialize()
+	client_registry.initialize()
 	room_registry.initialize()
 	round_registry.initialize()
 	test_manager.initialize()

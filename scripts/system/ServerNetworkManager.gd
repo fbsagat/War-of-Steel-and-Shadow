@@ -7,7 +7,7 @@ class_name ServerNetworkManager
 # ===== REGISTROS (Injetados pelo initializer.gd) =====
 
 var server_manager: ServerManager = null
-var player_registry: PlayerRegistry = null
+var client_registry: ClientRegistry = null
 var room_registry: RoomRegistry = null
 var round_registry: RoundRegistry = null
 var object_manager: ObjectManager = null

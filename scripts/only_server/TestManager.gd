@@ -21,7 +21,7 @@ var server_manager: ServerManager = null
 var network_manager: NetworkManager = null
 var item_database :ItemDatabase = null
 var map_manager: MapManager = null
-var player_registry: PlayerRegistry = null
+var client_registry: ClientRegistry = null
 var room_registry: RoomRegistry = null
 var round_registry: RoundRegistry = null
 var object_manager: ObjectManager = null
@@ -55,7 +55,7 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 	
 	FLUXO:
 	1. Valida peers conectados
-	2. Registra jogadores no PlayerRegistry (se necessário)
+	2. Registra jogadores no ClientRegistry (se necessário)
 	3. Cria sala no RoomRegistry
 	4. Adiciona jogadores à sala
 	5. Valida requisitos para iniciar
@@ -74,7 +74,7 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 		return
 	
 	# Valida registries
-	if not player_registry or not room_registry or not round_registry:
+	if not client_registry or not room_registry or not round_registry:
 		_log_debug("❌ Registries não disponíveis!")
 		return
 	
@@ -96,28 +96,28 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 	_log_debug("Jogadores: %d" % num_players)
 	_log_debug("========================================")
 	
-	# Registra jogadores no PlayerRegistry
+	# Registra jogadores no ClientRegistry
 	var players: Array = []
 	for i in range(num_players):
 		var peer_id = connected_peers[i]
 		
 		# Verifica se peer já está registrado
-		var player_data = player_registry.get_player(peer_id)
+		var player_data = client_registry.get_player(peer_id)
 		
 		if player_data.is_empty() or not player_data["registered"]:
 			# Adiciona peer se não existe
 			if player_data.is_empty():
-				player_registry.add_peer(peer_id)
+				client_registry.add_peer(peer_id)
 			
 			# Registra com nome padrão
 			var player_name = "TestPlayer%d - %d" % [i + 1, peer_id]
-			var success = player_registry.register_player(peer_id, player_name)
+			var success = client_registry.register_player(peer_id, player_name)
 			
 			if not success:
 				_log_debug("❌ Falha ao registrar jogador %d" % peer_id)
 				continue
 			
-			player_data = player_registry.get_player(peer_id)
+			player_data = client_registry.get_player(peer_id)
 		
 		# Adiciona à lista de jogadores
 		players.append({
@@ -357,7 +357,7 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 	4. Adiciona à árvore
 	5. Aguarda processamento completo
 	6. Valida que está na árvore
-	7. Registra no PlayerRegistry
+	7. Registra no ClientRegistry
 	8. Calcula posição de spawn
 	9. Configura transform
 	10. Inicializa player
@@ -418,12 +418,12 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 		player_instance.queue_free()
 		return
 	
-	# REGISTRA NO PlayerRegistry
-	player_registry.register_player_node(p_id, player_instance)
+	# REGISTRA NO ClientRegistry
+	client_registry.register_player_node(p_id, player_instance)
 	
 	# Debug: Verifica registro
 	if debug_mode:
-		var registered_path = player_registry.get_player_node_path(p_id)
+		var registered_path = client_registry.get_player_node_path(p_id)
 		if registered_path.is_empty():
 			push_warning("TestManager: node_path vazio após registro (player %d)" % p_id)
 		else:

@@ -36,7 +36,7 @@ class_name ObjectManager
 
 var server_manager: ServerManager = null
 var network_manager: NetworkManager = null
-var player_registry: PlayerRegistry = null
+var client_registry: ClientRegistry = null
 var round_registry: RoundRegistry = null
 var item_database: ItemDatabase = null
 

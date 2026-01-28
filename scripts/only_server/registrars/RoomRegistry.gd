@@ -16,7 +16,7 @@ class_name RoomRegistry
 
 # ===== REGISTROS (Injetados pelo initializer.gd) =====
 
-var player_registry = null
+var client_registry = null
 var round_registry = null
 var object_manager = null
 
@@ -87,7 +87,7 @@ func create_room(room_id: int, room_name: String, password: String, host_peer_id
 		return {}
 	
 	# Valida se host existe
-	if not player_registry or not player_registry.is_player_registered(host_peer_id):
+	if not client_registry or not client_registry.is_player_registered(host_peer_id):
 		push_error("RoomRegistry: Host %d não é um jogador válido" % host_peer_id)
 		return {}
 	
@@ -259,7 +259,7 @@ func get_rooms_in_game() -> Array:
 func add_player_to_room(room_id: int, peer_id: int) -> bool:
 	"""
 	Adiciona jogador à sala
-	Atualiza PlayerRegistry automaticamente
+	Atualiza ClientRegistry automaticamente
 	"""
 	if not rooms.has(room_id):
 		_log_debug("❌ Sala %d não existe" % room_id)
@@ -283,12 +283,12 @@ func add_player_to_room(room_id: int, peer_id: int) -> bool:
 		_log_debug("❌ Sala %d está em partida" % room_id)
 		return false
 	
-	# Valida jogador no PlayerRegistry
-	if not player_registry or not player_registry.is_player_registered(peer_id):
+	# Valida jogador no ClientRegistry
+	if not client_registry or not client_registry.is_player_registered(peer_id):
 		push_error("RoomRegistry: Player %d não está registrado" % peer_id)
 		return false
 	
-	var player_name = player_registry.get_player_name(peer_id)
+	var player_name = client_registry.get_player_name(peer_id)
 	
 	# Determina se é host (primeiro jogador OU host original)
 	var is_host = room["players"].is_empty() or peer_id == room["host_id"]
@@ -300,9 +300,9 @@ func add_player_to_room(room_id: int, peer_id: int) -> bool:
 		"is_host": is_host
 	})
 	
-	# Atualiza PlayerRegistry
-	if player_registry:
-		player_registry.join_room(peer_id, room_id)
+	# Atualiza ClientRegistry
+	if client_registry:
+		client_registry.join_room(peer_id, room_id)
 	
 	_log_debug("✓ Player '%s' (%d) entrou na sala '%s'" % [player_name, peer_id, room["name"]])
 	player_joined_room.emit(room_id, peer_id)
@@ -337,9 +337,9 @@ func remove_player_from_room(room_id: int, peer_id: int) -> bool:
 	# Remove da sala
 	room["players"].remove_at(player_index)
 	
-	# Atualiza PlayerRegistry
-	if player_registry:
-		player_registry.leave_room(peer_id)
+	# Atualiza ClientRegistry
+	if client_registry:
+		client_registry.leave_room(peer_id)
 	
 	_log_debug("✓ Player '%s' (%d) saiu da sala '%s'" % [player_name, peer_id, room["name"]])
 	player_left_room.emit(room_id, peer_id)

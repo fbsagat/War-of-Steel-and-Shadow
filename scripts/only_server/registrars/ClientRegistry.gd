@@ -1,6 +1,6 @@
 extends Node
-class_name PlayerRegistry
-## PlayerRegistry - Registro centralizado de jogadores (SERVIDOR APENAS)
+class_name ClientRegistry
+## ClientRegistry - Registro centralizado de jogadores (SERVIDOR APENAS)
 ## Gerencia informações de todos os jogadores conectados + Inventário por Rodada
 ## 
 ## RESPONSABILIDADES:
@@ -86,13 +86,13 @@ signal player_left_round(peer_id: int, round_id: int)
 # ===== INICIALIZAÇÃO =====
 
 func initialize():
-	"""Inicializa o PlayerRegistry (chamado apenas no servidor)"""
+	"""Inicializa o ClientRegistry (chamado apenas no servidor)"""
 	if _initialized:
-		_log_debug("⚠ PlayerRegistry já inicializado")
+		_log_debug("⚠ ClientRegistry já inicializado")
 		return
 	
 	_initialized = true
-	_log_debug("✓ PlayerRegistry inicializado")
+	_log_debug("✓ ClientRegistry inicializado")
 
 func reset():
 	"""Reseta completamente o registro (usado ao desligar servidor)"""
@@ -100,7 +100,7 @@ func reset():
 	players_cache.clear()
 	player_inventories.clear()
 	_initialized = false
-	_log_debug("🔄 PlayerRegistry resetado")
+	_log_debug("🔄 ClientRegistry resetado")
 
 # ===== GERENCIAMENTO DE PEERS =====
 
@@ -173,7 +173,7 @@ func is_name_taken(player_name: String) -> bool:
 func join_room(peer_id: int, room_id: int):
 	"""Marca jogador como dentro de uma sala"""
 	if not players.has(peer_id):
-		push_error("PlayerRegistry: Tentou marcar player %d em sala, mas não existe" % peer_id)
+		push_error("ClientRegistry: Tentou marcar player %d em sala, mas não existe" % peer_id)
 		return
 	
 	var player = players[peer_id]
@@ -209,7 +209,7 @@ func _leave_room_internal(peer_id: int):
 func join_round(peer_id: int, round_id: int):
 	"""Marca jogador como dentro de uma rodada e inicializa inventário"""
 	if not players.has(peer_id):
-		push_error("PlayerRegistry: Tentou marcar player %d em rodada, mas não existe" % peer_id)
+		push_error("ClientRegistry: Tentou marcar player %d em rodada, mas não existe" % peer_id)
 		return
 	
 	var player = players[peer_id]
@@ -314,7 +314,7 @@ func get_registered_player_count() -> int:
 func init_player_inventory(round_id: int, player_id: int) -> bool:
 	"""Inicializa inventário do jogador em uma rodada específica"""
 	if not is_player_registered(player_id):
-		push_error("PlayerRegistry: Tentou inicializar inventário de player %d não registrado" % player_id)
+		push_error("ClientRegistry: Tentou inicializar inventário de player %d não registrado" % player_id)
 		return false
 	
 	if not player_inventories.has(round_id):
@@ -342,7 +342,7 @@ func add_item_to_inventory(round_id: int, player_id: int, item_id: String, objec
 	"""Adiciona item ao inventário do jogador"""
 	var inventory = _get_player_inventory(round_id, player_id)
 	if inventory.is_empty():
-		push_error("PlayerRegistry: Inventário não encontrado: Player %d, Rodada %d" % [player_id, round_id])
+		push_error("ClientRegistry: Inventário não encontrado: Player %d, Rodada %d" % [player_id, round_id])
 		return false
 	
 	if inventory["inventory"].size() >= max_inventory_slots:
@@ -352,7 +352,7 @@ func add_item_to_inventory(round_id: int, player_id: int, item_id: String, objec
 	
 	# Valida item no ItemDatabase se disponível
 	if item_database and not item_database.item_exists_by_id(int(item_id)):
-		push_error("PlayerRegistry: Item inválido: %s" % item_id)
+		push_error("ClientRegistry: Item inválido: %s" % item_id)
 		return false
 	
 	var item_name = item_database.get_item_by_id(int(item_id)).to_dictionary()['name']
@@ -425,17 +425,17 @@ func equip_item(round_id: int, player_id: int, item_name: String, object_id, slo
 		if item_database:
 			slot = item_database.get_slot(item_name)
 		if slot.is_empty():
-			push_error("PlayerRegistry: Não foi possível detectar slot para item: %s" % item_name)
+			push_error("ClientRegistry: Não foi possível detectar slot para item: %s" % item_name)
 			return false
 	
 	# Valida slot
 	if not inventory["equipped"].has(slot):
-		push_error("PlayerRegistry: Slot inválido: %s" % slot)
+		push_error("ClientRegistry: Slot inválido: %s" % slot)
 		return false
 	
 	# Valida se item pode ser equipado neste slot
 	if item_database and not item_database.can_equip_in_slot(item_name, slot):
-		push_error("PlayerRegistry: Item %s não pode ser equipado em %s" % [item_name, slot])
+		push_error("ClientRegistry: Item %s não pode ser equipado em %s" % [item_name, slot])
 		return false
 	
 	# Desequipa item atual se houver
@@ -465,7 +465,7 @@ func unequip_item(round_id: int, player_id: int, slot: String, verify: bool = tr
 		return false
 	
 	if not inventory["equipped"].has(slot):
-		push_error("PlayerRegistry: Slot inválido: %s" % slot)
+		push_error("ClientRegistry: Slot inválido: %s" % slot)
 		return false
 	
 	var item_data = inventory["equipped"][slot]
@@ -506,12 +506,12 @@ func swap_equipped_item(round_id: int, player_id: int, new_item_name: String, in
 		return false
 	
 	if not inventory["equipped"].has(target_slot):
-		push_error("PlayerRegistry: Slot inválido para swap: %s" % target_slot)
+		push_error("ClientRegistry: Slot inválido para swap: %s" % target_slot)
 		return false
 	
 	var old_item_data = inventory["equipped"][target_slot]
 	if old_item_data.is_empty():
-		push_error("PlayerRegistry: Nenhum item equipado no slot %s para trocar" % target_slot)
+		push_error("ClientRegistry: Nenhum item equipado no slot %s para trocar" % target_slot)
 		return false
 	
 	# Verifica se o dragged_item realmente está no inventário
@@ -522,7 +522,7 @@ func swap_equipped_item(round_id: int, player_id: int, new_item_name: String, in
 			break
 	
 	if new_item_idx == -1:
-		push_error("PlayerRegistry: Item arrastado não encontrado no inventário")
+		push_error("ClientRegistry: Item arrastado não encontrado no inventário")
 		return false
 	
 	var new_item_data = inventory["inventory"][new_item_idx]
@@ -856,11 +856,11 @@ func get_first_equipped_item(round_id: int, player_id: int) -> Dictionary:
 func register_player_node(peer_id: int, player_node: Node):
 	"""Registra referência ao node do jogador na cena"""
 	if not is_player_registered(peer_id):
-		push_error("PlayerRegistry: Tentou registrar nó de player %d não registrado" % peer_id)
+		push_error("ClientRegistry: Tentou registrar nó de player %d não registrado" % peer_id)
 		return
 	
 	if not player_node or not player_node.is_inside_tree():
-		push_error("PlayerRegistry: Tentou registrar nó inválido para player %d" % peer_id)
+		push_error("ClientRegistry: Tentou registrar nó inválido para player %d" % peer_id)
 		return
 	
 	var node_path = str(player_node.get_path())
@@ -1010,4 +1010,4 @@ func debug_print_all_players():
 
 func _log_debug(message: String):
 	if debug_mode:
-		print("[SERVER][PlayerRegistry] %s" % message)
+		print("[SERVER][ClientRegistry] %s" % message)
