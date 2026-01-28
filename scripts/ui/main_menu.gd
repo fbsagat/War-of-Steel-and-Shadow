@@ -500,12 +500,12 @@ func show_room_list_menu(error_visible: bool = false):
 	if match_list_error_label and not error_visible:
 		match_list_error_label.text = ""
 		match_list_error_label.visible = false
+		# Desativa o botão quando carrega o menu
+		match_list_join_button.disabled = true
 	elif error_visible:
 		match_list_error_label.visible = true
 		match_password_container.visible = true
-	
-	# Desativa o botão quando carrega o menu
-	match_list_join_button.disabled = true
+		match_list_join_button.disabled = false
 		
 func show_manual_room_join_menu():
 	hide_all_menus()

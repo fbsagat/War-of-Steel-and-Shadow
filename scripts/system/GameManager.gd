@@ -377,7 +377,7 @@ func _client_wrong_password():
 	if main_menu and current_menu_visible_name == "RoomListMenu":
 		main_menu.show_room_list_menu(true)
 		main_menu.room_list_menu.visible = true
-	
+
 	if main_menu and current_menu_visible_name == "ManualRoomJoinMenu":
 		main_menu.show_manual_room_join_menu()
 		
