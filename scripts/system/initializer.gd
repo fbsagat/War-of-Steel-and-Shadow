@@ -166,7 +166,7 @@ func _init_client():
 	var main_menu_scene: PackedScene = load("res://scenes/ui/main_menu.tscn")
 	item_database = load("res://scripts/gameplay/ItemDatabase.gd").new()
 	map_manager = load("res://scripts/gameplay/MapManager.gd").new()
-	server_list_manager = load("res://scripts/system/client_serverlist_manager.gd").new()
+	server_list_manager = load("res://scripts/system/serverlist_manager.gd").new()
 
 	network_manager = network_manager_scene.instantiate()
 	game_manager = game_manager_scene.instantiate()
