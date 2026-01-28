@@ -85,7 +85,6 @@ var is_jumping: bool = false # True se está pulando
 var is_aiming: bool = false # true se estás mirando
 var is_running: bool = false # True se está pulando
 var is_moving: bool = false # True se está pulando ou atacando ou defendendo (para stamina)
-var mouse_mode: bool = true # Muda o modo de mouse na janela, capturado ou visivel
 var inventory_mode: bool = false # True se está com inventário aberto
 var run_on_jump: bool = false
 var last_simple_directions: Array = []
@@ -590,8 +589,6 @@ func _unhandled_input(event: InputEvent) -> void:
 			handle_test_repawn_player_call()
 	if event.is_action_pressed("ui_inventory"):
 		request_inventory_toggle()
-	if event.is_action_pressed("ui_cancel"):
-		_toggle_mouse_mode()
 		if inventory_mode:
 			request_inventory_toggle()
 			
@@ -610,12 +607,6 @@ func request_inventory_toggle():
 		
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 		_log_debug("Inventário fechado.")
-
-# Mouse
-func _toggle_mouse_mode():
-	mouse_mode = not mouse_mode
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if not mouse_mode else Input.MOUSE_MODE_CAPTURED
-	_log_debug("Mouse %s." % ["liberado" if not mouse_mode else "capturado"])
 		
 # Visual
 func _hide_all_model_items():

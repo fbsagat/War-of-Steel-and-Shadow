@@ -14,6 +14,7 @@ signal quit_game_requested()
 
 # Referências dos nós
 @onready var control_pai: Control
+@export var canvas_layer: CanvasLayer
 @onready var connecting_menu: CenterContainer
 @onready var server_list_menu: CenterContainer
 @onready var add_server_menu: CenterContainer
@@ -29,6 +30,10 @@ signal quit_game_requested()
 @onready var how_to_play_menu: CenterContainer
 @onready var options_menu: CenterContainer
 @onready var loading_menu: CenterContainer
+@onready var gameplay_menu: CenterContainer
+@onready var exit_confirm_menu: CenterContainer
+@onready var transparent: ColorRect
+@onready var color_rect: ColorRect
 
 # Menu principal
 @onready var connect_name_label: Label
@@ -113,6 +118,8 @@ signal quit_game_requested()
 
 @onready var reset_button: Button
 
+@onready var exit_confirm_label: Label
+
 @export var debug_mode : bool = true
 
 # Configurações atuais
@@ -135,7 +142,6 @@ var current_settings = {
 }
 
 # Resoluções disponíveis
-# Resoluções disponíveis
 var resolutions = [
 	Vector2i(3840, 2160),  # 4K
 	Vector2i(2560, 1440),  # 2K / QHD
@@ -147,6 +153,8 @@ var resolutions = [
 	Vector2i(800, 600)     # SVGA
 ]
 
+var in_game: bool = false
+var mouse_mode: bool = true # Muda o modo de mouse na janela, capturado ou visivel
 var current_menu_visible: CenterContainer = null
 var current_matches = []
 var current_servers = []
@@ -190,6 +198,21 @@ func _process(delta):
 	if is_loading and loading_icon:
 		loading_icon.rotation += delta * 3.0
 
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel") and in_game:
+		_toggle_gameplay_menu()
+
+# Gameplay menu
+func _toggle_gameplay_menu():
+	mouse_mode = not mouse_mode
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if not mouse_mode else Input.MOUSE_MODE_CAPTURED
+	
+	if not mouse_mode:
+		show_gameplay_menu()
+	else:
+		show_gameplay_menu(true)
+			
+	_log_debug("Mouse %s." % ["liberado" if not mouse_mode else "capturado"])
 # ===== SETUP INICIAL =====
 
 func _setup_menu_references():
@@ -208,6 +231,11 @@ func _setup_menu_references():
 	how_to_play_menu = control_pai.get_node("HowToPlayMenu")
 	options_menu = control_pai.get_node("OptionsMenu")
 	loading_menu = control_pai.get_node("LoadingMenu")
+	gameplay_menu = control_pai.get_node("GameplayMenu")
+	exit_confirm_menu = control_pai.get_node("ExitConfirmMenu")
+	
+	# Canvas Layer
+	canvas_layer = get_node("CanvasLayer")
 	
 	# Obtém referências das opções de vídeo
 	vsync_check = options_menu.find_child("VsyncCheck", true, false)
@@ -232,6 +260,10 @@ func _setup_menu_references():
 	reset_button = options_menu.find_child("ResetButton", true, false)
 
 func _setup_element_references():
+	# Backgrounds
+	transparent = canvas_layer.find_child("Transparent", true, false)
+	color_rect = canvas_layer.find_child("ColorRect", true, false)
+	
 	# Menu principal
 	connect_name_label = main_menu.find_child("ConnecteName", true, false)
 	join_server_button = main_menu.find_child("JoinServerButton", true, false)
@@ -297,6 +329,9 @@ func _setup_element_references():
 	loading_label = loading_menu.find_child("LoadingLabel", true, false)
 	loading_progress = loading_menu.find_child("LoadingProgress", true, false)
 	loading_icon = loading_menu.find_child("LoadingIcon", true, false)
+	
+	# Confirmação de saída
+	exit_confirm_label = loading_menu.find_child("ExitConfirmLabel", true, false)
 
 func _connect_button_signals():
 	# Menu principal
@@ -371,6 +406,15 @@ func _connect_button_signals():
 	# Loading menu
 	_connect_if_exists(loading_menu, "CancelButton", _on_loading_cancel_pressed)
 	
+	# Menu de gameplay
+	_connect_if_exists(gameplay_menu, "BackButton", _on_gameplay_menu_back_pressed)
+	_connect_if_exists(gameplay_menu, "ExitGame", _on_gameplay_menu_exit_game_pressed)
+	_connect_if_exists(gameplay_menu, "DisconnectFromServer", _on_gameplay_menu_disconnect_f_server_pressed)
+	
+	# Menu de confirmação de saída
+	_connect_if_exists(exit_confirm_menu, "BackButton", _on_exit_confirm_menu_back_pressed)
+	_connect_if_exists(exit_confirm_menu, "ExitButton", _on_exit_confirm_menu_exit_pressed)
+	
 func _connect_if_exists(parent: Node, button_name: String, callback: Callable):
 	var button = parent.find_child(button_name, true, false)
 	if button:
@@ -388,8 +432,9 @@ func _connect_game_manager_signals():
 	game_manager.room_created.connect(_on_game_manager_room_created)
 	game_manager.joined_room.connect(_on_game_manager_room_joined)
 	game_manager.room_updated.connect(_on_game_manager_room_updated)
-	#game_manager.match_started.connect(_on_game_manager_match_started)
 	game_manager.error_occurred.connect(_on_game_manager_error)
+	game_manager.round_started.connect(_on_gameplay_started)
+	game_manager.round_ended.connect(_on_gameplay_ended)
 	
 	# Conecta sinais das opções de vídeo
 	if vsync_check:
@@ -467,7 +512,25 @@ func show_delete_server_menu():
 func show_main_menu():
 	hide_all_menus()
 	main_menu.visible = true
+	transparent.visible = false
+	color_rect.visible = true
 	current_menu_visible = main_menu
+
+func show_gameplay_menu(_hide: bool = false):
+	_log_debug("show_gameplay_menu")
+	hide_all_menus()
+	main_menu.visible = false
+	color_rect.visible = false
+	transparent.visible = true
+	canvas_layer.show()
+	gameplay_menu.visible = true
+	current_menu_visible = gameplay_menu
+	if _hide:
+		transparent.visible = false
+		color_rect.visible = true
+		canvas_layer.hide()
+		gameplay_menu.visible = false
+		current_menu_visible = null
 
 func show_name_input_menu():
 	hide_all_menus()
@@ -572,7 +635,7 @@ func show_room_menu(room_data: Dictionary):
 	_update_room_display(room_data)
 
 func show_loading_menu(message: String = "Carregando..."):
-	get_node("CanvasLayer").show()
+	canvas_layer.show()
 	previous_menu = get_current_visible_menu()
 	hide_all_menus()
 	loading_menu.visible = true
@@ -610,6 +673,8 @@ func hide_all_menus():
 	how_to_play_menu.visible = false
 	options_menu.visible = false
 	loading_menu.visible = false
+	gameplay_menu.visible = false
+	exit_confirm_menu.visible = false
 
 func get_current_visible_menu() -> CenterContainer:
 	if connecting_menu.visible: return connecting_menu
@@ -939,6 +1004,24 @@ func _on_create_match_back_pressed():
 func _on_how_to_play_back_pressed():
 	show_main_menu()
 
+# ===== CALLBACKS DO MENU DE GAMEPLAY =====
+
+func _on_gameplay_menu_back_pressed():
+	_log_debug("Pressionado botão de menu de gameplay")
+	_toggle_gameplay_menu()
+	
+func _on_gameplay_menu_exit_game_pressed():
+	_log_debug("Pressionado botão de sair da partida")
+	
+func _on_gameplay_menu_disconnect_f_server_pressed():
+	_log_debug("Pressionado botão de desconectar do servidor")
+
+func _on_exit_confirm_menu_back_pressed():
+	_log_debug("Pressionado botão de voltar da tela de confirmação")
+
+func _on_exit_confirm_menu_exit_pressed():
+	_log_debug("Pressionado botão de confirmação de saída da partida ou desconexão do servidor")
+
 # ===== CALLBACKS DO MENU DE OPÇÕES =====
 
 func _on_options_confirm_pressed():
@@ -955,7 +1038,7 @@ func _on_cancel_cancel_pressed():
 func _on_loading_cancel_pressed():
 	show_main_menu()
 	game_manager.disconnect_from_server()
-	
+
 func save_options():
 	_log_debug("Salvando configurações...")
 	
@@ -1434,6 +1517,12 @@ func _on_game_manager_error(error_message: String):
 		show_error_create_room(error_message)
 	elif manual_room_join_menu.visible:
 		show_error_manual_join(error_message)
+
+func _on_gameplay_started():
+	in_game = true
+	
+func  _on_gameplay_ended():
+	in_game = false
 
 # ===== CALLBACKS DE VÍDEO =====
 

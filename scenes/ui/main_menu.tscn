@@ -44,7 +44,7 @@ font_size = 24
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_6dd3c"]
 bg_color = Color(0.13, 0.81149995, 1, 1)
 
-[node name="MainMenu" type="Control" unique_id=1416588749]
+[node name="MainMenu" type="Control" unique_id=1416588749 node_paths=PackedStringArray("canvas_layer")]
 visible = false
 layout_mode = 3
 anchors_preset = 15
@@ -53,9 +53,19 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_fe2o3")
+canvas_layer = NodePath("CanvasLayer")
 
 [node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=2047922715]
 follow_viewport_enabled = true
+
+[node name="Transparent" type="ColorRect" parent="CanvasLayer" unique_id=1947052350]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.8392157)
 
 [node name="ColorRect" type="ColorRect" parent="CanvasLayer" unique_id=1181165871]
 anchors_preset = 15
@@ -1223,3 +1233,81 @@ alignment = 1
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 text = "Cancelar"
+
+[node name="GameplayMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=1821625676]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ReferenceRect" type="ReferenceRect" parent="CanvasLayer/CenterContainer/Control/GameplayMenu" unique_id=1560891126]
+custom_minimum_size = Vector2(600, 500)
+layout_mode = 2
+border_color = Color(0, 0, 0, 1)
+border_width = 2.0
+editor_only = false
+
+[node name="ButtonsContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/GameplayMenu" unique_id=567534642]
+layout_mode = 2
+alignment = 1
+
+[node name="BackButton" type="Button" parent="CanvasLayer/CenterContainer/Control/GameplayMenu/ButtonsContainer" unique_id=1923963648]
+custom_minimum_size = Vector2(175, 50)
+layout_mode = 2
+text = "Voltar ao Jogo"
+
+[node name="ExitGame" type="Button" parent="CanvasLayer/CenterContainer/Control/GameplayMenu/ButtonsContainer" unique_id=1192511840]
+custom_minimum_size = Vector2(175, 50)
+layout_mode = 2
+text = "Sair da Partida"
+
+[node name="DisconnectFromServer" type="Button" parent="CanvasLayer/CenterContainer/Control/GameplayMenu/ButtonsContainer" unique_id=1933868508]
+custom_minimum_size = Vector2(175, 50)
+layout_mode = 2
+text = "Desconectar do Servidor"
+
+[node name="ExitConfirmMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=1452853231]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ReferenceRect" type="ReferenceRect" parent="CanvasLayer/CenterContainer/Control/ExitConfirmMenu" unique_id=679471616]
+custom_minimum_size = Vector2(600, 300)
+layout_mode = 2
+border_color = Color(0, 0, 0, 1)
+border_width = 2.0
+editor_only = false
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/ExitConfirmMenu" unique_id=1618150636]
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="ExitConfirmLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/ExitConfirmMenu/VBoxContainer" unique_id=1636511181]
+layout_mode = 2
+text = "Deseja mesmo sair da partida?
+"
+horizontal_alignment = 1
+
+[node name="ButtonsContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/ExitConfirmMenu/VBoxContainer" unique_id=1010809448]
+layout_mode = 2
+theme_override_constants/separation = 20
+alignment = 1
+
+[node name="BackButton" type="Button" parent="CanvasLayer/CenterContainer/Control/ExitConfirmMenu/VBoxContainer/ButtonsContainer" unique_id=1941388586]
+custom_minimum_size = Vector2(150, 50)
+layout_mode = 2
+text = "Voltar"
+
+[node name="ExitButton" type="Button" parent="CanvasLayer/CenterContainer/Control/ExitConfirmMenu/VBoxContainer/ButtonsContainer" unique_id=1935529981]
+custom_minimum_size = Vector2(150, 50)
+layout_mode = 2
+theme = SubResource("Theme_1g8jr")
+text = "Sair"
