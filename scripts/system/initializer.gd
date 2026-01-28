@@ -3,7 +3,7 @@ extends Node
 # Configurações
 ## [TESTES] Usa o TestManager para iniciar logo uma partida na execução
 ## (configura server e clients / clients recebem localhost_auto_connect = true)
-@export var test_mode: bool = true
+@export var test_mode: bool = false
 ## [TESTES] Define a quantidade de instâcias de clientes conectadas para executar fast_round
 @export var simulador_players_qtd: int = 2
 ## [TESTES] Dropa itens perto dos players e ativa o trainer de cada player
