@@ -1,4 +1,4 @@
-[gd_scene load_steps=4 format=3 uid="uid://b83ty82b5j1ax"]
+[gd_scene format=3 uid="uid://b83ty82b5j1ax"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_cls06"]
 sky_top_color = Color(0.53191274, 0.60434026, 0.7010687, 1)
@@ -18,10 +18,10 @@ ssao_enabled = true
 sdfgi_enabled = true
 glow_enabled = true
 
-[node name="WorldEnvironment" type="WorldEnvironment"]
+[node name="WorldEnvironment" type="WorldEnvironment" unique_id=102010393]
 environment = SubResource("Environment_17kia")
 
-[node name="Label" type="Label" parent="."]
+[node name="Label" type="Label" parent="." unique_id=343411687]
 offset_right = 40.0
 offset_bottom = 23.0
 text = "Este WorldEnvironment serve para ser usado para criar icones do itens spawnables: Colocase como filho e eis a iluminação padrão para criar os prints deste item."

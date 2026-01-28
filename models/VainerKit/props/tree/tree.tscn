@@ -1,4 +1,4 @@
-[gd_scene load_steps=23 format=4 uid="uid://bl8c62gm66ba5"]
+[gd_scene format=4 uid="uid://bl8c62gm66ba5"]
 
 [ext_resource type="Texture2D" uid="uid://xhcbjh60eff" path="res://models/VainerKit/props/tree/tree_branches_texture.png" id="1_anggd"]
 [ext_resource type="Material" uid="uid://bs6sd72wqho8j" path="res://models/VainerKit/props/tree/branches_texture.material" id="2_myc0t"]
@@ -222,42 +222,36 @@ _surfaces = [{
 blend_shape_mode = 0
 shadow_mesh = SubResource("ArrayMesh_87tbm")
 
-[node name="tree" type="Node3D"]
+[node name="tree" type="Node3D" unique_id=726409940]
 
-[node name="branches" type="MeshInstance3D" parent="."]
+[node name="branches" type="MeshInstance3D" parent="." unique_id=1218018813]
 transform = Transform3D(-9.506061e-07, 9.506061e-07, -7.9742618, 7.9742618, 1.13321075e-13, -9.506061e-07, 0, 7.9742618, 9.506061e-07, 0.07746822, 13.828986, 0.021910667)
 mesh = SubResource("ArrayMesh_1dw5w")
-skeleton = NodePath("")
 surface_material_override/0 = ExtResource("2_myc0t")
 
-[node name="trunk" type="MeshInstance3D" parent="."]
+[node name="trunk" type="MeshInstance3D" parent="." unique_id=1438665102]
 transform = Transform3D(-0.7493081, 0, 0.6622216, 0, 1, 0, -0.6622216, 0, -0.7493081, 0.099564016, 0.9579148, -0.09557724)
 mesh = SubResource("ArrayMesh_1onnv")
-skeleton = NodePath("")
 surface_material_override/0 = ExtResource("4_1b7op")
 
-[node name="StaticBody3D" type="StaticBody3D" parent="trunk"]
+[node name="StaticBody3D" type="StaticBody3D" parent="trunk" unique_id=2132189441]
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="trunk/StaticBody3D"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="trunk/StaticBody3D" unique_id=1462576503]
 shape = SubResource("ConcavePolygonShape3D_jcml6")
 
-[node name="leaves" type="MeshInstance3D" parent="."]
+[node name="leaves" type="MeshInstance3D" parent="." unique_id=1458504925]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 13.12, 0)
 mesh = SubResource("ArrayMesh_i6vib")
-skeleton = NodePath("")
 surface_material_override/0 = ExtResource("6_sqqap")
 
-[node name="roots" type="MeshInstance3D" parent="."]
+[node name="roots" type="MeshInstance3D" parent="." unique_id=1350105350]
 transform = Transform3D(-0.7493081, 0, 0.6622216, 0, 1, 0, -0.6622216, 0, -0.7493081, 0.099564016, 0.9579148, -0.09557724)
 mesh = SubResource("ArrayMesh_1d8a4")
-skeleton = NodePath("")
 
-[node name="roots_001" type="MeshInstance3D" parent="."]
+[node name="roots_001" type="MeshInstance3D" parent="." unique_id=1000552022]
 transform = Transform3D(-0.7493081, 0, 0.6622216, 0, 1, 0, -0.6622216, 0, -0.7493081, 0.099564016, 0.9579148, -0.09557724)
 mesh = SubResource("ArrayMesh_r0dp0")
-skeleton = NodePath("")
 
-[node name="roots_002" type="MeshInstance3D" parent="."]
+[node name="roots_002" type="MeshInstance3D" parent="." unique_id=1117884465]
 transform = Transform3D(-0.9468038, -0.22092655, 0.23399618, -0.2447196, 0.96647567, -0.077699065, -0.20898584, -0.13082922, -0.9691279, 0.012258038, 1.0865073, -0.6004655)
 mesh = SubResource("ArrayMesh_g10uc")
-skeleton = NodePath("")

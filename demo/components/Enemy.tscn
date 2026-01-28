@@ -1,4 +1,4 @@
-[gd_scene load_steps=6 format=3 uid="uid://di5fovhcyd7re"]
+[gd_scene format=3 uid="uid://di5fovhcyd7re"]
 
 [ext_resource type="Script" uid="uid://dxnniarjxw0ux" path="res://demo/src/Enemy.gd" id="1_yudyn"]
 
@@ -12,23 +12,23 @@ height = 1.5
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_d4cor"]
 albedo_color = Color(1, 0, 0, 1)
 
-[node name="Enemy" type="CharacterBody3D"]
+[node name="Enemy" type="CharacterBody3D" unique_id=562955823]
 collision_layer = 2
 script = ExtResource("1_yudyn")
 
-[node name="CollisionShapeBody" type="CollisionShape3D" parent="."]
+[node name="CollisionShapeBody" type="CollisionShape3D" parent="." unique_id=168955063]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
 shape = SubResource("CapsuleShape3D_lwhhq")
 
-[node name="CollisionShapeRay" type="CollisionShape3D" parent="."]
+[node name="CollisionShapeRay" type="CollisionShape3D" parent="." unique_id=2126215151]
 transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 1, 0)
 shape = SubResource("SeparationRayShape3D_i8f01")
 
-[node name="Body" type="MeshInstance3D" parent="."]
+[node name="Body" type="MeshInstance3D" parent="." unique_id=744268014]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
 mesh = SubResource("CapsuleMesh_lsqiy")
 surface_material_override/0 = SubResource("StandardMaterial3D_d4cor")
 
-[node name="NavigationAgent3D" type="NavigationAgent3D" parent="."]
+[node name="NavigationAgent3D" type="NavigationAgent3D" parent="." unique_id=182529676]
 path_desired_distance = 2.0
 debug_enabled = true

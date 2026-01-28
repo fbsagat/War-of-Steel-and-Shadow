@@ -1,4 +1,4 @@
-[gd_scene load_steps=3 format=3 uid="uid://1ev4o7q8l4ey"]
+[gd_scene format=3 uid="uid://1ev4o7q8l4ey"]
 
 [sub_resource type="BoxMesh" id="BoxMesh_f03xp"]
 size = Vector3(4, 0.25, 0.25)
@@ -6,31 +6,31 @@ size = Vector3(4, 0.25, 0.25)
 [sub_resource type="PrismMesh" id="PrismMesh_duxrp"]
 size = Vector3(1, 1, 0.25)
 
-[node name="Compass" type="Node3D"]
+[node name="Compass" type="Node3D" unique_id=579609963]
 
-[node name="BaseNS" type="MeshInstance3D" parent="."]
+[node name="BaseNS" type="MeshInstance3D" parent="." unique_id=957085028]
 transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 0, 0, 0)
 mesh = SubResource("BoxMesh_f03xp")
 skeleton = NodePath("../BaseEW")
 
-[node name="ArrowHeadN" type="MeshInstance3D" parent="BaseNS"]
+[node name="ArrowHeadN" type="MeshInstance3D" parent="BaseNS" unique_id=1861086568]
 transform = Transform3D(-4.37114e-08, 1, 4.37114e-08, 0, -4.37114e-08, 1, 1, 4.37114e-08, 1.91069e-15, 2.5, 0, 4.37114e-08)
 mesh = SubResource("PrismMesh_duxrp")
 skeleton = NodePath("../..")
 
-[node name="Label3DN" type="Label3D" parent="BaseNS/ArrowHeadN"]
+[node name="Label3DN" type="Label3D" parent="BaseNS/ArrowHeadN" unique_id=1420574791]
 transform = Transform3D(1, 0, -6.87826e-36, 0, 1, 0, 0, 0, 1, 0, 0, 0.35)
 billboard = 1
 double_sided = false
 text = "N"
 font_size = 96
 
-[node name="ArrowHeadS" type="MeshInstance3D" parent="BaseNS"]
+[node name="ArrowHeadS" type="MeshInstance3D" parent="BaseNS" unique_id=560919616]
 transform = Transform3D(-4.37114e-08, -1, -4.37114e-08, 0, -4.37114e-08, 1, -1, 4.37114e-08, 1.91069e-15, -2.5, 0, -4.37114e-08)
 mesh = SubResource("PrismMesh_duxrp")
 skeleton = NodePath("../..")
 
-[node name="Label3DS" type="Label3D" parent="BaseNS/ArrowHeadS"]
+[node name="Label3DS" type="Label3D" parent="BaseNS/ArrowHeadS" unique_id=869787259]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.35)
 billboard = 1
 double_sided = false
@@ -38,15 +38,15 @@ no_depth_test = true
 text = "S"
 font_size = 96
 
-[node name="BaseEW" type="MeshInstance3D" parent="."]
+[node name="BaseEW" type="MeshInstance3D" parent="." unique_id=276402125]
 mesh = SubResource("BoxMesh_f03xp")
 
-[node name="ArrowHeadE" type="MeshInstance3D" parent="BaseEW"]
+[node name="ArrowHeadE" type="MeshInstance3D" parent="BaseEW" unique_id=1019616142]
 transform = Transform3D(-4.37114e-08, 1, 0, 4.37114e-08, 1.91068e-15, 1, 1, 4.37114e-08, -4.37114e-08, 2.5, 0, 0)
 mesh = SubResource("PrismMesh_duxrp")
 skeleton = NodePath("../..")
 
-[node name="Label3DE" type="Label3D" parent="BaseEW/ArrowHeadE"]
+[node name="Label3DE" type="Label3D" parent="BaseEW/ArrowHeadE" unique_id=863909792]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.35)
 billboard = 1
 double_sided = false
@@ -54,12 +54,12 @@ no_depth_test = true
 text = "E"
 font_size = 96
 
-[node name="ArrowHeadW" type="MeshInstance3D" parent="BaseEW"]
+[node name="ArrowHeadW" type="MeshInstance3D" parent="BaseEW" unique_id=142798201]
 transform = Transform3D(-4.37114e-08, -1, 0, -4.37114e-08, 1.91069e-15, 1, -1, 4.37114e-08, -4.37114e-08, -2.5, 0, 0)
 mesh = SubResource("PrismMesh_duxrp")
 skeleton = NodePath("../..")
 
-[node name="Label3DW" type="Label3D" parent="BaseEW/ArrowHeadW"]
+[node name="Label3DW" type="Label3D" parent="BaseEW/ArrowHeadW" unique_id=430242038]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.35)
 billboard = 1
 double_sided = false

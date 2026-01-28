@@ -1,10 +1,10 @@
 [gd_scene format=3 uid="uid://r0qgqj0c8ukd"]
 
-[node name="DirectionalLight3D" type="DirectionalLight3D"]
+[node name="DirectionalLight3D" type="DirectionalLight3D" unique_id=1138037343]
 transform = Transform3D(1, 0, 0, 0, 0.95105654, 0.309017, 0, -0.309017, 0.95105654, 0, 0, 0)
 shadow_enabled = true
 
-[node name="Label" type="Label" parent="."]
+[node name="Label" type="Label" parent="." unique_id=1749784460]
 offset_right = 40.0
 offset_bottom = 23.0
 text = "Este Directional light serve para ser usado para criar icones do itens spawnables: Colocase como filho e eis a iluminação padrão para criar os prints deste item."

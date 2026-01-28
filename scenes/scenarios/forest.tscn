@@ -1,157 +1,157 @@
-[gd_scene load_steps=4 format=3 uid="uid://0yuy536rv6ae"]
+[gd_scene format=3 uid="uid://0yuy536rv6ae"]
 
 [ext_resource type="PackedScene" uid="uid://bl8c62gm66ba5" path="res://models/VainerKit/props/tree/tree.tscn" id="3_bhadl"]
 [ext_resource type="PackedScene" uid="uid://cttav2yu77tfn" path="res://models/VainerKit/props/bush/bush.tscn" id="3_bho3m"]
 [ext_resource type="PackedScene" uid="uid://btmu1dctxc3q5" path="res://models/VainerKit/props/bushes/bushes.tscn" id="3_nd2tn"]
 
-[node name="Forest" type="Node3D"]
+[node name="Forest" type="Node3D" unique_id=662231876]
 
-[node name="tree7" parent="." instance=ExtResource("3_bhadl")]
+[node name="tree7" parent="." unique_id=1534561163 instance=ExtResource("3_bhadl")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.3846183, -9.536743e-07, 19.27335)
 
-[node name="tree2" parent="." instance=ExtResource("3_bhadl")]
+[node name="tree2" parent="." unique_id=717508175 instance=ExtResource("3_bhadl")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12.766681, 0, 11.722146)
 
-[node name="tree5" parent="." instance=ExtResource("3_bhadl")]
+[node name="tree5" parent="." unique_id=1384530586 instance=ExtResource("3_bhadl")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15.721937, 0, -5.043233)
 
-[node name="tree10" parent="." instance=ExtResource("3_bhadl")]
+[node name="tree10" parent="." unique_id=637014795 instance=ExtResource("3_bhadl")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 19.25344, 0, -20.701136)
 
-[node name="tree9" parent="." instance=ExtResource("3_bhadl")]
+[node name="tree9" parent="." unique_id=1761903002 instance=ExtResource("3_bhadl")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.757206, 0, -28.333141)
 
-[node name="tree6" parent="." instance=ExtResource("3_bhadl")]
+[node name="tree6" parent="." unique_id=1616233751 instance=ExtResource("3_bhadl")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.4199786, 0, -14.6115675)
 
-[node name="tree" parent="." instance=ExtResource("3_bhadl")]
+[node name="tree" parent="." unique_id=2045416313 instance=ExtResource("3_bhadl")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6944237, 0, -0.6428449)
 
-[node name="tree3" parent="." instance=ExtResource("3_bhadl")]
+[node name="tree3" parent="." unique_id=837974977 instance=ExtResource("3_bhadl")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.4847, 0, 10.219282)
 
-[node name="tree4" parent="." instance=ExtResource("3_bhadl")]
+[node name="tree4" parent="." unique_id=1529837752 instance=ExtResource("3_bhadl")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16.356504, -9.536743e-07, -4.9867644)
 
-[node name="tree8" parent="." instance=ExtResource("3_bhadl")]
+[node name="tree8" parent="." unique_id=577520195 instance=ExtResource("3_bhadl")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13.9016695, 0, -21.86872)
 
-[node name="bush" parent="." instance=ExtResource("3_bho3m")]
+[node name="bush" parent="." unique_id=104383579 instance=ExtResource("3_bho3m")]
 transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, -3.7284894, 4.7683716e-07, 20.658257)
 
-[node name="bush2" parent="." instance=ExtResource("3_bho3m")]
+[node name="bush2" parent="." unique_id=1346545489 instance=ExtResource("3_bho3m")]
 transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, -0.5042443, 0, 21.498745)
 
-[node name="bush3" parent="." instance=ExtResource("3_bho3m")]
+[node name="bush3" parent="." unique_id=1845499152 instance=ExtResource("3_bho3m")]
 transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, -19.206451, 0, 11.902567)
 
-[node name="bush4" parent="." instance=ExtResource("3_bho3m")]
+[node name="bush4" parent="." unique_id=2138476622 instance=ExtResource("3_bho3m")]
 transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, -14.495065, 0, 12.894033)
 
-[node name="bush5" parent="." instance=ExtResource("3_bho3m")]
+[node name="bush5" parent="." unique_id=1521076647 instance=ExtResource("3_bho3m")]
 transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, -17.033388, 0, 12.4992285)
 
-[node name="bush6" parent="." instance=ExtResource("3_bho3m")]
+[node name="bush6" parent="." unique_id=230462506 instance=ExtResource("3_bho3m")]
 transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, -16.098074, 0, 2.2829142)
 
-[node name="bush7" parent="." instance=ExtResource("3_bho3m")]
+[node name="bush7" parent="." unique_id=919900900 instance=ExtResource("3_bho3m")]
 transform = Transform3D(-8.742278e-08, 0, 2, 0, 2, 0, -2, 0, -8.742278e-08, -15.961733, 0, -0.66243124)
 
-[node name="bush8" parent="." instance=ExtResource("3_bho3m")]
+[node name="bush8" parent="." unique_id=968508617 instance=ExtResource("3_bho3m")]
 transform = Transform3D(-8.742278e-08, 0, 2, 0, 2, 0, -2, 0, -8.742278e-08, -15.961733, 0, 5.421853)
 
-[node name="bush9" parent="." instance=ExtResource("3_bho3m")]
+[node name="bush9" parent="." unique_id=369866684 instance=ExtResource("3_bho3m")]
 transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, -16.582546, 4.7683716e-07, -21.601097)
 
-[node name="bush10" parent="." instance=ExtResource("3_bho3m")]
+[node name="bush10" parent="." unique_id=1954620201 instance=ExtResource("3_bho3m")]
 transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, -18.50113, 0, -19.829975)
 
-[node name="bush11" parent="." instance=ExtResource("3_bho3m")]
+[node name="bush11" parent="." unique_id=990846266 instance=ExtResource("3_bho3m")]
 transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, -15.863808, 4.7683716e-07, -18.112392)
 
-[node name="bush12" parent="." instance=ExtResource("3_bho3m")]
+[node name="bush12" parent="." unique_id=1567426944 instance=ExtResource("3_bho3m")]
 transform = Transform3D(1.8, 0, 0, 0, 1.8, 0, 0, 0, 1.8, -9.1001, -4.7683716e-07, 7.6360807)
 
-[node name="bush13" parent="." instance=ExtResource("3_bho3m")]
+[node name="bush13" parent="." unique_id=413887463 instance=ExtResource("3_bho3m")]
 transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 11.9773445, 0, 16.408018)
 
-[node name="bush14" parent="." instance=ExtResource("3_bho3m")]
+[node name="bush14" parent="." unique_id=5485121 instance=ExtResource("3_bho3m")]
 transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 18.496029, 0, -4.009097)
 
-[node name="bush15" parent="." instance=ExtResource("3_bho3m")]
+[node name="bush15" parent="." unique_id=1526355485 instance=ExtResource("3_bho3m")]
 transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 22.222101, 0, -19.322447)
 
-[node name="bush16" parent="." instance=ExtResource("3_bho3m")]
+[node name="bush16" parent="." unique_id=2011422164 instance=ExtResource("3_bho3m")]
 transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 8.405631, 4.7683716e-07, -28.817154)
 
-[node name="bush17" parent="." instance=ExtResource("3_bho3m")]
+[node name="bush17" parent="." unique_id=224714136 instance=ExtResource("3_bho3m")]
 transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 3.0473251, 0, -2.5055847)
 
-[node name="bush18" parent="." instance=ExtResource("3_bho3m")]
+[node name="bush18" parent="." unique_id=370348981 instance=ExtResource("3_bho3m")]
 transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 7.854968, 0, -11.994767)
 
-[node name="bush19" parent="." instance=ExtResource("3_bho3m")]
+[node name="bush19" parent="." unique_id=635194913 instance=ExtResource("3_bho3m")]
 transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, -0.09844589, -4.7683716e-07, -11.525621)
 
-[node name="bush20" parent="." instance=ExtResource("3_bho3m")]
+[node name="bush20" parent="." unique_id=638622325 instance=ExtResource("3_bho3m")]
 transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 18.420742, 0, -12.129712)
 
-[node name="bush21" parent="." instance=ExtResource("3_bho3m")]
+[node name="bush21" parent="." unique_id=2134382943 instance=ExtResource("3_bho3m")]
 transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, -2.4534035, 0, 1.4843903)
 
-[node name="bush22" parent="." instance=ExtResource("3_bho3m")]
+[node name="bush22" parent="." unique_id=132017366 instance=ExtResource("3_bho3m")]
 transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 22.58853, 0, 14.375526)
 
-[node name="bush23" parent="." instance=ExtResource("3_bho3m")]
+[node name="bush23" parent="." unique_id=1587043372 instance=ExtResource("3_bho3m")]
 transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 17.549335, 0, 9.591787)
 
-[node name="bush24" parent="." instance=ExtResource("3_bho3m")]
+[node name="bush24" parent="." unique_id=1788208468 instance=ExtResource("3_bho3m")]
 transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 3.3988638, 0, 11.323038)
 
-[node name="bush25" parent="." instance=ExtResource("3_bho3m")]
+[node name="bush25" parent="." unique_id=34115797 instance=ExtResource("3_bho3m")]
 transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, -8.830531, 0, -6.1601048)
 
-[node name="bush26" parent="." instance=ExtResource("3_bho3m")]
+[node name="bush26" parent="." unique_id=2003723834 instance=ExtResource("3_bho3m")]
 transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, -4.96115, 0, -28.20318)
 
-[node name="bushes" parent="." instance=ExtResource("3_nd2tn")]
+[node name="bushes" parent="." unique_id=1915061056 instance=ExtResource("3_nd2tn")]
 transform = Transform3D(1.767767, 0, -1.767767, 0, 2.5, 0, 1.767767, 0, 1.767767, 14.667886, 0, -4.0082865)
 
-[node name="bushes2" parent="." instance=ExtResource("3_nd2tn")]
+[node name="bushes2" parent="." unique_id=508238710 instance=ExtResource("3_nd2tn")]
 transform = Transform3D(2.5, 0, 0, 0, 2.5, 0, 0, 0, 2.5, 3.0669904, 0, -13.124271)
 
-[node name="bushes3" parent="." instance=ExtResource("3_nd2tn")]
+[node name="bushes3" parent="." unique_id=1283671604 instance=ExtResource("3_nd2tn")]
 transform = Transform3D(2.1650634, 0, 1.25, 0, 2.5, 0, -1.25, 0, 2.1650634, 14.170299, 0, 13.047605)
 
-[node name="bushes4" parent="." instance=ExtResource("3_nd2tn")]
+[node name="bushes4" parent="." unique_id=108411152 instance=ExtResource("3_nd2tn")]
 transform = Transform3D(1.767767, 0, 1.767767, 0, 2.5, 0, -1.767767, 0, 1.767767, 1.434258, 0, 18.41858)
 
-[node name="bushes5" parent="." instance=ExtResource("3_nd2tn")]
+[node name="bushes5" parent="." unique_id=1388220114 instance=ExtResource("3_nd2tn")]
 transform = Transform3D(-1.767767, 0, -1.767767, 0, 2.5, 0, 1.767767, 0, -1.767767, -17.421692, 0, 8.545781)
 
-[node name="bushes6" parent="." instance=ExtResource("3_nd2tn")]
+[node name="bushes6" parent="." unique_id=380505718 instance=ExtResource("3_nd2tn")]
 transform = Transform3D(-0.92878425, 0, -2.3210688, 0, 2.5, 0, 2.3210688, 0, -0.92878425, -18.63422, -4.7683716e-07, -5.5450163)
 
-[node name="bushes7" parent="." instance=ExtResource("3_nd2tn")]
+[node name="bushes7" parent="." unique_id=708920075 instance=ExtResource("3_nd2tn")]
 transform = Transform3D(-1.09278474e-07, 0, 2.5, 0, 2.5, 0, -2.5, 0, -1.09278474e-07, -11.625783, 0, -22.643064)
 
-[node name="bushes8" parent="." instance=ExtResource("3_nd2tn")]
+[node name="bushes8" parent="." unique_id=329830124 instance=ExtResource("3_nd2tn")]
 transform = Transform3D(-1.767767, 0, -1.767767, 0, 2.5, 0, 1.767767, 0, -1.767767, 3.3850951, 0, -29.138668)
 
-[node name="bushes9" parent="." instance=ExtResource("3_nd2tn")]
+[node name="bushes9" parent="." unique_id=78615483 instance=ExtResource("3_nd2tn")]
 transform = Transform3D(-1.767767, 0, -1.767767, 0, 2.5, 0, 1.767767, 0, -1.767767, 18.306543, -4.7683716e-07, -22.478329)
 
-[node name="bushes10" parent="." instance=ExtResource("3_nd2tn")]
+[node name="bushes10" parent="." unique_id=353355523 instance=ExtResource("3_nd2tn")]
 transform = Transform3D(1.1599026, 0, 2.214639, 0, 2.5, 0, -2.214639, 0, 1.1599026, 20.067633, 0, 11.724679)
 
-[node name="bushes11" parent="." instance=ExtResource("3_nd2tn")]
+[node name="bushes11" parent="." unique_id=1991160458 instance=ExtResource("3_nd2tn")]
 transform = Transform3D(2.5, 0, 0, 0, 2.5, 0, 0, 0, 2.5, -5.4016466, 0, 12.212626)
 
-[node name="bushes12" parent="." instance=ExtResource("3_nd2tn")]
+[node name="bushes12" parent="." unique_id=1125411770 instance=ExtResource("3_nd2tn")]
 transform = Transform3D(2.5, 0, 0, 0, 2.5, 0, 0, 0, 2.5, 8.417936, 0, 5.705532)
 
-[node name="bushes13" parent="." instance=ExtResource("3_nd2tn")]
+[node name="bushes13" parent="." unique_id=1261845530 instance=ExtResource("3_nd2tn")]
 transform = Transform3D(-2.4148145, 0, -0.6470478, 0, 2.5, 0, 0.6470478, 0, -2.4148145, 1.6382828, 0, -17.033014)
 
-[node name="bushes14" parent="." instance=ExtResource("3_nd2tn")]
+[node name="bushes14" parent="." unique_id=1833853123 instance=ExtResource("3_nd2tn")]
 transform = Transform3D(-1.09278474e-07, 0, 2.5, 0, 2.5, 0, -2.5, 0, -1.09278474e-07, -15.872505, 0, -12.813834)

@@ -1,4 +1,4 @@
-[gd_scene load_steps=5 format=3 uid="uid://da8cxlgmx22ff"]
+[gd_scene format=3 uid="uid://da8cxlgmx22ff"]
 
 [ext_resource type="Shader" uid="uid://p3udn7nj80y3" path="res://vfx/heal/s_heal_shader.tres" id="1_55hi1"]
 
@@ -19,7 +19,7 @@ scale_max = 0.59999996
 
 [sub_resource type="QuadMesh" id="QuadMesh_q7xes"]
 
-[node name="vfx_heal" type="GPUParticles3D"]
+[node name="vfx_heal" type="GPUParticles3D" unique_id=740336757]
 material_override = SubResource("ShaderMaterial_2774k")
 cast_shadow = 0
 amount = 4

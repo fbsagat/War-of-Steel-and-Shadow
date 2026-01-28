@@ -1,4 +1,4 @@
-[gd_scene load_steps=5 format=4 uid="uid://btmu1dctxc3q5"]
+[gd_scene format=4 uid="uid://btmu1dctxc3q5"]
 
 [ext_resource type="Material" uid="uid://ceqw3g4jdh1vh" path="res://models/VainerKit/props/bushes/branches_texture.material" id="1_m04fg"]
 [ext_resource type="Material" uid="uid://c3fvueeafw25t" path="res://models/VainerKit/props/bushes/bush_texture.material" id="2_xo6mn"]
@@ -57,40 +57,33 @@ _surfaces = [{
 blend_shape_mode = 0
 shadow_mesh = SubResource("ArrayMesh_61ncg")
 
-[node name="bushes" type="Node3D"]
+[node name="bushes" type="Node3D" unique_id=1047511276]
 transform = Transform3D(2.5, 0, 0, 0, 2.5, 0, 0, 0, 2.5, 0, 0, 0)
 
-[node name="branches001" type="MeshInstance3D" parent="."]
+[node name="branches001" type="MeshInstance3D" parent="." unique_id=1984216427]
 transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0.48002768, 0.5, -0.009081453)
 mesh = SubResource("ArrayMesh_mckri")
-skeleton = NodePath("")
 
-[node name="branches007" type="MeshInstance3D" parent="."]
+[node name="branches007" type="MeshInstance3D" parent="." unique_id=1583518243]
 transform = Transform3D(0.7071067, -0.70710677, 0, 0, 0, -1, 0.70710677, 0.7071067, 0, 0.42643452, 0.5, 0.32681444)
 mesh = SubResource("ArrayMesh_mckri")
-skeleton = NodePath("")
 
-[node name="branches002" type="MeshInstance3D" parent="."]
+[node name="branches002" type="MeshInstance3D" parent="." unique_id=42470869]
 transform = Transform3D(0.8660254, 0.5, 0, 0, 0, -1, -0.5, 0.8660254, 0, 0.40707278, 0.5, -0.24650186)
 mesh = SubResource("ArrayMesh_mckri")
-skeleton = NodePath("")
 
-[node name="branches003" type="MeshInstance3D" parent="."]
+[node name="branches003" type="MeshInstance3D" parent="." unique_id=1021005696]
 transform = Transform3D(-1, 5.9604645e-08, 0, 0, 0, -1, -5.9604645e-08, -1, 0, -0.48777118, 0.5, -0.004723996)
 mesh = SubResource("ArrayMesh_mckri")
-skeleton = NodePath("")
 
-[node name="branches006" type="MeshInstance3D" parent="."]
+[node name="branches006" type="MeshInstance3D" parent="." unique_id=42873480]
 transform = Transform3D(-0.25881913, -0.9659258, 0, 0, 0, -1, 0.9659258, -0.25881913, 0, -0.12262413, 0.5, 0.46784684)
 mesh = SubResource("ArrayMesh_mckri")
-skeleton = NodePath("")
 
-[node name="branches004" type="MeshInstance3D" parent="."]
+[node name="branches004" type="MeshInstance3D" parent="." unique_id=1143546037]
 transform = Transform3D(-0.5, -0.70710677, -0.49999997, 0.70710677, -4.2146848e-08, -0.70710677, 0.49999994, -0.70710677, 0.49999997, -0.044624686, 0.72362536, -0.004723996)
 mesh = SubResource("ArrayMesh_mckri")
-skeleton = NodePath("")
 
-[node name="branches005" type="MeshInstance3D" parent="."]
+[node name="branches005" type="MeshInstance3D" parent="." unique_id=562883651]
 transform = Transform3D(0.6830128, 0.258819, 0.6830127, 0.729952, -0.27485502, -0.6257992, 0.025760785, 0.92599547, -0.37665492, -0.044624686, 0.72362536, 0.27044678)
 mesh = SubResource("ArrayMesh_mckri")
-skeleton = NodePath("")

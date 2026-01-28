@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=4 uid="uid://cttav2yu77tfn"]
+[gd_scene format=4 uid="uid://cttav2yu77tfn"]
 
 [ext_resource type="Texture2D" uid="uid://5rye8ml0mjjs" path="res://models/VainerKit/props/bush/bush_bush_texture.png" id="1_1mevn"]
 [ext_resource type="Material" uid="uid://cjll2xeh5nck2" path="res://models/VainerKit/props/bush/bush.material" id="2_end6g"]
@@ -126,23 +126,20 @@ _surfaces = [{
 blend_shape_mode = 0
 shadow_mesh = SubResource("ArrayMesh_g5fq3")
 
-[node name="bush" type="Node3D"]
+[node name="bush" type="Node3D" unique_id=335670027]
 transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0)
 
-[node name="bush" type="MeshInstance3D" parent="."]
+[node name="bush" type="MeshInstance3D" parent="." unique_id=759596594]
 transform = Transform3D(1.6152859e-05, 1, 0, -1, 1.6152859e-05, 0, 0, 0, 1, 0, 0.7, 0)
 mesh = SubResource("ArrayMesh_2lodx")
-skeleton = NodePath("")
 surface_material_override/0 = ExtResource("2_end6g")
 
-[node name="bush_internal" type="MeshInstance3D" parent="."]
+[node name="bush_internal" type="MeshInstance3D" parent="." unique_id=2131127912]
 transform = Transform3D(1.4002138e-05, 0.866, 0, -0.866, 1.4002138e-05, 0, 0, 0, 0.866, 0, 0.6503433, 0)
 mesh = SubResource("ArrayMesh_jf8lh")
-skeleton = NodePath("")
 surface_material_override/0 = ExtResource("3_p1q7x")
 
-[node name="branches" type="MeshInstance3D" parent="."]
+[node name="branches" type="MeshInstance3D" parent="." unique_id=1460149457]
 transform = Transform3D(1.4279205e-07, -0.70710665, 0.7071069, 0.99999994, 7.5497894e-08, -1.2644057e-07, 3.6021884e-08, 0.7071068, 0.7071067, 0, 0, 0)
 mesh = SubResource("ArrayMesh_jfhfs")
-skeleton = NodePath("")
 surface_material_override/0 = ExtResource("5_vgd5x")

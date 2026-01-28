@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=4 uid="uid://bbmno4nmkh51v"]
+[gd_scene format=4 uid="uid://bbmno4nmkh51v"]
 
 [ext_resource type="Script" uid="uid://bfl717tl211j3" path="res://scripts/gameplay/itens_coletaveis.gd" id="1_rw5pi"]
 [ext_resource type="Texture2D" uid="uid://ci4tvi7xq6rde" path="res://models/Character/Knight_knight_texture.png" id="2_ynacn"]
@@ -49,7 +49,7 @@ shadow_mesh = SubResource("ArrayMesh_5vw27")
 [sub_resource type="ConvexPolygonShape3D" id="ConvexPolygonShape3D_ynacn"]
 points = PackedVector3Array(-0.41951066, 0.4202772, -6.7055225e-08, -0.27627796, 0.39758256, 0.045156233, -0.41868937, 0.44250873, -6.7055225e-08, -0.27627796, 0.39758256, -0.04518064, -0.2041688, 0.1875414, -0.065331034, -0.0578973, -0.28719345, -0.06472409, -0.09091312, -0.33953005, -0.036076546, -0.09912598, -0.3443932, -6.7055225e-08, -0.09091312, -0.33953005, 0.036052145, -0.0578973, -0.28719345, 0.06469969, -0.2041688, 0.1875414, 0.065306626, -7.8588724e-05, 0.40638253, 0.12400981, 0.00016778708, 1.7164191, 0.047826774, -7.8588724e-05, 0.12061533, 0.12400981, -0.13871211, 1.7164191, -6.7055225e-08, 0.00016778708, 1.7164191, -0.047851175, -7.8588724e-05, 0.40638253, -0.124009944, -7.8588724e-05, 0.12061533, -0.124009944, -0.04097876, -0.32795116, -0.06472409, -0.052476794, -0.377972, -0.036076546, -0.057240278, -0.38607723, -6.7055225e-08, -0.052476794, -0.377972, 0.036052145, -0.04097876, -0.32795116, 0.06469969, 0.27620286, 0.39758256, 0.045156233, 0.41861433, 0.44250873, -6.7055225e-08, 0.13904768, 1.7164191, -6.7055225e-08, 0.00016778708, 1.964439, -6.7055225e-08, -7.8588724e-05, -0.34485635, 0.06469969, 0.040821582, -0.32795116, 0.06469969, 0.057822257, -0.28719345, 0.06469969, 0.20409375, 0.1875414, 0.065306626, 0.27620286, 0.39758256, -0.04518064, 0.057822257, -0.28719345, -0.06472409, 0.040821582, -0.32795116, -0.06472409, -7.8588724e-05, -0.34485635, -0.06472409, 0.20409375, 0.1875414, -0.065331034, -7.8588724e-05, -0.39209825, -0.036076546, -7.8588724e-05, -0.40136138, -2.4341047e-05, -7.8588724e-05, -0.39209825, 0.036052145, 0.41943562, 0.4202772, -6.7055225e-08, 0.05240175, -0.377972, 0.036052145, 0.09075594, -0.33953005, 0.036052145, 0.09075594, -0.33953005, -0.036076546, 0.05240175, -0.377972, -0.036076546, 0.057165205, -0.38607723, -6.7055225e-08, 0.098968804, -0.3443932, -6.7055225e-08)
 
-[node name="sword_2" type="RigidBody3D" groups=["item"]]
+[node name="sword_2" type="RigidBody3D" unique_id=756409288 groups=["item"]]
 process_physics_priority = 1
 collision_layer = 4
 collision_mask = 7
@@ -58,19 +58,18 @@ physics_material_override = SubResource("PhysicsMaterial_rw5pi")
 continuous_cd = true
 script = ExtResource("1_rw5pi")
 
-[node name="sword_2" type="MeshInstance3D" parent="."]
+[node name="sword_2" type="MeshInstance3D" parent="." unique_id=1974026800]
 transform = Transform3D(-3.934025e-08, 0.9, -3.934025e-08, 0, -3.934025e-08, -0.9, -0.9, -3.934025e-08, 1.7196169e-15, -0.5, 0, 0)
 mesh = SubResource("ArrayMesh_rw5pi")
-skeleton = NodePath("")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1933956069]
 transform = Transform3D(-4.371139e-08, 1, -4.371139e-08, 0, -4.371139e-08, -1, -1, -4.371139e-08, 1.9106855e-15, -0.5, 0, 0)
 shape = SubResource("ConvexPolygonShape3D_ynacn")
 
-[node name="impact_sensor" type="Area3D" parent="."]
+[node name="impact_sensor" type="Area3D" parent="." unique_id=1356043916]
 collision_layer = 0
 collision_mask = 8
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="impact_sensor"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="impact_sensor" unique_id=1433983111]
 transform = Transform3D(-4.5896957e-08, 1.05, -4.5896957e-08, 0, -4.5896957e-08, -1.05, -1.05, -4.5896957e-08, 2.0062196e-15, -0.5, 0, 0)
 shape = SubResource("ConvexPolygonShape3D_ynacn")

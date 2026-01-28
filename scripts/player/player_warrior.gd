@@ -823,7 +823,7 @@ func _send_state_to_server(delta: float):
 		# Força envio nos primeiros `initial_sync_duration` segundos
 		if initial_sync_elapsed < initial_sync_duration:
 			should_send = true
-			_log_debug("📡 Enviando estado forçado (inicialização: %.2fs)" % initial_sync_elapsed)
+			#_log_debug("📡 Enviando estado forçado (inicialização: %.2fs)" % initial_sync_elapsed)
 		else:
 			# Comportamento normal: só envia se houver mudança
 			var pos_changed = global_position.distance_to(target_position) > position_threshold

@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3 uid="uid://bnyrp1vp6h5in"]
+[gd_scene format=3 uid="uid://bnyrp1vp6h5in"]
 
 [ext_resource type="Script" uid="uid://rybogedbckvr" path="res://scripts/ui/inventory_menu.gd" id="1_xmty8"]
 
@@ -54,7 +54,7 @@ corner_radius_top_right = 6
 corner_radius_bottom_right = 6
 corner_radius_bottom_left = 6
 
-[node name="InventoryUI" type="Control"]
+[node name="InventoryUI" type="Control" unique_id=1166792592]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -64,7 +64,7 @@ grow_vertical = 2
 mouse_filter = 1
 script = ExtResource("1_xmty8")
 
-[node name="Inventory" type="CenterContainer" parent="."]
+[node name="Inventory" type="CenterContainer" parent="." unique_id=92906380]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -73,10 +73,10 @@ offset_top = -56.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="CanvasLayer" type="CanvasLayer" parent="Inventory"]
+[node name="CanvasLayer" type="CanvasLayer" parent="Inventory" unique_id=1632149165]
 layer = -1
 
-[node name="Background" type="ColorRect" parent="Inventory/CanvasLayer"]
+[node name="Background" type="ColorRect" parent="Inventory/CanvasLayer" unique_id=290129364]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -84,93 +84,93 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0, 0, 0, 0.8392157)
 
-[node name="ReferenceRect" type="ReferenceRect" parent="Inventory"]
+[node name="ReferenceRect" type="ReferenceRect" parent="Inventory" unique_id=903111090]
 custom_minimum_size = Vector2(1100, 650)
 layout_mode = 2
 border_color = Color(0, 0, 0, 1)
 border_width = 2.0
 editor_only = false
 
-[node name="CenterContainer" type="CenterContainer" parent="Inventory"]
+[node name="CenterContainer" type="CenterContainer" parent="Inventory" unique_id=1815085648]
 layout_mode = 2
 
-[node name="MainVBox" type="VBoxContainer" parent="Inventory/CenterContainer"]
+[node name="MainVBox" type="VBoxContainer" parent="Inventory/CenterContainer" unique_id=1305595078]
 custom_minimum_size = Vector2(600, 500)
 layout_mode = 2
 theme_override_constants/separation = 30
 
-[node name="EquipmentContainer" type="HBoxContainer" parent="Inventory/CenterContainer/MainVBox"]
+[node name="EquipmentContainer" type="HBoxContainer" parent="Inventory/CenterContainer/MainVBox" unique_id=1514992874]
 layout_mode = 2
 theme_override_constants/separation = 120
 alignment = 1
 
-[node name="EquipmentGrid" type="GridContainer" parent="Inventory/CenterContainer/MainVBox/EquipmentContainer"]
+[node name="EquipmentGrid" type="GridContainer" parent="Inventory/CenterContainer/MainVBox/EquipmentContainer" unique_id=1789660321]
 layout_mode = 2
 theme_override_constants/h_separation = 30
 theme_override_constants/v_separation = 20
 columns = 2
 
-[node name="HelmetContainer" type="VBoxContainer" parent="Inventory/CenterContainer/MainVBox/EquipmentContainer/EquipmentGrid"]
+[node name="HelmetContainer" type="VBoxContainer" parent="Inventory/CenterContainer/MainVBox/EquipmentContainer/EquipmentGrid" unique_id=1755516153]
 layout_mode = 2
 theme_override_constants/separation = 5
 
-[node name="HelmetLabel" type="Label" parent="Inventory/CenterContainer/MainVBox/EquipmentContainer/EquipmentGrid/HelmetContainer"]
+[node name="HelmetLabel" type="Label" parent="Inventory/CenterContainer/MainVBox/EquipmentContainer/EquipmentGrid/HelmetContainer" unique_id=1079783917]
 layout_mode = 2
 theme_override_font_sizes/font_size = 14
 text = "Capacete"
 horizontal_alignment = 1
 
-[node name="HelmetSlot" type="Panel" parent="Inventory/CenterContainer/MainVBox/EquipmentContainer/EquipmentGrid/HelmetContainer"]
+[node name="HelmetSlot" type="Panel" parent="Inventory/CenterContainer/MainVBox/EquipmentContainer/EquipmentGrid/HelmetContainer" unique_id=2125033393]
 custom_minimum_size = Vector2(80, 80)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_qyubi")
 
-[node name="CapeContainer" type="VBoxContainer" parent="Inventory/CenterContainer/MainVBox/EquipmentContainer/EquipmentGrid"]
+[node name="CapeContainer" type="VBoxContainer" parent="Inventory/CenterContainer/MainVBox/EquipmentContainer/EquipmentGrid" unique_id=1913643125]
 layout_mode = 2
 theme_override_constants/separation = 5
 
-[node name="CapeLabel" type="Label" parent="Inventory/CenterContainer/MainVBox/EquipmentContainer/EquipmentGrid/CapeContainer"]
+[node name="CapeLabel" type="Label" parent="Inventory/CenterContainer/MainVBox/EquipmentContainer/EquipmentGrid/CapeContainer" unique_id=2139573300]
 layout_mode = 2
 theme_override_font_sizes/font_size = 14
 text = "Capa"
 horizontal_alignment = 1
 
-[node name="CapeSlot" type="Panel" parent="Inventory/CenterContainer/MainVBox/EquipmentContainer/EquipmentGrid/CapeContainer"]
+[node name="CapeSlot" type="Panel" parent="Inventory/CenterContainer/MainVBox/EquipmentContainer/EquipmentGrid/CapeContainer" unique_id=956543408]
 custom_minimum_size = Vector2(80, 80)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_qyubi")
 
-[node name="RightHandContainer" type="VBoxContainer" parent="Inventory/CenterContainer/MainVBox/EquipmentContainer/EquipmentGrid"]
+[node name="RightHandContainer" type="VBoxContainer" parent="Inventory/CenterContainer/MainVBox/EquipmentContainer/EquipmentGrid" unique_id=741559565]
 layout_mode = 2
 theme_override_constants/separation = 5
 
-[node name="RightHandLabel" type="Label" parent="Inventory/CenterContainer/MainVBox/EquipmentContainer/EquipmentGrid/RightHandContainer"]
+[node name="RightHandLabel" type="Label" parent="Inventory/CenterContainer/MainVBox/EquipmentContainer/EquipmentGrid/RightHandContainer" unique_id=855738430]
 layout_mode = 2
 theme_override_font_sizes/font_size = 14
 text = "Mão Dir."
 horizontal_alignment = 1
 
-[node name="RightHandSlot" type="Panel" parent="Inventory/CenterContainer/MainVBox/EquipmentContainer/EquipmentGrid/RightHandContainer"]
+[node name="RightHandSlot" type="Panel" parent="Inventory/CenterContainer/MainVBox/EquipmentContainer/EquipmentGrid/RightHandContainer" unique_id=2104611669]
 custom_minimum_size = Vector2(80, 80)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_qyubi")
 
-[node name="LeftHandContainer" type="VBoxContainer" parent="Inventory/CenterContainer/MainVBox/EquipmentContainer/EquipmentGrid"]
+[node name="LeftHandContainer" type="VBoxContainer" parent="Inventory/CenterContainer/MainVBox/EquipmentContainer/EquipmentGrid" unique_id=1659321637]
 layout_mode = 2
 theme_override_constants/separation = 5
 
-[node name="LeftHandLabel" type="Label" parent="Inventory/CenterContainer/MainVBox/EquipmentContainer/EquipmentGrid/LeftHandContainer"]
+[node name="LeftHandLabel" type="Label" parent="Inventory/CenterContainer/MainVBox/EquipmentContainer/EquipmentGrid/LeftHandContainer" unique_id=1468423432]
 layout_mode = 2
 theme_override_font_sizes/font_size = 14
 text = "Mão Esq."
 horizontal_alignment = 1
 
-[node name="LeftHandSlot" type="Panel" parent="Inventory/CenterContainer/MainVBox/EquipmentContainer/EquipmentGrid/LeftHandContainer"]
+[node name="LeftHandSlot" type="Panel" parent="Inventory/CenterContainer/MainVBox/EquipmentContainer/EquipmentGrid/LeftHandContainer" unique_id=174455864]
 custom_minimum_size = Vector2(80, 80)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_qyubi")
 
-[node name="DropArea" type="Panel" parent="Inventory/CenterContainer/MainVBox/EquipmentContainer"]
+[node name="DropArea" type="Panel" parent="Inventory/CenterContainer/MainVBox/EquipmentContainer" unique_id=203275427]
 custom_minimum_size = Vector2(180, 180)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -178,7 +178,7 @@ size_flags_vertical = 4
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_pcuoj")
 
-[node name="DropLabel" type="Label" parent="Inventory/CenterContainer/MainVBox/EquipmentContainer/DropArea"]
+[node name="DropLabel" type="Label" parent="Inventory/CenterContainer/MainVBox/EquipmentContainer/DropArea" unique_id=1423833837]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -199,14 +199,14 @@ ITEM"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="HBoxContainer" type="HBoxContainer" parent="Inventory/CenterContainer/MainVBox"]
+[node name="HBoxContainer" type="HBoxContainer" parent="Inventory/CenterContainer/MainVBox" unique_id=1744479752]
 layout_mode = 2
 alignment = 1
 
-[node name="ItemsPanel" type="Panel" parent="Inventory/CenterContainer/MainVBox/HBoxContainer"]
+[node name="ItemsPanel" type="Panel" parent="Inventory/CenterContainer/MainVBox/HBoxContainer" unique_id=1838891240]
 layout_mode = 2
 
-[node name="MarginContainer" type="MarginContainer" parent="Inventory/CenterContainer/MainVBox/HBoxContainer/ItemsPanel"]
+[node name="MarginContainer" type="MarginContainer" parent="Inventory/CenterContainer/MainVBox/HBoxContainer/ItemsPanel" unique_id=1926379006]
 layout_mode = 1
 anchors_preset = -1
 anchor_left = 0.446
@@ -222,58 +222,58 @@ theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 10
 
-[node name="ItemsGrid" type="GridContainer" parent="Inventory/CenterContainer/MainVBox/HBoxContainer/ItemsPanel/MarginContainer"]
+[node name="ItemsGrid" type="GridContainer" parent="Inventory/CenterContainer/MainVBox/HBoxContainer/ItemsPanel/MarginContainer" unique_id=1133140096]
 layout_mode = 2
 theme_override_constants/h_separation = 5
 theme_override_constants/v_separation = 5
 columns = 10
 
-[node name="ItemSlot1" type="Panel" parent="Inventory/CenterContainer/MainVBox/HBoxContainer/ItemsPanel/MarginContainer/ItemsGrid"]
+[node name="ItemSlot1" type="Panel" parent="Inventory/CenterContainer/MainVBox/HBoxContainer/ItemsPanel/MarginContainer/ItemsGrid" unique_id=1604184697]
 custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_fy31g")
 
-[node name="ItemSlot2" type="Panel" parent="Inventory/CenterContainer/MainVBox/HBoxContainer/ItemsPanel/MarginContainer/ItemsGrid"]
+[node name="ItemSlot2" type="Panel" parent="Inventory/CenterContainer/MainVBox/HBoxContainer/ItemsPanel/MarginContainer/ItemsGrid" unique_id=1267914816]
 custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_fy31g")
 
-[node name="ItemSlot3" type="Panel" parent="Inventory/CenterContainer/MainVBox/HBoxContainer/ItemsPanel/MarginContainer/ItemsGrid"]
+[node name="ItemSlot3" type="Panel" parent="Inventory/CenterContainer/MainVBox/HBoxContainer/ItemsPanel/MarginContainer/ItemsGrid" unique_id=1748216787]
 custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_fy31g")
 
-[node name="ItemSlot4" type="Panel" parent="Inventory/CenterContainer/MainVBox/HBoxContainer/ItemsPanel/MarginContainer/ItemsGrid"]
+[node name="ItemSlot4" type="Panel" parent="Inventory/CenterContainer/MainVBox/HBoxContainer/ItemsPanel/MarginContainer/ItemsGrid" unique_id=413987427]
 custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_fy31g")
 
-[node name="ItemSlot5" type="Panel" parent="Inventory/CenterContainer/MainVBox/HBoxContainer/ItemsPanel/MarginContainer/ItemsGrid"]
+[node name="ItemSlot5" type="Panel" parent="Inventory/CenterContainer/MainVBox/HBoxContainer/ItemsPanel/MarginContainer/ItemsGrid" unique_id=1872760473]
 custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_fy31g")
 
-[node name="ItemSlot6" type="Panel" parent="Inventory/CenterContainer/MainVBox/HBoxContainer/ItemsPanel/MarginContainer/ItemsGrid"]
+[node name="ItemSlot6" type="Panel" parent="Inventory/CenterContainer/MainVBox/HBoxContainer/ItemsPanel/MarginContainer/ItemsGrid" unique_id=522953311]
 custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_fy31g")
 
-[node name="ItemSlot7" type="Panel" parent="Inventory/CenterContainer/MainVBox/HBoxContainer/ItemsPanel/MarginContainer/ItemsGrid"]
+[node name="ItemSlot7" type="Panel" parent="Inventory/CenterContainer/MainVBox/HBoxContainer/ItemsPanel/MarginContainer/ItemsGrid" unique_id=116611785]
 custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_fy31g")
 
-[node name="ItemSlot8" type="Panel" parent="Inventory/CenterContainer/MainVBox/HBoxContainer/ItemsPanel/MarginContainer/ItemsGrid"]
+[node name="ItemSlot8" type="Panel" parent="Inventory/CenterContainer/MainVBox/HBoxContainer/ItemsPanel/MarginContainer/ItemsGrid" unique_id=1957457038]
 custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_fy31g")
 
-[node name="ItemSlot9" type="Panel" parent="Inventory/CenterContainer/MainVBox/HBoxContainer/ItemsPanel/MarginContainer/ItemsGrid"]
+[node name="ItemSlot9" type="Panel" parent="Inventory/CenterContainer/MainVBox/HBoxContainer/ItemsPanel/MarginContainer/ItemsGrid" unique_id=1923303705]
 custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_fy31g")
 
-[node name="StatusBar" type="CenterContainer" parent="."]
+[node name="StatusBar" type="CenterContainer" parent="." unique_id=2019371477]
 layout_mode = 1
 anchors_preset = 7
 anchor_left = 0.5
@@ -286,29 +286,29 @@ offset_right = 640.0
 grow_horizontal = 2
 grow_vertical = 0
 
-[node name="VBoxContainer" type="VBoxContainer" parent="StatusBar"]
+[node name="VBoxContainer" type="VBoxContainer" parent="StatusBar" unique_id=623729742]
 layout_mode = 2
 alignment = 1
 
-[node name="BarsHBox" type="HBoxContainer" parent="StatusBar/VBoxContainer"]
+[node name="BarsHBox" type="HBoxContainer" parent="StatusBar/VBoxContainer" unique_id=129404345]
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 8
 theme_override_constants/separation = 20
 alignment = 1
 
-[node name="HealthContainer" type="VBoxContainer" parent="StatusBar/VBoxContainer/BarsHBox"]
+[node name="HealthContainer" type="VBoxContainer" parent="StatusBar/VBoxContainer/BarsHBox" unique_id=416355264]
 layout_mode = 2
 theme_override_constants/separation = 5
 alignment = 1
 
-[node name="HealthLabel" type="Label" parent="StatusBar/VBoxContainer/BarsHBox/HealthContainer"]
+[node name="HealthLabel" type="Label" parent="StatusBar/VBoxContainer/BarsHBox/HealthContainer" unique_id=1979917998]
 layout_mode = 2
 theme_override_font_sizes/font_size = 18
 text = "Vida"
 horizontal_alignment = 1
 
-[node name="HealthBar" type="ProgressBar" parent="StatusBar/VBoxContainer/BarsHBox/HealthContainer"]
+[node name="HealthBar" type="ProgressBar" parent="StatusBar/VBoxContainer/BarsHBox/HealthContainer" unique_id=218918565]
 custom_minimum_size = Vector2(250, 35)
 layout_mode = 2
 theme_override_styles/background = SubResource("StyleBoxFlat_xmty8")
@@ -316,18 +316,18 @@ theme_override_styles/fill = SubResource("StyleBoxFlat_1jujj")
 value = 100.0
 show_percentage = false
 
-[node name="StaminaContainer" type="VBoxContainer" parent="StatusBar/VBoxContainer/BarsHBox"]
+[node name="StaminaContainer" type="VBoxContainer" parent="StatusBar/VBoxContainer/BarsHBox" unique_id=2012100546]
 layout_mode = 2
 theme_override_constants/separation = 5
 alignment = 1
 
-[node name="StaminaLabel" type="Label" parent="StatusBar/VBoxContainer/BarsHBox/StaminaContainer"]
+[node name="StaminaLabel" type="Label" parent="StatusBar/VBoxContainer/BarsHBox/StaminaContainer" unique_id=1761327759]
 layout_mode = 2
 theme_override_font_sizes/font_size = 18
 text = "Stamina"
 horizontal_alignment = 1
 
-[node name="StaminaBar" type="ProgressBar" parent="StatusBar/VBoxContainer/BarsHBox/StaminaContainer"]
+[node name="StaminaBar" type="ProgressBar" parent="StatusBar/VBoxContainer/BarsHBox/StaminaContainer" unique_id=1095481372]
 custom_minimum_size = Vector2(250, 35)
 layout_mode = 2
 theme_override_styles/background = SubResource("StyleBoxFlat_xmty8")
@@ -335,14 +335,14 @@ theme_override_styles/fill = SubResource("StyleBoxFlat_apvdt")
 value = 100.0
 show_percentage = false
 
-[node name="HBoxContainer" type="HBoxContainer" parent="StatusBar/VBoxContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="StatusBar/VBoxContainer" unique_id=1788583277]
 layout_mode = 2
 alignment = 1
 
-[node name="ItemsPanel" type="Panel" parent="StatusBar/VBoxContainer/HBoxContainer"]
+[node name="ItemsPanel" type="Panel" parent="StatusBar/VBoxContainer/HBoxContainer" unique_id=1527725178]
 layout_mode = 2
 
-[node name="MarginContainer" type="MarginContainer" parent="StatusBar/VBoxContainer/HBoxContainer/ItemsPanel"]
+[node name="MarginContainer" type="MarginContainer" parent="StatusBar/VBoxContainer/HBoxContainer/ItemsPanel" unique_id=1403148373]
 layout_mode = 1
 anchors_preset = -1
 anchor_left = 0.437
@@ -358,53 +358,53 @@ theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 10
 
-[node name="ItemsGrid" type="GridContainer" parent="StatusBar/VBoxContainer/HBoxContainer/ItemsPanel/MarginContainer"]
+[node name="ItemsGrid" type="GridContainer" parent="StatusBar/VBoxContainer/HBoxContainer/ItemsPanel/MarginContainer" unique_id=971626216]
 layout_mode = 2
 theme_override_constants/h_separation = 5
 theme_override_constants/v_separation = 5
 columns = 10
 
-[node name="ItemSlot1" type="Panel" parent="StatusBar/VBoxContainer/HBoxContainer/ItemsPanel/MarginContainer/ItemsGrid"]
+[node name="ItemSlot1" type="Panel" parent="StatusBar/VBoxContainer/HBoxContainer/ItemsPanel/MarginContainer/ItemsGrid" unique_id=1775037624]
 custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_fy31g")
 
-[node name="ItemSlot2" type="Panel" parent="StatusBar/VBoxContainer/HBoxContainer/ItemsPanel/MarginContainer/ItemsGrid"]
+[node name="ItemSlot2" type="Panel" parent="StatusBar/VBoxContainer/HBoxContainer/ItemsPanel/MarginContainer/ItemsGrid" unique_id=18047875]
 custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_fy31g")
 
-[node name="ItemSlot3" type="Panel" parent="StatusBar/VBoxContainer/HBoxContainer/ItemsPanel/MarginContainer/ItemsGrid"]
+[node name="ItemSlot3" type="Panel" parent="StatusBar/VBoxContainer/HBoxContainer/ItemsPanel/MarginContainer/ItemsGrid" unique_id=228456857]
 custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_fy31g")
 
-[node name="ItemSlot4" type="Panel" parent="StatusBar/VBoxContainer/HBoxContainer/ItemsPanel/MarginContainer/ItemsGrid"]
+[node name="ItemSlot4" type="Panel" parent="StatusBar/VBoxContainer/HBoxContainer/ItemsPanel/MarginContainer/ItemsGrid" unique_id=136099156]
 custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_fy31g")
 
-[node name="ItemSlot5" type="Panel" parent="StatusBar/VBoxContainer/HBoxContainer/ItemsPanel/MarginContainer/ItemsGrid"]
+[node name="ItemSlot5" type="Panel" parent="StatusBar/VBoxContainer/HBoxContainer/ItemsPanel/MarginContainer/ItemsGrid" unique_id=1341338786]
 custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_fy31g")
 
-[node name="ItemSlot6" type="Panel" parent="StatusBar/VBoxContainer/HBoxContainer/ItemsPanel/MarginContainer/ItemsGrid"]
+[node name="ItemSlot6" type="Panel" parent="StatusBar/VBoxContainer/HBoxContainer/ItemsPanel/MarginContainer/ItemsGrid" unique_id=1360392419]
 custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_fy31g")
 
-[node name="ItemSlot7" type="Panel" parent="StatusBar/VBoxContainer/HBoxContainer/ItemsPanel/MarginContainer/ItemsGrid"]
+[node name="ItemSlot7" type="Panel" parent="StatusBar/VBoxContainer/HBoxContainer/ItemsPanel/MarginContainer/ItemsGrid" unique_id=1167782310]
 custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_fy31g")
 
-[node name="ItemSlot8" type="Panel" parent="StatusBar/VBoxContainer/HBoxContainer/ItemsPanel/MarginContainer/ItemsGrid"]
+[node name="ItemSlot8" type="Panel" parent="StatusBar/VBoxContainer/HBoxContainer/ItemsPanel/MarginContainer/ItemsGrid" unique_id=59955244]
 custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_fy31g")
 
-[node name="ItemSlot9" type="Panel" parent="StatusBar/VBoxContainer/HBoxContainer/ItemsPanel/MarginContainer/ItemsGrid"]
+[node name="ItemSlot9" type="Panel" parent="StatusBar/VBoxContainer/HBoxContainer/ItemsPanel/MarginContainer/ItemsGrid" unique_id=167809238]
 custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_fy31g")

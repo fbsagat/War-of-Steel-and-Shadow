@@ -1,4 +1,4 @@
-[gd_scene load_steps=22 format=3 uid="uid://dipn6t27p0nap"]
+[gd_scene format=3 uid="uid://dipn6t27p0nap"]
 
 [ext_resource type="PackedScene" uid="uid://bjmikbn4ac2lu" path="res://sky/assets/scenes/BuildingBlocks.tscn" id="1"]
 [ext_resource type="PackedScene" uid="uid://1ev4o7q8l4ey" path="res://sky/assets/meshes/Compass.tscn" id="2_gjkdl"]
@@ -85,122 +85,122 @@ emission_enabled = true
 emission = Color(0.054902, 0.564706, 0.972549, 1)
 emission_energy_multiplier = 5.0
 
-[node name="PrimitivesCity" type="Node3D"]
+[node name="PrimitivesCity" type="Node3D" unique_id=1320665629]
 
-[node name="Floor" type="MeshInstance3D" parent="."]
+[node name="Floor" type="MeshInstance3D" parent="." unique_id=1336097804]
 transform = Transform3D(2000, 0, 0, 0, 1, 0, 0, 0, 2000, 0, 0, 0)
 layers = 4
 material_override = SubResource("1")
 mesh = SubResource("2")
 
-[node name="Compass" parent="." instance=ExtResource("2_gjkdl")]
+[node name="Compass" parent="." unique_id=219704578 instance=ExtResource("2_gjkdl")]
 
-[node name="Props" type="Node3D" parent="."]
+[node name="Props" type="Node3D" parent="." unique_id=1590978602]
 
-[node name="Sphere0" type="MeshInstance3D" parent="Props"]
+[node name="Sphere0" type="MeshInstance3D" parent="Props" unique_id=1654072101]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 1, 4)
 material_override = SubResource("3")
 mesh = SubResource("4")
 skeleton = NodePath("../..")
 
-[node name="Sphere1" type="MeshInstance3D" parent="Props"]
+[node name="Sphere1" type="MeshInstance3D" parent="Props" unique_id=1732128136]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 1, 2)
 material_override = SubResource("5")
 mesh = SubResource("4")
 skeleton = NodePath("../..")
 
-[node name="Sphere2" type="MeshInstance3D" parent="Props"]
+[node name="Sphere2" type="MeshInstance3D" parent="Props" unique_id=675719848]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 1, 0)
 material_override = SubResource("6")
 mesh = SubResource("4")
 skeleton = NodePath("../..")
 
-[node name="Teapot" type="MeshInstance3D" parent="Props"]
+[node name="Teapot" type="MeshInstance3D" parent="Props" unique_id=1383374173]
 transform = Transform3D(0.707107, 0, -0.707107, 0, 1, 0, 0.707107, 0, 0.707107, 8, 0, 6.5)
 material_override = SubResource("7")
 mesh = ExtResource("9")
 skeleton = NodePath("../..")
 
-[node name="Teapot2" type="MeshInstance3D" parent="Props"]
+[node name="Teapot2" type="MeshInstance3D" parent="Props" unique_id=846173968]
 transform = Transform3D(0.707107, 0, -0.707107, 0, 1, 0, 0.707107, 0, 0.707107, 8, 0, 10)
 material_override = SubResource("8")
 mesh = ExtResource("9")
 skeleton = NodePath("../..")
 
-[node name="Teapot3" type="MeshInstance3D" parent="Props"]
+[node name="Teapot3" type="MeshInstance3D" parent="Props" unique_id=1896459648]
 transform = Transform3D(0.707107, 0, -0.707107, 0, 1, 0, 0.707107, 0, 0.707107, 7.96891, 9.53674e-07, 13.998)
 material_override = SubResource("9")
 mesh = ExtResource("9")
 skeleton = NodePath("../..")
 
-[node name="KnotTorusGold" type="MeshInstance3D" parent="Props"]
+[node name="KnotTorusGold" type="MeshInstance3D" parent="Props" unique_id=547770751]
 transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 8, 1, -3.5)
 material_override = SubResource("StandardMaterial3D_bvo0c")
 mesh = ExtResource("10")
 skeleton = NodePath("../..")
 
-[node name="KnotTorusMatte" type="MeshInstance3D" parent="Props"]
+[node name="KnotTorusMatte" type="MeshInstance3D" parent="Props" unique_id=667704359]
 transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 8, 1, -8)
 material_override = SubResource("StandardMaterial3D_tloy4")
 mesh = ExtResource("10")
 skeleton = NodePath("../..")
 
-[node name="KnotTorusGloss" type="MeshInstance3D" parent="Props"]
+[node name="KnotTorusGloss" type="MeshInstance3D" parent="Props" unique_id=887914956]
 transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 8, 1, -13)
 material_override = SubResource("12")
 mesh = ExtResource("10")
 skeleton = NodePath("../..")
 
-[node name="LCylinder" type="MeshInstance3D" parent="Props"]
+[node name="LCylinder" type="MeshInstance3D" parent="Props" unique_id=288880193]
 transform = Transform3D(0.5, 0, 0, 0, 1, 0, 0, 0, 0.5, 0, 1, 13.25)
 material_override = SubResource("13")
 mesh = SubResource("14")
 skeleton = NodePath("../..")
 
-[node name="LCylinder2" type="MeshInstance3D" parent="Props"]
+[node name="LCylinder2" type="MeshInstance3D" parent="Props" unique_id=1364485323]
 transform = Transform3D(0.5, 0, 0, 0, 1, 0, 0, 0, 0.5, -6, 1, 6)
 material_override = SubResource("15")
 mesh = SubResource("14")
 skeleton = NodePath("../..")
 
-[node name="LCylinder3" type="MeshInstance3D" parent="Props"]
+[node name="LCylinder3" type="MeshInstance3D" parent="Props" unique_id=525911274]
 transform = Transform3D(0.5, 0, 0, 0, 1, 0, 0, 0, 0.5, -6, 1, -6)
 material_override = SubResource("16")
 mesh = SubResource("14")
 skeleton = NodePath("../..")
 
-[node name="OmniLight3D2" type="OmniLight3D" parent="Props/LCylinder3"]
+[node name="OmniLight3D2" type="OmniLight3D" parent="Props/LCylinder3" unique_id=1064271659]
 transform = Transform3D(2, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0)
 light_color = Color(0.054902, 0.564706, 0.972549, 1)
 shadow_enabled = true
 omni_range = 20.0
 
-[node name="LCylinder4" type="MeshInstance3D" parent="Props"]
+[node name="LCylinder4" type="MeshInstance3D" parent="Props" unique_id=533832181]
 transform = Transform3D(0.5, 0, 0, 0, 1, 0, 0, 0, 0.5, 0, 1, -13.25)
 material_override = SubResource("13")
 mesh = SubResource("14")
 skeleton = NodePath("../..")
 
-[node name="OmniLight3D" type="OmniLight3D" parent="Props/LCylinder4"]
+[node name="OmniLight3D" type="OmniLight3D" parent="Props/LCylinder4" unique_id=1380471429]
 transform = Transform3D(2, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0)
 light_color = Color(0.972549, 0.505882, 0.054902, 1)
 shadow_enabled = true
 omni_range = 20.0
 
-[node name="Buildings" parent="." instance=ExtResource("1")]
+[node name="Buildings" parent="." unique_id=1488295812 instance=ExtResource("1")]
 transform = Transform3D(-5.05739e-08, 0, 1, 0, 1.799, 0, -1.157, 0, -4.37114e-08, -318, 0, -598.815)
 
-[node name="Buildings2" parent="." instance=ExtResource("1")]
+[node name="Buildings2" parent="." unique_id=1713096518 instance=ExtResource("1")]
 transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -317.435, 0, 7.93411)
 
-[node name="Buildings3" parent="." instance=ExtResource("1")]
+[node name="Buildings3" parent="." unique_id=2029866751 instance=ExtResource("1")]
 transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -316.869, 0, 601.186)
 
-[node name="Buildings4" parent="." instance=ExtResource("1")]
+[node name="Buildings4" parent="." unique_id=364370220 instance=ExtResource("1")]
 transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 342, 0, -599.437)
 
-[node name="Buildings5" parent="." instance=ExtResource("1")]
+[node name="Buildings5" parent="." unique_id=836169754 instance=ExtResource("1")]
 transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 342.565, 0, 15.5)
 
-[node name="Buildings6" parent="." instance=ExtResource("1")]
+[node name="Buildings6" parent="." unique_id=1914750537 instance=ExtResource("1")]
 transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 266.673, 0, 603.016)

@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=4 uid="uid://cb26och8280fn"]
+[gd_scene format=4 uid="uid://cb26och8280fn"]
 
 [ext_resource type="Material" uid="uid://dyf3texhrr1fx" path="res://models/VainerKit/items/potion_glass/potion_glass.material" id="1_on2en"]
 [ext_resource type="Texture2D" uid="uid://bp5wuo72n453k" path="res://models/VainerKit/items/potion_glass/potion_glass_log_texture.png" id="1_wecpa"]
@@ -121,24 +121,21 @@ _surfaces = [{
 blend_shape_mode = 0
 shadow_mesh = SubResource("ArrayMesh_tkye7")
 
-[node name="potion_glass" type="Node3D"]
+[node name="potion_glass" type="Node3D" unique_id=1961427682]
 
-[node name="glass" type="MeshInstance3D" parent="."]
+[node name="glass" type="MeshInstance3D" parent="." unique_id=1539756760]
 transform = Transform3D(0.24000001, 0, 0, 0, 0.24000001, 0, 0, 0, 0.24000001, 0, 0.00019994611, 0)
 mesh = SubResource("ArrayMesh_b8xkp")
-skeleton = NodePath("")
 surface_material_override/0 = ExtResource("1_on2en")
 
-[node name="liquid" type="MeshInstance3D" parent="."]
+[node name="liquid" type="MeshInstance3D" parent="." unique_id=1786808920]
 transform = Transform3D(0.21505366, 0, 0, 0, 0.21505366, 0, 0, 0, 0.21505366, 0, 0.00019994611, 0)
 mesh = SubResource("ArrayMesh_js4j2")
-skeleton = NodePath("")
 surface_material_override/0 = ExtResource("2_47bsv")
 
-[node name="cap" type="MeshInstance3D" parent="."]
+[node name="cap" type="MeshInstance3D" parent="." unique_id=1803199403]
 transform = Transform3D(0.24000001, 0, 0, 0, 0.24000001, 0, 0, 0, 0.24000001, 0, 0.55459994, 0)
 mesh = SubResource("ArrayMesh_6dylx")
-skeleton = NodePath("")
 
-[node name="vfx_heal" parent="." instance=ExtResource("4_47bsv")]
+[node name="vfx_heal" parent="." unique_id=1253158400 instance=ExtResource("4_47bsv")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6561486, 0)

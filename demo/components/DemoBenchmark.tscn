@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3 uid="uid://dyt8c2xqmddo2"]
+[gd_scene format=3 uid="uid://dyt8c2xqmddo2"]
 
 [ext_resource type="Script" uid="uid://ba508qknm6m5" path="res://demo/src/DemoScene.gd" id="1_2gjn4"]
 [ext_resource type="PackedScene" uid="uid://d2jihfohphuue" path="res://demo/components/UI.tscn" id="2_3obxr"]
@@ -59,20 +59,20 @@ _shader_parameters = {
 auto_shader = true
 dual_scaling = true
 
-[node name="Demo" type="Node"]
+[node name="Demo" type="Node" unique_id=2108183572]
 script = ExtResource("1_2gjn4")
 
-[node name="UI" parent="." instance=ExtResource("2_3obxr")]
+[node name="UI" parent="." unique_id=982589736 instance=ExtResource("2_3obxr")]
 
-[node name="World" parent="." instance=ExtResource("3_b7ioy")]
+[node name="World" parent="." unique_id=1922195735 instance=ExtResource("3_b7ioy")]
 
-[node name="Borders" parent="." instance=ExtResource("4_nn6wp")]
+[node name="Borders" parent="." unique_id=1857973848 instance=ExtResource("4_nn6wp")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 512, 0, 512)
 
-[node name="Player" parent="." instance=ExtResource("5_bwggt")]
+[node name="Player" parent="." unique_id=1959662565 instance=ExtResource("5_bwggt")]
 transform = Transform3D(0.134125, 0, -0.990965, 0, 1, 0, 0.990965, 0, 0.134125, 216.455, 103.968, -1835.34)
 
-[node name="Terrain3D" type="Terrain3D" parent="."]
+[node name="Terrain3D" type="Terrain3D" parent="." unique_id=358781715]
 data_directory = "res://demo/data"
 material = SubResource("Terrain3DMaterial_klrp5")
 assets = ExtResource("6_3r2au")

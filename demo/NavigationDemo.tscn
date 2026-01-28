@@ -1,4 +1,4 @@
-[gd_scene load_steps=27 format=3 uid="uid://x34e4v60vdmy"]
+[gd_scene format=3 uid="uid://x34e4v60vdmy"]
 
 [ext_resource type="Script" uid="uid://ba508qknm6m5" path="res://demo/src/DemoScene.gd" id="1_po4vw"]
 [ext_resource type="PackedScene" uid="uid://dwnhqfjq7v1pq" path="res://demo/components/Borders.tscn" id="3_3upu0"]
@@ -70,8 +70,8 @@ shader_parameter/cirrus_sky_tint_fade = 0.5
 shader_parameter/cirrus_intensity = 10.0
 shader_parameter/cirrus_size = 1.0
 shader_parameter/cirrus_uv = Vector2(0.16, 0.11)
-shader_parameter/cirrus_position1 = Vector2(0, 0)
-shader_parameter/cirrus_position2 = Vector2(0, 0)
+shader_parameter/cirrus_position1 = Vector2(0.00065996626, 0.00065996626)
+shader_parameter/cirrus_position2 = Vector2(0.00065996626, 0.00065996626)
 shader_parameter/cirrus_day_color = Color(0.824, 0.875, 1, 1)
 shader_parameter/cirrus_horizon_light_color = Color(0.98, 0.43, 0.15, 1)
 shader_parameter/cirrus_night_color = Color(0.09, 0.094, 0.129, 1)
@@ -84,7 +84,7 @@ shader_parameter/cumulus_noise_freq = 2.7
 shader_parameter/cumulus_sky_tint_fade = 0.0
 shader_parameter/cumulus_intensity = 0.6
 shader_parameter/cumulus_size = 0.5
-shader_parameter/cumulus_position = Vector2(0, 0)
+shader_parameter/cumulus_position = Vector2(0.0032998328, 0.0032998328)
 shader_parameter/cumulus_texture = ExtResource("5_qxi3g")
 shader_parameter/cumulus_day_color = Color(0.823529, 0.87451, 1, 1)
 shader_parameter/cumulus_horizon_light_color = Color(0.98, 0.43, 0.15, 1)
@@ -107,7 +107,7 @@ background_mode = 2
 sky = SubResource("Sky_a6n5c")
 ambient_light_source = 3
 ambient_light_color = Color(1, 1, 1, 1)
-ambient_light_sky_contribution = 0.7461642
+ambient_light_sky_contribution = 0.78610003
 reflected_light_source = 2
 tonemap_mode = 3
 tonemap_white = 6.0
@@ -168,28 +168,28 @@ world_background = 0
 auto_shader = true
 dual_scaling = true
 
-[node name="Demo" type="Node"]
+[node name="Demo" type="Node" unique_id=1302730268]
 script = ExtResource("1_po4vw")
 
-[node name="UI" parent="." instance=ExtResource("5_rc7e2")]
+[node name="UI" parent="." unique_id=1889691287 instance=ExtResource("5_rc7e2")]
 
-[node name="Sky3D" type="WorldEnvironment" parent="."]
+[node name="Sky3D" type="WorldEnvironment" parent="." unique_id=1849831526]
 environment = SubResource("Environment_l86mf")
 camera_attributes = SubResource("CameraAttributesPractical_wo5b4")
 script = ExtResource("10_typrb")
 current_time = 10.0
 wind_direction = 2.35619451204804
 
-[node name="SunLight" type="DirectionalLight3D" parent="Sky3D"]
+[node name="SunLight" type="DirectionalLight3D" parent="Sky3D" unique_id=1199662638]
 transform = Transform3D(0, -0.90386146, 0.42782524, 0.66545725, 0.31934416, 0.67467475, -0.746436, 0.2846994, 0.60148114, 0.42782524, 0.67467475, 0.60148114)
 shadow_enabled = true
 
-[node name="MoonLight" type="DirectionalLight3D" parent="Sky3D"]
+[node name="MoonLight" type="DirectionalLight3D" parent="Sky3D" unique_id=1786506394]
 transform = Transform3D(0, -0.8089093, -0.5879333, -0.760891, 0.38149792, -0.5248848, 0.6488796, 0.44735318, -0.6154919, -0.5879333, -0.5248848, -0.6154919)
 light_color = Color(0.572549, 0.776471, 0.956863, 1)
 light_energy = 0.0
 
-[node name="SkyDome" type="Node" parent="Sky3D"]
+[node name="SkyDome" type="Node" parent="Sky3D" unique_id=987853042]
 script = ExtResource("11_y32s5")
 sun_azimuth = -2.523332
 sun_altitude = -0.8302724
@@ -197,27 +197,27 @@ moon_azimuth = -5.5206833
 moon_altitude = -2.1233761
 wind_direction = 2.35619451204804
 
-[node name="TimeOfDay" type="Node" parent="Sky3D"]
+[node name="TimeOfDay" type="Node" parent="Sky3D" unique_id=2074287584]
 script = ExtResource("12_jmdsm")
 dome_path = NodePath("../SkyDome")
 current_time = 10.0
 
-[node name="Borders" parent="." instance=ExtResource("3_3upu0")]
+[node name="Borders" parent="." unique_id=1816756379 instance=ExtResource("3_3upu0")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 512, -2.5, 512)
 
-[node name="Tunnel" parent="." instance=ExtResource("5_2lvlr")]
+[node name="Tunnel" parent="." unique_id=2130014239 instance=ExtResource("5_2lvlr")]
 
-[node name="Player" parent="." instance=ExtResource("4_fk3ul")]
+[node name="Player" parent="." unique_id=2060651156 instance=ExtResource("4_fk3ul")]
 transform = Transform3D(0.0774673, 0, -0.996995, 0, 1, 0, 0.996995, 0, 0.0774673, 229.418, 104.956, -1838.16)
 
-[node name="Enemy" parent="." node_paths=PackedStringArray("target") instance=ExtResource("12_b2xl8")]
+[node name="Enemy" parent="." unique_id=552596848 node_paths=PackedStringArray("target") instance=ExtResource("12_b2xl8")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 192.727, 105.171, -1787.81)
 target = NodePath("../Player")
 
-[node name="NavigationRegion3D" type="NavigationRegion3D" parent="."]
+[node name="NavigationRegion3D" type="NavigationRegion3D" parent="." unique_id=90322518]
 navigation_mesh = ExtResource("8_6jfdr")
 
-[node name="Terrain3D" type="Terrain3D" parent="NavigationRegion3D"]
+[node name="Terrain3D" type="Terrain3D" parent="NavigationRegion3D" unique_id=1215083670]
 data_directory = "res://demo/data"
 material = SubResource("Terrain3DMaterial_s5mq5")
 assets = ExtResource("10_qmhh8")
