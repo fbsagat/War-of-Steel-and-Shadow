@@ -1,7 +1,12 @@
 extends Node
 
 # Configurações
-@export var test_mode: bool = false
+## [TESTES] Usa o TestManager para iniciar logo uma partida na execução
+## (configura server e clients / clients recebem localhost_auto_connect = true)
+@export var test_mode: bool = true
+## [TESTES] Define a quantidade de instnacias de clientes para executar fast_round
+@export var simulador_players_qtd: int = 2
+## [TESTES] Dropa itens perto dos players e ativa o trainer de cada player
 @export var trainer: bool = true
 
 ## Manager de rede, gerencia comunicação entre servidor e clientes
@@ -143,6 +148,7 @@ func _init_server(is_headless):
 	# Configurar modo de testes
 	if test_mode:
 		server_manager.fast_round = true
+		server_manager.simulador_players_qtd = simulador_players_qtd
 	if trainer:
 		server_manager.test_trainer = true
 	
