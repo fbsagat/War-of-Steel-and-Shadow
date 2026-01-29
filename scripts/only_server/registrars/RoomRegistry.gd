@@ -76,12 +76,21 @@ func reset():
 	_log_debug("🔄 RoomRegistry resetado")
 
 # ===== GERENCIAMENTO DE SALAS =====
+func _get_next_room_id() -> int:
+	"""Gera próximo ID de rodada disponível"""
+	var max_id = 0
+	for room_id in rooms:
+		if room_id > max_id:
+			max_id = room_id
+	return max_id + 1
 
-func create_room(room_id: int, room_name: String, password: String, host_peer_id: int, min_players: int, max_players: int) -> Dictionary:
+func create_room(room_name: String, password: String, host_peer_id: int, min_players: int, max_players: int) -> Dictionary:
 	"""
 	Cria nova sala
 	Retorna RoomData completo ou {} se falhar
 	"""
+	var room_id = _get_next_room_id()
+	
 	if rooms.has(room_id):
 		push_error("RoomRegistry: Sala com ID %d já existe!" % room_id)
 		return {}

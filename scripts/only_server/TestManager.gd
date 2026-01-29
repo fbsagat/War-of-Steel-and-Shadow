@@ -136,7 +136,6 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 	var room_id = _get_next_test_room_id()
 	
 	var room_data = room_registry.create_room(
-		room_id,
 		nome_sala,
 		"",  # Sem senha
 		players[0]["id"],  # Host é o primeiro jogador

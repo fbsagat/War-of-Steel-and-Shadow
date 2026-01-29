@@ -248,7 +248,7 @@ func _physics_process(delta):
 	if debug:
 		_print_debug()
 
-func _update_rotation_targets(delta: float) -> void:
+func _update_rotation_targets(_delta: float) -> void:
 	"""Atualiza os valores alvo de rotação com base no modo atual"""
 	match current_mode:
 		CameraMode.FREE_LOOK:

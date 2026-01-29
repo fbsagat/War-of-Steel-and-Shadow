@@ -26,7 +26,7 @@ func initialize():
 	
 	# Conecta aos sinais de rede
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
-	multiplayer.server_disconnected.connect(_on_server_disconnected)
+	game_manager.disconnected_from_server.connect(_on_server_disconnected)
 	multiplayer.connection_failed.connect(_on_connection_failed)
 
 func _on_connected_to_server():
@@ -41,9 +41,6 @@ func _on_connected_to_server():
 func _on_server_disconnected():
 	"""Callback quando desconecta do servidor"""
 	is_connected_ = false
-	
-	# Futuramente: Resetar tudo e jogar pro menu de espera de conexão com o servidor
-	
 	_log_debug("❌ Conexão de rede perdida")
 
 func _on_connection_failed():

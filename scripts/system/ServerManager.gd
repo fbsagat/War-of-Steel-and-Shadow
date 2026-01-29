@@ -408,11 +408,7 @@ func _handle_create_room(peer_id: int, room_name: String, password: String):
 		return
 	
 	# Cria sala
-	var room_id = next_room_id
-	next_room_id += 1
-	
 	var room_data = room_registry.create_room(
-		room_id,
 		room_name,
 		password,
 		peer_id,
@@ -424,7 +420,7 @@ func _handle_create_room(peer_id: int, room_name: String, password: String):
 		_send_error(peer_id, "Erro ao criar sala")
 		return
 	
-	_log_debug("✓ Sala criada: %s (ID: %d, Host: %s)" % [room_name, room_id, player["name"]])
+	_log_debug("✓ Sala criada: %s (ID: %d, Host: %s)" % [room_name, room_data["id"], player["name"]])
 	
 	# Atualiza lista de salas para todos
 	_send_rooms_list_to_all()
