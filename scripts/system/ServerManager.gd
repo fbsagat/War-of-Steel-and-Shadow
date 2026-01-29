@@ -55,7 +55,6 @@ const server_camera : String = "res://scenes/server_scenes/server_camera.tscn"
 @export var enable_anticheat: bool = false
 
 # ===== REGISTROS (Injetados pelo initializer.gd) =====
-
 var network_manager: NetworkManager = null
 var client_registry : ClientRegistry = null
 var room_registry: RoomRegistry = null
@@ -71,9 +70,7 @@ var mouse_mode: bool = true
 var current_active_viewport: SubViewport = null  # Adicione esta
 var viewport_display: TextureRect = null
 
-
 # ===== VARIÁVEIS INTERNAS =====
-
 ## ID incremental para criação de salas
 var next_room_id: int = 1
 
@@ -229,7 +226,6 @@ func _setup_debug_timer():
 	add_child(debug_timer_)
 
 # ===== CALLBACKS DE CONEXÃO =====
-
 func _on_peer_connected(peer_id: int):
 	"""Callback quando um cliente conecta ao servidor"""
 	_log_debug("✓ Cliente conectado: Peer ID %d" % peer_id)
@@ -320,7 +316,6 @@ func _on_peer_disconnected(peer_id: int):
 	client_registry.remove_peer(peer_id)
 
 # ===== HANDLERS DE JOGADOR =====
-
 func _handle_register_player(peer_id: int, player_name: String):
 	"""Processa solicitação de registro de nome de jogador"""
 	_log_debug("Tentativa de registro: '%s' (Peer ID: %d)" % [player_name, peer_id])
@@ -369,7 +364,6 @@ func _validate_player_name(player_name: String) -> String:
 	return ""
 
 # ===== HANDLERS DE SALAS =====
-
 func _handle_request_rooms_list(peer_id: int):
 	"""Envia lista de salas disponíveis (não em jogo) para o cliente"""
 	_log_debug("Cliente %d solicitou lista de salas" % peer_id)
@@ -786,7 +780,6 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 		_switch_camera_to_round(round_node)
 
 # ===== INSTANCIAÇÃO NO SERVIDOR =====
-
 func _server_instantiate_round(match_data: Dictionary, round_node, players_node):
 	"""
 	Instancia a rodada no servidor (mapa e players)
@@ -893,7 +886,6 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, pl
 	])
 
 # ===== CALLBACKS DE RODADA =====
-
 func _on_round_ending(round_id: int, reason: String):
 	"""
 	Callback quando uma rodada está terminando
@@ -918,7 +910,6 @@ func _on_all_players_disconnected(round_id: int):
 	round_registry.end_round(round_id, "all_disconnected")
 
 # ===== FIM DE RODADA =====
-
 func _complete_round_end(round_id: int):
 	"""
 	Completa o fim da rodada e retorna players à sala
@@ -988,7 +979,6 @@ func _cleanup_round_objects(round_id: int):
 	_log_debug("✓ Limpeza completa")
 
 # ===== VALIDAÇÃO ANTI-CHEAT =====
-
 func _validate_player_movement(p_id: int, pos: Vector3, vel: Vector3, rot: Vector3 = Vector3.ZERO) -> bool:
 	"""
 	Valida se o movimento do jogador é razoável (anti-cheat)
@@ -1107,7 +1097,6 @@ func _rpc_despawn_on_clients(player_ids: Array, round_id: int, object_id: int):
 		network_manager._rpc_client_despawn_item.rpc_id(player_id, object_id, round_id)
 
 # ===== VALIDAÇÃO DE ITENS =====
-
 @rpc("any_peer", "call_remote", "reliable")
 func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 	"""Servidor recebe pedido de pegar item para o inventário, valida e redistribui"""
@@ -1560,7 +1549,6 @@ func _server_validate_drop_item(requesting_player_id: int, obj_id: int):
 			player_node.execute_item_drop()
 		
 # ===== VALIDAÇÕES DE AÇÕES DO PLAYER =====
-
 func attack_validation(group: String, player_id: int, actual_weapon: String, body_name: int):
 	
 	if group == "player":
@@ -1629,7 +1617,6 @@ func _server_player_action(p_id: int, action_type: String, item_equipado_nome, a
 		player_node._client_receive_action(action_type, item_equipado_nome, anim_name)
 
 # ===== UTILITÁRIOS =====
-
 func _get_position_front_and_above(pos: Vector3, rot: Vector3, dist: float = 1.5, height: float = 1.2) -> Vector3:
 	"""
 	Calcula posição na frente e acima do player
@@ -1759,7 +1746,6 @@ func _log_debug(message: String):
 		print("[SERVER]" + message)
 
 # ===== DEBUG =====
-
 func _print_player_states():
 	"""Debug: Imprime estados de todos os players para validação"""
 	_log_debug("[PLAYSTATES]========================================")

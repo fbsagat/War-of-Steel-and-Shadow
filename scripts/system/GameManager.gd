@@ -5,7 +5,6 @@ class_name GameManager
 ## Responsável por conectar ao servidor dedicado e gerenciar o fluxo do jogo
 
 # ===== CONFIGURAÇÕES (Editáveis no Inspector) =====
-
 @export_category("Connection Settings")
 const DEFAULT_SERVER_ADDRESS: String = "127.0.0.1"
 const DEFAULT_SERVER_PORT: int = 7777
