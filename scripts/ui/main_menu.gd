@@ -11,6 +11,9 @@ var server_list_manager: ServerListManager = null
 #signal match_selected(match_id: int, password: String)
 #signal manual_join_requested(room_name: String, password: String)
 signal quit_game_requested()
+signal gameplay_menu_back_pressed()
+signal gameplay_menu_exit_game_pressed()
+signal gameplay_menu_disconnect_f_server_pressed()
 
 # Referências dos nós
 @onready var control_pai: Control
@@ -42,8 +45,8 @@ signal quit_game_requested()
 # Menu de lista de servidores
 @onready var server_list: ItemList
 @onready var server_list_error_label: Label
-@export var server_list_delete_button: Button
-@export var server_list_join_button: Button
+@onready var server_list_delete_button: Button
+@onready var server_list_join_button: Button
 
 # Menu de adicionar servidor na lista
 @onready var add_server_name_input: LineEdit
@@ -56,7 +59,7 @@ signal quit_game_requested()
 @onready var match_password_input: LineEdit
 @onready var match_password_container: VBoxContainer
 @onready var match_list_error_label: Label
-@export var match_list_join_button: Button
+@onready var match_list_join_button: Button
 
 # Menu de conexão
 @onready var connecting_label: Label
@@ -121,6 +124,7 @@ signal quit_game_requested()
 @onready var exit_confirm_label: Label
 
 @export var debug_mode : bool = true
+@export var start_unlocked_mouse: bool = false
 
 # Configurações atuais
 var current_settings = {
@@ -153,8 +157,8 @@ var resolutions = [
 	Vector2i(800, 600)     # SVGA
 ]
 
-var in_game: bool = false
-var mouse_mode: bool = true # Muda o modo de mouse na janela, capturado ou visivel
+var inventory_mode: bool = false # True se está com inventário aberto
+
 var current_menu_visible: CenterContainer = null
 var current_matches = []
 var current_servers = []
@@ -190,29 +194,14 @@ func _ready():
 	
 	# Registra esta UI no GameManager e conecta sinais
 	if game_manager:
-		game_manager.set_main_menu(self)
+		game_manager.main_menu_node = self
 		_connect_game_manager_signals()
 
 func _process(delta):
 	# Rotaciona o ícone de carregamento
 	if is_loading and loading_icon:
 		loading_icon.rotation += delta * 3.0
-
-func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("ui_cancel") and in_game:
-		_toggle_gameplay_menu()
-
-# Gameplay menu
-func _toggle_gameplay_menu():
-	mouse_mode = not mouse_mode
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if not mouse_mode else Input.MOUSE_MODE_CAPTURED
 	
-	if not mouse_mode:
-		show_gameplay_menu()
-	else:
-		show_gameplay_menu(true)
-			
-	_log_debug("Mouse %s." % ["liberado" if not mouse_mode else "capturado"])
 # ===== SETUP INICIAL =====
 
 func _setup_menu_references():
@@ -433,8 +422,6 @@ func _connect_game_manager_signals():
 	game_manager.joined_room.connect(_on_game_manager_room_joined)
 	game_manager.room_updated.connect(_on_game_manager_room_updated)
 	game_manager.error_occurred.connect(_on_game_manager_error)
-	game_manager.round_started.connect(_on_gameplay_started)
-	game_manager.round_ended.connect(_on_gameplay_ended)
 	
 	# Conecta sinais das opções de vídeo
 	if vsync_check:
@@ -516,8 +503,16 @@ func show_main_menu():
 	color_rect.visible = true
 	current_menu_visible = main_menu
 
+func hide_main_menu():
+	if start_unlocked_mouse:
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	else:
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+		
+	self.hide()
+	self.get_node("CanvasLayer").hide()
+
 func show_gameplay_menu(_hide: bool = false):
-	_log_debug("show_gameplay_menu")
 	hide_all_menus()
 	main_menu.visible = false
 	color_rect.visible = false
@@ -1007,14 +1002,16 @@ func _on_how_to_play_back_pressed():
 # ===== CALLBACKS DO MENU DE GAMEPLAY =====
 
 func _on_gameplay_menu_back_pressed():
-	_log_debug("Pressionado botão de menu de gameplay")
-	_toggle_gameplay_menu()
+	_log_debug("Pressionado botão de voltar ao jogo do menu de gameplay")
+	gameplay_menu_back_pressed.emit()
 	
 func _on_gameplay_menu_exit_game_pressed():
 	_log_debug("Pressionado botão de sair da partida")
+	gameplay_menu_exit_game_pressed.emit()
 	
 func _on_gameplay_menu_disconnect_f_server_pressed():
 	_log_debug("Pressionado botão de desconectar do servidor")
+	gameplay_menu_disconnect_f_server_pressed.emit()
 
 func _on_exit_confirm_menu_back_pressed():
 	_log_debug("Pressionado botão de voltar da tela de confirmação")
@@ -1517,12 +1514,6 @@ func _on_game_manager_error(error_message: String):
 		show_error_create_room(error_message)
 	elif manual_room_join_menu.visible:
 		show_error_manual_join(error_message)
-
-func _on_gameplay_started():
-	in_game = true
-	
-func  _on_gameplay_ended():
-	in_game = false
 
 # ===== CALLBACKS DE VÍDEO =====
 

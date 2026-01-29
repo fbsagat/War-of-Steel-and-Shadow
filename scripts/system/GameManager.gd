@@ -24,19 +24,16 @@ const camera_controller : String = "res://scenes/gameplay/camera_controller.tscn
 @export_category("Debug")
 @export var debug_mode: bool = true
 
-@export_category("Player")
-@export var inventory : Control
-
 # ===== REGISTROS (Injetados pelo initializer.gd) =====
-
 var item_database: ItemDatabase = null
 var network_manager: NetworkManager = null
 var initializer = null
 
 # ===== VARIÁVEIS INTERNAS =====
-
-var main_menu: Control = null
 var is_connected_to_server: bool = false
+var is_in_round: bool = false
+var inventory_menu: bool = false # True se o menu de inventário estiver visível
+var gameplay_menu: bool = false # True se o menu de gameplay  estiver visível
 var local_peer_id: int = 0
 var player_name: String = ""
 var configs: Dictionary = {}
@@ -50,16 +47,16 @@ var cached_unique_id: int = 0
 var spawned_objects: Dictionary = {}
 var local_inventory: Dictionary = {} # Inventário(de itens e equipamentos) local do player.
 
-## Referências da rodada atual
+# ===== REFERÊNCIAS =====
 var map_manager: Node = null
+var main_menu_node: Control = null
+var inventory_node : Control = null
 var local_player: Node = null
-var is_in_round: bool = false
 var round_node: Node = null
 var players_node: Node = null
 var objects_node: Node = null
 
 # ===== SINAIS =====
-
 signal connected_to_server()
 signal connection_failed(reason: String)
 signal disconnected_from_server()
@@ -87,15 +84,103 @@ func _ready():
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
 	_log_debug("Sinais de rede configurados")
 
+func connect_inventory_signals():
+	main_menu_node.gameplay_menu_back_pressed.connect(_on_gameplay_menu_back_pressed)
+	main_menu_node.gameplay_menu_exit_game_pressed.connect(_on_gameplay_menu_exit_game_pressed)
+	main_menu_node.gameplay_menu_disconnect_f_server_pressed.connect(_on_gameplay_menu_disconnect_f_server_pressed)
+
 func initialize():
-	if main_menu:
-		main_menu.show_main_menu()
+	if main_menu_node:
+		main_menu_node.show_main_menu()
 	
 	if localhost_auto_connect:
 		await get_tree().create_timer(0.25).timeout
 		join_server_by_ip(server_address, str(server_port))
 
-# ===== CONEXÃO COM O SERVIDOR =====
+# ===== FUNÇÕES DE MENU e INPUT =====
+func _unhandled_input(event: InputEvent) -> void:
+	if not _can_process_menu_input():
+		return
+
+	if event.is_action_pressed("ui_cancel"):
+		_handle_escape()
+		return
+
+	if event.is_action_pressed("ui_inventory"):
+		_handle_inventory()
+		return
+
+# Validação
+func _can_process_menu_input() -> bool:
+	return is_in_round \
+		and main_menu_node != null \
+		and inventory_node != null
+
+
+# ESC (ui_cancel)
+# Prioridade: 1. Fecha inventário. 2. Fecha gameplay menu. 3. Abre gameplay menu.
+func _handle_escape() -> void:
+	# Fecha inventário primeiro
+	if inventory_menu:
+		inventory_menu = false
+		_toggle_inventory_menu(true)
+		return
+
+	# Fecha gameplay menu
+	if gameplay_menu:
+		gameplay_menu = false
+		_toggle_gameplay_menu(true)
+		return
+
+	# Abre gameplay menu
+	gameplay_menu = true
+	_toggle_gameplay_menu(false)
+
+# Inventory menu (ui_inventory)
+func _handle_inventory() -> void:
+	# Não abre inventário se gameplay menu estiver aberto
+	if gameplay_menu:
+		return
+
+	inventory_menu = !inventory_menu
+	_toggle_inventory_menu(not inventory_menu)
+
+func _on_gameplay_menu_back_pressed():
+	_handle_escape()
+
+func _toggle_inventory_menu(hide: bool = false) -> void:
+	if not is_in_round or inventory_node == null:
+		return
+
+	if hide:
+		# Esconder inventário
+		inventory_node.hide_inventory()
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+		_log_debug("Escondendo menu de inventário e capturando ponteiro do mouse")
+	else:
+		# Mostrar inventário
+		inventory_node.show_inventory()
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+		_log_debug("Mostrando menu de inventário e exibindo ponteiro do mouse")
+
+# Gameplay menu
+func _toggle_gameplay_menu(hide: bool = false) -> void:
+	if main_menu_node == null:
+		return
+
+	if hide:
+		# Esconder gameplay menu
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+		main_menu_node.show_gameplay_menu(true)
+		_log_debug("Escondendo menu de gameplay e capturando ponteiro do mouse")
+	else:
+		# Mostrar gameplay menu
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+		main_menu_node.show_gameplay_menu(false)
+		_log_debug("Mostrando menu de gameplay e exibindo ponteiro do mouse")
+
+
+# ===== FUNÇÕES DE CONEXÃO COM O SERVIDOR =====
 func join_server_by_ip(received_ip: String, received_port: String) -> bool:
 	# Validar IP/hostname
 	if received_ip and received_ip.strip_edges() != "":
@@ -201,8 +286,8 @@ func connect_to_server():
 	
 	_log_debug("Tentando conectar ao servidor: %s:%d" % [server_address, server_port])
 	
-	if main_menu:
-		main_menu.show_loading_menu("Conectando ao servidor...")
+	if main_menu_node:
+		main_menu_node.show_loading_menu("Conectando ao servidor...")
 	
 	var peer = ENetMultiplayerPeer.new()
 	var error = peer.create_client(server_address, server_port)
@@ -253,8 +338,8 @@ func _on_connected_to_server():
 	
 	_log_debug(" Cliente conectado ao servidor com sucesso! Peer ID: %d" % local_peer_id)
 	
-	if main_menu:
-		main_menu.show_name_input_menu()
+	if main_menu_node:
+		main_menu_node.show_name_input_menu()
 	
 	connected_to_server.emit()
 
@@ -271,11 +356,19 @@ func _on_server_disconnected():
 	_reset_client_state()
 	
 	# Inicia processo de reconexão
-	if main_menu:
-		main_menu.show_connecting_menu()
-		main_menu.show_error_connecting("Conexão perdida. Tentando reconectar...")
+	if main_menu_node:
+		main_menu_node.show_connecting_menu()
+		main_menu_node.show_error_connecting("Conexão perdida. Tentando reconectar...")
 	
 	disconnected_from_server.emit()
+
+func _on_gameplay_menu_exit_game_pressed():
+	_log_debug("_on_gameplay_menu_exit_game_pressed")
+	pass
+
+func _on_gameplay_menu_disconnect_f_server_pressed():
+	_log_debug("_on_gameplay_menu_disconnect_f_server_pressed")
+	disconnect_from_server()
 
 func _reset_client_state():
 	# Limpa todos os objetos spawnados
@@ -301,14 +394,14 @@ func _reset_client_state():
 	is_in_round = false
 	
 	# Volta para tela inicial de conexão
-	if main_menu:
-		main_menu.show_loading_menu("Conectando ao servidor...")
+	if main_menu_node:
+		main_menu_node.show_loading_menu("Conectando ao servidor...")
 	
 func _handle_connection_error(message: String):
 	"""Trata erro de conexão"""
-	if main_menu:
-		main_menu.show_connecting_menu()
-		main_menu.show_error_connecting(message)
+	if main_menu_node:
+		main_menu_node.show_connecting_menu()
+		main_menu_node.show_error_connecting(message)
 	
 	connection_failed.emit(message)
 	
@@ -344,8 +437,8 @@ func set_player_name(p_name: String):
 	
 	_log_debug("Tentando registrar nome: " + p_name)
 	
-	if main_menu:
-		main_menu.show_loading_menu("Registrando jogador...")
+	if main_menu_node:
+		main_menu_node.show_loading_menu("Registrando jogador...")
 	
 	network_manager.register_player(p_name)
 	
@@ -354,8 +447,8 @@ func _client_name_accepted(accepted_name: String):
 	player_name = accepted_name
 	_log_debug("Nome aceito pelo servidor: " + player_name)
 	
-	if main_menu:
-		main_menu.update_name_e_connected(configs["server_name"], accepted_name)
+	if main_menu_node:
+		main_menu_node.update_name_e_connected(configs["server_name"], accepted_name)
 		
 	name_accepted.emit()
 	
@@ -363,43 +456,43 @@ func _client_name_rejected(reason: String):
 	"""Callback quando o nome é rejeitado"""
 	_log_debug("Nome rejeitado: " + reason)
 	
-	if main_menu:
-		main_menu.show_name_input_menu()
-		main_menu.show_error_name_input(reason)
+	if main_menu_node:
+		main_menu_node.show_name_input_menu()
+		main_menu_node.show_error_name_input(reason)
 	
 	name_rejected.emit(reason)
 	
 func _client_wrong_password():
 	"""Callback quando a senha está incorreta"""
 	
-	var current_menu_visible_name = main_menu.current_menu_visible.name
+	var current_menu_visible_name = main_menu_node.current_menu_visible.name
 	
-	if main_menu and current_menu_visible_name == "RoomListMenu":
-		main_menu.show_room_list_menu(true)
-		main_menu.room_list_menu.visible = true
+	if main_menu_node and current_menu_visible_name == "RoomListMenu":
+		main_menu_node.show_room_list_menu(true)
+		main_menu_node.room_list_menu.visible = true
 
-	if main_menu and current_menu_visible_name == "ManualRoomJoinMenu":
-		main_menu.show_manual_room_join_menu()
+	if main_menu_node and current_menu_visible_name == "ManualRoomJoinMenu":
+		main_menu_node.show_manual_room_join_menu()
 		
 	_show_error("Senha incorreta")
 	
 func _client_room_name_exists():
 	"""Callback de quando já existe uma sala com o nome escolhido"""
-	if main_menu:
-		main_menu.show_create_match_menu()
+	if main_menu_node:
+		main_menu_node.show_create_match_menu()
 		_show_error("Já existe uma sala com o nome escolhido")
 
 func _client_room_name_error(error_msg : String):
 	"""Callback de quando já existe uma sala com o nome escolhido"""
-	if main_menu:
-		main_menu.show_create_match_menu()
+	if main_menu_node:
+		main_menu_node.show_create_match_menu()
 		_show_error(error_msg)
 
 func _client_room_not_found():
 	"""Callback quando a sala não é encontrada"""
-	if main_menu:
-		main_menu.show_room_list_menu()
-		main_menu.match_password_container.visible = true
+	if main_menu_node:
+		main_menu_node.show_room_list_menu()
+		main_menu_node.match_password_container.visible = true
 		_show_error("Sala não encontrada")
 		# Arrumar algum dia
 
@@ -436,8 +529,8 @@ func create_room(room_name: String, password: String = ""):
 	
 	_log_debug("Criando sala: '%s' (Senha: %s)" % [room_name, "Sim" if password else "Não"])
 	
-	if main_menu:
-		main_menu.show_loading_menu("Criando sala...")
+	if main_menu_node:
+		main_menu_node.show_loading_menu("Criando sala...")
 	
 	network_manager.create_room(room_name, password)
 
@@ -446,8 +539,8 @@ func _client_room_created(room_data: Dictionary):
 	current_room = room_data
 	_log_debug(" Sala criada com sucesso: %s (ID: %d)" % [room_data["name"], room_data["id"]])
 	
-	if main_menu:
-		main_menu.show_room_menu(room_data)
+	if main_menu_node:
+		main_menu_node.show_room_menu(room_data)
 	
 	room_created.emit(room_data)
 
@@ -463,8 +556,8 @@ func join_room(room_id: int, password: String = ""):
 	
 	_log_debug("Tentando entrar na sala ID: %d" % room_id)
 	
-	if main_menu:
-		main_menu.show_loading_menu("Entrando na sala...")
+	if main_menu_node:
+		main_menu_node.show_loading_menu("Entrando na sala...")
 	
 	network_manager.join_room(room_id, password)
 
@@ -480,8 +573,8 @@ func join_room_by_name(room_name: String, password: String = ""):
 	
 	_log_debug("Tentando entrar na sala: '%s'" % room_name)
 	
-	if main_menu:
-		main_menu.show_loading_menu("Procurando sala...")
+	if main_menu_node:
+		main_menu_node.show_loading_menu("Procurando sala...")
 	
 	network_manager.join_room_by_name(room_name, password)
 
@@ -490,8 +583,8 @@ func _client_joined_room(room_data: Dictionary):
 	current_room = room_data
 	_log_debug("Entrou na sala com sucesso: %s (ID: %d)" % [room_data["name"], room_data["id"]])
 	
-	if main_menu:
-		main_menu.show_room_menu(room_data)
+	if main_menu_node:
+		main_menu_node.show_room_menu(room_data)
 	
 	joined_room.emit(room_data)
 
@@ -528,16 +621,16 @@ func close_room():
 	_log_debug("Fechando sala: %s" % current_room["name"])
 	network_manager.close_room()
 	current_room = {}
-	if main_menu:
-		main_menu.show_main_menu()
+	if main_menu_node:
+		main_menu_node.show_main_menu()
 
 func _client_room_closed(reason: String):
 	"""Callback quando a sala é fechada"""
 	_log_debug("Sala fechada: " + reason)
 	current_room = {}
 	
-	if main_menu:
-		main_menu.show_room_list_menu()
+	if main_menu_node:
+		main_menu_node.show_room_list_menu()
 		_show_error(reason)
 		# Arrumar algum dia
 
@@ -586,8 +679,8 @@ func _client_round_ended(end_data: Dictionary):
 	_log_debug("========================================")
 	
 	# Mostrar UI de fim de rodada (se tiver)
-	if main_menu:
-		main_menu.show_round_end_screen(end_data)
+	if main_menu_node:
+		main_menu_node.show_round_end_screen(end_data)
 	
 	round_ended.emit(end_data)
 	
@@ -616,9 +709,8 @@ func _start_round_locally(match_data: Dictionary):
 	is_in_round = true
 	
 	# Esconde o menu
-	if main_menu:
-		main_menu.hide()
-		main_menu.get_node("CanvasLayer").hide()
+	if main_menu_node:
+		main_menu_node.hide_main_menu()
 	
 	# Criar cena de organização do round
 	round_node = Node.new()
@@ -674,17 +766,18 @@ func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bo
 	var player_scene_ = preload(player_scene)
 	var player_instance = player_scene_.instantiate()
 	
+	# Injeta configurações
 	player_instance.name = player_name_
 	player_instance.player_id = player_data["id"]
 	player_instance.player_name = player_data["name"]
-	
-	# Adiciona player à cena PRIMEIRO
-	players_node.add_child(player_instance)
 	
 	# Injeta dependências
 	player_instance.item_database = item_database
 	player_instance.network_manager = network_manager
 	player_instance.game_manager = self
+	
+	# Adiciona player à cena PRIMEIRO
+	players_node.add_child(player_instance)
 	
 	# Inicializa jogador
 	var spawn_info = map_manager.get_spawn_data(spawn_data["spawn_index"])
@@ -705,15 +798,16 @@ func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bo
 		
 		# Carrega o menu de inventário
 		var inventory_scene: PackedScene = load("res://scenes/ui/inventory_menu.tscn")
-		var inventory_node: Node = inventory_scene.instantiate()
-		get_tree().root.add_child(inventory_node)
-		inventory = inventory_node
+		var inventory_node_: Node = inventory_scene.instantiate()
+		get_tree().root.add_child(inventory_node_)
+		inventory_node = inventory_node_
 		inventory_node.game_manager = self
 		
 		# Atribui referência DIRETA (só para local) inventory_node
-		player_instance.inventory = inventory_node
-		player_instance.inventory.setup_inventory_signals()
+		player_instance.inventory_node = inventory_node
+		inventory_node.setup_inventory_signals()
 		player_instance.connect_inventory_signals()
+		connect_inventory_signals()
 		
 		# Atribui referência DIRETA (só para local) camera_instance
 		player_instance.camera_controller = camera_instance
@@ -758,9 +852,9 @@ func _client_return_to_room(room_data: Dictionary):
 	_cleanup_local_round()
 	
 	# Volta para o menu da sala
-	if main_menu:
-		main_menu.show()
-		main_menu.show_room_menu(room_data)
+	if main_menu_node:
+		main_menu_node.show()
+		main_menu_node.show_room_menu(room_data)
 	
 	returned_to_room.emit(room_data)
 	
@@ -816,17 +910,17 @@ func _show_error(message: String):
 	"""Mostra erro na UI apropriada"""
 	_log_debug("ERRO: " + message)
 	
-	if main_menu:
-		if main_menu.connecting_menu and main_menu.connecting_menu.visible:
-			main_menu.show_error_connecting(message)
-		elif main_menu.room_menu and main_menu.room_menu.visible:
-			main_menu.show_error_room(message)
-		elif main_menu.room_list_menu and main_menu.room_list_menu.visible:
-			main_menu.show_error_room_list(message)
-		elif main_menu.manual_room_join_menu and main_menu.manual_room_join_menu.visible:
-			main_menu.show_error_manual_join(message)
-		elif main_menu.create_room_menu and main_menu.create_room_menu.visible:
-			main_menu.show_error_create_room(message)
+	if main_menu_node:
+		if main_menu_node.connecting_menu and main_menu_node.connecting_menu.visible:
+			main_menu_node.show_error_connecting(message)
+		elif main_menu_node.room_menu and main_menu_node.room_menu.visible:
+			main_menu_node.show_error_room(message)
+		elif main_menu_node.room_list_menu and main_menu_node.room_list_menu.visible:
+			main_menu_node.show_error_room_list(message)
+		elif main_menu_node.manual_room_join_menu and main_menu_node.manual_room_join_menu.visible:
+			main_menu_node.show_error_manual_join(message)
+		elif main_menu_node.create_room_menu and main_menu_node.create_room_menu.visible:
+			main_menu_node.show_error_create_room(message)
 
 # ===== SISTEMA DE INVENTÁRIO POR RODADA =====
 	
@@ -1184,11 +1278,6 @@ func filtrar_dict_invertido(original: Dictionary) -> Dictionary:
 		if not comando.has(chave):
 			copia.erase(chave)
 	return copia
-
-func set_main_menu(menu: Control):
-	"""Registra referência do menu principal"""
-	main_menu = menu
-	_log_debug("UI principal registrada")
 	
 func verificar_rede() -> bool:
 	var peer = multiplayer.multiplayer_peer

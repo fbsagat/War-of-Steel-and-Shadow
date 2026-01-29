@@ -54,7 +54,7 @@ extends CharacterBody3D
 @onready var animation_tree: AnimationTree = $AnimationTree
 @onready var attack_timer: Timer = $attack_timer
 @onready var name_label: Label3D = $NameLabel
-@onready var inventory : Control
+@onready var inventory_node : Control
 
 # ===== REGISTROS (Injetados pelo initializer.gd) =====
 
@@ -85,11 +85,11 @@ var is_jumping: bool = false # True se está pulando
 var is_aiming: bool = false # true se estás mirando
 var is_running: bool = false # True se está pulando
 var is_moving: bool = false # True se está pulando ou atacando ou defendendo (para stamina)
-var inventory_mode: bool = false # True se está com inventário aberto
 var run_on_jump: bool = false
 var last_simple_directions: Array = []
 var is_block_attacking: bool = false
 var stamina_level: float = 100
+var stop_movment: bool = false
 const MAX_STAMINA: float = 100.0
 const STAMINA_DEPLETION_RATE: float = 20.0  # por segundo
 const STAMINA_RECOVERY_RATE: float = 15.0   # por segundo
@@ -205,8 +205,8 @@ func _physics_process(delta: float) -> void:
 		stamina_level += STAMINA_RECOVERY_RATE * delta
 		stamina_level = min(stamina_level, MAX_STAMINA)
 	
-	if inventory:
-		inventory.set_stamina(stamina_level)
+	if inventory_node:
+		inventory_node.set_stamina(stamina_level)
 	#_log_debug("Stamina: %s" % stamina_level)
 	
 func _respawn_player(_position : Vector3):
@@ -216,10 +216,10 @@ func _process(_delta: float) -> void:
 	pass
 	
 func connect_inventory_signals():
-	inventory.request_drop_item.connect(action_drop_item_call)
-	inventory.request_equip_item.connect(action_equip_item_call)
-	inventory.request_unequip_item.connect(action_unequip_item_call)
-	inventory.request_swap_items.connect(action_swap_items_call)
+	inventory_node.request_drop_item.connect(action_drop_item_call)
+	inventory_node.request_equip_item.connect(action_equip_item_call)
+	inventory_node.request_unequip_item.connect(action_unequip_item_call)
+	inventory_node.request_swap_items.connect(action_swap_items_call)
 
 func hitboxes_manager():
 	# Conecta automaticamente todos os hitboxes de ataque presentes no modelo
@@ -470,7 +470,7 @@ func _handle_movement_input(delta: float):
 			move_dir = _get_movement_direction_locked()
 		else:
 			move_dir = _get_movement_direction_free_cam()
-	_apply_movement(move_dir if not inventory_mode else Vector3(0, 0, 0), delta)
+	_apply_movement(move_dir if not stop_movment else Vector3(0, 0, 0), delta)
 	return move_dir
 	
 # Movimentos: Pulo e corrida
@@ -478,7 +478,7 @@ func _apply_movement(move_dir: Vector3, delta: float) -> void:
 	# Pulo: Preserva velocidade horizontal EXATA do chão
 		
 	if not is_aiming:
-		if Input.is_action_just_pressed("jump") and is_on_floor() and not inventory_mode and stamina_level > 0:
+		if Input.is_action_just_pressed("jump") and is_on_floor() and not stop_movment and stamina_level > 0:
 			velocity.y = jump_velocity
 			is_jumping = true
 			run_on_jump = Input.is_action_pressed("run")
@@ -501,7 +501,7 @@ func _apply_movement(move_dir: Vector3, delta: float) -> void:
 			animation_tree["parameters/final_transt/transition_request"] = "jump_land"
 			animation_tree["parameters/final_transt/transition_request"] = "walking_e_blends"
 	else:
-		if Input.is_action_just_pressed("jump") and is_on_floor() and not inventory_mode and stamina_level > 0:
+		if Input.is_action_just_pressed("jump") and is_on_floor() and not stop_movment and stamina_level > 0:
 			animation_tree.set("parameters/Jump_Full_Short/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 			#velocity.y = jump_velocity / 2.2
 			is_jumping = true
@@ -572,7 +572,7 @@ func camera_strafe_mode(ativar: bool = true):
 func _unhandled_input(event: InputEvent) -> void:
 	handle_test_equip_inputs_call()
 	
-	if is_local_player and not inventory_mode:
+	if is_local_player and not stop_movment:
 		if event.is_action_pressed("interact"):
 			action_pick_up_item_call()
 		elif event.is_action_pressed("attack"):
@@ -587,26 +587,6 @@ func _unhandled_input(event: InputEvent) -> void:
 			handle_test_drop_item_call()
 		elif event.is_action_pressed("repawn_player"):
 			handle_test_repawn_player_call()
-	if event.is_action_pressed("ui_inventory"):
-		request_inventory_toggle()
-		if inventory_mode:
-			request_inventory_toggle()
-			
-func request_inventory_toggle():
-	inventory_mode = not inventory_mode
-
-	if inventory and inventory_mode:
-		# Mostrar inventário
-		inventory.show_inventory()
-		
-		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-		_log_debug("Inventário aberto.")
-	elif inventory:
-		# Esconder inventário
-		inventory.hide_inventory()
-		
-		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
-		_log_debug("Inventário fechado.")
 		
 # Visual
 func _hide_all_model_items():
@@ -1311,7 +1291,7 @@ func initialize(p_id: int, p_name: String, spawn_pos: Vector3):
 # Função para equipar itens magicamente (Trainer de testes / Remover em produção)
 func handle_test_equip_inputs_call():
 
-	if not inventory_mode:
+	if not stop_movment:
 		var mapped_id: int
 		var test_equip_map: Dictionary = {}
 
