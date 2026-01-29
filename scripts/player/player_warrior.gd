@@ -10,11 +10,11 @@ extends CharacterBody3D
 @export var walking_speed: float = 2.0
 @export var run_multiplier: float = 1.5
 @export var jump_velocity: float = 8.0
-@export var acceleration: float = 8.0
-@export var deceleration: float = 8.0
+@export var acceleration: float = 10.0
+@export var deceleration: float = 15.0
 @export var bobbing_intensity: float = 0.6
-@export var turn_speed: float = 8.0
-@export var air_control: float = 1.2
+@export var turn_speed: float = 10.0
+@export var air_control: float = 0.3
 @export var air_friction: float = 0.01
 @export var preserve_run_on_jump: bool = true
 @export var gravity: float = 20.0
@@ -291,37 +291,6 @@ func get_nearby_items(
 		)
 	
 	return items
-	
-# Funções da câmera livre
-func _get_movement_direction_free_cam() -> Vector3:
-	var camera := camera_controller
-	if camera and camera.is_inside_tree():
-		var cam_basis := camera.global_transform.basis
-		var cam_forward := (-cam_basis.z).normalized()
-		cam_forward.y = 0.0
-		var cam_right := Vector3.UP.cross(cam_forward).normalized()
-		var input_vec := Input.get_vector("move_left", "move_right", "move_forward", "move_backward")
-		if input_vec.length() > 0.1:
-			return (cam_forward * input_vec.y + cam_right * input_vec.x).normalized()
-	else:
-		_log_debug("Câmera não disponível. Usando eixos fixos")
-		var world_input := Input.get_vector("move_left", "move_right", "move_forward", "move_backward")
-		if world_input.length() > 0.1:
-			return Vector3(-world_input.x, 0.0, world_input.y).normalized()
-	return Vector3.ZERO
-	
-# Funções da câmera lockada
-func _get_movement_direction_locked() -> Vector3:
-	var input_vec := Input.get_vector("move_left", "move_right", "move_forward", "move_backward")
-	if input_vec.length() <= 0.1:
-		return Vector3.ZERO
-		
-	# Usa a frente atual do corpo
-	var forward = Vector3(-global_transform.basis.z.x, 0, -global_transform.basis.z.z).normalized()
-	var right = Vector3.UP.cross(forward).normalized()
-
-	# Input: Y = para frente/trás, X = strafe
-	return (forward * input_vec.y + right * input_vec.x).normalized()
 
 # Configura timer para atualização periódica de inimigos próximos
 func enemy_detection_timer():
@@ -460,17 +429,59 @@ func _handle_animations(move_dir):
 	elif floor_state and not is_jumping:
 		animation_tree["parameters/final_transt/transition_request"] = "jump_land"
 		animation_tree["parameters/final_transt/transition_request"] = "walking_e_blends"
+		
+# Funções da câmera livre
+func _get_movement_direction_free_cam() -> Vector3:
+	var camera := camera_controller
+	if camera and camera.is_inside_tree():
+		var cam_basis := camera.global_transform.basis
+		
+		# ✅ CORRETO: Zera Y ANTES de normalizar
+		var cam_forward := -cam_basis.z
+		cam_forward.y = 0.0
+		cam_forward = cam_forward.normalized()  # Normaliza DEPOIS
+		
+		var cam_right := Vector3.UP.cross(cam_forward).normalized()
+		
+		var input_vec := Input.get_vector("move_left", "move_right", "move_forward", "move_backward")
+		if input_vec.length() > 0.01:  # ✅ Threshold menor para precisão
+			return (cam_forward * input_vec.y + cam_right * input_vec.x).normalized()
+	else:
+		_log_debug("Câmera não disponível. Usando eixos fixos")
+		var world_input := Input.get_vector("move_left", "move_right", "move_forward", "move_backward")
+		if world_input.length() > 0.01:
+			return Vector3(-world_input.x, 0.0, world_input.y).normalized()
+	
+	return Vector3.ZERO
+	
+# Funções da câmera lockada
+func _get_movement_direction_locked() -> Vector3:
+	var input_vec := Input.get_vector("move_left", "move_right", "move_forward", "move_backward")
+	if input_vec.length() <= 0.01:  # ✅ Threshold consistente
+		return Vector3.ZERO
+	
+	# ✅ Simplificado e correto
+	var forward := -global_transform.basis.z
+	forward.y = 0.0
+	forward = forward.normalized()
+	
+	var right := Vector3.UP.cross(forward).normalized()
+	
+	# Input: Y = frente/trás, X = strafe
+	return (forward * input_vec.y + right * input_vec.x).normalized()
 
 # Movimentos: Aplica conforme o modo ativado no momento: free_cam ou locked
-func _handle_movement_input(delta: float):
-	var move_dir: Vector3
-	# move_dir zempre zerada para servidor, ele recebe movimentação via rpc, não via input
-	if not _is_server:
+func _handle_movement_input(delta: float) -> Vector3:
+	var move_dir := Vector3.ZERO
+	
+	# Só processa input se NÃO for servidor
+	if not _is_server and not stop_movment:  # ✅ Checa stop_movment aqui
 		if is_aiming:
 			move_dir = _get_movement_direction_locked()
 		else:
 			move_dir = _get_movement_direction_free_cam()
-	_apply_movement(move_dir if not stop_movment else Vector3(0, 0, 0), delta)
+	
+	_apply_movement(move_dir, delta)
 	return move_dir
 	
 # Movimentos: Pulo e corrida
