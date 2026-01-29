@@ -51,7 +51,7 @@ var local_inventory: Dictionary = {} # Inventário(de itens e equipamentos) loca
 var map_manager: Node = null
 var main_menu_node: Control = null
 var inventory_node : Control = null
-var local_player: Node = null
+var local_player_node: Node = null
 var round_node: Node = null
 var players_node: Node = null
 var objects_node: Node = null
@@ -154,11 +154,13 @@ func _toggle_inventory_menu(hide: bool = false) -> void:
 
 	if hide:
 		# Esconder inventário
+		local_player_node.stop_movment = false
 		inventory_node.hide_inventory()
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 		_log_debug("Escondendo menu de inventário e capturando ponteiro do mouse")
 	else:
 		# Mostrar inventário
+		local_player_node.stop_movment = true
 		inventory_node.show_inventory()
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 		_log_debug("Mostrando menu de inventário e exibindo ponteiro do mouse")
@@ -170,11 +172,13 @@ func _toggle_gameplay_menu(hide: bool = false) -> void:
 
 	if hide:
 		# Esconder gameplay menu
+		local_player_node.stop_movment = false
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 		main_menu_node.show_gameplay_menu(true)
 		_log_debug("Escondendo menu de gameplay e capturando ponteiro do mouse")
 	else:
 		# Mostrar gameplay menu
+		local_player_node.stop_movment = true
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 		main_menu_node.show_gameplay_menu(false)
 		_log_debug("Mostrando menu de gameplay e exibindo ponteiro do mouse")
@@ -398,7 +402,7 @@ func _reset_client_state():
 	current_room = {}
 	current_round = {}
 	#map_manager = null
-	local_player = null
+	local_player_node = null
 	is_in_round = false
 	
 	# Volta para tela inicial de conexão
@@ -825,7 +829,7 @@ func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bo
 		# Ativa controle
 		player_instance.set_as_local_player()
 		camera_instance.set_as_active()
-		local_player = player_instance
+		local_player_node = player_instance
 		
 		player_instance.add_to_group("player")
 		player_instance.add_to_group("myself_player")
@@ -884,7 +888,7 @@ func _cleanup_local_round():
 		if child.is_in_group("player") or child.is_in_group("camera_controller"):
 			child.queue_free()
 	
-	local_player = null
+	local_player_node = null
 	
 	# Limpa objetos spawnados
 	for round_id in spawned_objects.keys():
