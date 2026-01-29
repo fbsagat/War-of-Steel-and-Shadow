@@ -11,6 +11,7 @@ const DEFAULT_SERVER_PORT: int = 7777
 @export var server_address: String = DEFAULT_SERVER_ADDRESS
 @export var server_port: int = DEFAULT_SERVER_PORT
 @export var localhost_auto_connect: bool = false
+var peer: ENetMultiplayerPeer
 
 const map_scene : String = "res://scenes/system/terrain_3d.tscn"
 const player_scene : String = "res://scenes/gameplay/player_warrior.tscn"
@@ -288,7 +289,7 @@ func connect_to_server():
 	if main_menu_node:
 		main_menu_node.show_loading_menu("Conectando ao servidor...")
 	
-	var peer = ENetMultiplayerPeer.new()
+	peer = ENetMultiplayerPeer.new()
 	var error = peer.create_client(server_address, server_port)
 	
 	if error != OK:
@@ -311,14 +312,20 @@ func disconnect_from_server():
 		multiplayer.multiplayer_peer.close()
 		multiplayer.multiplayer_peer = null
 	
-	is_connected_to_server = false
-	is_connecting = false
-	local_peer_id = 0
-	current_room = {}
-	player_name = ""
-	is_in_round = false
-	
-	disconnected_from_server.emit()
+		peer = null
+		is_connected_to_server = false
+		is_connecting = false
+		local_peer_id = 0
+		current_room = {}
+		player_name = ""
+		is_in_round = false
+		
+		if round_node:
+			round_node.queue_free()
+		if inventory_node:
+			inventory_node.queue_free()
+		
+		disconnected_from_server.emit()
 
 # ===== CALLBACKS DE CONEXÃO =====
 
@@ -352,6 +359,8 @@ func _on_server_disconnected():
 	is_in_round = false
 	
 	# Reseta estado do cliente
+	if round_node:
+		round_node.queue_free()
 	_reset_client_state()
 	
 	# Inicia processo de reconexão
@@ -806,7 +815,6 @@ func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bo
 		player_instance.inventory_node = inventory_node
 		inventory_node.setup_inventory_signals()
 		player_instance.connect_inventory_signals()
-		connect_inventory_signals()
 		
 		# Atribui referência DIRETA (só para local) camera_instance
 		player_instance.camera_controller = camera_instance
@@ -1279,8 +1287,8 @@ func filtrar_dict_invertido(original: Dictionary) -> Dictionary:
 	return copia
 	
 func verificar_rede() -> bool:
-	var peer = multiplayer.multiplayer_peer
-	return peer != null and peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED and multiplayer != null and multiplayer.has_multiplayer_peer()
+	var peer_ = multiplayer.multiplayer_peer
+	return peer_ != null and peer_.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED and multiplayer != null and multiplayer.has_multiplayer_peer()
 
 func _log_debug(message: String):
 	if not debug_mode:

@@ -3,7 +3,7 @@ extends Node
 # Configurações
 ## [TESTES] Usa o TestManager para iniciar logo uma partida na execução
 ## (configura server e clients / clients recebem localhost_auto_connect = true)
-@export var test_mode: bool = true
+@export var test_mode: bool = false
 ## [TESTES] Define a quantidade de instâcias de clientes conectadas para executar fast_round
 @export var simulador_players_qtd: int = 2
 ## [TESTES] Dropa itens perto dos players e ativa o trainer de cada player
@@ -206,6 +206,7 @@ func _init_client():
 	game_manager.item_database = item_database
 	game_manager.network_manager = network_manager
 	game_manager.map_manager = map_manager
+	game_manager.main_menu_node = main_menu
 	game_manager.initializer = self
 	
 	# MainMenu precisa de:
@@ -213,6 +214,8 @@ func _init_client():
 	main_menu.server_list_manager = server_list_manager
 	
 	# Configurações
+	game_manager.connect_inventory_signals()
+	main_menu._connect_game_manager_signals()
 	
 	# Configurar modo de testes
 	if test_mode:

@@ -191,11 +191,6 @@ func _ready():
 	
 	# Força centralização inicial
 	_center_window()
-	
-	# Registra esta UI no GameManager e conecta sinais
-	if game_manager:
-		game_manager.main_menu_node = self
-		_connect_game_manager_signals()
 
 func _process(delta):
 	# Rotaciona o ícone de carregamento
