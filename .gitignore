@@ -77,3 +77,4 @@ node_modules/
 # project.godot deve ser versionado (configurações do projeto)
 
 # FIM
+/addons/terrain_3d/bin
