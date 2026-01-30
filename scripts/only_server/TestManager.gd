@@ -472,10 +472,10 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 
 func on_spawn_requested(_character) -> void:
 	var _round_id = client_registry.get_player_round(_character.player_id)
-	var round = round_registry.get_round(_round_id)
-	var objects_node = round["round_node"].get_node_or_null("Objects")
+	var _round = round_registry.get_round(_round_id)
+	var objects_node = _round["round_node"].get_node_or_null("Objects")
 	var potions = ["potion_glass_heal", "potion_glass_stamina", "potion_glass_poison"]
-	object_manager.spawn_item(objects_node, _round_id, potions.pick_random(), Vector3(8.204, 2.30, 14.222), Vector3(0, 0, 0), Vector3(randi_range(-5, 5), randi_range(5, 30), randi_range(-5, 5)))
+	object_manager.spawn_item(objects_node, _round_id, potions.pick_random(), Vector3(8.204, 2.30, 14.222), Vector3(randi_range(-5, 5), randi_range(-5, 5), randi_range(-5, 5)), Vector3(randi_range(-5, 5), randi_range(5, 30), randi_range(-5, 5)))
 	
 # ===== UTILITÁRIOS =====
 
