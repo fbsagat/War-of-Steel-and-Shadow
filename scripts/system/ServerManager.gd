@@ -1157,7 +1157,7 @@ func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 		return
 	
 	# Se auto equip false, não equipar automaticamente
-	if not item_database.get_item(item["name"]).to_dictionary()["auto_equip"]:
+	if not item_database.get_item(item["name"]).is_auto_equip_function():
 		return
 	
 	# Equipa o item no registro do player

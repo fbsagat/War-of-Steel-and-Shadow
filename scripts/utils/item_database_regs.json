@@ -322,7 +322,7 @@
 
 
   {
-	"id": 12,
+	"id": 112,
 	"scene_path": "res://scenes/collectibles/apple.tscn",
 	"model_node_link": "World/Items/apple",
 	"owner": "all",
@@ -342,7 +342,7 @@
 	"craft_uses": []
   },
   {
-	"id": 13,
+	"id": 113,
 	"scene_path": "res://scenes/collectibles/materials/dried_meat.tscn",
 	"model_node_link": "World/Items/Materials/dried_meat",
 	"owner": "all",
@@ -362,7 +362,7 @@
 	"craft_uses": ["stew", "rations"]
   },
   {
-	"id": 14,
+	"id": 114,
 	"scene_path": "res://scenes/collectibles/materials/herb_leaf.tscn",
 	"model_node_link": "World/Items/Materials/herb_leaf",
 	"owner": "all",
@@ -382,7 +382,7 @@
 	"craft_uses": ["health_potion", "stamina_potion"]
   },
   {
-	"id": 15,
+	"id": 115,
 	"scene_path": "res://scenes/collectibles/materials/iron_ingot.tscn",
 	"model_node_link": "World/Items/Materials/iron_ingot",
 	"owner": "all",
@@ -402,7 +402,7 @@
 	"notes": "Usado como núcleo para lâminas e mecanismos"
   },
   {
-	"id": 16,
+	"id": 116,
 	"scene_path": "res://scenes/collectibles/materials/oak_plank.tscn",
 	"model_node_link": "World/Items/Materials/oak_plank",
 	"owner": "all",
@@ -421,7 +421,7 @@
 	"craft_uses": ["shield_1", "small_shield"]
   },
   {
-	"id": 17,
+	"id": 117,
 	"scene_path": "res://scenes/collectibles/materials/steel_plate.tscn",
 	"model_node_link": "World/Items/Materials/steel_plate",
 	"owner": "all",
@@ -440,7 +440,7 @@
 	"craft_uses": ["steel_helmet", "heavy_helmet"]
   },
   {
-	"id": 18,
+	"id": 118,
 	"scene_path": "res://scenes/collectibles/materials/silk_cloth.tscn",
 	"model_node_link": "World/Items/Materials/silk_cloth",
 	"owner": "all",
@@ -459,7 +459,7 @@
 	"craft_uses": ["cape_2", "silken_cloak"]
   },
   {
-	"id": 19,
+	"id": 119,
 	"scene_path": "res://scenes/collectibles/materials/tinder_bundle.tscn",
 	"model_node_link": "World/Items/Materials/tinder_bundle",
 	"owner": "all",

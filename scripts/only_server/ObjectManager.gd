@@ -98,7 +98,7 @@ func reset():
 
 # ===== SPAWN DE OBJETOS - API PRINCIPAL (SERVIDOR) =====
 
-func spawn_item(objects_node, round_id: int, item_name: String, position: Vector3, rotation: Vector3 = Vector3.ZERO, owner_id: int = -1) -> int:
+func spawn_item(objects_node, round_id: int, item_name: String, position: Vector3, rotation: Vector3 = Vector3.ZERO, velocity: Vector3 = Vector3.ZERO, owner_id: int = -1) -> int:
 	"""
 	Spawna item no servidor e replica para clientes
 	
@@ -134,7 +134,7 @@ func spawn_item(objects_node, round_id: int, item_name: String, position: Vector
 	_log_debug("🔨 Spawnando item no servidor, round %s: %s (ID: %d)" % [round_id, item_name, object_id])
 	
 	# Spawna no servidor
-	var item_node = await _spawn_on_server(objects_node, object_id, round_id, item_name, position, rotation, owner_id)
+	var item_node = await _spawn_on_server(objects_node, object_id, round_id, item_name, position, rotation, velocity, owner_id)
 	
 	if not item_node:
 		push_error("ObjectManager: Falha ao spawnar item '%s' no servidor" % item_name)
@@ -150,9 +150,9 @@ func spawn_item(objects_node, round_id: int, item_name: String, position: Vector
 		"owner_id": owner_id,
 		"spawn_time": Time.get_unix_time_from_system()
 	}
-	var drop_velocity = item_node.initial_velocity
+
 	# ✅ Envia RPC individual para cada cliente ativo
-	_send_spawn_to_clients(round_id, object_id, item_name, position, rotation, drop_velocity, owner_id)
+	_send_spawn_to_clients(round_id, object_id, item_name, position, rotation, velocity, owner_id)
 	
 	_log_debug("✓ Item spawnado: %s (ID: %d, Round: %d)" % [item_name, object_id, round_id])
 	
@@ -234,10 +234,11 @@ func spawn_item_in_front_of_player(objects_node, round_id: int, player_id: int, 
 	# Calcula posição na frente do player
 	var spawn_pos = _calculate_front_position(player_pos, player_rot)
 	var spawn_rot = Vector3.ZERO  # Rotação padrão
+	var spawn_vel = Vector3.ZERO # Rotação padrão
 
 	_log_debug("Spawn na frente do player %d: pos=%s" % [player_id, spawn_pos])
 	
-	return await spawn_item(objects_node, round_id, item_name, spawn_pos, spawn_rot, player_id)
+	return await spawn_item(objects_node, round_id, item_name, spawn_pos, spawn_rot, spawn_vel, player_id)
 
 func spawn_item_over_of_player(objects_node, round_id: int, player_id: int, item_name: String) -> int:
 	"""
@@ -261,10 +262,11 @@ func spawn_item_over_of_player(objects_node, round_id: int, player_id: int, item
 	# Calcula posição na frente do player
 	var spawn_pos = Vector3(player_pos.x, player_pos.y + 3, player_pos.z)
 	var spawn_rot = Vector3.ZERO  # Rotação padrão
+	var spawn_vel = Vector3.ZERO  # Rotação padrão
 
 	_log_debug("Spawn na frente do player %d: pos=%s" % [player_id, spawn_pos])
 	
-	return await spawn_item(objects_node, round_id, item_name, spawn_pos, spawn_rot, player_id)
+	return await spawn_item(objects_node, round_id, item_name, spawn_pos, spawn_rot, spawn_vel, player_id)
 
 func spawn_item_at_random_position(objects_node, round_id: int, item_name: String, area_center: Vector3, area_radius: float, owner_id: int = -1) -> int:
 	"""Spawna item em posição aleatória dentro de uma área circular"""
@@ -281,8 +283,9 @@ func spawn_item_at_random_position(objects_node, round_id: int, item_name: Strin
 		0,
 		sin(angle) * distance
 	)
-	
-	return await spawn_item(objects_node, round_id, item_name, spawn_pos, Vector3.ZERO, owner_id)
+	var spawn_rot = Vector3.ZERO
+	var spawn_vel = Vector3.ZERO
+	return await spawn_item(objects_node, round_id, item_name, spawn_pos, spawn_rot, spawn_vel, owner_id)
 
 # ===== DESPAWN DE OBJETOS (SERVIDOR) =====
 
@@ -488,7 +491,8 @@ func retrieve_stored_object(objects_node, round_id: int, object_id: int, positio
 	stored_objects[round_id].erase(object_id)
 	
 	# Spawna no mundo
-	var item_node = await _spawn_on_server(objects_node, object_id, round_id, item_name, position, rotation, new_owner_id)
+	var velocity = Vector3(0, 0, 0)
+	var item_node = await _spawn_on_server(objects_node, object_id, round_id, item_name, position, rotation, velocity, new_owner_id)
 	
 	if not item_node:
 		push_error("ObjectManager: Falha ao respawnar objeto guardado %d" % object_id)
@@ -684,7 +688,7 @@ func object_exists_anywhere(round_id: int, object_id: int) -> bool:
 
 # ===== SPAWN INTERNO (SERVIDOR) =====
 
-func _spawn_on_server(objects_node, object_id: int, round_id: int, item_name: String, position: Vector3, rotation: Vector3, owner_id: int) -> Node:
+func _spawn_on_server(objects_node, object_id: int, round_id: int, item_name: String, position: Vector3, rotation: Vector3, velocity: Vector3, owner_id: int) -> Node:
 	"""
 	Spawna objeto no servidor usando ItemDatabase
 	
@@ -748,6 +752,8 @@ func _spawn_on_server(objects_node, object_id: int, round_id: int, item_name: St
 			var player_state = server_manager.player_states[owner_id]
 			var player_rot = player_state["rot"]
 			drop_velocity = _calculate_drop_impulse(player_rot)
+		else:
+			drop_velocity = velocity
 			
 		_log_debug("Impulso inicial do drop calculado: %s" % drop_velocity)
 		item_node.initialize(object_id, round_id, item_name, item_full_data, owner_id, drop_velocity)

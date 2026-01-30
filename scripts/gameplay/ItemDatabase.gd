@@ -279,6 +279,10 @@ class ItemData:
 	func is_defense_function() -> bool:
 		return function == "defense"
 	
+	## Verifica se tem função de equipar automaticamente
+	func is_auto_equip_function() -> bool:
+		return auto_equip == true
+	
 	# ───────────────────────────────────────────────────────────────────────
 	# FUNÇÕES DE STACK
 	# ───────────────────────────────────────────────────────────────────────

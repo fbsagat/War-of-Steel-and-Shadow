@@ -48,7 +48,9 @@ func initialize():
 	_log_debug("✓ TestManager inicializado")
 
 # ===== CRIAÇÃO DE PARTIDA DE TESTE =====
-
+func sort_num(min_val: int, max_val: int) -> int:
+	return randi_range(min_val, max_val)
+	
 func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_round: Dictionary = {}):
 	"""
 	Cria uma partida de teste usando os peers conectados reais
@@ -262,16 +264,16 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 	
 	if server_manager.test_trainer:
 		# Spawna alguns objetos
-		object_manager.spawn_item(objects_node, round_data["round_id"], "torch", Vector3(0, 2, 0), Vector3(0, 0, 0))
-		object_manager.spawn_item(objects_node, round_data["round_id"], "torch", Vector3(1, 4, 1), Vector3(0, 0, 0))
-		object_manager.spawn_item(objects_node, round_data["round_id"], "torch", Vector3(2, 4, 4), Vector3(0, 0, 0))
-		object_manager.spawn_item(objects_node, round_data["round_id"], "steel_helmet", Vector3(2, 4, 4), Vector3(0, 0, 0))
-		object_manager.spawn_item(objects_node, round_data["round_id"], "cape_1", Vector3(2, 4, 4), Vector3(0, 0, 0))
-		object_manager.spawn_item(objects_node, round_data["round_id"], "sword_2", Vector3(2, 30, 1), Vector3(0, 0, 0))
-		object_manager.spawn_item(objects_node, round_data["round_id"], "shield_3", Vector3(0, 500, 0), Vector3(0, 0, 0))
-		object_manager.spawn_item(objects_node, round_data["round_id"], "potion_glass_heal", Vector3(2, 1, 2), Vector3(0, 0, 0))
-		object_manager.spawn_item(objects_node, round_data["round_id"], "potion_glass_stamina", Vector3(2, 2, 3), Vector3(0, 0, 0))
-		object_manager.spawn_item(objects_node, round_data["round_id"], "potion_glass_poison", Vector3(2, 3, 4), Vector3(0, 0, 0))
+		object_manager.spawn_item(objects_node, round_data["round_id"], "torch", Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(sort_num(-3, 3), sort_num(20, 30), sort_num(-3, 3)))
+		object_manager.spawn_item(objects_node, round_data["round_id"], "torch", Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(sort_num(-3, 3), sort_num(20, 30), sort_num(-3, 3)))
+		object_manager.spawn_item(objects_node, round_data["round_id"], "torch", Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(sort_num(-3, 3), sort_num(20, 30), sort_num(-3, 3)))
+		object_manager.spawn_item(objects_node, round_data["round_id"], "steel_helmet", Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(sort_num(-3, 3), sort_num(20, 30), sort_num(-3, 3)))
+		object_manager.spawn_item(objects_node, round_data["round_id"], "cape_1", Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(sort_num(-3, 3), sort_num(20, 30), sort_num(-3, 3)))
+		object_manager.spawn_item(objects_node, round_data["round_id"], "sword_2", Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(sort_num(-3, 3), sort_num(20, 30), sort_num(-3, 3)))
+		object_manager.spawn_item(objects_node, round_data["round_id"], "shield_3", Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(sort_num(-3, 3), sort_num(20, 30), sort_num(-3, 3)))
+		object_manager.spawn_item(objects_node, round_data["round_id"], "potion_glass_heal", Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(sort_num(-3, 3), sort_num(20, 30), sort_num(-3, 3)))
+		object_manager.spawn_item(objects_node, round_data["round_id"], "potion_glass_stamina", Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(sort_num(-3, 3), sort_num(20, 30), sort_num(-3, 3)))
+		object_manager.spawn_item(objects_node, round_data["round_id"], "potion_glass_poison", Vector3(4.577, 0, 22.876), Vector3(0, 0, 0), Vector3(0, 0, 0))
 	
 	# Atualiza lista de salas para os players no menu
 	server_manager._send_rooms_list_to_all()
