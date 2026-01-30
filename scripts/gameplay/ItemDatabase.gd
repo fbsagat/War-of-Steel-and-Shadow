@@ -11,6 +11,27 @@ class_name ItemDatabase
 ## - Validar existência e compatibilidade de itens
 ## - Fornecer informações de slots, equipabilidade, consumibilidade, craftabilidade
 
+## ═══════════════════════════════════════════════════════════════════════════
+## TUTORIAL BREVE: ADICIONAR/REMOVER CAMPOS DE ITENS
+## 
+## ✅ Para campos experimentais ou raros:
+##    - Adicione diretamente no JSON.
+##    - Acesse via item.get_metadata("chave", padrão).
+##    - Não requer alteração de código.
+##
+## ✅ Para campos centrais ao gameplay:
+##    1. Declare var novo_campo na classe ItemData.
+##    2. Leia em _init(): novo_campo = json_data.get("novo_campo", valor_padrão)
+##    3. Adicione "novo_campo" à lista known_fields (evita duplicar em metadata).
+##    4. Inclua em to_dictionary().
+##    5. (Opcional) Crie métodos de acesso específicos.
+##
+## 🗑️ Para remover campo:
+##    - Se era em metadata: só remover do JSON.
+##    - Se era nativo: remova variável, leitura, known_fields, to_dictionary e usos.
+## ═══════════════════════════════════════════════════════════════════════════
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # CONFIGURAÇÕES EXPORTADAS
 # ═══════════════════════════════════════════════════════════════════════════
@@ -53,6 +74,7 @@ class ItemData:
 	var level: int
 	var function: String
 	var category: String
+	var auto_equip: bool
 	var rarity: String
 	
 	# ─── Sistema de stack ───
@@ -105,6 +127,7 @@ class ItemData:
 		level = int(json_data.get("level", 1))
 		function = json_data.get("function", "")
 		category = json_data.get("category", "misc")
+		auto_equip = json_data.get("auto_equip", true)
 		rarity = json_data.get("rarity", "common")
 		
 		# Sistema de stack
@@ -148,7 +171,7 @@ class ItemData:
 		# Armazena campos extras em metadata
 		var known_fields = [
 			"id", "name", "scene_path", "model_node_link",
-			"owner", "type", "level", "function", "category", "rarity",
+			"owner", "type", "level", "function", "category", "auto_equip", "rarity",
 			"stackable", "max_stack", "weight", "value",
 			"damage", "damage_type", "defense", "block_chance",
 			"durability", "craftable", "craft_type", "craft_uses", "ingredients",
@@ -171,6 +194,7 @@ class ItemData:
 			"level": level,
 			"function": function,
 			"category": category,
+			"auto_equip": auto_equip,
 			"rarity": rarity,
 			"stackable": stackable,
 			"max_stack": max_stack,

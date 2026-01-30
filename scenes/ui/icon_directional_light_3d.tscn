@@ -7,4 +7,4 @@ shadow_enabled = true
 [node name="Label" type="Label" parent="." unique_id=1749784460]
 offset_right = 40.0
 offset_bottom = 23.0
-text = "Este Directional light serve para ser usado para criar icones do itens spawnables: Colocase como filho e eis a iluminação padrão para criar os prints deste item."
+text = "Este Directional light serve para ser usado para criar icones do itens spawnables: Coloca-se como filho e eis a iluminação padrão para criar os prints deste item."

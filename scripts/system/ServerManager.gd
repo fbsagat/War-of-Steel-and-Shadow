@@ -1155,7 +1155,11 @@ func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 	# Se o slot deste item estiver vazio, equipar este item lá automaticamente \/
 	if not client_registry.is_slot_empty(round_["round_id"], player['id'], item["type"]):
 		return
-		
+	
+	# Se auto equip false, não equipar automaticamente
+	if not item_database.get_item(item["name"]).to_dictionary()["auto_equip"]:
+		return
+	
 	# Equipa o item no registro do player
 	client_registry.equip_item(round_["round_id"], player['id'], item["name"], object_id)
 	
