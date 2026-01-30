@@ -1097,9 +1097,14 @@ func _rpc_despawn_on_clients(player_ids: Array, round_id: int, object_id: int):
 func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 	"""Servidor recebe pedido de pegar item para o inventário, valida e redistribui"""
 	
-	var player_node = client_registry.get_player_node(requesting_player_id)
 	var round_id = client_registry.get_player_round(requesting_player_id)
 	var object = _get_spawned_object(round_id ,object_id)
+	
+	# Verificação de item é válido (é um objeto spawnado corretamente / tem os atributos adicionado pelo objeta manager)
+	if not object:
+		return
+	
+	var player_node = client_registry.get_player_node(requesting_player_id)
 	var server_nearby = player_node.get_nearby_items()
 	var player = client_registry.get_player(requesting_player_id)
 	var round_ = round_registry.get_round_by_player_id(player["id"])

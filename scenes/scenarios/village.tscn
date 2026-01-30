@@ -257,12 +257,6 @@ transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, -11.054898, -0.28131634, 0.19
 [node name="well2" parent="wells" unique_id=159355999 instance=ExtResource("2_dhhkg")]
 transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 2.777, -0.281, -50.128)
 
-[node name="potion_glass" parent="wells" unique_id=634471321 instance=ExtResource("7_jttmf")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.9798385, 1.9187577, -49.15187)
-
-[node name="potion_glass2" parent="wells" unique_id=108152069 instance=ExtResource("7_jttmf")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.387852, 1.9184408, -0.9371242)
-
 [node name="shops" type="Node3D" parent="." unique_id=1665983908]
 
 [node name="shop" parent="shops" unique_id=272228860 instance=ExtResource("6_i76jp")]
@@ -275,7 +269,7 @@ transform = Transform3D(-2.1855693e-07, 0, 1, 0, 1, 0, -1, 0, -2.1855693e-07, -1
 transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 12.524464, 0, 14.768878)
 
 [node name="potion_glass" parent="shops" unique_id=1427021959 instance=ExtResource("7_jttmf")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18.524048, 1.0883449, -49.34202)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18.524048, 1.0883449, -50.554993)
 
 [node name="potion_glass2" parent="shops" unique_id=449119491 instance=ExtResource("7_jttmf")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13.044487, 1.088345, -30.990725)
