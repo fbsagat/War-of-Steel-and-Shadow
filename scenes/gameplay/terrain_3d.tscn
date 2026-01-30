@@ -4,6 +4,8 @@
 [ext_resource type="PackedScene" uid="uid://d3sr0a7dxfkr8" path="res://addons/terrain_3d/extras/particle_example/Terrain3DParticles.tscn" id="2_t70ke"]
 [ext_resource type="PackedScene" uid="uid://cwu8t6cp4qo1c" path="res://sky/sky_3d.tscn" id="3_t70ke"]
 [ext_resource type="PackedScene" uid="uid://bl8c62gm66ba5" path="res://models/VainerKit/props/tree/tree.tscn" id="8_l3dix"]
+[ext_resource type="Script" uid="uid://dugb1u2tv0mq2" path="res://scripts/utils/test_pressure_plate.gd" id="9_j31ul"]
+[ext_resource type="ArrayMesh" uid="uid://cd3o3jrohhsqx" path="res://models/KayKit_DungeonRemastered_1.1_FREE/Assets/obj/plate.obj" id="9_qeakp"]
 [ext_resource type="PackedScene" uid="uid://cuncihjkfu1ya" path="res://models/VainerKit/builds/wood_bridge/wood_bridge.glb" id="11_3txeo"]
 [ext_resource type="PackedScene" uid="uid://0yuy536rv6ae" path="res://scenes/scenarios/forest.tscn" id="12_6jw5i"]
 [ext_resource type="PackedScene" uid="uid://b5yktcibltwu3" path="res://models/VainerKit/builds/medieval_tower_ruins/medieval_tower_ruins.glb" id="13_au1d7"]
@@ -865,6 +867,15 @@ uv1_world_triplanar = true
 material = SubResource("StandardMaterial3D_3txeo")
 size = Vector3(1.185, 2.32, 1.09)
 
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_l3dix"]
+albedo_color = Color(1, 0, 0, 1)
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_qeakp"]
+material = SubResource("StandardMaterial3D_l3dix")
+
+[sub_resource type="ConvexPolygonShape3D" id="ConvexPolygonShape3D_j31ul"]
+points = PackedVector3Array(-1, 0, -1, -1, 0, 1, 1, 0, -1, 1, 0, 1)
+
 [node name="Terrain3D" type="Terrain3D" unique_id=110752287]
 data_directory = "res://scenes/system/terrain_data"
 material = SubResource("Terrain3DMaterial_xuisu")
@@ -922,3 +933,21 @@ transform = Transform3D(1.3113416e-07, 0, -1, 0, 1, 0, 1, 0, 1.3113416e-07, 56.0
 
 [node name="tree" parent="." unique_id=2147137266 instance=ExtResource("8_l3dix")]
 transform = Transform3D(-0.77645713, 0, -2.8977776, 0, 3, 0, 2.8977776, 0, -0.77645713, -40.941517, -1.1128595, 0.9311943)
+
+[node name="Pressure_plate" type="Node3D" parent="." unique_id=828688538]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 8.203504, 0.00993371, 14.222015)
+script = ExtResource("9_j31ul")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Pressure_plate" unique_id=597319947]
+mesh = SubResource("PlaneMesh_qeakp")
+
+[node name="Area3D" type="Area3D" parent="Pressure_plate" unique_id=1276853828]
+collision_layer = 0
+collision_mask = 2
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Pressure_plate/Area3D" unique_id=1804696467]
+shape = SubResource("ConvexPolygonShape3D_j31ul")
+
+[node name="Plate" type="MeshInstance3D" parent="Pressure_plate" unique_id=1903177284]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -0.092749596, -0.08459866, 0.093735695)
+mesh = ExtResource("9_qeakp")
