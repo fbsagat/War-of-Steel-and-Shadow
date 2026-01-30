@@ -391,7 +391,8 @@ func _reset_client_state():
 	spawned_objects.clear()
 	
 	# Limpa a partida(round) totalmente
-	round_node.queue_free()
+	if round_node:
+		round_node.queue_free()
 	
 	# Reset completo do estado
 	is_connected_to_server = false
