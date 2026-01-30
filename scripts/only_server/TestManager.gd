@@ -269,9 +269,9 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 		object_manager.spawn_item(objects_node, round_data["round_id"], "cape_1", Vector3(2, 4, 4), Vector3(0, 0, 0))
 		object_manager.spawn_item(objects_node, round_data["round_id"], "sword_2", Vector3(2, 30, 1), Vector3(0, 0, 0))
 		object_manager.spawn_item(objects_node, round_data["round_id"], "shield_3", Vector3(0, 500, 0), Vector3(0, 0, 0))
-		object_manager.spawn_item(objects_node, round_data["round_id"], "potion_glass", Vector3(2, 1, 2), Vector3(0, 0, 0))
-		object_manager.spawn_item(objects_node, round_data["round_id"], "potion_glass", Vector3(2, 2, 3), Vector3(0, 0, 0))
-		object_manager.spawn_item(objects_node, round_data["round_id"], "potion_glass", Vector3(2, 3, 4), Vector3(0, 0, 0))
+		object_manager.spawn_item(objects_node, round_data["round_id"], "potion_glass_heal", Vector3(2, 1, 2), Vector3(0, 0, 0))
+		object_manager.spawn_item(objects_node, round_data["round_id"], "potion_glass_stamina", Vector3(2, 2, 3), Vector3(0, 0, 0))
+		object_manager.spawn_item(objects_node, round_data["round_id"], "potion_glass_poison", Vector3(2, 3, 4), Vector3(0, 0, 0))
 	
 	# Atualiza lista de salas para os players no menu
 	server_manager._send_rooms_list_to_all()
