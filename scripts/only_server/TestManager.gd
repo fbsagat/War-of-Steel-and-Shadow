@@ -133,8 +133,6 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 		return
 	
 	# Cria sala no RoomRegistry
-	var room_id = _get_next_test_room_id()
-	
 	var room_data = room_registry.create_room(
 		nome_sala,
 		"",  # Sem senha
@@ -142,7 +140,7 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 		server_manager.min_players_to_start,
 		server_manager.max_players_per_room
 	)
-
+	var room_id = room_data["id"]
 	if room_data.is_empty():
 		_log_debug("❌ Falha ao criar sala!")
 		return
@@ -158,6 +156,7 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 	# Valida requisitos para iniciar
 	if not room_registry.can_start_match(room_id):
 		var reqs = room_registry.get_match_requirements(room_id)
+		print("[111]reqs: ", reqs)
 		_log_debug("❌ Requisitos não atendidos: %d/%d jogadores (mínimo: %d)" % [
 			reqs["current_players"],
 			reqs["max_players"],
@@ -270,6 +269,9 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 		object_manager.spawn_item(objects_node, round_data["round_id"], "cape_1", Vector3(2, 4, 4), Vector3(0, 0, 0))
 		object_manager.spawn_item(objects_node, round_data["round_id"], "sword_2", Vector3(2, 30, 1), Vector3(0, 0, 0))
 		object_manager.spawn_item(objects_node, round_data["round_id"], "shield_3", Vector3(0, 500, 0), Vector3(0, 0, 0))
+		object_manager.spawn_item(objects_node, round_data["round_id"], "potion_glass", Vector3(2, 1, 2), Vector3(0, 0, 0))
+		object_manager.spawn_item(objects_node, round_data["round_id"], "potion_glass", Vector3(2, 2, 3), Vector3(0, 0, 0))
+		object_manager.spawn_item(objects_node, round_data["round_id"], "potion_glass", Vector3(2, 3, 4), Vector3(0, 0, 0))
 	
 	# Atualiza lista de salas para os players no menu
 	server_manager._send_rooms_list_to_all()
@@ -462,15 +464,6 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 	_log_debug("✓ Player spawnado: %s (ID: %d)" % [p_name, p_id])
 
 # ===== UTILITÁRIOS =====
-
-func _get_next_test_room_id() -> int:
-	"""
-	Gera ID único para sala de teste
-	Usa timestamp + random para evitar colisões
-	"""
-	var base_id = 1000  # IDs de teste começam em 1000
-	var random_offset = randi_range(0, 999)
-	return base_id + room_registry.get_room_count() + random_offset
 
 func _log_debug(message: String):
 	"""Função padrão de debug"""
