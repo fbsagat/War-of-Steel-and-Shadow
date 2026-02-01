@@ -822,7 +822,7 @@ _shader_parameters = {
 &"tri_scale_reduction": 0.3,
 &"world_noise_fragment_normals": false,
 &"world_noise_height": 15.000000223518,
-&"world_noise_lod_distance": 7500.0,
+&"world_noise_lod_distance": 100.0,
 &"world_noise_max_octaves": 10,
 &"world_noise_min_octaves": 2,
 &"world_noise_offset": Vector3(0, 0, 0),
@@ -830,6 +830,7 @@ _shader_parameters = {
 &"world_noise_scale": 14.999999670308
 }
 world_background = 2
+texture_filtering = 1
 auto_shader = true
 dual_scaling = true
 shader_override_enabled = true
@@ -837,35 +838,6 @@ shader_override = SubResource("Shader_xuisu")
 
 [sub_resource type="RibbonTrailMesh" id="RibbonTrailMesh_kf5nm"]
 size = 0.25
-
-[sub_resource type="FastNoiseLite" id="FastNoiseLite_j31ul"]
-
-[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_uwu5a"]
-noise = SubResource("FastNoiseLite_j31ul")
-seamless = true
-as_normal_map = true
-
-[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_p01j3"]
-noise = SubResource("FastNoiseLite_j31ul")
-seamless = true
-as_normal_map = true
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_3txeo"]
-transparency = 1
-depth_draw_mode = 1
-albedo_color = Color(0.047058824, 0.31764707, 0.43529412, 0.5058824)
-roughness = 0.0
-normal_enabled = true
-normal_texture = SubResource("NoiseTexture2D_uwu5a")
-refraction_enabled = true
-refraction_texture = SubResource("NoiseTexture2D_p01j3")
-uv1_scale = Vector3(0.4, 0.4, 0.4)
-uv1_triplanar = true
-uv1_world_triplanar = true
-
-[sub_resource type="BoxMesh" id="BoxMesh_uwu5a"]
-material = SubResource("StandardMaterial3D_3txeo")
-size = Vector3(1.185, 2.32, 1.09)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_l3dix"]
 albedo_color = Color(1, 0, 0, 1)
@@ -880,6 +852,8 @@ points = PackedVector3Array(-1, 0, -1, -1, 0, 1, 1, 0, -1, 1, 0, 1)
 data_directory = "res://scenes/system/terrain_data"
 material = SubResource("Terrain3DMaterial_xuisu")
 assets = ExtResource("1_0rjur")
+mesh_lods = 5
+mesh_size = 28
 top_level = true
 metadata/_edit_lock_ = true
 
@@ -903,11 +877,6 @@ particle_count = 1115136
 
 [node name="village" parent="." unique_id=1811853203 instance=ExtResource("22_uwu5a")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.427544, -0.15174103, 39.013947)
-
-[node name="water" type="MeshInstance3D" parent="." unique_id=634915812]
-transform = Transform3D(197.08347, 0, 0, 0, 10.115421, 0, 0, 0, 188.34369, -44.468224, -13.3905325, -28.809319)
-visible = false
-mesh = SubResource("BoxMesh_uwu5a")
 
 [node name="wood_bridge" parent="." unique_id=142139320 instance=ExtResource("11_3txeo")]
 transform = Transform3D(1.9, 0, 0, 0, 1.9, 0, 0, 0, 1.9, 0.05253315, -0.24581076, -41.684708)

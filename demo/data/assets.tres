@@ -35,23 +35,24 @@ last_shadow_lod = 3
 
 [sub_resource type="Terrain3DTextureAsset" id="Terrain3DTextureAsset_adagb"]
 name = "Rock"
+albedo_color = Color(0.98939866, 0.98939866, 0.98939854, 1)
 albedo_texture = ExtResource("2_y3ibi")
 normal_texture = ExtResource("3_wncaf")
 normal_depth = 2.0
 ao_strength = 2.0
 roughness = 1.0
-uv_scale = 0.15
+uv_scale = 0.05
 
 [sub_resource type="Terrain3DTextureAsset" id="Terrain3DTextureAsset_e6edf"]
 name = "Ground"
 id = 1
-albedo_color = Color(0.68494415, 0.67570704, 0.60027814, 1)
+albedo_color = Color(0.60585034, 0.6754324, 0.5141187, 1)
 albedo_texture = ExtResource("3_g8f2m")
 normal_texture = ExtResource("4_aw5y1")
 normal_depth = 0.8
 ao_strength = 0.8
 roughness = 1.0
-uv_scale = 0.316
+uv_scale = 0.05
 
 [resource]
 mesh_list = Array[Terrain3DMeshAsset]([SubResource("Terrain3DMeshAsset_2qf8x"), SubResource("Terrain3DMeshAsset_or12t")])
