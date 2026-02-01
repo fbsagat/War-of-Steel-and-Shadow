@@ -4,11 +4,11 @@
 [ext_resource type="PackedScene" uid="uid://d3sr0a7dxfkr8" path="res://addons/terrain_3d/extras/particle_example/Terrain3DParticles.tscn" id="2_t70ke"]
 [ext_resource type="PackedScene" uid="uid://cwu8t6cp4qo1c" path="res://sky/sky_3d.tscn" id="3_t70ke"]
 [ext_resource type="PackedScene" uid="uid://bl8c62gm66ba5" path="res://models/VainerKit/props/tree/tree.tscn" id="8_l3dix"]
-[ext_resource type="Script" uid="uid://dugb1u2tv0mq2" path="res://scripts/utils/test_pressure_plate.gd" id="9_j31ul"]
-[ext_resource type="ArrayMesh" uid="uid://cd3o3jrohhsqx" path="res://models/KayKit_DungeonRemastered_1.1_FREE/Assets/obj/plate.obj" id="9_qeakp"]
-[ext_resource type="PackedScene" uid="uid://cuncihjkfu1ya" path="res://models/VainerKit/builds/wood_bridge/wood_bridge.glb" id="11_3txeo"]
+[ext_resource type="Script" uid="uid://y34drp4wugwo" path="res://scripts/utils/test_pressure_plate.gd" id="9_j31ul"]
+[ext_resource type="ArrayMesh" uid="uid://bxyi1k5432r3s" path="res://models/KayKit_DungeonRemastered_1.1_FREE/Assets/obj/plate.obj" id="9_qeakp"]
+[ext_resource type="PackedScene" uid="uid://bugr54d8lp5nq" path="res://models/VainerKit/builds/wood_bridge/wood_bridge.glb" id="11_3txeo"]
 [ext_resource type="PackedScene" uid="uid://0yuy536rv6ae" path="res://scenes/scenarios/forest.tscn" id="12_6jw5i"]
-[ext_resource type="PackedScene" uid="uid://b5yktcibltwu3" path="res://models/VainerKit/builds/medieval_tower_ruins/medieval_tower_ruins.glb" id="13_au1d7"]
+[ext_resource type="PackedScene" uid="uid://ca37tpchr3a8r" path="res://models/VainerKit/builds/medieval_tower_ruins/medieval_tower_ruins.glb" id="13_au1d7"]
 [ext_resource type="PackedScene" uid="uid://c0ngmife3um6s" path="res://scenes/scenarios/village.tscn" id="22_uwu5a"]
 
 [sub_resource type="Gradient" id="Gradient_xuisu"]
@@ -880,7 +880,6 @@ points = PackedVector3Array(-1, 0, -1, -1, 0, 1, 1, 0, -1, 1, 0, 1)
 data_directory = "res://scenes/system/terrain_data"
 material = SubResource("Terrain3DMaterial_xuisu")
 assets = ExtResource("1_0rjur")
-collision_mode = 3
 top_level = true
 metadata/_edit_lock_ = true
 
