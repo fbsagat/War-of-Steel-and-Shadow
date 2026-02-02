@@ -1,6 +1,6 @@
 [gd_resource type="StandardMaterial3D" format=3 uid="uid://d2a254xvlmxnm"]
 
-[ext_resource type="Texture2D" uid="uid://bdfrfxf3671ft" path="res://textures/grama.jpg" id="1_bk4qm"]
+[ext_resource type="Texture2D" uid="uid://df8qtmjkbdn8t" path="res://demo/assets/materials/terrain3d_background.png" id="1_bk4qm"]
 
 [resource]
 diffuse_mode = 1
@@ -9,5 +9,5 @@ roughness = 0.8
 normal_enabled = true
 ao_enabled = true
 ao_light_affect = 0.15
-uv1_scale = Vector3(4, 4, 1)
+uv1_scale = Vector3(-0.835, -0.835, -0.209)
 stencil_flags = 2
