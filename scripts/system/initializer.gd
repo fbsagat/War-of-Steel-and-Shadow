@@ -12,7 +12,7 @@ extends Node
 @export var start_unlocked_mouse: bool = true
 
 ## Instruções para debug (executa _log_debug apenas nos itens selecionados)
-var activate_only_selected: bool = false
+var activate_only_selected: bool = false # Ativa apenas módulos selecionados
 ## Disponíveis: "Server", "NetworkManager", "TestManager", "GameManager", "RoomRegistry"
 ## "RoundRegistry", "ClientRegistry", "Player_node", "ObjectManager", "MapManager", "MainMenu"
 ## "ItemDatabase", "InventoryMenu", "DroppedItem"
