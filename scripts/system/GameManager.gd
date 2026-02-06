@@ -4,7 +4,8 @@ class_name GameManager
 ## GameManager - Gerenciador principal do jogo multiplayer (CLIENTE)
 ## Responsável por conectar ao servidor dedicado e gerenciar o fluxo do jogo
 
-# ===== CONFIGURAÇÕES (Editáveis no Inspector) =====
+# ===== CONFIGURAÇÕES =====
+
 @export_category("Connection Settings")
 const DEFAULT_SERVER_ADDRESS: String = "127.0.0.1"
 const DEFAULT_SERVER_PORT: int = 7777
@@ -25,11 +26,14 @@ const camera_controller : String = "res://scenes/gameplay/camera_controller.tscn
 @export var debug_mode: bool = true
 
 # ===== REGISTROS (Injetados pelo initializer.gd) =====
+
 var item_database: ItemDatabase = null
 var network_manager: NetworkManager = null
+var map_manager: Node = null
 var initializer = null
 
 # ===== VARIÁVEIS INTERNAS =====
+
 var is_connected_to_server: bool = false
 var is_in_round: bool = false
 var inventory_menu: bool = false # True se o menu de inventário estiver visível
@@ -47,8 +51,8 @@ var cached_unique_id: int = 0
 var spawned_objects: Dictionary = {}
 var local_inventory: Dictionary = {} # Inventário(de itens e equipamentos) local do player.
 
-# ===== REFERÊNCIAS =====
-var map_manager: Node = null
+# ===== REFERÊNCIAS INTERNAS =====
+
 var main_menu_node: Control = null
 var inventory_node : Control = null
 var local_player_node: Node = null
@@ -57,6 +61,7 @@ var players_node: Node = null
 var objects_node: Node = null
 
 # ===== SINAIS =====
+
 signal connected_to_server()
 signal connection_failed(reason: String)
 signal disconnected_from_server()
@@ -77,6 +82,7 @@ signal item_unequipped(object_id: String)
 signal items_swapped(item_id_1: String, item_id_2: String)
 
 # ===== FUNÇÕES DE INICIALIZAÇÃO =====
+
 func _ready():
 	# Conecta sinais (só uma vez!)
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
@@ -815,11 +821,13 @@ func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bo
 		get_tree().root.add_child(inventory_node_)
 		inventory_node = inventory_node_
 		inventory_node.game_manager = self
+		inventory_node.initializer = initializer
 		
 		# Atribui referência DIRETA (só para local) inventory_node
 		player_instance.inventory_node = inventory_node
 		inventory_node.setup_inventory_signals()
 		player_instance.connect_inventory_signals()
+		inventory_node.player_node = player_instance
 		
 		# Atribui referência DIRETA (só para local) camera_instance
 		player_instance.camera_controller = camera_instance
@@ -1193,9 +1201,13 @@ func _spawn_on_client(object_id: int, round_id: int, item_name: String, position
 		push_error("GameManager[Cliente]: Falha ao instanciar")
 		return
 	
-	# ✅ CORRIGIDO: Nome consistente com servidor
+	# Nome consistente com servidor
 	item_node.name = "Object_%d_%s_%d" % [object_id, item_name, round_id]
 	_log_debug("[ITEM]📦 Spawnando no cliente: %s - %s" % [owner_id, item_node.name])
+	
+	# Injeta dependências
+	item_node.network_manager = network_manager
+	item_node.initializer = initializer
 	
 	# Adiciona à árvore
 	var round_scene = get_tree().root.get_node_or_null("Round")
@@ -1298,10 +1310,18 @@ func verificar_rede() -> bool:
 func _log_debug(message: String):
 	if not debug_mode:
 		return
-
+	
 	var unique_id := cached_unique_id
 	if unique_id == 0 and verificar_rede() and multiplayer.has_multiplayer_peer():
 		unique_id = multiplayer.get_unique_id()
 		cached_unique_id = unique_id
-
-	print("[CLIENT][GameManager][ClientID: %s]: Message: %s" % [unique_id, message])
+	
+	# Configurações do initializer
+	if initializer.activate_only_selected and not "GameManager" in initializer.selected:
+		return
+	
+	# Enquanto o cliente não receber id único de peer multiplayer, não exibe no log debug
+	if unique_id == 1:
+		print("[GameManager]:Message:%s" % message)
+	else:
+		print("[GameManager][ClientID:%s]:Message:%s" % [unique_id, message])

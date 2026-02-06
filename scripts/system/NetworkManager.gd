@@ -4,6 +4,10 @@ class_name NetworkManager
 ## NetworkManager - Classe Base
 ## Contém funcionalidades compartilhadas entre cliente e servidor
 
+# ===== REGISTROS (Injetados pelo initializer.gd) =====
+
+var initializer = null
+
 # ===== CONFIGURAÇÕES =====
 
 @export_category("Debug")
@@ -28,6 +32,11 @@ func _log_debug(message: String) -> void:
 	"""Imprime mensagem de debug se habilitado"""
 	if not debug_mode:
 		return
+	
+	# Configurações do initializer
+	if initializer.activate_only_selected and not "NetworkManager" in initializer.selected:
+		return
+		
 	print("%s %s" % [_get_log_prefix(), message])
 
 func _get_log_prefix() -> String:

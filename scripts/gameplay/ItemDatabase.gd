@@ -31,10 +31,7 @@ class_name ItemDatabase
 ##    - Se era nativo: remova variável, leitura, known_fields, to_dictionary e usos.
 ## ═══════════════════════════════════════════════════════════════════════════
 
-
-# ═══════════════════════════════════════════════════════════════════════════
-# CONFIGURAÇÕES EXPORTADAS
-# ═══════════════════════════════════════════════════════════════════════════
+# CONFIGURAÇÕES
 
 @export_category("Database Settings")
 ## Caminho do arquivo JSON com registro de itens
@@ -47,16 +44,16 @@ class_name ItemDatabase
 @export var debug_mode: bool = true
 @export var log_stats: bool = false
 
-# ═══════════════════════════════════════════════════════════════════════════
-# VARIÁVEIS INTERNAS
-# ═══════════════════════════════════════════════════════════════════════════
+# ===== REGISTROS (Injetados pelo initializer.gd) =====
+
+var initializer = null
+
+# ===== VARIÁVEIS INTERNAS =====
 
 ## Detecta se está rodando como servidor dedicado
 var _is_server: bool = false
 
-# ═══════════════════════════════════════════════════════════════════════════
 # CLASSE ITEMDATA
-# ═══════════════════════════════════════════════════════════════════════════
 
 ## Classe interna que representa um item do database
 class ItemData:
@@ -1320,12 +1317,6 @@ func print_item_info(item_name: String):
 	
 	print("╚" + "═".repeat(item.name.length() + 16) + "╝\n")
 
-## Log interno com suporte a servidor/cliente
-func _log_debug(message: String):
-	if debug_mode:
-		var prefix = "[SERVER]" if _is_server else "[CLIENT]"
-		print("%s[ItemDatabase] %s" % [prefix, message])
-
 ## Log de estatísticas após carregamento
 func _log_stats():
 	if not debug_mode:
@@ -1341,3 +1332,16 @@ func _log_stats():
 		consumable_items.size(),
 		material_items.size()
 	])
+
+## Log interno com suporte a servidor/cliente
+func _log_debug(message: String):
+	if not debug_mode:
+		return
+	
+	# Configurações do initializer
+	if initializer.activate_only_selected and not "ItemDatabase" in initializer.selected:
+		return
+	
+	var prefix = "[SERVER]" if _is_server else "[CLIENT]"
+	print("%s[ItemDatabase] %s" % [prefix, message])
+	

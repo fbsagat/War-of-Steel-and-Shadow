@@ -25,6 +25,7 @@ var client_registry: ClientRegistry = null
 var room_registry: RoomRegistry = null
 var round_registry: RoundRegistry = null
 var object_manager: ObjectManager = null
+var initializer = null
 
 # ===== VARIÁVEIS INTERNAS =====
 
@@ -467,5 +468,11 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 
 func _log_debug(message: String):
 	"""Função padrão de debug"""
-	if debug_mode:
-		print("[SERVER][TestManager] %s" % message)
+	if not debug_mode:
+		return
+	
+	# Configurações do initializer
+	if initializer.activate_only_selected and not "TestManager" in initializer.selected:
+		return	
+		
+	print("[SERVER][TestManager] %s" % message)

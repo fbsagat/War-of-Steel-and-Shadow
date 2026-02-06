@@ -49,7 +49,8 @@ extends CharacterBody3D
 @export var initial_sync_duration: float = 3.0
 @export var initial_sync_elapsed: float = 0.0
 
-# referências
+# ===== REFERÊNCIAS INTERNAS =====
+
 @onready var animation_player: AnimationPlayer = $AnimationPlayer
 @onready var animation_tree: AnimationTree = $AnimationTree
 @onready var attack_timer: Timer = $attack_timer
@@ -62,6 +63,7 @@ var network_manager: NetworkManager = null
 var item_database: ItemDatabase = null
 var server_manager: ServerManager = null
 var game_manager: GameManager = null
+var initializer = null
 
 # Estados de sincronização
 var target_position: Vector3 = Vector3.ZERO
@@ -1535,10 +1537,12 @@ func _log_debug(message: String):
 	if not debug:
 		return
 	
-	if _is_server:
-		print("[SERVER][PLAYER][ClientID: %d]%s" % [player_id, message])
-	else:
-		print("[CLIENT][PLAYER][ClientID: %d]%s" % [player_id, message])
+	# Configurações do initializer
+	if initializer.activate_only_selected and not "Player_node" in initializer.selected:
+		return
+	
+	var prefix = "[SERVER]" if _is_server else "[CLIENT]"
+	print("%s[PlayerNode][ClientID: %d]: %s" % [prefix, player_id, message])
 		
 func verificar_rede():
 	var peer = multiplayer.multiplayer_peer

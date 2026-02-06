@@ -2,15 +2,8 @@ extends RigidBody3D
 class_name DroppedItem
 ## Script para itens dropados no mundo - Sincronização servidor/cliente
 
-# ===== VARIÁVEIS NECESSÁRIAS =====
-var object_id: int = -1
-var round_id: int = -1
-var item_name: String = ""
-var item_data: Dictionary = {}
-var owner_id: int = -1
-var initial_velocity: Vector3 = Vector3.ZERO
-
 # ===== CONFIGURAÇÕES =====
+
 @export_category("Collection Settings")
 @export var auto_collect: bool = false
 @export var collection_radius: float = 1.5
@@ -31,19 +24,28 @@ var initial_velocity: Vector3 = Vector3.ZERO
 @export var debug_mode: bool = true
 @export var debug_show_sync: bool = false
 
-# ===== VARIÁVEIS INTERNAS =====
-var lifetime_timer: Timer = null
-var is_collected: bool = false
-var spawn_time: float = 0.0
-var can_be_collected: bool = false
-
-# ===== SINAIS =====
-signal despawned(object_id: int)
-
 # ===== REGISTROS (Injetados pelo initializer.gd) =====
 
 var network_manager: NetworkManager = null
 var server_manager: ServerManager = null
+var initializer = null
+
+# ===== SINAIS =====
+
+signal despawned(object_id: int)
+
+# ===== VARIÁVEIS INTERNAS =====
+
+var object_id: int = -1
+var round_id: int = -1
+var item_name: String = ""
+var item_data: Dictionary = {}
+var owner_id: int = -1
+var initial_velocity: Vector3 = Vector3.ZERO
+var lifetime_timer: Timer = null
+var is_collected: bool = false
+var spawn_time: float = 0.0
+var can_be_collected: bool = false
 
 # ===== INICIALIZAÇÃO =====
 func initialize(
@@ -264,6 +266,12 @@ func _on_body_entered(_body: Node):
 	pass
 
 func _log_debug(message: String):
-	if debug_mode:
-		var prefix = "[SERVER]" if is_server_authority() else "[CLIENT]"
-		print("%s[DroppedItem:%d]%s" % [prefix, object_id, message])
+	if not debug_mode:
+		return
+	
+	# Configurações do initializer
+	if initializer.activate_only_selected and not "DroppedItem" in initializer.selected:
+		return
+	
+	var prefix = "[SERVER]" if is_server_authority() else "[CLIENT]"
+	print("%s[DroppedItem:%d]%s" % [prefix, object_id, message])

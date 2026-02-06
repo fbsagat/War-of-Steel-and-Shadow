@@ -11,6 +11,13 @@ extends Node
 ## Iniciar com o mouse destrancado (client)
 @export var start_unlocked_mouse: bool = true
 
+## Instruções para debug (executa _log_debug apenas nos itens selecionados)
+var activate_only_selected: bool = false
+## Disponíveis: "Server", "NetworkManager", "TestManager", "GameManager", "RoomRegistry"
+## "RoundRegistry", "ClientRegistry", "Player_node", "ObjectManager", "MapManager", "MainMenu"
+## "ItemDatabase", "InventoryMenu", "DroppedItem"
+var selected: Array = ["GameManager", "Server"]
+
 ## Manager de rede, gerencia comunicação entre servidor e clientes
 var network_manager: NetworkManager = null
 
@@ -101,6 +108,7 @@ func _init_server(is_headless):
 	server_manager.object_manager = object_manager
 	server_manager.test_manager = test_manager
 	server_manager.map_manager = map_manager
+	server_manager.initializer = self
 	
 	# Networkmanager precisa de:
 	network_manager.server_manager = server_manager
@@ -108,6 +116,7 @@ func _init_server(is_headless):
 	network_manager.room_registry = room_registry
 	network_manager.round_registry = round_registry
 	network_manager.object_manager = object_manager
+	network_manager.initializer = self
 	
 	# ClientRegistry precisa de:
 	client_registry.network_manager = network_manager
@@ -115,16 +124,25 @@ func _init_server(is_headless):
 	client_registry.round_registry = round_registry
 	client_registry.object_manager = object_manager
 	client_registry.item_database = item_database
+	client_registry.initializer = self
 	
 	# RoomRegistry precisa de:
 	room_registry.client_registry = client_registry
 	room_registry.round_registry = round_registry
 	room_registry.object_manager = object_manager
+	room_registry.initializer = self
 	
 	# RoundRegistry precisa de:
 	round_registry.client_registry = client_registry
 	round_registry.room_registry = room_registry
 	round_registry.object_manager = object_manager
+	round_registry.initializer = self
+	
+	# MapManager precisa de:
+	map_manager.initializer = self
+	
+	# ItemDatabase precisa de:
+	item_database.initializer = self
 	
 	# ObjectManager precisa de:
 	object_manager.server_manager = server_manager
@@ -132,6 +150,7 @@ func _init_server(is_headless):
 	object_manager.client_registry = client_registry
 	object_manager.round_registry = round_registry
 	object_manager.item_database = item_database
+	object_manager.initializer = self
 	
 	# TestManager precisa de:
 	test_manager.server_manager = server_manager
@@ -142,6 +161,7 @@ func _init_server(is_headless):
 	test_manager.round_registry = round_registry
 	test_manager.object_manager = object_manager
 	test_manager.map_manager = map_manager
+	test_manager.initializer = self
 	
 	# configurações
 	network_manager.server_is_headless = is_headless
@@ -201,6 +221,7 @@ func _init_client():
 	# NetworkManager precisa de:
 	network_manager.game_manager = game_manager
 	network_manager.item_database = item_database
+	network_manager.initializer = self
 	
 	# GameManager precisa de:
 	game_manager.item_database = item_database
@@ -212,6 +233,13 @@ func _init_client():
 	# MainMenu precisa de:
 	main_menu.game_manager = game_manager
 	main_menu.server_list_manager = server_list_manager
+	main_menu.initializer = self
+	
+	# MapManager precisa de:
+	map_manager.initializer = self
+	
+	# ItemDatabase precisa de:
+	item_database.initializer = self
 	
 	# Configurações
 	game_manager.connect_inventory_signals()

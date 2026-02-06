@@ -22,6 +22,7 @@ var room_registry: RoomRegistry = null
 var round_registry: RoundRegistry = null
 var object_manager: ObjectManager = null
 var item_database: ItemDatabase = null
+var initializer = null
 
 # ===== VARIÁVEIS INTERNAS =====
 
@@ -1009,5 +1010,11 @@ func debug_print_all_players():
 	print("\n=====================================\n")
 
 func _log_debug(message: String):
-	if debug_mode:
-		print("[SERVER][ClientRegistry] %s" % message)
+	if not debug_mode:
+		return
+		
+	# Configurações do initializer
+	if initializer.activate_only_selected and not "ClientRegistry" in initializer.selected:
+		return
+		
+	print("[SERVER][ClientRegistry] %s" % message)

@@ -4,8 +4,10 @@ extends Control
 
 var game_manager: GameManager = null
 var server_list_manager: ServerListManager = null
+var initializer = null
 
 # ===== SINAIS =====
+
 #signal join_match_requested()
 #signal create_match_requested(room_name: String, password: String)
 #signal match_selected(match_id: int, password: String)
@@ -15,7 +17,8 @@ signal gameplay_menu_back_pressed()
 signal gameplay_menu_exit_game_pressed()
 signal gameplay_menu_disconnect_f_server_pressed()
 
-# Referências dos nós
+# ===== REFERÊNCIAS INTERNAS =====
+
 @onready var control_pai: Control
 @export var canvas_layer: CanvasLayer
 @onready var connecting_menu: CenterContainer
@@ -1578,5 +1581,11 @@ func _on_reset_pressed():
 
 func _log_debug(message: String):
 	"""Imprime mensagem de debug se habilitado"""
-	if debug_mode:
-		print("[MainMenu]: " + message)
+	if not debug_mode:
+		return
+		
+	# Configurações do initializer
+	if initializer.activate_only_selected and not "MainMenu" in initializer.selected:
+		return
+	
+	print("[MainMenu]: " + message)
