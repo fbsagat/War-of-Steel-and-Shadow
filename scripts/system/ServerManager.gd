@@ -866,6 +866,7 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, pl
 	player_instance.item_database = item_database
 	player_instance.network_manager = network_manager
 	player_instance.server_manager = self
+	player_instance.initializer = initializer
 	
 	# Preenche terreno e central_spawn
 	player_instance.terrain_ = map_manager.current_map

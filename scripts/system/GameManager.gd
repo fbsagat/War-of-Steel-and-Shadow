@@ -360,6 +360,10 @@ func _on_connection_failed():
 	"""Dispara quando a tentativa de conexão falha."""
 	_log_debug("Falha ao conectar ao servidor")
 
+
+# Criar a função para desconexão porposital por parte do cliente!
+
+
 func _on_server_disconnected():
 	"""Dispara quando o cliente já estava conectado, mas perde a conexão com o servidor."""
 	_log_debug("Desconectado do servidor")
