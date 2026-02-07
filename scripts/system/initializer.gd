@@ -11,13 +11,15 @@ extends Node
 ## Iniciar com o mouse destrancado (client)
 @export var start_unlocked_mouse: bool = true
 
-## Instruções para debug (executa _log_debug apenas nos itens selecionados)
-var activate_only_selected: bool = false # Ativa apenas módulos selecionados
-## Disponíveis: "Server", "NetworkManager", "TestManager", "GameManager", "RoomRegistry"
-## "RoundRegistry", "ClientRegistry", "Player_node", "ObjectManager", "MapManager", "MainMenu"
-## "ItemDatabase", "InventoryMenu", "DroppedItem"
-var selected: Array = ["GameManager", "Server"]
+# Instruções para debug
+## Executa _log_debug apenas nos itens selecionados
+var activate_only_selected: bool = false
+# Disponíveis: "Server", "NetworkManager", "TestManager", "GameManager", "RoomRegistry"
+# "RoundRegistry", "ClientRegistry", "Player_node", "ObjectManager", "MapManager", "MainMenu"
+# "ItemDatabase", "InventoryMenu", "DroppedItem"
+var selected: Array = ["GameManager", "Server", "NetworkManager"]
 
+# Referências
 ## Manager de rede, gerencia comunicação entre servidor e clientes
 var network_manager: NetworkManager = null
 

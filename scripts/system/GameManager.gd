@@ -14,13 +14,10 @@ const DEFAULT_SERVER_PORT: int = 7777
 @export var localhost_auto_connect: bool = false
 var peer: ENetMultiplayerPeer
 
+@export_category("Default Node References")
 const map_scene : String = "res://scenes/system/terrain_3d.tscn"
 const player_scene : String = "res://scenes/gameplay/player_warrior.tscn"
 const camera_controller : String = "res://scenes/gameplay/camera_controller.tscn"
-
-@export_category("Physics Settings")
-@export var drop_impulse_strength: float = 2.0
-@export var drop_impulse_variance: float = 1.0
 
 @export_category("Debug")
 @export var debug_mode: bool = true
@@ -121,7 +118,6 @@ func _can_process_menu_input() -> bool:
 	return is_in_round \
 		and main_menu_node != null \
 		and inventory_node != null
-
 
 # ESC (ui_cancel)
 # Prioridade: 1. Fecha inventário. 2. Fecha gameplay menu. 3. Abre gameplay menu.
@@ -340,6 +336,7 @@ func disconnect_from_server():
 # ===== CALLBACKS DE CONEXÃO =====
 
 func _on_connected_to_server():
+	"""Esse sinal é emitido quando o cliente consegue se conectar com sucesso ao servidor."""
 	"""Callback quando conecta com sucesso ao servidor"""
 	# Só leia get_unique_id() quando o peer estiver ativo
 
@@ -360,9 +357,11 @@ func _on_connected_to_server():
 	connected_to_server.emit()
 
 func _on_connection_failed():
+	"""Dispara quando a tentativa de conexão falha."""
 	_log_debug("Falha ao conectar ao servidor")
 
 func _on_server_disconnected():
+	"""Dispara quando o cliente já estava conectado, mas perde a conexão com o servidor."""
 	_log_debug("Desconectado do servidor")
 	
 	is_connected_to_server = false
@@ -803,6 +802,7 @@ func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bo
 	player_instance.initialize(player_data["id"], player_data["name"], spawn_info["position"])
 	player_instance.rotation = spawn_info["rotation"]
 	player_instance.setup_name_label()
+	player_instance.initializer = initializer
 
 	# Configuração ESPECÍFICA por tipo de jogador
 	if is_local:
