@@ -35,8 +35,11 @@ var players_cache: Dictionary = {}
 ## Inventários organizados por rodada: {round_id: {player_id: InventoryData}}
 var player_inventories: Dictionary = {}
 
-# Estado de inicialização
+## Estado de inicialização
 var _initialized: bool = false
+
+## Próxima posição de entrada no servidor
+var entry_position: int = 0
 
 # ===== SINAIS =====
 
@@ -64,6 +67,7 @@ signal player_left_round(peer_id: int, round_id: int)
 ## PlayerData:
 ## {
 ##   "id": int,
+##   "position": int,
 ##   "name": String,
 ##   "registered": bool,
 ##   "connected_at": float,
@@ -105,6 +109,11 @@ func reset():
 
 # ===== GERENCIAMENTO DE PEERS =====
 
+func _get_next_position() -> int:
+	"""Gera próximo ID de rodada disponível"""
+	entry_position += 1
+	return entry_position
+
 func add_peer(peer_id: int):
 	"""Adiciona um novo peer conectado (ainda não registrado)"""
 	if players.has(peer_id):
@@ -113,6 +122,7 @@ func add_peer(peer_id: int):
 	
 	players[peer_id] = {
 		"id": peer_id,
+		"entry_position": _get_next_position(),
 		"name": "",
 		"registered": false,
 		"connected_at": Time.get_unix_time_from_system(),

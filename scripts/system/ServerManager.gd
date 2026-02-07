@@ -251,8 +251,17 @@ func _on_peer_connected(peer_id: int):
 	# atualiza nome do seridor
 	network_manager.rpc_id(peer_id, "update_client_info", configs)
 	
-	# Sistema de teste automático (se ativado)
-	if fast_round and (multiplayer.get_peers().size() == simulador_players_qtd) and test_manager:
+	# Verificar se test manager existe
+	if not test_manager:
+		return
+	
+	# Verificar se test_round está ativado
+	if not fast_round:
+		return
+		
+	# Executar sistema de teste automático no momento que entra a quantidade de players necessária
+	var player_entry_position = client_registry.get_player(peer_id)["entry_position"]
+	if (multiplayer.get_peers().size() == simulador_players_qtd) and (player_entry_position == simulador_players_qtd):
 		test_manager.criar_partida_teste()
 
 func _on_peer_disconnected(peer_id: int):
