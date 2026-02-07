@@ -10,10 +10,10 @@ extends Control
 # ===== REGISTROS (Injetados pelo initializer.gd) =====
 
 var game_manager: GameManager = null
+var player_node: CharacterBody3D = null
+var initializer = null
 
-# =============================================================================
-# SINAIS PARA COMUNICAÇÃO COM O SERVIDOR
-# =============================================================================
+# ===== SINAIS =====
 
 signal request_drop_item(item_id: String)
 signal request_equip_item(item_id: String, slot_type: String)
@@ -21,12 +21,10 @@ signal request_unequip_item(slot_type: String)
 signal request_swap_items(item_id_1: String, item_id_2: String)
 #signal request_move_item(item_id: String, from_slot: String, to_slot: String)
 
-# =============================================================================
-# REFERÊNCIAS DA UI
-# =============================================================================
+# ===== REFERÊNCIAS INTERNAS =====
 
 # Grupos principais
-@onready var debug: bool = true
+@onready var debug_mode: bool = true
 
 @onready var inventory_root = $Inventory
 @onready var background_canvas = $Inventory/CanvasLayer
@@ -55,18 +53,14 @@ signal request_swap_items(item_id_1: String, item_id_2: String)
 # Área de drop
 @onready var drop_area = $Inventory/CenterContainer/MainVBox/EquipmentContainer/DropArea
 
-# =============================================================================
 # ESTADO DO JOGADOR (recebido do servidor)
-# =============================================================================
 
 var max_health = 100.0
 var current_health = 100.0
 var max_stamina = 100.0
 var current_stamina = 100.0
 
-# =============================================================================
 # SISTEMA DE DRAG & DROP (APENAS VISUAL - NÃO ALTERA ESTADO)
-# =============================================================================
 
 var dragged_item = null           # Control sendo arrastado
 var dragged_item_id = ""          # ID único do item sendo arrastado
@@ -74,16 +68,12 @@ var drag_preview = null           # Preview visual durante drag
 var original_slot = null          # Slot de origem
 var original_slot_type = ""       # Tipo do slot de origem ("inventory_0", "equipment_head", etc)
 
-# =============================================================================
 # SISTEMA DE QUICKBAR (HUD)
-# =============================================================================
 
 var selected_index: int = 0       # Índice do slot selecionado (0-8)
 var item_slots: Array[Panel] = [] # Referências aos 9 slots do quickbar
 
-# =============================================================================
 # GERAÇÃO DE IDs ÚNICOS
-# =============================================================================
 
 var next_item_id: int = 0  # Contador para IDs únicos
 
@@ -92,9 +82,7 @@ func _generate_item_id() -> String:
 	next_item_id += 1
 	return "item_%d_%d" % [Time.get_ticks_msec(), next_item_id]
 
-# =============================================================================
 # INICIALIZAÇÃO
-# =============================================================================
 
 func _ready():
 	_setup_initial_state()
@@ -1016,5 +1004,11 @@ func add_test_items():
 
 func _log_debug(message: String):
 	"""Imprime mensagem de debug"""
-	if debug:
-		print("[CLIENT][INVENTORY] %s" % message)
+	if not debug_mode:
+		return
+	
+	# Configurações do initializer
+	if initializer.activate_only_selected and not "InventoryMenu" in initializer.selected:
+		return
+	
+	print("[CLIENT][InventoryMenu] %s" % message)

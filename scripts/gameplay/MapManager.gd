@@ -23,6 +23,10 @@ class_name MapManager
 ## Variação na rotação (em radianos, ~5.7 graus)
 @export var rotation_variance: float = 0.2
 
+# ===== REGISTROS (Injetados pelo initializer.gd) =====
+
+var initializer = null
+
 # ===== VARIÁVEIS INTERNAS =====
 
 ## Referência ao mapa carregado atualmente
@@ -303,6 +307,12 @@ func apply_sky_configs(sky_node: Node, config: Dictionary) -> void:
 	_log_debug("✓ Configurações aplicadas!")
 
 func _log_debug(message: String):
-	if debug_mode:
-		var server: String = "[SERVER]" if is_server else "[CLIENT]"
-		print("%s[MapManager]%s" % [server, message])
+	if not debug_mode:
+		return
+		
+	# Configurações do initializer
+	if initializer.activate_only_selected and not "MapManager" in initializer.selected:
+		return
+	
+	var server: String = "[SERVER]" if is_server else "[CLIENT]"
+	print("%s[MapManager]%s" % [server, message])

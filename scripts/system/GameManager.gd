@@ -4,7 +4,8 @@ class_name GameManager
 ## GameManager - Gerenciador principal do jogo multiplayer (CLIENTE)
 ## Responsável por conectar ao servidor dedicado e gerenciar o fluxo do jogo
 
-# ===== CONFIGURAÇÕES (Editáveis no Inspector) =====
+# ===== CONFIGURAÇÕES =====
+
 @export_category("Connection Settings")
 const DEFAULT_SERVER_ADDRESS: String = "127.0.0.1"
 const DEFAULT_SERVER_PORT: int = 7777
@@ -13,23 +14,23 @@ const DEFAULT_SERVER_PORT: int = 7777
 @export var localhost_auto_connect: bool = false
 var peer: ENetMultiplayerPeer
 
+@export_category("Default Node References")
 const map_scene : String = "res://scenes/system/terrain_3d.tscn"
 const player_scene : String = "res://scenes/gameplay/player_warrior.tscn"
 const camera_controller : String = "res://scenes/gameplay/camera_controller.tscn"
-
-@export_category("Physics Settings")
-@export var drop_impulse_strength: float = 2.0
-@export var drop_impulse_variance: float = 1.0
 
 @export_category("Debug")
 @export var debug_mode: bool = true
 
 # ===== REGISTROS (Injetados pelo initializer.gd) =====
+
 var item_database: ItemDatabase = null
 var network_manager: NetworkManager = null
+var map_manager: Node = null
 var initializer = null
 
 # ===== VARIÁVEIS INTERNAS =====
+
 var is_connected_to_server: bool = false
 var is_in_round: bool = false
 var inventory_menu: bool = false # True se o menu de inventário estiver visível
@@ -47,8 +48,8 @@ var cached_unique_id: int = 0
 var spawned_objects: Dictionary = {}
 var local_inventory: Dictionary = {} # Inventário(de itens e equipamentos) local do player.
 
-# ===== REFERÊNCIAS =====
-var map_manager: Node = null
+# ===== REFERÊNCIAS INTERNAS =====
+
 var main_menu_node: Control = null
 var inventory_node : Control = null
 var local_player_node: Node = null
@@ -57,6 +58,7 @@ var players_node: Node = null
 var objects_node: Node = null
 
 # ===== SINAIS =====
+
 signal connected_to_server()
 signal connection_failed(reason: String)
 signal disconnected_from_server()
@@ -77,6 +79,7 @@ signal item_unequipped(object_id: String)
 signal items_swapped(item_id_1: String, item_id_2: String)
 
 # ===== FUNÇÕES DE INICIALIZAÇÃO =====
+
 func _ready():
 	# Conecta sinais (só uma vez!)
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
@@ -115,7 +118,6 @@ func _can_process_menu_input() -> bool:
 	return is_in_round \
 		and main_menu_node != null \
 		and inventory_node != null
-
 
 # ESC (ui_cancel)
 # Prioridade: 1. Fecha inventário. 2. Fecha gameplay menu. 3. Abre gameplay menu.
@@ -334,6 +336,7 @@ func disconnect_from_server():
 # ===== CALLBACKS DE CONEXÃO =====
 
 func _on_connected_to_server():
+	"""Esse sinal é emitido quando o cliente consegue se conectar com sucesso ao servidor."""
 	"""Callback quando conecta com sucesso ao servidor"""
 	# Só leia get_unique_id() quando o peer estiver ativo
 
@@ -354,9 +357,15 @@ func _on_connected_to_server():
 	connected_to_server.emit()
 
 func _on_connection_failed():
+	"""Dispara quando a tentativa de conexão falha."""
 	_log_debug("Falha ao conectar ao servidor")
 
+
+# Criar a função para desconexão porposital por parte do cliente!
+
+
 func _on_server_disconnected():
+	"""Dispara quando o cliente já estava conectado, mas perde a conexão com o servidor."""
 	_log_debug("Desconectado do servidor")
 	
 	is_connected_to_server = false
@@ -797,6 +806,7 @@ func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bo
 	player_instance.initialize(player_data["id"], player_data["name"], spawn_info["position"])
 	player_instance.rotation = spawn_info["rotation"]
 	player_instance.setup_name_label()
+	player_instance.initializer = initializer
 
 	# Configuração ESPECÍFICA por tipo de jogador
 	if is_local:
@@ -815,11 +825,13 @@ func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bo
 		get_tree().root.add_child(inventory_node_)
 		inventory_node = inventory_node_
 		inventory_node.game_manager = self
+		inventory_node.initializer = initializer
 		
 		# Atribui referência DIRETA (só para local) inventory_node
 		player_instance.inventory_node = inventory_node
 		inventory_node.setup_inventory_signals()
 		player_instance.connect_inventory_signals()
+		inventory_node.player_node = player_instance
 		
 		# Atribui referência DIRETA (só para local) camera_instance
 		player_instance.camera_controller = camera_instance
@@ -1193,9 +1205,13 @@ func _spawn_on_client(object_id: int, round_id: int, item_name: String, position
 		push_error("GameManager[Cliente]: Falha ao instanciar")
 		return
 	
-	# ✅ CORRIGIDO: Nome consistente com servidor
+	# Nome consistente com servidor
 	item_node.name = "Object_%d_%s_%d" % [object_id, item_name, round_id]
 	_log_debug("[ITEM]📦 Spawnando no cliente: %s - %s" % [owner_id, item_node.name])
+	
+	# Injeta dependências
+	item_node.network_manager = network_manager
+	item_node.initializer = initializer
 	
 	# Adiciona à árvore
 	var round_scene = get_tree().root.get_node_or_null("Round")
@@ -1298,10 +1314,18 @@ func verificar_rede() -> bool:
 func _log_debug(message: String):
 	if not debug_mode:
 		return
-
+	
 	var unique_id := cached_unique_id
 	if unique_id == 0 and verificar_rede() and multiplayer.has_multiplayer_peer():
 		unique_id = multiplayer.get_unique_id()
 		cached_unique_id = unique_id
-
-	print("[CLIENT][GameManager][ClientID: %s]: Message: %s" % [unique_id, message])
+	
+	# Configurações do initializer
+	if initializer.activate_only_selected and not "GameManager" in initializer.selected:
+		return
+	
+	# Enquanto o cliente não receber id único de peer multiplayer, não exibe no log debug
+	if unique_id == 1:
+		print("[GameManager]:Message:%s" % message)
+	else:
+		print("[GameManager][ClientID:%s]:Message:%s" % [unique_id, message])

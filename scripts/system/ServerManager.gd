@@ -14,6 +14,7 @@ class_name ServerManager
 ## IMPORTANTE: Este script só executa quando iniciado com --server ou --dedicated
 
 # ===== CONFIGURAÇÕES =====
+
 @export_category("Debug")
 @export var debug_mode: bool = true
 @export var debug_timer: bool = false
@@ -55,6 +56,7 @@ const server_camera : String = "res://scenes/server_scenes/server_camera.tscn"
 @export var enable_anticheat: bool = false
 
 # ===== REGISTROS (Injetados pelo initializer.gd) =====
+
 var network_manager: NetworkManager = null
 var client_registry : ClientRegistry = null
 var room_registry: RoomRegistry = null
@@ -63,14 +65,19 @@ var item_database: ItemDatabase = null
 var object_manager: ObjectManager = null
 var test_manager: TestManager = null
 var map_manager: Node = null
+
+# ===== REFERÊNCIAS INTERNAS =====
+
 var all_rounds_node: Node = null
 var current_cam_round_index: int = -1
 var current_active_camera: Camera3D = null
 var mouse_mode: bool = true
-var current_active_viewport: SubViewport = null  # Adicione esta
+var current_active_viewport: SubViewport = null
 var viewport_display: TextureRect = null
+var initializer = null
 
 # ===== VARIÁVEIS INTERNAS =====
+
 ## ID incremental para criação de salas
 var next_room_id: int = 1
 
@@ -244,8 +251,17 @@ func _on_peer_connected(peer_id: int):
 	# atualiza nome do seridor
 	network_manager.rpc_id(peer_id, "update_client_info", configs)
 	
-	# Sistema de teste automático (se ativado)
-	if fast_round and (multiplayer.get_peers().size() == simulador_players_qtd) and test_manager:
+	# Verificar se test manager existe
+	if not test_manager:
+		return
+	
+	# Verificar se test_round está ativado
+	if not fast_round:
+		return
+		
+	# Executar sistema de teste automático no momento que entra a quantidade de players necessária
+	var player_entry_position = client_registry.get_player(peer_id)["entry_position"]
+	if (multiplayer.get_peers().size() == simulador_players_qtd) and (player_entry_position == simulador_players_qtd):
 		test_manager.criar_partida_teste()
 
 func _on_peer_disconnected(peer_id: int):
@@ -260,7 +276,7 @@ func _on_peer_disconnected(peer_id: int):
 	"""
 	_log_debug("❌ Cliente desconectado: Peer ID %d" % peer_id)
 	
-	# 1. LIMPA RODADA (se estiver em uma)
+	# 1. LIMPA RODADA (se estiver em uma) (se estiver vazia)
 	var p_round = round_registry.get_round_by_player_id(peer_id)
 	if not p_round.is_empty():
 		var round_id = p_round["round_id"]
@@ -850,6 +866,7 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, pl
 	player_instance.item_database = item_database
 	player_instance.network_manager = network_manager
 	player_instance.server_manager = self
+	player_instance.initializer = initializer
 	
 	# Preenche terreno e central_spawn
 	player_instance.terrain_ = map_manager.current_map
@@ -1747,8 +1764,14 @@ func _get_spawned_object(round_id: int, object_id: int):
 
 func _log_debug(message: String):
 	"""Imprime mensagem de debug se habilitado"""
-	if debug_mode:
-		print("[SERVER]" + message)
+	if not debug_mode:
+		return
+	
+	# Configurações do initializer
+	if initializer.activate_only_selected and not "Server" in initializer.selected:
+		return
+	
+	print("[Server]" + message)
 
 # ===== DEBUG =====
 func _print_player_states():

@@ -19,6 +19,7 @@ class_name RoomRegistry
 var client_registry = null
 var round_registry = null
 var object_manager = null
+var initializer = null
 
 # ===== VARIÁVEIS INTERNAS =====
 
@@ -713,5 +714,11 @@ func debug_print_all_rooms():
 
 func _log_debug(message: String):
 	"""Função padrão de debug"""
-	if debug_mode:
-		print("[SERVER][RoomRegistry] %s" % message)
+	if not debug_mode:
+		return
+	
+	# Configurações do initializer
+	if initializer.activate_only_selected and not "RoomRegistry" in initializer.selected:
+		return
+	
+	print("[SERVER][RoomRegistry] %s" % message)

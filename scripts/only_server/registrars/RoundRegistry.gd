@@ -26,6 +26,7 @@ class_name RoundRegistry
 var client_registry = null
 var room_registry = null
 var object_manager = null
+var initializer = null
 
 # ===== VARIÁVEIS INTERNAS =====
 
@@ -793,5 +794,11 @@ func _gerar_paletas_cores() -> Array:
 
 func _log_debug(message: String):
 	"""Função padrão de debug"""
-	if debug_mode:
-		print("[SERVER][RoundRegistry] %s" % message)
+	if not debug_mode:
+		return
+	
+	# Configurações do initializer
+	if initializer.activate_only_selected and not "RoundRegistry" in initializer.selected:
+		return
+	
+	print("[SERVER][RoundRegistry] %s" % message)

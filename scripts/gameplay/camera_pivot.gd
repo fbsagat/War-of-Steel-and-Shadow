@@ -5,14 +5,11 @@
 
 extends Node3D
 
-# ==============================
 # TIPOS DE MODO DE CÂMERA
-# ==============================
 enum CameraMode { FREE_LOOK, BEHIND_PLAYER }
 
-# ==============================
-# EXPORT — CONFIGURAÇÕES GERAIS
-# ==============================
+# ===== CONFIGURAÇÕES =====
+
 @export var debug: bool = false
 @export var target: Node3D:
 	set(value):
@@ -31,9 +28,8 @@ enum CameraMode { FREE_LOOK, BEHIND_PLAYER }
 
 @export var collision_margin: float = 0.3
 
-# ==============================
-# EXPORT — CONFIGURAÇÕES DO MODO LIVRE (FREE_LOOK)
-# ==============================
+# CONFIGURAÇÕES DO MODO LIVRE (FREE_LOOK)
+
 @export_group("Modo Livre (Free Look)")
 @export var free_look_rotation_speed: float = 0.002
 @export_range(1.0, 30.0, 0.1) var free_look_smoothness: float = 10.0
@@ -41,18 +37,14 @@ enum CameraMode { FREE_LOOK, BEHIND_PLAYER }
 @export_range(0, 80, 1) var free_look_max_pitch_deg: float = 70
 @export var free_look_height_offset: float = 1.6
 
-# ==============================
-# EXPORT — CONFIGURAÇÕES DO MODO TRAVADO (BEHIND_PLAYER)
-# ==============================
+# CONFIGURAÇÕES DO MODO TRAVADO (BEHIND_PLAYER)
+
 @export_group("Modo Travado (Behind Player)")
 @export_range(1.0, 30.0, 0.1) var behind_smoothness: float = 12.0
 @export var behind_height_offset: float = 1.4
 @export_range(-30, 30, 1) var behind_target_pitch_deg: float = -10
 @export var disable_mouse_in_behind_mode: bool = true
 
-# ==============================
-# EXPORT — TRANSIÇÕES DO MODO TRAVADO
-# ==============================
 @export_group("Transições do Modo Travado")
 @export var use_smooth_transitions: bool = true
 @export_range(0.1, 10.0, 0.1) var transition_speed: float = 3.0
@@ -63,9 +55,8 @@ enum CameraMode { FREE_LOOK, BEHIND_PLAYER }
 @export var instant_transition_on_activate: bool = false
 @export var instant_transition_on_release: bool = false
 
-# ==============================
-# VARIÁVEIS INTERNAS
-# ==============================
+# ===== VARIÁVEIS INTERNAS =====
+
 var current_mode: CameraMode = CameraMode.FREE_LOOK
 var is_active: bool = false
 
@@ -82,9 +73,8 @@ var _current_distance: float = 0.0
 # Controle de entrada
 var _mouse_delta: Vector2 = Vector2.ZERO
 
-# ==============================
 # INICIALIZAÇÃO
-# ==============================
+
 func _ready():
 	add_to_group("camera_controller")
 	if target == null:

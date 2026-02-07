@@ -15,6 +15,7 @@ var is_connected_: bool = false
 var cached_unique_id: int = 0
 
 # --- SINCRONIZAÇÃO DE OBJETOS ---
+
 ## Buffer de interpolação no cliente
 ## { object_id: { last_update: float, target_pos: Vector3, target_rot: Vector3, has_first: bool } }
 var client_sync_buffer: Dictionary = {}

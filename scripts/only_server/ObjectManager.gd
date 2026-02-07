@@ -39,6 +39,7 @@ var network_manager: NetworkManager = null
 var client_registry: ClientRegistry = null
 var round_registry: RoundRegistry = null
 var item_database: ItemDatabase = null
+var initializer = null
 
 # ===== VARIÁVEIS INTERNAS =====
 
@@ -46,7 +47,7 @@ var item_database: ItemDatabase = null
 ## {round_id: {object_id: {node: Node, item_name: String, owner_id: int, spawn_time: float}}}
 var spawned_objects: Dictionary = {}
 
-## ✨ NOVO: Objetos guardados organizados por rodada
+## Objetos guardados organizados por rodada
 ## {round_id: {object_id: {item_name: String, owner_id: int, stored_time: float, stored_by: int, transfer_history: Array, custom_data: Dictionary}}}
 var stored_objects: Dictionary = {}
 
@@ -722,6 +723,7 @@ func _spawn_on_server(objects_node, object_id: int, round_id: int, item_name: St
 	# Injeta dependências
 	item_node.network_manager = network_manager
 	item_node.server_manager = server_manager
+	item_node.initializer = initializer
 	
 	_log_debug("Criando node: %s" % item_node.name)
 	
@@ -968,5 +970,11 @@ func print_round_objects(round_id: int):
 	print("─────────────────────────────────────────\n")
 
 func _log_debug(message: String):
-	if debug_mode:
-		print("[SERVER][ObjectManager] %s" % message)
+	if not debug_mode:
+		return
+	
+	# Configurações do initializer
+	if initializer.activate_only_selected and not "ObjectManager" in initializer.selected:
+		return
+	
+	print("[SERVER][ObjectManager] %s" % message)

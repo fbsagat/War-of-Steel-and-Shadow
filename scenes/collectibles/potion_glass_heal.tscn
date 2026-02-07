@@ -1,10 +1,11 @@
 [gd_scene format=4 uid="uid://c85qw1ebyqdai"]
 
-[ext_resource type="Script" uid="uid://bfl717tl211j3" path="res://scripts/gameplay/itens_coletaveis.gd" id="1_4a4xk"]
+[ext_resource type="Script" uid="uid://bfl717tl211j3" path="res://scripts/gameplay/DroppedItem.gd" id="1_4a4xk"]
 [ext_resource type="Material" uid="uid://dyf3texhrr1fx" path="res://models/VainerKit/items/potion_glass/potion_glass.material" id="1_lkmab"]
 [ext_resource type="Material" uid="uid://dc3cu6hrbrk5h" path="res://models/VainerKit/items/potion_glass/Liquid.material" id="2_4a4xk"]
 [ext_resource type="Texture2D" uid="uid://bp5wuo72n453k" path="res://models/VainerKit/items/potion_glass/potion_glass_log_texture.png" id="3_dkt0f"]
 [ext_resource type="PackedScene" uid="uid://da8cxlgmx22ff" path="res://vfx/heal/vfx_heal.tscn" id="4_wvm85"]
+
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ulu25"]
 resource_name = "potion_glass"

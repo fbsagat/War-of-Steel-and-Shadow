@@ -25,6 +25,7 @@ var client_registry: ClientRegistry = null
 var room_registry: RoomRegistry = null
 var round_registry: RoundRegistry = null
 var object_manager: ObjectManager = null
+var initializer = null
 
 # ===== VARIÁVEIS INTERNAS =====
 
@@ -410,6 +411,7 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 	player_instance.item_database = item_database
 	player_instance.network_manager = network_manager
 	player_instance.server_manager = server_manager
+	player_instance.initializer = initializer
 	
 	# Preenche terreno e central_spawn
 	player_instance.terrain_ = map_manager.current_map
@@ -481,5 +483,11 @@ func on_spawn_requested(_character) -> void:
 
 func _log_debug(message: String):
 	"""Função padrão de debug"""
-	if debug_mode:
-		print("[SERVER][TestManager] %s" % message)
+	if not debug_mode:
+		return
+	
+	# Configurações do initializer
+	if initializer.activate_only_selected and not "TestManager" in initializer.selected:
+		return	
+		
+	print("[SERVER][TestManager] %s" % message)
