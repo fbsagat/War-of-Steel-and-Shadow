@@ -1,0 +1,32 @@
+[gd_scene format=3 uid="uid://ok7ob10il5go"]
+
+[ext_resource type="Shader" uid="uid://bnd2kg4rxfftx" path="res://vfx/poison/s_poison_shader.tres" id="1_n3qhn"]
+
+[sub_resource type="Curve" id="Curve_6his4"]
+_data = [Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="CurveTexture" id="CurveTexture_1cs5a"]
+curve = SubResource("Curve_6his4")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_n2n8a"]
+emission_shape = 2
+emission_sphere_radius = 5.0
+gravity = Vector3(0, 0.5, 0)
+tangential_accel_min = 2.9999976
+tangential_accel_max = 2.9999976
+scale_curve = SubResource("CurveTexture_1cs5a")
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_o245v"]
+render_priority = 0
+shader = ExtResource("1_n3qhn")
+
+[sub_resource type="QuadMesh" id="QuadMesh_sgdke"]
+material = SubResource("ShaderMaterial_o245v")
+
+[node name="vfx_poison" type="Node3D" unique_id=1435086447]
+
+[node name="GPUParticles3D" type="GPUParticles3D" parent="." unique_id=392613306]
+lifetime = 2.0
+process_material = SubResource("ParticleProcessMaterial_n2n8a")
+draw_pass_1 = SubResource("QuadMesh_sgdke")

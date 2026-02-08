@@ -1,0 +1,44 @@
+[gd_scene format=3 uid="uid://4boso4a5uryx"]
+
+[ext_resource type="PackedScene" uid="uid://ok7ob10il5go" path="res://vfx/poison/vfx_poison.tscn" id="1_q4ukj"]
+
+[sub_resource type="Curve" id="Curve_hsq6s"]
+_data = [Vector2(0, 0.024608493), 0.0, 0.0, 0, 0, Vector2(1, 0.6957495), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="CurveTexture" id="CurveTexture_jhk05"]
+curve = SubResource("Curve_hsq6s")
+
+[sub_resource type="Curve" id="Curve_dxeyw"]
+_data = [Vector2(0, 0), 0.0, 0.0, 0, 0, Vector2(0.24731183, 1), 0.04755502, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="CurveTexture" id="CurveTexture_yroe8"]
+curve = SubResource("Curve_dxeyw")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_4i4us"]
+gravity = Vector3(0, 0, 0)
+scale_min = 10.0
+scale_max = 10.0
+scale_curve = SubResource("CurveTexture_yroe8")
+color = Color(0.7887894, 0.9275334, 0.53412783, 1)
+alpha_curve = SubResource("CurveTexture_jhk05")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1t3nd"]
+transparency = 1
+shading_mode = 0
+vertex_color_use_as_albedo = true
+albedo_color = Color(0.43137255, 0.6, 0, 1)
+
+[sub_resource type="SphereMesh" id="SphereMesh_odgd6"]
+material = SubResource("StandardMaterial3D_1t3nd")
+
+[node name="vfx_poison_aura" type="Node3D" unique_id=772353299]
+
+[node name="vfx_poison" parent="." unique_id=1435086447 instance=ExtResource("1_q4ukj")]
+
+[node name="GPUParticles3D" type="GPUParticles3D" parent="." unique_id=606866276]
+amount = 1
+lifetime = 5.0
+process_material = SubResource("ParticleProcessMaterial_4i4us")
+draw_pass_1 = SubResource("SphereMesh_odgd6")
