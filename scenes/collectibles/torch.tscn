@@ -1,8 +1,9 @@
 [gd_scene format=4 uid="uid://chufflhkownuw"]
 
-[ext_resource type="Script" uid="uid://cnbe1yewpcaxx" path="res://scripts/gameplay/DroppedItem.gd" id="1_j8j46"]
-[ext_resource type="Texture2D" uid="uid://btlyfk5rja7tf" path="res://models/KayKit_DungeonRemastered_1.1_FREE/Assets/fbx/dungeon_texture.png" id="1_uplqx"]
-[ext_resource type="PackedScene" uid="uid://b0me0q10p1flx" path="res://models/VainerKit/items/torch/torch.glb" id="3_dtj55"]
+[ext_resource type="Script" uid="uid://bfl717tl211j3" path="res://scripts/gameplay/DroppedItem.gd" id="1_j8j46"]
+[ext_resource type="Texture2D" uid="uid://d2avxl0nxmgdx" path="res://models/Character/texture/dungeon_texture.png" id="1_uplqx"]
+
+
 
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_j8j46"]
 rough = true
@@ -64,7 +65,6 @@ transform = Transform3D(0.9, 0, 0, 0, 0.9, 0, 0, 0, 0.9, 0, 0, 0)
 
 [node name="torch" type="MeshInstance3D" parent="torch" unique_id=1040672587]
 transform = Transform3D(90, 0, 0, 0, -3.934025e-06, 90, 0, -90, -3.934025e-06, 0, 0, 0)
-visible = false
 mesh = SubResource("ArrayMesh_xfqeq")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1802280712]
@@ -78,6 +78,3 @@ collision_mask = 8
 [node name="CollisionShape3D" type="CollisionShape3D" parent="impact_sensor" unique_id=1158671524]
 transform = Transform3D(105, 0, 0, 0, -4.589696e-06, 105, 0, -105, -4.589696e-06, 0, 0, 0)
 shape = SubResource("ConvexPolygonShape3D_j8j46")
-
-[node name="torch2" parent="." unique_id=464719511 instance=ExtResource("3_dtj55")]
-transform = Transform3D(0.6, 0, 0, 0, 0.6, 0, 0, 0, 0.6, 0.033806622, -0.31817707, 0)
