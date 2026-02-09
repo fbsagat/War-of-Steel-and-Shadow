@@ -1,0 +1,53 @@
+[gd_scene format=3 uid="uid://dkt04rbyeng25"]
+
+[ext_resource type="Shader" uid="uid://bjun2r2gue0m0" path="res://vfx/fire/shader/s_fire_shader.tres" id="1_wudug"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_5ti2b"]
+render_priority = 0
+shader = ExtResource("1_wudug")
+shader_parameter/Speed = Vector2(0, 1)
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_fbi7y"]
+emission_shape_offset = Vector3(0, 0.5, 0)
+emission_shape_scale = Vector3(1, 0, 1)
+emission_shape = 2
+emission_sphere_radius = 1.0
+gravity = Vector3(0, 0, 0)
+color = Color(0.99160117, 0.7629983, 0, 1)
+
+[sub_resource type="QuadMesh" id="QuadMesh_2oryi"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_0eevc"]
+render_priority = 0
+shader = ExtResource("1_wudug")
+shader_parameter/Speed = Vector2(0, 1)
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_qouby"]
+emission_shape_offset = Vector3(0, 0, -0.675)
+emission_shape_scale = Vector3(1, 0, 1)
+emission_shape = 3
+emission_box_extents = Vector3(1, 1, 1)
+gravity = Vector3(0, 0, 0)
+color = Color(1, 0.69803923, 0.1764706, 1)
+
+[sub_resource type="QuadMesh" id="QuadMesh_him7u"]
+size = Vector2(3, 3)
+orientation = 1
+
+[node name="vfx_fire_aura" type="Node3D" unique_id=836518820]
+
+[node name="fire_particles" type="GPUParticles3D" parent="." unique_id=621849665]
+material_override = SubResource("ShaderMaterial_5ti2b")
+amount = 14
+lifetime = 5.0
+randomness = 1.0
+process_material = SubResource("ParticleProcessMaterial_fbi7y")
+draw_pass_1 = SubResource("QuadMesh_2oryi")
+
+[node name="fire_aura" type="GPUParticles3D" parent="." unique_id=1582514774]
+material_override = SubResource("ShaderMaterial_0eevc")
+amount = 5
+lifetime = 5.0
+speed_scale = 0.5
+process_material = SubResource("ParticleProcessMaterial_qouby")
+draw_pass_1 = SubResource("QuadMesh_him7u")
