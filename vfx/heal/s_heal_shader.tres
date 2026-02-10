@@ -1,6 +1,6 @@
 [gd_resource type="VisualShader" format=3 uid="uid://p3udn7nj80y3"]
 
-[ext_resource type="Texture2D" uid="uid://b3wxdv2o8f71l" path="res://vfx/heal/heal_vfx.png" id="1_0vxcl"]
+[ext_resource type="Texture2D" uid="uid://bqh76ruyiu314" path="res://vfx/heal/heal_vfx.png" id="1_0vxcl"]
 
 [sub_resource type="VisualShaderNodeVectorDecompose" id="VisualShaderNodeVectorDecompose_6sfky"]
 output_port_for_preview = 1
@@ -9,6 +9,19 @@ op_type = 2
 
 [sub_resource type="VisualShaderNodeTexture" id="VisualShaderNodeTexture_nrnfy"]
 texture = ExtResource("1_0vxcl")
+
+[sub_resource type="Gradient" id="Gradient_t2ois"]
+colors = PackedColorArray(0, 1, 0.50980395, 1, 0, 1, 0.50980395, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_nwjdo"]
+gradient = SubResource("Gradient_t2ois")
+
+[sub_resource type="VisualShaderNodeTexture" id="VisualShaderNodeTexture_u257p"]
+texture = SubResource("GradientTexture2D_nwjdo")
+texture_type = 1
+
+[sub_resource type="VisualShaderNodeInput" id="VisualShaderNodeInput_1t82c"]
+input_name = "color"
 
 [sub_resource type="VisualShaderNodeBillboard" id="VisualShaderNodeBillboard_hk7mt"]
 billboard_type = 2
@@ -25,4 +38,8 @@ nodes/fragment/3/node = SubResource("VisualShaderNodeVectorDecompose_6sfky")
 nodes/fragment/3/position = Vector2(-140, 280)
 nodes/fragment/4/node = SubResource("VisualShaderNodeTexture_nrnfy")
 nodes/fragment/4/position = Vector2(-480, 80)
-nodes/fragment/connections = PackedInt32Array(4, 0, 3, 0, 3, 3, 0, 1, 4, 0, 0, 0)
+nodes/fragment/5/node = SubResource("VisualShaderNodeTexture_u257p")
+nodes/fragment/5/position = Vector2(-80, 16)
+nodes/fragment/8/node = SubResource("VisualShaderNodeInput_1t82c")
+nodes/fragment/8/position = Vector2(-288, 832)
+nodes/fragment/connections = PackedInt32Array(4, 0, 3, 0, 3, 3, 0, 1, 4, 0, 0, 0, 4, 0, 5, 0, 5, 0, 0, 0)

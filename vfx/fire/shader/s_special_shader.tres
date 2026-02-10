@@ -80,6 +80,7 @@ keep_scale = true
 [resource]
 modes/cull = 2
 flags/unshaded = true
+preview_params/Speed = "Vector2(0, 1)"
 nodes/vertex/2/node = SubResource("VisualShaderNodeBillboard_l6vmb")
 nodes/vertex/2/position = Vector2(-40, 120)
 nodes/vertex/connections = PackedInt32Array(2, 0, 0, 10)
