@@ -46,7 +46,8 @@ var entry_position: int = 0
 # --- Sinais de Conexão ---
 signal peer_added(peer_id: int)
 signal peer_removed(peer_id: int)
-signal player_registered(peer_id: int, player_name: String)
+signal player_registered(peer_id: int, player_uuid: String)
+signal player_name_registered(peer_id: int, player_name: String)
 
 # --- Sinais de Localização ---
 signal player_joined_room(peer_id: int, room_id: int)
@@ -67,6 +68,7 @@ signal player_left_round(peer_id: int, round_id: int)
 ## PlayerData:
 ## {
 ##   "id": int,
+##   "uuid": String,
 ##   "position": int,
 ##   "name": String,
 ##   "registered": bool,
@@ -122,6 +124,7 @@ func add_peer(peer_id: int):
 	
 	players[peer_id] = {
 		"id": peer_id,
+		"uuid": "",
 		"entry_position": _get_next_position(),
 		"name": "",
 		"registered": false,
@@ -154,21 +157,33 @@ func remove_peer(peer_id: int):
 	_log_debug("✓ Peer removido: %d (%s)" % [peer_id, player_name])
 	peer_removed.emit(peer_id)
 
-func register_player(peer_id: int, player_name: String) -> bool:
-	"""Registra nome do jogador"""
+func register_player(peer_id: int, player_uuid: String) -> bool:
+	"""Registra uuid do jogador"""
 	if not players.has(peer_id):
-		_log_debug("❌ Tentou registrar jogador inexistente: %d" % peer_id)
+		_log_debug("❌ Tentou registrar uuid jogador inexistente: %d" % peer_id)
 		return false
 	
-	if is_name_taken(player_name):
-		_log_debug("❌ Nome já em uso: %s" % player_name)
+	players[peer_id]["uuid"] = player_uuid
+	players[peer_id]["registered"] = true
+	
+	_log_debug("✓ Uuid do jogador registrado: %s (Session ID: %d)" % [player_uuid, peer_id])
+	player_registered.emit(peer_id, player_uuid)
+	return true
+
+func register_player_name(peer_id: int, player_name: String) -> bool:
+	"""Registra nome do jogador"""
+	if not players.has(peer_id):
+		_log_debug("❌ Tentou registrar nome de jogador inexistente: %d" % peer_id)
+		return false
+	
+	if not players[peer_id]["registered"] == true:
+		_log_debug("❌ Tentou registrar nome antes de registrar uuid: %d" % peer_id)
 		return false
 	
 	players[peer_id]["name"] = player_name
-	players[peer_id]["registered"] = true
 	
-	_log_debug("✓ Jogador registrado: %s (ID: %d)" % [player_name, peer_id])
-	player_registered.emit(peer_id, player_name)
+	_log_debug("✓ Nome do jogador registrado: %s (ID: %d)" % [player_name, peer_id])
+	player_name_registered.emit(peer_id, player_name)
 	return true
 
 func is_name_taken(player_name: String) -> bool:
@@ -176,6 +191,13 @@ func is_name_taken(player_name: String) -> bool:
 	var normalized_name = player_name.strip_edges().to_lower()
 	for player in players.values():
 		if player.has("name") and player["name"].strip_edges().to_lower() == normalized_name:
+			return true
+	return false
+
+func is_uuid_taken(player_uuid: String) -> bool:
+	"""Verifica se um nome já está em uso"""
+	for player in players.values():
+		if player.has("uuid") and player["uuid"] == player_uuid:
 			return true
 	return false
 

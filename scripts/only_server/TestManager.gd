@@ -35,6 +35,7 @@ var free_camera: Camera3D = null
 # Estado de inicialização
 var _initialized: bool = false
 
+var actual_camera: Camera3D = null
 var dummy_camera: Camera3D
 
 # ===== INICIALIZAÇÃO =====
@@ -106,21 +107,16 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 		
 		# Verifica se peer já está registrado
 		var player_data = client_registry.get_player(peer_id)
+			
+		# Registra com nome padrão
+		var player_name = "TestPlayer%d - %d" % [i + 1, peer_id]
+		var success = client_registry.register_player_name(peer_id, player_name)
+
+		if not success:
+			_log_debug("❌ Falha ao registrar jogador %d" % peer_id)
+			continue
 		
-		if player_data.is_empty() or not player_data["registered"]:
-			# Adiciona peer se não existe
-			if player_data.is_empty():
-				client_registry.add_peer(peer_id)
-			
-			# Registra com nome padrão
-			var player_name = "TestPlayer%d - %d" % [i + 1, peer_id]
-			var success = client_registry.register_player(peer_id, player_name)
-			
-			if not success:
-				_log_debug("❌ Falha ao registrar jogador %d" % peer_id)
-				continue
-			
-			player_data = client_registry.get_player(peer_id)
+		player_data = client_registry.get_player(peer_id)
 		
 		# Adiciona à lista de jogadores
 		players.append({
@@ -130,11 +126,11 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 		})
 		
 		_log_debug("  ✓ Jogador registrado: %s (ID: %d)" % [player_data["name"], peer_id])
-	
+
 	if players.is_empty():
 		_log_debug("❌ Nenhum jogador válido para criar partida")
 		return
-	
+
 	# Cria sala no RoomRegistry
 	var room_data = room_registry.create_room(
 		nome_sala,
@@ -147,8 +143,8 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 	if room_data.is_empty():
 		_log_debug("❌ Falha ao criar sala!")
 		return
-	
-	_log_debug("  ✓ Sala criada: '%s' (ID: %d)" % [nome_sala, room_id])
+
+	_log_debug(" ✓ Sala criada: '%s' (ID: %d)" % [nome_sala, room_id])
 	
 	# Adiciona outros jogadores à sala (host já foi adicionado)
 	for i in range(1, players.size()):
@@ -256,7 +252,7 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 	# Envia comando de início para todos os clientes
 	for room_player in match_data["players"]:
 		network_manager.rpc_id(room_player["id"], "_client_round_started", match_data)
-	
+
 	# Instancia rodada no servidor
 	await _server_instantiate_round(match_data, players_node, round_node)
 	
@@ -296,8 +292,8 @@ func _server_instantiate_round(match_data: Dictionary, players_node, round_node)
 	Instancia a rodada no servidor (mapa e players)
 	Similar ao ServerManager, mas com validações extras para testes
 	"""
-	
-	_log_debug("  Instanciando rodada no servidor...")
+
+	_log_debug(" Instanciando rodada no servidor...")
 	
 	# Aplica configurações de mapa
 	await map_manager.apply_map_configs(match_data["settings"])
@@ -314,9 +310,9 @@ func _server_instantiate_round(match_data: Dictionary, players_node, round_node)
 		var spawn_data = match_data["spawn_data"][player_data["id"]]
 		_spawn_player_on_server(player_data, spawn_data, match_data["round_id"], players_node)
 	
-	# Cria câmera livre se não estiver em modo headless
-	var actual_camera: Camera3D = null
+	# Cria câmera livre se não estiver em modo headless(sem renderização)
 	if not server_manager.is_headless:
+		_log_debug("Criando câmera livre: Não está em modo headless")
 		actual_camera = preload(server_manager.server_camera).instantiate()
 		actual_camera.name = "FreeCamera"
 		round_node.add_child(actual_camera)
@@ -324,7 +320,7 @@ func _server_instantiate_round(match_data: Dictionary, players_node, round_node)
 		actual_camera.current = true
 		await get_tree().process_frame
 	else:
-		# Se estiver em modo headless criar uma câmera dummy
+		_log_debug("Criando câmera dummy: Está em modo headless")
 		actual_camera = Camera3D.new()
 		actual_camera.name = "DummyCamera"
 		round_node.add_child(actual_camera)
@@ -339,13 +335,10 @@ func _server_instantiate_round(match_data: Dictionary, players_node, round_node)
 	# Configura o Terrain3D para usar actual_camera
 	if terrain_3d:
 		terrain_3d.set_camera(actual_camera)
+		# Ativa o physics_process após atribuir a câmera
+		terrain_3d.set_physics_process(true)
 	else:
 		push_warning("terrain_3d não encontrado para configurar câmera")
-	
-	# Tira ui (desnecessária para o servidor)
-	var ui = get_tree().root.get_node_or_null("MainMenu")
-	if ui:
-		ui.queue_free()
 	
 	# Se não headless, joga este primeiro round para a camera do servidor
 	if not server_manager.is_headless and match_data["round_id"] <= 1:

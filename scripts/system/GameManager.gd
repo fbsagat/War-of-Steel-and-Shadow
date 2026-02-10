@@ -27,6 +27,10 @@ const camera_controller : String = "res://scenes/gameplay/camera_controller.tscn
 const MAX_RECONNECT_ATTEMPTS := 10
 const RECONNECT_DELAY := 2.0 # segundos
 
+@export_category("Player Identifier")
+@export var client_uuid: String = ""
+const PLAYER_UUID_FILE := "user://player_id.cfg"
+
 # ===== REGISTROS (Injetados pelo initializer.gd) =====
 
 var item_database: ItemDatabase = null
@@ -91,6 +95,11 @@ func _ready():
 	multiplayer.connection_failed.connect(_on_connection_failed)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
 	_log_debug("Sinais de rede configurados")
+	
+	if client_uuid == "":
+		_load_or_generate_id()
+		
+	_log_debug("UUID atual deste cliente: %s" % client_uuid)
 
 func connect_inventory_signals():
 	main_menu_node.gameplay_menu_back_pressed.connect(_on_gameplay_menu_back_pressed)
@@ -329,6 +338,9 @@ func _on_connected_to_server():
 	is_connected_to_server = true
 	local_peer_id = multiplayer.get_unique_id()
 	
+	# envia o UUID pro servidor
+	send_client_uuid(client_uuid)
+	
 	_log_debug(" Cliente conectado ao servidor com sucesso! Peer ID: %d" % local_peer_id)
 	
 	if main_menu_node:
@@ -459,7 +471,14 @@ func create_local_match():
 	#server_pid = OS.create_process(server_path, ["--port", "7777"])
 
 # ===== REGISTRO DE JOGADOR =====
-
+func send_client_uuid(_client_uuid: String):
+	"Envia o uuid do jogador para o servidor tomar decisões sobre ele"
+	
+	if not is_connected_to_server:
+		_show_error("Não conectado ao servidor")
+		return
+	network_manager.send_client_uuid(client_uuid)
+	
 func set_player_name(p_name: String):
 	"""Envia nome do jogador para registro no servidor"""
 	if not is_connected_to_server:
@@ -471,7 +490,7 @@ func set_player_name(p_name: String):
 	if main_menu_node:
 		main_menu_node.show_loading_menu("Registrando jogador...")
 	
-	network_manager.register_player(p_name)
+	network_manager.register_player_name(p_name)
 	
 func _client_name_accepted(accepted_name: String):
 	"""Callback quando o nome é aceito pelo servidor"""
@@ -492,6 +511,17 @@ func _client_name_rejected(reason: String):
 		main_menu_node.show_error_name_input(reason)
 	
 	name_rejected.emit(reason)
+	
+func _client_uuid_rejected():
+	"""Callback quando o uuid do usuário é repetido"""
+	_log_debug("UUID rejeitado (repetido)")
+	
+	_on_intentional_disconnect_from_server()
+	
+	if main_menu_node:
+		main_menu_node.show_server_list_menu()
+		main_menu_node.show_error_server_list("UUID inválida")
+		
 	
 func _client_wrong_password():
 	"""Callback quando a senha está incorreta"""
@@ -1313,6 +1343,30 @@ func _despawn_on_client(object_id: int, round_id: int):
 	network_manager.unregister_syncable_object(object_id)
 	
 	_log_debug("✓ Objeto despawnado no cliente: ID=%d" % object_id)
+
+# ===== PLAYER IDENTIFIER FUNCTIONS =====
+
+func _load_or_generate_id() -> void:
+	_log_debug("_load_or_generate_id")
+	var config := ConfigFile.new()
+	if config.load(PLAYER_UUID_FILE) == OK && config.has_section_key("Player", "id"):
+		client_uuid = config.get_value("Player", "id")
+		_log_debug("UUID carregado: %s" % client_uuid)
+	else:
+		client_uuid = _generate_unique_id()
+		_save_id()
+		_log_debug("Novo UUID gerado: %s" % client_uuid)
+	
+func _generate_unique_id() -> String:
+	# Baseado em timestamp + random para evitar colisões em testes
+	var timestamp := Time.get_unix_time_from_system()
+	var random_part := randi() % 1000000
+	return "pid_%s_%06d" % [timestamp, random_part]
+
+func _save_id() -> void:
+	var config := ConfigFile.new()
+	config.set_value("Player", "id", client_uuid)
+	config.save(PLAYER_UUID_FILE)
 
 # ===== UTILITÁRIOS =====
 

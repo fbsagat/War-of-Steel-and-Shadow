@@ -68,6 +68,8 @@ func load_map(map_scene_path: String, round_node):
 		
 	# Adiciona o mapa à cena
 	round_node.add_child(current_map)
+	# Desativa o physics_process (câmera precisa ser atribuida)
+	current_map.set_physics_process(false)
 	
 func apply_map_configs(settings: Dictionary = {}):
 	# Aplicar configurações do Terrain3D

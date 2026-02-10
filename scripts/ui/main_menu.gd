@@ -461,7 +461,8 @@ func show_connecting_menu():
 		connecting_error_label.text = ""
 		connecting_error_label.visible = false
 
-func show_server_list_menu(servers: Array):
+func show_server_list_menu():
+	var servers : Array = server_list_manager.get_items()
 	populate_server_list(servers)
 	
 	hide_all_menus()
@@ -709,7 +710,7 @@ func _on_join_server_pressed():
 	if not game_manager.is_connected_to_server:
 		# game_manager.request_server_list()
 		_log_debug("Join Server pressiondo! mostrar menu de list de servidor!")
-		show_server_list_menu(server_list_manager.get_items())
+		show_server_list_menu()
 	else:
 		_log_debug("Join Server pressiondo, já conectado! mostrar menu de list de salas!")
 		show_room_list_menu()
@@ -861,7 +862,7 @@ func _on_manual_server_join_button_pressed():
 	show_manual_server_join_menu()
 
 func _on_add_server_back_pressed():
-	show_server_list_menu(server_list_manager.get_items())
+	show_server_list_menu()
 	_log_debug("Voltar! não vou mais adicionar servidor na lista de servidores")
 
 func _on_confirm_add_server_pressed():
@@ -914,17 +915,17 @@ func _on_confirm_add_server_pressed():
 	
 	if server_list_manager:
 		server_list_manager.add_item(add_server_name_input.text, add_server_ip_input.text, int(add_server_port_input.text))
-	show_server_list_menu(server_list_manager.get_items())
+	show_server_list_menu()
 	
 	_log_debug("Adicionando servidor na lista de servidores")
 
 func _on_delete_server_back_pressed():
-	show_server_list_menu(server_list_manager.get_items())
+	show_server_list_menu()
 	_log_debug("Voltar! não vou mais apagar este servidor da lista")
 
 func _on_confirm_delete_server_pressed():
 	server_list_manager.remove_item(selected_server_id)
-	show_server_list_menu(server_list_manager.get_items())
+	show_server_list_menu()
 	_log_debug("Apagando este servidor da lista")
 
 # ===== CALLBACKS DO MENU DE ENTRADA MANUAL =====
@@ -966,7 +967,7 @@ func _on_manual_room_join_back_pressed():
 	show_room_list_menu()
 
 func _on_manual_server_join_back_pressed():
-		show_server_list_menu(server_list_manager.get_items())
+		show_server_list_menu()
 
 # ===== CALLBACKS DO MENU DE CRIAR PARTIDA =====
 

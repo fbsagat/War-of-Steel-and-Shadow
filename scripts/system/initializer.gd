@@ -8,7 +8,7 @@ extends Node
 @export var simulador_players_qtd: int = 2
 ## [TESTES] Dropa itens perto dos players e ativa o trainer de cada player
 @export var trainer: bool = true
-## Iniciar com o mouse destrancado (client)
+## Iniciar com o mouse destrancado (Cliente / apenas no modo de testes)
 @export var start_unlocked_mouse: bool = true
 
 # Instruções para debug
@@ -17,7 +17,7 @@ var activate_only_selected: bool = true
 # Disponíveis: "Server", "NetworkManager", "TestManager", "GameManager", "RoomRegistry"
 # "RoundRegistry", "ClientRegistry", "Player_node", "ObjectManager", "MapManager", "MainMenu"
 # "ItemDatabase", "InventoryMenu", "DroppedItem"
-var selected: Array = ["GameManager", "Server", "NetworkManager"]
+var selected: Array = ["Server", "TestManager"]
 
 # Referências
 ## Manager de rede, gerencia comunicação entre servidor e clientes
@@ -60,7 +60,11 @@ func _ready():
 	if is_server:
 		_init_server(is_headless)
 	else:
-		_init_client()
+		var client_uuid_ = null
+		for arg in args:
+			if arg.begins_with("--client_uuid="):
+				client_uuid_ = arg.split("=")[1]
+		_init_client(client_uuid_)
 		
 func _init_server(is_headless):
 	# Instancia managers e registros
@@ -166,6 +170,7 @@ func _init_server(is_headless):
 	test_manager.initializer = self
 	
 	# configurações
+	server_manager.is_headless = is_headless
 	network_manager.server_is_headless = is_headless
 	map_manager.is_server = true
 	
@@ -189,7 +194,7 @@ func _init_server(is_headless):
 	item_database.load_database()
 	object_manager.initialize()
 
-func _init_client():
+func _init_client(client_uuid_):
 	# Instancia managers e registros
 	var network_manager_scene: PackedScene = load("res://scenes/system/client_network_manager.tscn")
 	var game_manager_scene: PackedScene = load("res://scenes/system/game_manager.tscn")
@@ -246,6 +251,9 @@ func _init_client():
 	# Configurações
 	game_manager.connect_inventory_signals()
 	main_menu._connect_game_manager_signals()
+	if client_uuid_:
+		game_manager.client_uuid = client_uuid_
+		
 	
 	# Configurar modo de testes
 	if test_mode:

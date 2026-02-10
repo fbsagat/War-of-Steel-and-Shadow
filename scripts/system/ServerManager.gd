@@ -74,6 +74,7 @@ var current_active_camera: Camera3D = null
 var mouse_mode: bool = true
 var current_active_viewport: SubViewport = null
 var viewport_display: TextureRect = null
+var test_mode_check_timer: Timer
 var initializer = null
 
 # ===== VARIÁVEIS INTERNAS =====
@@ -85,10 +86,31 @@ var next_room_id: int = 1
 ## Formato: {peer_id: {pos: Vector3, vel: Vector3, rot: Vector3, timestamp: int}}
 var player_states: Dictionary = {}
 
+
 # ===== INICIALIZAÇÃO =====
 
 func _ready() -> void:
-	pass
+	# Inicializa verificador de teste automático se fast_round true
+	if fast_round:
+		test_mode_check_timer = Timer.new()
+		test_mode_check_timer.wait_time = 2.0 # período em segundos
+		test_mode_check_timer.one_shot = false
+		test_mode_check_timer.timeout.connect(_on_fast_round_verify_timeout)
+		add_child(test_mode_check_timer)
+		test_mode_check_timer.start()
+
+func _on_fast_round_verify_timeout():
+	if _verificar_teste_automático():
+		test_mode_check_timer.stop()
+
+func _verificar_teste_automático() -> bool:
+	_log_debug("Chamada periódica para iniciar o modo de testes")
+	# Executar sistema de teste automático no momento que entra e registra a quantidade de players necessária
+	var players_on_count = client_registry.get_registered_player_count()
+	if players_on_count >= simulador_players_qtd:
+		test_manager.criar_partida_teste()
+		return true
+	return false
 
 func initialize():
 	_start_server()
@@ -258,11 +280,6 @@ func _on_peer_connected(peer_id: int):
 	# Verificar se test_round está ativado
 	if not fast_round:
 		return
-		
-	# Executar sistema de teste automático no momento que entra a quantidade de players necessária
-	var player_entry_position = client_registry.get_player(peer_id)["entry_position"]
-	if (multiplayer.get_peers().size() == simulador_players_qtd) and (player_entry_position == simulador_players_qtd):
-		test_manager.criar_partida_teste()
 
 func _on_peer_disconnected(peer_id: int):
 	"""
@@ -332,7 +349,20 @@ func _on_peer_disconnected(peer_id: int):
 	client_registry.remove_peer(peer_id)
 
 # ===== HANDLERS DE JOGADOR =====
-func _handle_register_player(peer_id: int, player_name: String):
+func _server_receive_client_uuid(peer_id: int, _client_uuid: String):
+	"""Processa uuid enviado pelo cliente ao se conectar"""
+	_log_debug("Cliente de sessão: %s, está enviando este uuid: %s" % [peer_id, _client_uuid])
+	
+	# Valida UUID única
+	if client_registry.is_uuid_taken(_client_uuid):
+		_log_debug("❌ UUID rejeitado: " + _client_uuid)
+		network_manager.rpc_id(peer_id, "_client_uuid_rejected")
+		return
+	
+	_log_debug("UUID validada e aceita para este cliente: %s, UUID: %s" % [peer_id, _client_uuid])
+	client_registry.register_player(peer_id, _client_uuid)
+
+func _handle_register_player_name(peer_id: int, player_name: String):
 	"""Processa solicitação de registro de nome de jogador"""
 	_log_debug("Tentativa de registro: '%s' (Peer ID: %d)" % [player_name, peer_id])
 	
@@ -344,7 +374,7 @@ func _handle_register_player(peer_id: int, player_name: String):
 		return
 	
 	# Registra no ClientRegistry
-	var success = client_registry.register_player(peer_id, player_name)
+	var success = client_registry.register_player_name(peer_id, player_name)
 	
 	if success:
 		_log_debug("✓ Jogador registrado: %s (Peer ID: %d)" % [player_name, peer_id])
@@ -838,6 +868,9 @@ func _server_instantiate_round(match_data: Dictionary, round_node, players_node)
 	# Configura o Terrain3D para usar actual_camera
 	if terrain_3d:
 		terrain_3d.set_camera(actual_camera)
+		# Ativa o physics_process após atribuir a câmera
+		terrain_3d.set_physics_process(true)
+		
 	else:
 		push_warning("terrain_3d não encontrado para configurar câmera")
 
