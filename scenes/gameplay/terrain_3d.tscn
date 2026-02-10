@@ -27,6 +27,7 @@ points = PackedVector3Array(-1, 0, -1, -1, 0, 1, 1, 0, -1, 1, 0, 1)
 data_directory = "res://scenes/system/terrain_data"
 material = ExtResource("1_3txeo")
 assets = ExtResource("1_0rjur")
+collision_mode = 3
 mesh_lods = 5
 mesh_size = 28
 top_level = true
