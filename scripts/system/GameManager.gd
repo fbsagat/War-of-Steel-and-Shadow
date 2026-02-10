@@ -38,6 +38,7 @@ var initializer = null
 
 var is_connected_to_server: bool = false
 var is_in_round: bool = false
+var is_connecting: bool = false
 var inventory_menu: bool = false # True se o menu de inventário estiver visível
 var gameplay_menu: bool = false # True se o menu de gameplay  estiver visível
 var local_peer_id: int = 0
@@ -46,7 +47,6 @@ var configs: Dictionary = {}
 var current_room: Dictionary = {}
 var current_round: Dictionary = {}
 var connection_start_time: float = 0.0
-var is_connecting: bool = false
 var cached_unique_id: int = 0
 ## Objetos spawnados organizados por rodada
 ## {round_id: {object_id: {node: Node, item_name: String, owner_id: int}}}
