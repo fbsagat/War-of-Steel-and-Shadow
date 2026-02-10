@@ -1,6 +1,6 @@
 [gd_resource type="VisualShader" format=3 uid="uid://cn4baexdjokbs"]
 
-[ext_resource type="Texture2D" uid="uid://cl25to66bsv25" path="res://vfx/fire/texture/smoke_texture.png" id="1_np3my"]
+[ext_resource type="Texture2D" uid="uid://q1beyc24e3ka" path="res://vfx/fire/texture/smoke_texture.png" id="1_np3my"]
 
 [sub_resource type="VisualShaderNodeInput" id="VisualShaderNodeInput_8xagh"]
 input_name = "color"

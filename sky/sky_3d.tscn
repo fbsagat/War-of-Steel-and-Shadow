@@ -1,15 +1,15 @@
 [gd_scene format=3 uid="uid://cwu8t6cp4qo1c"]
 
-[ext_resource type="Shader" uid="uid://dw1cefd46umfe" path="res://addons/sky_3d/shaders/SkyMaterial.gdshader" id="1_6v73i"]
+[ext_resource type="Shader" uid="uid://bipvxhsup06dy" path="res://addons/sky_3d/shaders/SkyMaterial.gdshader" id="1_6v73i"]
 [ext_resource type="Texture2D" uid="uid://cfqk60lpl5ljv" path="res://addons/sky_3d/assets/resources/SNoise.tres" id="2_plwot"]
-[ext_resource type="Texture2D" uid="uid://mo6emlvn0a1x" path="res://addons/sky_3d/assets/textures/noiseClouds.png" id="3_h53aj"]
-[ext_resource type="Texture2D" uid="uid://03s2mulp6jff" path="res://addons/sky_3d/assets/thirdparty/textures/moon/MoonMap.png" id="4_4xct4"]
-[ext_resource type="Texture2D" uid="uid://d2woysd0c1ck6" path="res://addons/sky_3d/assets/textures/noise.jpg" id="5_a3wnc"]
-[ext_resource type="Texture2D" uid="uid://63jy4sjke7i6" path="res://addons/sky_3d/assets/thirdparty/textures/milkyway/StarField.jpg" id="6_0df23"]
-[ext_resource type="Texture2D" uid="uid://b6q5qe6q000m7" path="res://addons/sky_3d/assets/thirdparty/textures/milkyway/Milkyway.jpg" id="7_rjr5q"]
-[ext_resource type="Script" uid="uid://b551jsaemg3qo" path="res://addons/sky_3d/src/Sky3D.gd" id="8_ejlry"]
-[ext_resource type="Script" uid="uid://b0ml57ff1ehx6" path="res://addons/sky_3d/src/SkyDome.gd" id="9_ql8si"]
-[ext_resource type="Script" uid="uid://ckck8wyfsjci3" path="res://addons/sky_3d/src/TimeOfDay.gd" id="10_7mbj6"]
+[ext_resource type="Texture2D" uid="uid://d0k0u3ty4x0oq" path="res://addons/sky_3d/assets/textures/noiseClouds.png" id="3_h53aj"]
+[ext_resource type="Texture2D" uid="uid://cgkpt1phegr0o" path="res://addons/sky_3d/assets/thirdparty/textures/moon/MoonMap.png" id="4_4xct4"]
+[ext_resource type="Texture2D" uid="uid://duouhha3p8le4" path="res://addons/sky_3d/assets/textures/noise.jpg" id="5_a3wnc"]
+[ext_resource type="Texture2D" uid="uid://cmjud60lva1s4" path="res://addons/sky_3d/assets/thirdparty/textures/milkyway/StarField.jpg" id="6_0df23"]
+[ext_resource type="Texture2D" uid="uid://ce52d4b2a7g87" path="res://addons/sky_3d/assets/thirdparty/textures/milkyway/Milkyway.jpg" id="7_rjr5q"]
+[ext_resource type="Script" uid="uid://b5u3wf6k6i0q6" path="res://addons/sky_3d/src/Sky3D.gd" id="8_ejlry"]
+[ext_resource type="Script" uid="uid://dj2qy5yam03pw" path="res://addons/sky_3d/src/SkyDome.gd" id="9_ql8si"]
+[ext_resource type="Script" uid="uid://cv5j5empg8inu" path="res://addons/sky_3d/src/TimeOfDay.gd" id="10_7mbj6"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_v8wrf"]
 shader = ExtResource("1_6v73i")
@@ -39,7 +39,7 @@ shader_parameter/moon_texture_flip_u = false
 shader_parameter/moon_texture_flip_v = false
 shader_parameter/moon_size = 0.07
 shader_parameter/atm_moon_mie_tint = Color(0.137255, 0.184314, 0.292196, 1)
-shader_parameter/atm_moon_mie_intensity = 0.38586423456668856
+shader_parameter/atm_moon_mie_intensity = 0.3819059392809868
 shader_parameter/atm_moon_partial_mie_phase = Vector3(0.36, 1.64, 1.6)
 shader_parameter/starmap_color = Color(0.709804, 0.709804, 0.709804, 0.854902)
 shader_parameter/starmap_texture = ExtResource("7_rjr5q")
@@ -62,8 +62,8 @@ shader_parameter/cirrus_sky_tint_fade = 0.5
 shader_parameter/cirrus_intensity = 10.0
 shader_parameter/cirrus_size = 1.0
 shader_parameter/cirrus_uv = Vector2(0.16, 0.11)
-shader_parameter/cirrus_position1 = Vector2(0.00061282585, 0.00061282585)
-shader_parameter/cirrus_position2 = Vector2(0.00061282585, 0.00061282585)
+shader_parameter/cirrus_position1 = Vector2(0.00058925565, 0.00058925565)
+shader_parameter/cirrus_position2 = Vector2(0.00058925565, 0.00058925565)
 shader_parameter/cirrus_day_color = Color(0.824, 0.875, 1, 1)
 shader_parameter/cirrus_horizon_light_color = Color(0.98, 0.43, 0.15, 1)
 shader_parameter/cirrus_night_color = Color(0.09, 0.094, 0.129, 1)
@@ -76,7 +76,7 @@ shader_parameter/cumulus_noise_freq = 2.7
 shader_parameter/cumulus_sky_tint_fade = 0.0
 shader_parameter/cumulus_intensity = 0.6
 shader_parameter/cumulus_size = 0.5
-shader_parameter/cumulus_position = Vector2(0.0030641304, 0.0030641304)
+shader_parameter/cumulus_position = Vector2(0.0029462792, 0.0029462792)
 shader_parameter/cumulus_texture = ExtResource("3_h53aj")
 shader_parameter/cumulus_day_color = Color(0.823529, 0.87451, 1, 1)
 shader_parameter/cumulus_horizon_light_color = Color(0.98, 0.43, 0.15, 1)

@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://di5fovhcyd7re"]
 
-[ext_resource type="Script" uid="uid://dxnniarjxw0ux" path="res://demo/src/Enemy.gd" id="1_yudyn"]
+[ext_resource type="Script" uid="uid://bkxq5ug62ukpc" path="res://demo/src/Enemy.gd" id="1_yudyn"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_lwhhq"]
 height = 1.5

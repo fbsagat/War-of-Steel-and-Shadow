@@ -1,19 +1,15 @@
 [gd_scene format=3 uid="uid://drtoetvef4112"]
 
-[ext_resource type="ArrayMesh" uid="uid://dhfmkxar0so0e" path="res://models/KayKit_DungeonRemastered_1.1_FREE/Assets/obj/column.obj" id="1_of5a1"]
-[ext_resource type="PackedScene" uid="uid://c7hei3assqyuh" path="res://models/KayKit_DungeonRemastered_1.1_FREE/Assets/gltf/torch_mounted.gltf" id="2_lddk5"]
-[ext_resource type="PackedScene" uid="uid://denwgvgdxlfqb" path="res://models/KayKit_DungeonRemastered_1.1_FREE/Assets/gltf/torch_lit.gltf" id="3_y0f0q"]
 [ext_resource type="Script" uid="uid://ywf7cbswl6sg" path="res://scripts/objects/torch_lit.gd" id="4_yse03"]
 
 [node name="lamp_post" type="Node3D" unique_id=394104959]
 
 [node name="Column" type="MeshInstance3D" parent="." unique_id=1585834197]
-mesh = ExtResource("1_of5a1")
 
-[node name="torch_mounted2" parent="." unique_id=434333257 instance=ExtResource("2_lddk5")]
+[node name="torch_mounted2" parent="." unique_id=434333257]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0224074, 0.35530412)
 
-[node name="torch_lit2" parent="." unique_id=1197816934 instance=ExtResource("3_y0f0q")]
+[node name="torch_lit2" parent="." unique_id=1197816934]
 transform = Transform3D(1, 0, 0, 0, 0.9712133, -0.2382114, 0, 0.2382114, 0.9712133, 0, 1.0288467, 0.5556299)
 
 [node name="OmniLight3D" type="OmniLight3D" parent="." unique_id=1839088686]

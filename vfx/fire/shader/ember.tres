@@ -1,6 +1,6 @@
 [gd_resource type="VisualShader" format=3 uid="uid://w7vq34wwolki"]
 
-[ext_resource type="Texture2D" uid="uid://lrnhtsk2yqfc" path="res://vfx/fire/texture/ember_texture.png" id="1_f7vpq"]
+[ext_resource type="Texture2D" uid="uid://4xodpetv86pr" path="res://vfx/fire/texture/ember_texture.png" id="1_f7vpq"]
 
 [sub_resource type="VisualShaderNodeTexture" id="VisualShaderNodeTexture_3dqbc"]
 texture = ExtResource("1_f7vpq")
