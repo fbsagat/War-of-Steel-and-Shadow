@@ -6,9 +6,9 @@
 [ext_resource type="PackedScene" uid="uid://cwu8t6cp4qo1c" path="res://sky/sky_3d.tscn" id="3_t70ke"]
 [ext_resource type="PackedScene" uid="uid://bl8c62gm66ba5" path="res://models/VainerKit/props/tree/tree.tscn" id="8_l3dix"]
 [ext_resource type="Script" uid="uid://y34drp4wugwo" path="res://scripts/utils/test_pressure_plate.gd" id="9_j31ul"]
-[ext_resource type="PackedScene" uid="uid://cuncihjkfu1ya" path="res://models/VainerKit/builds/wood_bridge/wood_bridge.glb" id="11_3txeo"]
+[ext_resource type="PackedScene" uid="uid://bugr54d8lp5nq" path="res://models/VainerKit/builds/wood_bridge/wood_bridge.glb" id="11_3txeo"]
 [ext_resource type="PackedScene" uid="uid://0yuy536rv6ae" path="res://scenes/scenarios/forest.tscn" id="12_6jw5i"]
-[ext_resource type="PackedScene" uid="uid://b5yktcibltwu3" path="res://models/VainerKit/builds/medieval_tower_ruins/medieval_tower_ruins.glb" id="13_au1d7"]
+[ext_resource type="PackedScene" uid="uid://ca37tpchr3a8r" path="res://models/VainerKit/builds/medieval_tower_ruins/medieval_tower_ruins.glb" id="13_au1d7"]
 [ext_resource type="PackedScene" uid="uid://c0ngmife3um6s" path="res://scenes/scenarios/village.tscn" id="22_uwu5a"]
 
 [sub_resource type="RibbonTrailMesh" id="RibbonTrailMesh_kf5nm"]

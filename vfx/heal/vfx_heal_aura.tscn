@@ -1,0 +1,69 @@
+[gd_scene format=3 uid="uid://bdb6eko0wjleq"]
+
+[ext_resource type="PackedScene" uid="uid://da8cxlgmx22ff" path="res://vfx/heal/vfx_heal.tscn" id="1_jfcda"]
+[ext_resource type="Shader" uid="uid://p3udn7nj80y3" path="res://vfx/heal/s_heal_shader.tres" id="2_wtjlx"]
+[ext_resource type="Texture2D" uid="uid://bitivpxy1t1gy" path="res://vfx/heal/heal_aura.png" id="3_y7itu"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_evici"]
+render_priority = 0
+shader = ExtResource("2_wtjlx")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_0g5ps"]
+emission_shape_offset = Vector3(0, 0.335, 0)
+emission_shape_scale = Vector3(0.5, 0.1, 0.5)
+emission_shape = 2
+emission_sphere_radius = 1.0
+gravity = Vector3(0, 0.5, 0)
+scale_min = 0.099999994
+scale_max = 0.29999998
+
+[sub_resource type="Curve" id="Curve_as2pm"]
+_data = [Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="CurveTexture" id="CurveTexture_yhqcb"]
+curve = SubResource("Curve_as2pm")
+
+[sub_resource type="Gradient" id="Gradient_xa743"]
+colors = PackedColorArray(0, 1, 0.50980395, 1, 0, 1, 0.50980395, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_h2cup"]
+gradient = SubResource("Gradient_xa743")
+
+[sub_resource type="Curve" id="Curve_ye616"]
+_data = [Vector2(0, 0), 0.0, 0.0, 0, 0, Vector2(1, 1), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="CurveTexture" id="CurveTexture_uwp5b"]
+curve = SubResource("Curve_ye616")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_thw6o"]
+gravity = Vector3(0, 0, 0)
+scale_min = 3.0
+scale_max = 3.0
+scale_curve = SubResource("CurveTexture_uwp5b")
+color_ramp = SubResource("GradientTexture1D_h2cup")
+alpha_curve = SubResource("CurveTexture_yhqcb")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_pr8hk"]
+transparency = 1
+cull_mode = 2
+shading_mode = 0
+vertex_color_use_as_albedo = true
+albedo_texture = ExtResource("3_y7itu")
+
+[sub_resource type="QuadMesh" id="QuadMesh_j7c4n"]
+material = SubResource("StandardMaterial3D_pr8hk")
+orientation = 1
+
+[node name="vfx_heal" type="Node3D" unique_id=1939793060]
+
+[node name="heal_particles" parent="." unique_id=740336757 instance=ExtResource("1_jfcda")]
+material_override = SubResource("ShaderMaterial_evici")
+process_material = SubResource("ParticleProcessMaterial_0g5ps")
+
+[node name="heal_aura" type="GPUParticles3D" parent="." unique_id=692287024]
+amount = 2
+lifetime = 1.8
+process_material = SubResource("ParticleProcessMaterial_thw6o")
+draw_pass_1 = SubResource("QuadMesh_j7c4n")

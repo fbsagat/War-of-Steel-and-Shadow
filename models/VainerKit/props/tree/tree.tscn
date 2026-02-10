@@ -1,10 +1,10 @@
 [gd_scene format=4 uid="uid://bl8c62gm66ba5"]
 
-[ext_resource type="Texture2D" uid="uid://xhcbjh60eff" path="res://models/VainerKit/props/tree/tree_branches_texture.png" id="1_anggd"]
+[ext_resource type="Texture2D" uid="uid://cq7gp1nrif543" path="res://models/VainerKit/props/tree/tree_branches_texture.png" id="1_anggd"]
 [ext_resource type="Material" uid="uid://bs6sd72wqho8j" path="res://models/VainerKit/props/tree/branches_texture.material" id="2_myc0t"]
-[ext_resource type="Texture2D" uid="uid://bdv2o8q0ggwtx" path="res://models/VainerKit/props/tree/tree_log_texture.png" id="3_xm5sm"]
+[ext_resource type="Texture2D" uid="uid://c5txl02r5xjr8" path="res://models/VainerKit/props/tree/tree_log_texture.png" id="3_xm5sm"]
 [ext_resource type="Material" uid="uid://bo0gst2o3kfch" path="res://models/VainerKit/props/tree/tree_texture.material" id="4_1b7op"]
-[ext_resource type="Texture2D" uid="uid://p2rv1qqdoj6j" path="res://models/VainerKit/props/tree/tree_oak_leaf_texture.png" id="5_8er1l"]
+[ext_resource type="Texture2D" uid="uid://dloyk4f16lwcs" path="res://models/VainerKit/props/tree/tree_oak_leaf_texture.png" id="5_8er1l"]
 [ext_resource type="Material" uid="uid://qwiik0sg7a5v" path="res://models/VainerKit/props/tree/oak_leaves.material" id="6_sqqap"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_lcxfe"]

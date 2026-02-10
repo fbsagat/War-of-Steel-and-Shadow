@@ -1,8 +1,8 @@
 [gd_scene format=4 uid="uid://dnlqxftetlonw"]
 
-[ext_resource type="Script" uid="uid://bfl717tl211j3" path="res://scripts/gameplay/itens_coletaveis.gd" id="1_uc3fe"]
+[ext_resource type="Script" uid="uid://cnbe1yewpcaxx" path="res://scripts/gameplay/DroppedItem.gd" id="1_11wq4"]
 [ext_resource type="Material" uid="uid://dyf3texhrr1fx" path="res://models/VainerKit/items/potion_glass/potion_glass.material" id="2_ynbs1"]
-[ext_resource type="Texture2D" uid="uid://bp5wuo72n453k" path="res://models/VainerKit/items/potion_glass/potion_glass_log_texture.png" id="4_qiqni"]
+[ext_resource type="Texture2D" uid="uid://ilj7hrmaf08y" path="res://models/VainerKit/items/potion_glass/potion_glass_log_texture.png" id="4_qiqni"]
 [ext_resource type="PackedScene" uid="uid://da8cxlgmx22ff" path="res://vfx/heal/vfx_heal.tscn" id="5_fas5c"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ulu25"]
@@ -134,7 +134,7 @@ shadow_mesh = SubResource("ArrayMesh_tkye7")
 [node name="potion_glass" type="RigidBody3D" unique_id=1320946576]
 collision_layer = 4
 collision_mask = 7
-script = ExtResource("1_uc3fe")
+script = ExtResource("1_11wq4")
 
 [node name="glass" type="MeshInstance3D" parent="." unique_id=1539756760]
 transform = Transform3D(0.24000001, 0, 0, 0, 0.24000001, 0, 0, 0, 0.24000001, 0, 0.00019994611, 0)

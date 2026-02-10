@@ -1,9 +1,9 @@
 [gd_scene format=4 uid="uid://cttav2yu77tfn"]
 
-[ext_resource type="Texture2D" uid="uid://5rye8ml0mjjs" path="res://models/VainerKit/props/bush/bush_bush_texture.png" id="1_1mevn"]
+[ext_resource type="Texture2D" uid="uid://bbwadusrfcq67" path="res://models/VainerKit/props/bush/bush_bush_texture.png" id="1_1mevn"]
 [ext_resource type="Material" uid="uid://cjll2xeh5nck2" path="res://models/VainerKit/props/bush/bush.material" id="2_end6g"]
 [ext_resource type="Material" uid="uid://dnvrbwpyef0qw" path="res://models/VainerKit/props/bush/bush_internal.material" id="3_p1q7x"]
-[ext_resource type="Texture2D" uid="uid://1u625wtwrx2m" path="res://models/VainerKit/props/bush/bush_branches_texture.png" id="4_ps5n3"]
+[ext_resource type="Texture2D" uid="uid://c33m8d21f7wxs" path="res://models/VainerKit/props/bush/bush_branches_texture.png" id="4_ps5n3"]
 [ext_resource type="Material" uid="uid://cnvx0a5vp50ae" path="res://models/VainerKit/props/bush/branches_texture.material" id="5_vgd5x"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_6hov5"]

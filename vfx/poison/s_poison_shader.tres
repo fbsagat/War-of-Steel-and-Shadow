@@ -1,0 +1,46 @@
+[gd_resource type="VisualShader" format=3 uid="uid://bnd2kg4rxfftx"]
+
+[ext_resource type="Texture2D" uid="uid://dmgh441i33pww" path="res://vfx/poison/poison_particle.png" id="1_ik8nx"]
+
+[sub_resource type="VisualShaderNodeTexture" id="VisualShaderNodeTexture_ikxxj"]
+texture = ExtResource("1_ik8nx")
+
+[sub_resource type="VisualShaderNodeVectorDecompose" id="VisualShaderNodeVectorDecompose_hj7oa"]
+output_port_for_preview = 3
+default_input_values = [0, Quaternion(0, 0, 0, 0)]
+op_type = 2
+
+[sub_resource type="Gradient" id="Gradient_drxou"]
+colors = PackedColorArray(0, 1, 0, 1, 0, 1, 0, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_m44wh"]
+gradient = SubResource("Gradient_drxou")
+
+[sub_resource type="VisualShaderNodeTexture" id="VisualShaderNodeTexture_8uijh"]
+texture = SubResource("GradientTexture1D_m44wh")
+texture_type = 1
+
+[sub_resource type="VisualShaderNodeMix" id="VisualShaderNodeMix_ruw3o"]
+output_port_for_preview = 0
+default_input_values = [0, Vector2(0, 0), 1, Vector2(1, 1), 2, Vector2(0.5, 2)]
+expanded_output_ports = [0]
+op_type = 1
+
+[sub_resource type="VisualShaderNodeBillboard" id="VisualShaderNodeBillboard_th71w"]
+billboard_type = 2
+keep_scale = true
+
+[resource]
+nodes/vertex/2/node = SubResource("VisualShaderNodeBillboard_th71w")
+nodes/vertex/2/position = Vector2(-64, 432)
+nodes/vertex/connections = PackedInt32Array(2, 0, 0, 10)
+nodes/fragment/0/position = Vector2(592, 64)
+nodes/fragment/2/node = SubResource("VisualShaderNodeTexture_ikxxj")
+nodes/fragment/2/position = Vector2(-464, 48)
+nodes/fragment/3/node = SubResource("VisualShaderNodeVectorDecompose_hj7oa")
+nodes/fragment/3/position = Vector2(-144, 400)
+nodes/fragment/4/node = SubResource("VisualShaderNodeTexture_8uijh")
+nodes/fragment/4/position = Vector2(-160, -208)
+nodes/fragment/5/node = SubResource("VisualShaderNodeMix_ruw3o")
+nodes/fragment/5/position = Vector2(128, -80)
+nodes/fragment/connections = PackedInt32Array(2, 0, 3, 0, 3, 3, 0, 1, 4, 0, 5, 0, 5, 0, 0, 0, 2, 0, 5, 1)

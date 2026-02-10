@@ -1,9 +1,8 @@
 [gd_scene format=4 uid="uid://c68his0yilpof"]
 
-[ext_resource type="Script" uid="uid://bfl717tl211j3" path="res://scripts/gameplay/DroppedItem.gd" id="1_01tis"]
-[ext_resource type="Texture2D" uid="uid://ci4tvi7xq6rde" path="res://models/Character/Knight_knight_texture.png" id="2_vdmsc"]
+[ext_resource type="Script" uid="uid://cnbe1yewpcaxx" path="res://scripts/gameplay/DroppedItem.gd" id="1_01tis"]
+[ext_resource type="Texture2D" uid="uid://bdbfo7dkaubk1" path="res://models/Character/Knight_knight_texture.png" id="2_vdmsc"]
 [ext_resource type="Material" uid="uid://bn5hj4a80drmh" path="res://tres/steel_helmet.tres" id="3_4ucwi"]
-
 
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_fr844"]
 bounce = 0.3
