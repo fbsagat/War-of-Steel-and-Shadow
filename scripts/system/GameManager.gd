@@ -508,7 +508,9 @@ func _client_name_rejected(reason: String):
 	_log_debug("Nome rejeitado: " + reason)
 	
 	if main_menu_node:
-		main_menu_node.show_name_input_menu()
+		# Se player_name for "", é tela de welcome, se já ter algum nome definido, tela de renomeação 
+		var condition = true if player_name == "" else false
+		main_menu_node.show_name_input_menu(condition)
 		main_menu_node.show_error_name_input(reason)
 	
 	name_rejected.emit(reason)
@@ -528,7 +530,7 @@ func _client_uuid_accepted():
 	"""Callback quando o uuid do usuário é aceito pelo servidor"""
 	_log_debug("UUID aceito pleo servidor")
 	if main_menu_node:
-		main_menu_node.show_name_input_menu()
+		main_menu_node.show_name_input_menu(true)
 	uuid_accepted.emit()
 
 # ===== GERENCIAMENTO DE SALAS =====

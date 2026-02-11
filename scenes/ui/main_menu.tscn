@@ -150,7 +150,6 @@ horizontal_alignment = 1
 vertical_alignment = 2
 
 [node name="NameInputMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=7578943]
-visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -169,13 +168,13 @@ editor_only = false
 layout_mode = 2
 alignment = 1
 
-[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/NameInputMenu/VBoxContainer" unique_id=741002981]
+[node name="WelcomeLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/NameInputMenu/VBoxContainer" unique_id=741002981]
 layout_mode = 2
 text = "Bem vindo!"
 label_settings = SubResource("LabelSettings_fe2o3")
 horizontal_alignment = 1
 
-[node name="Label2" type="Label" parent="CanvasLayer/CenterContainer/Control/NameInputMenu/VBoxContainer" unique_id=1733892402]
+[node name="FunctionLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/NameInputMenu/VBoxContainer" unique_id=1733892402]
 layout_mode = 2
 text = "Escolha seu nome"
 label_settings = SubResource("LabelSettings_1g8jr")
@@ -204,8 +203,19 @@ text = "Deu cagada!"
 horizontal_alignment = 1
 autowrap_mode = 3
 
-[node name="ConfirmButton" type="Button" parent="CanvasLayer/CenterContainer/Control/NameInputMenu/VBoxContainer" unique_id=540576604]
-custom_minimum_size = Vector2(200, 50)
+[node name="ButtonsContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/NameInputMenu/VBoxContainer" unique_id=77811839]
+layout_mode = 2
+theme_override_constants/separation = 40
+alignment = 1
+
+[node name="ReturnButton" type="Button" parent="CanvasLayer/CenterContainer/Control/NameInputMenu/VBoxContainer/ButtonsContainer" unique_id=1816016197]
+visible = false
+custom_minimum_size = Vector2(150, 40)
+layout_mode = 2
+text = "Voltar"
+
+[node name="ConfirmButton" type="Button" parent="CanvasLayer/CenterContainer/Control/NameInputMenu/VBoxContainer/ButtonsContainer" unique_id=540576604]
+custom_minimum_size = Vector2(150, 50)
 layout_mode = 2
 text = "Confirmar"
 
@@ -1297,6 +1307,7 @@ layout_mode = 2
 text = "Desconectar do Servidor"
 
 [node name="ExitConfirmMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=1452853231]
+visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
