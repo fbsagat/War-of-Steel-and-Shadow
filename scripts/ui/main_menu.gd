@@ -93,6 +93,7 @@ signal gameplay_menu_disconnect_f_server_pressed()
 @onready var create_room_error_label: Label
 
 # Menu de sala (lobby)
+@onready var server_name_label: Label
 @onready var room_name_label: Label
 @onready var room_players_list: ItemList
 @onready var room_start_button: Button
@@ -177,6 +178,7 @@ var is_loading = false
 var player_count = 0
 var exit_server_button_pressed: bool = false
 var actual_player_name = ""
+var actual_server_name = ""
 
 func _ready():
 	_log_debug("Inicializando MainMenu")
@@ -206,7 +208,7 @@ func _process(delta):
 	# Rotaciona o ícone de carregamento
 	if is_loading and loading_icon:
 		loading_icon.rotation += delta * 3.0
-	
+
 # ===== SETUP INICIAL =====
 
 func _setup_menu_references():
@@ -270,6 +272,8 @@ func _setup_element_references():
 	function_label = name_input_menu.find_child("FunctionLabel", true, false)
 	welcome_label = name_input_menu.find_child("WelcomeLabel", true, false)
 	player_name_input = name_input_menu.find_child("PlayerNameInput", true, false)
+	if player_name_input:
+		player_name_input.text_submitted.connect(_on_name_confirm_pressed)
 	name_input_return_button = name_input_menu.find_child("ReturnButton", true, false)
 	name_input_error_label = name_input_menu.find_child("ErrorLabel", true, false)
 	
@@ -286,6 +290,7 @@ func _setup_element_references():
 	add_server_error_label = add_server_menu.find_child("ErrorLabel", true, false)
 	
 	# Lista de salas
+	server_name_label = room_list_menu.find_child("ServerName", true, false)
 	match_list = room_list_menu.find_child("MatchList", true, false)
 	match_password_container = room_list_menu.find_child("PasswordContainer", true, false)
 	if match_password_container:
@@ -307,6 +312,8 @@ func _setup_element_references():
 	
 	# Criar partida
 	room_name_input = create_room_menu.find_child("RoomNameInput", true, false)
+	if room_name_input:
+		room_name_input.text_submitted.connect(_on_create_match_confirm_pressed)
 	room_password_input = create_room_menu.find_child("RoomPasswordInput", true, false)
 	create_room_error_label = create_room_menu.find_child("ErrorLabel", true, false)
 	
@@ -416,12 +423,19 @@ func _connect_button_signals():
 	_connect_if_exists(exit_confirm_menu, "BackButton", _on_exit_confirm_menu_back_pressed)
 	_connect_if_exists(exit_confirm_menu, "ExitButton", _on_exit_confirm_menu_exit_pressed)
 	
-func _connect_if_exists(parent: Node, button_name: String, callback: Callable):
+func _connect_if_exists(parent: Node,button_name: String,callback: Callable,set_focus: bool = false):
 	var button = parent.find_child(button_name, true, false)
-	if button:
+	
+	if button and button is Button:
 		button.pressed.connect(callback)
+		
+		if set_focus:
+			button.focus_mode = Control.FOCUS_ALL
+			button.grab_focus()
+			
 	else:
 		_log_debug("%s não encontrado em %s" % [button_name, parent.name])
+
 
 func _connect_game_manager_signals():
 	game_manager.connected_to_server.connect(_on_game_manager_connected)
@@ -499,6 +513,7 @@ func show_add_server_menu():
 	
 	# Limpar campos sempre que o menu é carregado
 	add_server_name_input.text = ""
+	add_server_name_input.grab_focus()
 	add_server_ip_input.text = ""
 	add_server_port_input.text = ""
 	add_server_error_label.text = ""
@@ -572,6 +587,7 @@ func show_name_input_menu(welcome: bool):
 
 func show_room_list_menu(error_visible: bool = false):
 	room_list_menu.visible = true
+	server_name_label.text = actual_server_name
 	current_menu_visible = room_list_menu
 	game_manager.request_rooms_list()
 	
@@ -606,6 +622,7 @@ func show_manual_room_join_menu():
 	
 	if manual_room_name_input:
 		manual_room_name_input.text = ""
+		manual_room_name_input.grab_focus()
 	if manual_room_password_input:
 		manual_room_password_input.text = ""
 	if manual_join_error_label:
@@ -619,6 +636,8 @@ func show_manual_server_join_menu():
 	
 	if manual_server_ip_input:
 		manual_server_ip_input.text = "127.0.0.1"
+		manual_server_ip_input.grab_focus()
+		manual_server_ip_input.set_caret_column(manual_server_ip_input.text.length())
 	if manual_server_port_input:
 		manual_server_port_input.text = "7777"
 	if manual_server_join_error_label:
@@ -637,6 +656,7 @@ func show_create_match_menu():
 	
 	if room_name_input:
 		room_name_input.text = ""
+		room_name_input.grab_focus()
 	if room_password_input:
 		room_password_input.text = ""
 	if create_room_error_label:
@@ -717,7 +737,7 @@ func get_current_visible_menu() -> CenterContainer:
 
 # ===== CALLBACKS DO MENU DE ESCOLHA DE NOME =====
 
-func _on_name_confirm_pressed():
+func _on_name_confirm_pressed(text: String = ""):
 	if not player_name_input:
 		return
 	
@@ -1011,7 +1031,7 @@ func _on_manual_server_join_back_pressed():
 
 # ===== CALLBACKS DO MENU DE CRIAR PARTIDA =====
 
-func _on_create_match_confirm_pressed():
+func _on_create_match_confirm_pressed(text: String = ""):
 	if not room_name_input:
 		return
 	
@@ -1427,6 +1447,7 @@ func _update_room_display(room_data: Dictionary):
 func update_name_e_connected(server_name: String, player_name: String):
 	if main_menu:
 		actual_player_name = player_name
+		actual_server_name = server_name
 		connect_name_label = main_menu.get_node_or_null("VBoxContainer/ConnecteName")
 		if connect_name_label:
 			connect_name_label.text = '🌐🔗 Conectado em "%s" como %s' % [server_name, player_name]

@@ -45,7 +45,6 @@ font_size = 24
 bg_color = Color(0.13, 0.81149995, 1, 1)
 
 [node name="MainMenu" type="Control" unique_id=1416588749 node_paths=PackedStringArray("canvas_layer")]
-visible = false
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -209,7 +208,6 @@ theme_override_constants/separation = 40
 alignment = 1
 
 [node name="ReturnButton" type="Button" parent="CanvasLayer/CenterContainer/Control/NameInputMenu/VBoxContainer/ButtonsContainer" unique_id=1816016197]
-visible = false
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 text = "Voltar"
@@ -487,6 +485,14 @@ custom_minimum_size = Vector2(1100, 800)
 layout_mode = 2
 theme_override_constants/separation = 10
 alignment = 1
+
+[node name="ServerName" type="Label" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer" unique_id=1593123630]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 0
+theme = SubResource("Theme_fe2o3")
+theme_override_colors/font_color = Color(0.91, 0.6066667, 0, 1)
+theme_override_font_sizes/font_size = 15
 
 [node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer" unique_id=2130359538]
 layout_mode = 2
