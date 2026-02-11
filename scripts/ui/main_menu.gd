@@ -171,6 +171,7 @@ var selected_server_id = -1
 var previous_menu: CenterContainer = null
 var is_loading = false
 var player_count = 0
+var exit_server_button_pressed: bool = false
 
 func _ready():
 	_log_debug("Inicializando MainMenu")
@@ -320,7 +321,7 @@ func _setup_element_references():
 	loading_icon = loading_menu.find_child("LoadingIcon", true, false)
 	
 	# Confirmação de saída
-	exit_confirm_label = loading_menu.find_child("ExitConfirmLabel", true, false)
+	exit_confirm_label = exit_confirm_menu.find_child("ExitConfirmLabel", true, false)
 
 func _connect_button_signals():
 	# Menu principal
@@ -496,6 +497,15 @@ func show_delete_server_menu():
 	hide_all_menus()
 	delete_server_menu.visible = true
 	current_menu_visible = delete_server_menu
+
+func show_exit_confirm_menu(exit_server: bool):
+	hide_all_menus()
+	if not exit_server:
+		exit_confirm_label.text = "Deseja mesmo sair da partida?"
+	else:
+		exit_confirm_label.text = "Deseja mesmo sair do servidor?"
+	exit_confirm_menu.visible = true
+	current_menu_visible = exit_confirm_menu
 
 func show_main_menu():
 	hide_all_menus()
@@ -1005,21 +1015,28 @@ func _on_how_to_play_back_pressed():
 func _on_gameplay_menu_back_pressed():
 	_log_debug("Pressionado botão de voltar ao jogo do menu de gameplay")
 	gameplay_menu_back_pressed.emit()
-	
+
 func _on_gameplay_menu_exit_game_pressed():
 	_log_debug("Pressionado botão de sair da partida")
-	gameplay_menu_exit_game_pressed.emit()
+	exit_server_button_pressed = false
+	show_exit_confirm_menu(exit_server_button_pressed)
 	
 func _on_gameplay_menu_disconnect_f_server_pressed():
 	_log_debug("Pressionado botão de desconectar do servidor")
-	gameplay_menu_disconnect_f_server_pressed.emit()
-
+	exit_server_button_pressed = true
+	show_exit_confirm_menu(exit_server_button_pressed)
+	
 func _on_exit_confirm_menu_back_pressed():
 	_log_debug("Pressionado botão de voltar da tela de confirmação")
+	gameplay_menu_back_pressed.emit()
 
 func _on_exit_confirm_menu_exit_pressed():
 	_log_debug("Pressionado botão de confirmação de saída da partida ou desconexão do servidor")
-
+	if not exit_server_button_pressed:
+		gameplay_menu_exit_game_pressed.emit()
+	else:
+		gameplay_menu_disconnect_f_server_pressed.emit()
+	
 # ===== CALLBACKS DO MENU DE OPÇÕES =====
 
 func _on_options_confirm_pressed():

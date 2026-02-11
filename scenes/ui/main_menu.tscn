@@ -1270,7 +1270,6 @@ layout_mode = 2
 text = "Desconectar do Servidor"
 
 [node name="ExitConfirmMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=1452853231]
-visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -1292,9 +1291,17 @@ alignment = 1
 
 [node name="ExitConfirmLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/ExitConfirmMenu/VBoxContainer" unique_id=1636511181]
 layout_mode = 2
-text = "Deseja mesmo sair da partida?
-"
 horizontal_alignment = 1
+
+[node name="WarningLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/ExitConfirmMenu/VBoxContainer" unique_id=534474016]
+visible = false
+custom_minimum_size = Vector2(400, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.71609545, 0.27946, 0, 1)
+theme_override_font_sizes/font_size = 20
+text = "Você pode voltar, mas perderá o status de anfitrião"
+horizontal_alignment = 1
+autowrap_mode = 3
 
 [node name="ButtonsContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/ExitConfirmMenu/VBoxContainer" unique_id=1010809448]
 layout_mode = 2
