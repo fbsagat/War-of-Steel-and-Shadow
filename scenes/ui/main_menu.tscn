@@ -527,6 +527,7 @@ text = "Entrar"
 [node name="ManualJoinButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer/ButtonsContainer1" unique_id=1450865729]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
+disabled = true
 text = "Entrada Manual"
 
 [node name="CreateRoomButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer/ButtonsContainer1" unique_id=343451675]

@@ -63,6 +63,7 @@ signal gameplay_menu_disconnect_f_server_pressed()
 @onready var match_password_container: VBoxContainer
 @onready var match_list_error_label: Label
 @onready var match_list_join_button: Button
+@onready var manual_join_button: Button
 
 # Menu de conexão
 @onready var connecting_label: Label
@@ -282,6 +283,7 @@ func _setup_element_references():
 		match_password_input = match_password_container.find_child("PasswordInput", true, false)
 	match_list_error_label = room_list_menu.find_child("ErrorLabel", true, false)
 	match_list_join_button = room_list_menu.find_child("JoinButton", true, false)
+	manual_join_button = room_list_menu.find_child("ManualJoinButton", true, false)
 	
 	# Entrada manual de sala
 	manual_room_name_input = manual_room_join_menu.find_child("ManualRoomNameInput", true, false)
@@ -737,7 +739,7 @@ func _on_match_list_back_pressed():
 	show_main_menu()
 
 func _on_exit_server_pressed():
-	game_manager.disconnect_from_server()
+	game_manager._on_intentional_disconnect_from_server()
 
 func _on_match_list_join_pressed():
 	if selected_match_id <= -1:
@@ -1477,6 +1479,10 @@ func _on_game_manager_rooms_received(sucess: bool, rooms: Array):
 	if sucess:
 		populate_room_list(rooms)
 		_log_debug("Lista de salas recebida: %d salas" % rooms.size())
+		if rooms.size() >= 5:
+			manual_join_button.disabled = false
+		else:
+			manual_join_button.disabled = true
 
 func _on_game_manager_name_accepted():
 	_log_debug("Nome aceito pelo servidor")
