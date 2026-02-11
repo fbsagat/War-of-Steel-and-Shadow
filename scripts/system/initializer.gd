@@ -1,9 +1,10 @@
 extends Node
 
 # Configurações
-## [TESTES] Usa o TestManager para iniciar logo uma partida na execução
-## (configura server e clients / clients recebem localhost_auto_connect = true)
-@export var test_mode: bool = true
+## [TESTES] Usa o TestManager para iniciar uma partida logo na execução (localhost)
+## (configura server e clients / server cria round e inicia partida com primeiros clientes /
+##  clientes recebem localhost_auto_connect = true)
+@export var test_mode: bool = false
 ## [TESTES] Define a quantidade de instâcias de clientes conectadas para executar fast_round
 @export var simulador_players_qtd: int = 2
 ## [TESTES] Dropa itens perto dos players e ativa o trainer de cada player
@@ -17,35 +18,34 @@ var activate_only_selected: bool = true
 # Disponíveis: "Server", "NetworkManager", "TestManager", "GameManager", "RoomRegistry"
 # "RoundRegistry", "ClientRegistry", "Player_node", "ObjectManager", "MapManager", "MainMenu"
 # "ItemDatabase", "InventoryMenu", "DroppedItem"
-var selected: Array = ["Server", "TestManager"]
+var selected: Array = ["Server", "TestManager", "NetworkManager", "GameManager"]
 
 # Referências
 ## Manager de rede, gerencia comunicação entre servidor e clientes
 var network_manager: NetworkManager = null
-
 ## Manager principal do servidor
 var server_manager: ServerManager = null
-
 ## Manager principal dos clientes
 var game_manager: Node = null
-
-## Manager que gerencia lista de servidores salvos em persistência
+## Manager que gerencia lista de servidores salvos em persistência para os clientes
 var server_list_manager: ServerListManager = null
-
 ## Carrega a base de dados de itens de gameplay, comum entre servidor e clientes
 var item_database: ItemDatabase = null
+## Gerenciador de mapas e spawns de players
+var map_manager: Node = null
 
+## Managers auxiliares para o servidor
+## Gerenciador autoritativo de objetos no mundo
+var object_manager: ObjectManager = null
+## Ferramenta de desenvolvimento para testes automatizados
+var test_manager: TestManager = null
 ## Registro do servidor, classe de players, classe de salas e classe de partidas
 var client_registry : ClientRegistry = null
 var room_registry: RoomRegistry = null
 var round_registry: RoundRegistry = null
 
-## Managers auxiliares para o servidor
-var object_manager: ObjectManager = null
-var test_manager: TestManager = null
-var map_manager: Node = null
-
-# Menu de inicialização para os clientes
+## Managers auxiliares para os clienes
+## Menu de inicialização
 var main_menu: Control = null
 
 func _ready():
@@ -60,6 +60,8 @@ func _ready():
 	if is_server:
 		_init_server(is_headless)
 	else:
+		# Injetar uuid do argumento client_uuid, substituindo a verificação
+		# padrão na psta do usuário (apenas para desenvolvimento)
 		var client_uuid_ = null
 		for arg in args:
 			if arg.begins_with("--client_uuid="):
@@ -254,7 +256,6 @@ func _init_client(client_uuid_):
 	if client_uuid_:
 		game_manager.client_uuid = client_uuid_
 		
-	
 	# Configurar modo de testes
 	if test_mode:
 		game_manager.localhost_auto_connect = true

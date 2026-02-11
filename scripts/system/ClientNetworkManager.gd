@@ -102,6 +102,14 @@ func _client_uuid_rejected():
 	_log_debug("❌ UUID rejeitada, repetida")
 	game_manager._client_uuid_rejected()
 
+func _client_uuid_accepted():
+	"""RPC: Cliente recebe uuid aceito pelo servidor"""
+	if multiplayer.is_server():
+		return
+	
+	_log_debug("✅ UUID aceito pelo servidor")
+	game_manager._client_uuid_accepted()
+
 # ===== GERENCIAMENTO DE SALAS =====
 
 func request_rooms_list():

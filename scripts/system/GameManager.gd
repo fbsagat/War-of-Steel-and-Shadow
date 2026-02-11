@@ -71,6 +71,8 @@ var objects_node: Node = null
 signal connected_to_server()
 signal connection_failed(reason: String)
 signal disconnected_from_server()
+signal uuid_rejected()
+signal uuid_accepted()
 signal rooms_list_received(success: bool, rooms: Array)
 signal joined_room(room_data: Dictionary)
 signal room_created(room_data: Dictionary)
@@ -342,10 +344,6 @@ func _on_connected_to_server():
 	send_client_uuid(client_uuid)
 	
 	_log_debug(" Cliente conectado ao servidor com sucesso! Peer ID: %d" % local_peer_id)
-	
-	if main_menu_node:
-		main_menu_node.show_name_input_menu()
-	
 	connected_to_server.emit()
 
 func _on_connection_failed():
@@ -521,7 +519,14 @@ func _client_uuid_rejected():
 	if main_menu_node:
 		main_menu_node.show_server_list_menu()
 		main_menu_node.show_error_server_list("UUID inválida")
-		
+	uuid_rejected.emit()
+
+func _client_uuid_accepted():
+	"""Callback quando o uuid do usuário é aceito pelo servidor"""
+	_log_debug("UUID aceito pleo servidor")
+	if main_menu_node:
+		main_menu_node.show_name_input_menu()
+	uuid_accepted.emit()
 	
 func _client_wrong_password():
 	"""Callback quando a senha está incorreta"""

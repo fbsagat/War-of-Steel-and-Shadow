@@ -361,6 +361,7 @@ func _server_receive_client_uuid(peer_id: int, _client_uuid: String):
 	
 	_log_debug("UUID validada e aceita para este cliente: %s, UUID: %s" % [peer_id, _client_uuid])
 	client_registry.register_player(peer_id, _client_uuid)
+	network_manager.rpc_id(peer_id, "_client_uuid_accepted")
 
 func _handle_register_player_name(peer_id: int, player_name: String):
 	"""Processa solicitação de registro de nome de jogador"""

@@ -73,6 +73,10 @@ func _client_name_rejected(_reason: String):
 func _client_uuid_rejected():
 	pass
 
+@rpc("authority", "call_remote", "reliable")
+func _client_uuid_accepted():
+	pass
+
 @rpc("any_peer", "call_remote", "reliable")
 func _server_request_rooms_list():
 	pass
