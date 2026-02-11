@@ -400,7 +400,7 @@ func _on_intentional_disconnect_from_server(notify: bool = false):
 	notify = avisa o servidor.
 	"""
 	
-	_log_debug("Cliente desconectado intencionalmente do servidor, resetando estado do cliente e voltando oao menu principal")
+	_log_debug("Cliente desconectado intencionalmente do servidor, resetando estado do cliente e voltando ao menu principal")
 	
 	if notify:
 		_log_debug("Avisando servidor")
@@ -411,30 +411,30 @@ func _on_intentional_disconnect_from_server(notify: bool = false):
 		multiplayer.multiplayer_peer.close()
 		multiplayer.multiplayer_peer = null
 		
-		# Reset completo do estado
-		peer = null
-		is_connected_to_server = false
-		is_in_round = false
-		is_connecting = false
-		local_peer_id = 0
-		player_name = ""
-		configs.clear()
-		current_room.clear()
-		current_round.clear()
-		local_player_node = null
-		spawned_objects.clear()
-		local_inventory.clear()
+	# Reset completo do estado
+	peer = null
+	is_connected_to_server = false
+	is_in_round = false
+	is_connecting = false
+	local_peer_id = 0
+	player_name = ""
+	configs.clear()
+	current_room.clear()
+	current_round.clear()
+	local_player_node = null
+	spawned_objects.clear()
+	local_inventory.clear()
+	
+	# Limpa o nó da partida(round) totalmente
+	if round_node:
+		round_node.queue_free()
 		
-		# Limpa o nó da partida(round) totalmente
-		if round_node:
-			round_node.queue_free()
-			
-		# Volta para tela inicial
-		if main_menu_node:
-			main_menu_node.show_main_menu()
-		
-		# Emite sinal
-		disconnected_from_server.emit()
+	# Volta para tela inicial
+	if main_menu_node:
+		main_menu_node.show_main_menu()
+	
+	# Emite sinal
+	disconnected_from_server.emit()
 
 # ===== EXECUÇÃO DE BOTÕES DE CONEXÃO =====
 
@@ -445,7 +445,9 @@ func _on_gameplay_menu_exit_game_pressed():
 func _on_gameplay_menu_disconnect_f_server_pressed():
 	_log_debug("_on_gameplay_menu_disconnect_f_server_pressed")
 	_on_intentional_disconnect_from_server(true)
-	
+
+# ===== ATUALIZAÇÃO DE CONFIGURAÇÕES =====
+
 func update_client_info(info: Dictionary):
 	_log_debug("Atualizando configurações do servidor:")
 	
@@ -469,6 +471,7 @@ func create_local_match():
 	#server_pid = OS.create_process(server_path, ["--port", "7777"])
 
 # ===== REGISTRO DE JOGADOR =====
+
 func send_client_uuid(_client_uuid: String):
 	"Envia o uuid do jogador para o servidor tomar decisões sobre ele"
 	
@@ -527,7 +530,9 @@ func _client_uuid_accepted():
 	if main_menu_node:
 		main_menu_node.show_name_input_menu()
 	uuid_accepted.emit()
-	
+
+# ===== GERENCIAMENTO DE SALAS =====
+
 func _client_wrong_password():
 	"""Callback quando a senha está incorreta"""
 	
@@ -560,9 +565,6 @@ func _client_room_not_found():
 		main_menu_node.show_room_list_menu()
 		main_menu_node.match_password_container.visible = true
 		_show_error("Sala não encontrada")
-		# Arrumar algum dia
-
-# ===== GERENCIAMENTO DE SALAS =====
 
 func request_rooms_list():
 	_log_debug("📤 Solicitando lista de salas")
@@ -1352,7 +1354,7 @@ func _despawn_on_client(object_id: int, round_id: int):
 # ===== PLAYER IDENTIFIER FUNCTIONS =====
 
 func _load_or_generate_id() -> void:
-	_log_debug("_load_or_generate_id")
+	"""Função principal do sistema de identificação persistente de clientes (não seguro mas eficaz kkk XD)"""
 	var config := ConfigFile.new()
 	if config.load(PLAYER_UUID_FILE) == OK && config.has_section_key("Player", "id"):
 		client_uuid = config.get_value("Player", "id")
