@@ -149,6 +149,7 @@ horizontal_alignment = 1
 vertical_alignment = 2
 
 [node name="NameInputMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=7578943]
+visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -579,12 +580,15 @@ layout_mode = 2
 text = "Desconectar"
 
 [node name="RoomMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=1954665922]
-visible = false
-custom_minimum_size = Vector2(1200, 600)
+custom_minimum_size = Vector2(1250, 600)
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_left = -38.0
+offset_top = 39.0
+offset_right = 36.0
+offset_bottom = -43.0
 grow_horizontal = 2
 grow_vertical = 2
 
@@ -614,13 +618,6 @@ layout_mode = 2
 custom_minimum_size = Vector2(800, 600)
 layout_mode = 2
 allow_search = false
-item_count = 3
-item_0/text = "Fulano 1"
-item_0/selectable = false
-item_1/text = "Fulano 2"
-item_1/selectable = false
-item_2/text = "Fulano 3"
-item_2/selectable = false
 
 [node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer" unique_id=462777944]
 visible = false
