@@ -1,0 +1,30 @@
+[gd_scene format=3 uid="uid://dmqck50kkaf55"]
+
+[ext_resource type="Terrain3DMaterial" uid="uid://cs4wtyol0f1e4" path="res://material/terrain_3d_material.res" id="1_f551s"]
+[ext_resource type="Terrain3DAssets" uid="uid://dal3jhw6241qg" path="res://demo/data/assets.tres" id="2_bmhbe"]
+[ext_resource type="PackedScene" uid="uid://cwu8t6cp4qo1c" path="res://sky/sky_3d.tscn" id="3_bmhbe"]
+[ext_resource type="PackedScene" uid="uid://0yuy536rv6ae" path="res://scenes/scenarios/forest.tscn" id="3_x2a3c"]
+[ext_resource type="PackedScene" uid="uid://c0ngmife3um6s" path="res://scenes/scenarios/village.tscn" id="4_vwtkr"]
+
+[node name="Terrain3D" type="Terrain3D" unique_id=1390070452]
+data_directory = "res://terrain_data/map_002"
+material = ExtResource("1_f551s")
+assets = ExtResource("2_bmhbe")
+collision_mode = 3
+mesh_lods = 6
+top_level = true
+metadata/_edit_lock_ = true
+
+[node name="Sky3D" parent="." unique_id=247390174 instance=ExtResource("3_bmhbe")]
+editor_time_enabled = false
+game_time_enabled = false
+current_time = 13.384399999999996
+
+[node name="Forest" parent="." unique_id=662231876 instance=ExtResource("3_x2a3c")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -579.47253, 115.942345, 472.7279)
+
+[node name="Forest2" parent="." unique_id=1881428286 instance=ExtResource("3_x2a3c")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -527.5215, 111.86353, 432.0769)
+
+[node name="village" parent="." unique_id=1860069856 instance=ExtResource("4_vwtkr")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -161.58536, 0.025585175, 95.13635)

@@ -15,7 +15,7 @@ const DEFAULT_SERVER_PORT: int = 7777
 var peer: ENetMultiplayerPeer
 
 @export_category("Default Node References")
-const map_scene : String = "res://scenes/system/terrain_3d.tscn"
+const map_scene : String = "res://terrain_data/map_001.tscn"
 const player_scene : String = "res://scenes/gameplay/player_warrior.tscn"
 const camera_controller : String = "res://scenes/gameplay/camera_controller.tscn"
 

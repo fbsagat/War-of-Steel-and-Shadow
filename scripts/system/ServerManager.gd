@@ -32,7 +32,7 @@ class_name ServerManager
 @export var public_server_name: String = "Games da PQP! Diversão garantida!"
 
 @export_category("Default Node References")
-const map_scene : String = "res://scenes/gameplay/terrain_3d.tscn"
+const map_scene : String = "res://terrain_data/map_001.tscn"
 const player_scene : String = "res://scenes/gameplay/player_warrior.tscn"
 const camera_controller : String = "res://scenes/system/camera_controller.tscn"
 const server_camera : String = "res://scenes/server_scenes/server_camera.tscn"

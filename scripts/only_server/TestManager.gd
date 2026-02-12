@@ -303,7 +303,8 @@ func _server_instantiate_round(match_data: Dictionary, players_node, round_node)
 	await map_manager.apply_map_configs(match_data["settings"])
 	var terrain_3d = round_node.get_node_or_null("Terrain3D")
 	var pressure_plate: Node3D = terrain_3d.get_node_or_null("Pressure_plate")
-	pressure_plate.request_spawn.connect(on_spawn_requested)
+	if pressure_plate:
+		pressure_plate.request_spawn.connect(on_spawn_requested)
 	
 	# Salva referência no RoundRegistry
 	if round_registry.rounds.has(match_data["round_id"]):

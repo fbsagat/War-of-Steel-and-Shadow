@@ -1,15 +1,15 @@
-[gd_scene format=3 uid="uid://3m24sag7gx5w"]
+[gd_scene format=3 uid="uid://b1doqdvkiws2g"]
 
-[ext_resource type="Terrain3DAssets" uid="uid://dal3jhw6241qg" path="res://demo/data/assets.tres" id="1_0rjur"]
-[ext_resource type="Terrain3DMaterial" uid="uid://cs4wtyol0f1e4" path="res://material/terrain_3d_material.res" id="1_3txeo"]
-[ext_resource type="PackedScene" uid="uid://d3sr0a7dxfkr8" path="res://addons/terrain_3d/extras/particle_example/Terrain3DParticles.tscn" id="2_t70ke"]
-[ext_resource type="PackedScene" uid="uid://cwu8t6cp4qo1c" path="res://sky/sky_3d.tscn" id="3_t70ke"]
-[ext_resource type="PackedScene" uid="uid://bl8c62gm66ba5" path="res://models/VainerKit/props/tree/tree.tscn" id="8_l3dix"]
-[ext_resource type="Script" uid="uid://y34drp4wugwo" path="res://scripts/utils/test_pressure_plate.gd" id="9_j31ul"]
-[ext_resource type="PackedScene" uid="uid://bugr54d8lp5nq" path="res://models/VainerKit/builds/wood_bridge/wood_bridge.glb" id="11_3txeo"]
-[ext_resource type="PackedScene" uid="uid://0yuy536rv6ae" path="res://scenes/scenarios/forest.tscn" id="12_6jw5i"]
-[ext_resource type="PackedScene" uid="uid://ca37tpchr3a8r" path="res://models/VainerKit/builds/medieval_tower_ruins/medieval_tower_ruins.glb" id="13_au1d7"]
-[ext_resource type="PackedScene" uid="uid://c0ngmife3um6s" path="res://scenes/scenarios/village.tscn" id="22_uwu5a"]
+[ext_resource type="Terrain3DMaterial" uid="uid://cs4wtyol0f1e4" path="res://material/terrain_3d_material.res" id="1_s775h"]
+[ext_resource type="Terrain3DAssets" uid="uid://dal3jhw6241qg" path="res://demo/data/assets.tres" id="2_52lar"]
+[ext_resource type="PackedScene" uid="uid://cwu8t6cp4qo1c" path="res://sky/sky_3d.tscn" id="3_pxow6"]
+[ext_resource type="PackedScene" uid="uid://d3sr0a7dxfkr8" path="res://addons/terrain_3d/extras/particle_example/Terrain3DParticles.tscn" id="4_eyql6"]
+[ext_resource type="PackedScene" uid="uid://c0ngmife3um6s" path="res://scenes/scenarios/village.tscn" id="5_6ijiw"]
+[ext_resource type="PackedScene" uid="uid://bugr54d8lp5nq" path="res://models/VainerKit/builds/wood_bridge/wood_bridge.glb" id="6_pn8ik"]
+[ext_resource type="PackedScene" uid="uid://0yuy536rv6ae" path="res://scenes/scenarios/forest.tscn" id="7_y8j7c"]
+[ext_resource type="PackedScene" uid="uid://ca37tpchr3a8r" path="res://models/VainerKit/builds/medieval_tower_ruins/medieval_tower_ruins.glb" id="8_3onse"]
+[ext_resource type="PackedScene" uid="uid://bl8c62gm66ba5" path="res://models/VainerKit/props/tree/tree.tscn" id="9_q2tym"]
+[ext_resource type="Script" uid="uid://y34drp4wugwo" path="res://scripts/utils/test_pressure_plate.gd" id="10_nv6o6"]
 
 [sub_resource type="RibbonTrailMesh" id="RibbonTrailMesh_kf5nm"]
 size = 0.25
@@ -24,9 +24,9 @@ material = SubResource("StandardMaterial3D_l3dix")
 points = PackedVector3Array(-1, 0, -1, -1, 0, 1, 1, 0, -1, 1, 0, 1)
 
 [node name="Terrain3D" type="Terrain3D" unique_id=110752287]
-data_directory = "res://scenes/system/terrain_data"
-material = ExtResource("1_3txeo")
-assets = ExtResource("1_0rjur")
+data_directory = "res://terrain_data/map_001"
+material = ExtResource("1_s775h")
+assets = ExtResource("2_52lar")
 collision_mode = 3
 mesh_lods = 5
 mesh_size = 28
@@ -36,12 +36,12 @@ metadata/_edit_lock_ = true
 [node name="central_spawn" type="Node3D" parent="." unique_id=231891818]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.466239, 0.38564134, -4.0823317)
 
-[node name="Sky3D" parent="." unique_id=2011906563 instance=ExtResource("3_t70ke")]
+[node name="Sky3D" parent="." unique_id=2011906563 instance=ExtResource("3_pxow6")]
 editor_time_enabled = false
 current_time = 9.756026666666664
 minutes_per_day = 15.0
 
-[node name="Terrain3DParticles" parent="." unique_id=268241865 node_paths=PackedStringArray("terrain") instance=ExtResource("2_t70ke")]
+[node name="Terrain3DParticles" parent="." unique_id=268241865 node_paths=PackedStringArray("terrain") instance=ExtResource("4_eyql6")]
 visible = false
 terrain = NodePath("..")
 grid_width = 11
@@ -51,36 +51,36 @@ shadow_mode = 1
 min_draw_distance = 132.0
 particle_count = 1115136
 
-[node name="village" parent="." unique_id=1811853203 instance=ExtResource("22_uwu5a")]
+[node name="village" parent="." unique_id=1811853203 instance=ExtResource("5_6ijiw")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.427544, -0.15174103, 39.013947)
 
-[node name="wood_bridge" parent="." unique_id=142139320 instance=ExtResource("11_3txeo")]
+[node name="wood_bridge" parent="." unique_id=142139320 instance=ExtResource("6_pn8ik")]
 transform = Transform3D(1.9, 0, 0, 0, 1.9, 0, 0, 0, 1.9, 0.05253315, -0.24581076, -41.684708)
 
-[node name="wood_bridge3" parent="." unique_id=784856682 instance=ExtResource("11_3txeo")]
+[node name="wood_bridge3" parent="." unique_id=784856682 instance=ExtResource("6_pn8ik")]
 transform = Transform3D(-8.305164e-08, 0, -1.9, 0, 1.9, 0, 1.9, 0, -8.305164e-08, 39.77218, 0.13819624, 37.905197)
 
-[node name="wood_bridge2" parent="." unique_id=1319996749 instance=ExtResource("11_3txeo")]
+[node name="wood_bridge2" parent="." unique_id=1319996749 instance=ExtResource("6_pn8ik")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -41.4974, -0.40886438, -19.572985)
 
-[node name="Forest" parent="." unique_id=1101210006 instance=ExtResource("12_6jw5i")]
+[node name="Forest" parent="." unique_id=1101210006 instance=ExtResource("7_y8j7c")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 34.86126, -0.07295227, -98.05785)
 
-[node name="Forest2" parent="." unique_id=1246026849 instance=ExtResource("12_6jw5i")]
+[node name="Forest2" parent="." unique_id=1246026849 instance=ExtResource("7_y8j7c")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -14.510935, -0.07295227, -95.05785)
 
-[node name="Forest3" parent="." unique_id=1075873354 instance=ExtResource("12_6jw5i")]
+[node name="Forest3" parent="." unique_id=1075873354 instance=ExtResource("7_y8j7c")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 23.729733, -0.33137178, 90.53559)
 
-[node name="medieval_tower_ruins" parent="." unique_id=303563640 instance=ExtResource("13_au1d7")]
+[node name="medieval_tower_ruins" parent="." unique_id=303563640 instance=ExtResource("8_3onse")]
 transform = Transform3D(1.3113416e-07, 0, -1, 0, 1, 0, 1, 0, 1.3113416e-07, 56.083496, 0.018917322, -70.02586)
 
-[node name="tree" parent="." unique_id=2147137266 instance=ExtResource("8_l3dix")]
+[node name="tree" parent="." unique_id=2147137266 instance=ExtResource("9_q2tym")]
 transform = Transform3D(-0.77645713, 0, -2.8977776, 0, 3, 0, 2.8977776, 0, -0.77645713, -40.941517, -1.1128595, 0.9311943)
 
 [node name="Pressure_plate" type="Node3D" parent="." unique_id=828688538]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 8.203504, 0.00993371, 14.222015)
-script = ExtResource("9_j31ul")
+script = ExtResource("10_nv6o6")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Pressure_plate" unique_id=597319947]
 mesh = SubResource("PlaneMesh_qeakp")

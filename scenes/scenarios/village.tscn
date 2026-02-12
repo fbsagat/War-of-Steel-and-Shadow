@@ -315,7 +315,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -24.551699, 0.98002744, -72.4
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -23.616154, 2.9800272, -72.5531)
 
 [node name="water" type="MeshInstance3D" parent="." unique_id=328315057]
-transform = Transform3D(1.046, 0, 0, 0, 0.054, 0, 0, 0, 1, 0, -3.184713, 0)
+transform = Transform3D(4, 0, 0, 0, 0.054, 0, 0, 0, 4, 0, -3.184713, 0)
 mesh = SubResource("BoxMesh_romep")
 
 [node name="logs" parent="." unique_id=587268671 instance=ExtResource("12_e8vn3")]
