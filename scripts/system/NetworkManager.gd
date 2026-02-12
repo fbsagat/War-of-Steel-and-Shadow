@@ -45,9 +45,16 @@ func _get_log_prefix() -> String:
 	return ""
 
 # ===== FUNÇÕES RPC COMPARTILHADAS (declarações vazias) =====
+@rpc("any_peer", "call_remote", "reliable")
+func send_client_uuid(_client_uuid: String):
+	pass
+	
+@rpc("any_peer", "call_remote", "reliable")
+func _handle_receive_client_uuid(_client_uuid: String):
+	pass
 
 @rpc("any_peer", "call_remote", "reliable")
-func _server_register_player(_player_name: String):
+func _server_register_player_name(_player_name: String):
 	pass
 
 @rpc("authority", "call_remote", "reliable")
@@ -60,6 +67,14 @@ func _client_name_accepted(_accepted_name: String):
 
 @rpc("authority", "call_remote", "reliable")
 func _client_name_rejected(_reason: String):
+	pass
+
+@rpc("authority", "call_remote", "reliable")
+func _client_uuid_rejected():
+	pass
+
+@rpc("authority", "call_remote", "reliable")
+func _client_uuid_accepted():
 	pass
 
 @rpc("any_peer", "call_remote", "reliable")
