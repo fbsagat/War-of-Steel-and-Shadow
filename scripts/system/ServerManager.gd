@@ -478,7 +478,7 @@ func _handle_create_room(peer_id: int, room_name: String, password: String):
 	
 	_log_debug("✓ Sala criada: %s (ID: %d, Host: %s)" % [room_name, room_data["id"], player["name"]])
 	
-	# Atualiza lista de salas para todos
+	# Atualiza lista de salas para todos (útil para quem está na lista de salas)
 	_send_rooms_list_to_all()
 	
 	# Confirma criação para o criador
@@ -1823,7 +1823,7 @@ func _log_debug(message: String):
 	if initializer.activate_only_selected and not "Server" in initializer.selected:
 		return
 	
-	print("[Server]" + message)
+	print("[SERVER]" + message)
 
 # ===== DEBUG =====
 

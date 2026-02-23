@@ -44,7 +44,7 @@ func initialize():
 	# Conectar-se ao evento de desconexão para limpar dados
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
 	
-	_log_debug("Inicializando NetworkManager como servidor")
+	_log_debug("Inicializando NetworkManager")
 
 func _process(delta: float):
 	_server_update_sync_timers(delta)
@@ -84,6 +84,7 @@ func _on_peer_disconnected(peer_id: int):
 		_player_rpc_queues.erase(peer_id)
 
 # ===== REGISTRO DE JOGADOR =====
+
 func _handle_receive_client_uuid(_client_uuid: String):
 	"""RPC: Servidor recebe uuid do client que acabou de conectar"""
 	if not multiplayer.is_server():

@@ -446,6 +446,9 @@ func _on_gameplay_menu_disconnect_f_server_pressed():
 	_log_debug("_on_gameplay_menu_disconnect_f_server_pressed")
 	_on_intentional_disconnect_from_server(true)
 
+func _on_gameplay_menu_give_up_game_pressed():
+	_log_debug("_on_gameplay_menu_give_up_game_pressed")
+
 # ===== ATUALIZAÇÃO DE CONFIGURAÇÕES =====
 
 func update_client_info(info: Dictionary):

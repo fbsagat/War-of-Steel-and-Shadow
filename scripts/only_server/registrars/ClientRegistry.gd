@@ -1049,4 +1049,4 @@ func _log_debug(message: String):
 	if initializer.activate_only_selected and not "ClientRegistry" in initializer.selected:
 		return
 		
-	print("[SERVER][ClientRegistry] %s" % message)
+	print("[Server][ClientRegistry] %s" % message)

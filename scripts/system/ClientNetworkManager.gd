@@ -23,7 +23,7 @@ var client_sync_buffer: Dictionary = {}
 # ===== FUNÇÕES DE INICIALIZAÇÃO =====
 
 func initialize():
-	_log_debug("Inicializando NetworkManager como cliente")
+	_log_debug("Inicializando NetworkManager")
 	
 	# Conecta aos sinais de rede
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
