@@ -62,11 +62,11 @@ func _ready():
 	else:
 		# Injetar uuid do argumento client_uuid, substituindo a verificação
 		# padrão na psta do usuário (apenas para desenvolvimento)
-		var client_uuid_ = null
+		var id_file_ = null
 		for arg in args:
-			if arg.begins_with("--client_uuid="):
-				client_uuid_ = arg.split("=")[1]
-		_init_client(client_uuid_)
+			if arg.begins_with("--id_file="):
+				id_file_ = arg.split("=")[1]
+		_init_client(id_file_)
 		
 func _init_server(is_headless):
 	# Instancia managers e registros
@@ -128,6 +128,7 @@ func _init_server(is_headless):
 	
 	# ClientRegistry precisa de:
 	client_registry.network_manager = network_manager
+	client_registry.server_manager = server_manager
 	client_registry.room_registry = room_registry
 	client_registry.round_registry = round_registry
 	client_registry.object_manager = object_manager
@@ -196,7 +197,7 @@ func _init_server(is_headless):
 	item_database.load_database()
 	object_manager.initialize()
 
-func _init_client(client_uuid_):
+func _init_client(id_file_):
 	# Instancia managers e registros
 	var network_manager_scene: PackedScene = load("res://scenes/system/client_network_manager.tscn")
 	var game_manager_scene: PackedScene = load("res://scenes/system/game_manager.tscn")
@@ -253,8 +254,8 @@ func _init_client(client_uuid_):
 	# Configurações
 	game_manager.connect_inventory_signals()
 	main_menu._connect_game_manager_signals()
-	if client_uuid_:
-		game_manager.client_uuid = client_uuid_
+	if id_file_:
+		game_manager.IDENTITY_FILE = id_file_
 		
 	# Configurar modo de testes
 	if test_mode:

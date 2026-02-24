@@ -58,9 +58,6 @@ func _get_log_prefix() -> String:
 	return "[CLIENT][NetworkManager][ClientID: %d]" % cached_unique_id
 
 # ===== REGISTRO DE JOGADOR =====
-func send_client_uuid(_client_uuid: String):
-	"Envia o uuid do jogador para o servidor tomar decisões sobre ele"
-	rpc_id(1, "_handle_receive_client_uuid", _client_uuid)
 
 func register_player_name(player_name: String):
 	"""Envia requisição de registro de jogador ao servidor"""
@@ -93,22 +90,6 @@ func _client_name_rejected(reason: String):
 	
 	_log_debug("❌ Nome rejeitado: " + reason)
 	game_manager._client_name_rejected(reason)
-
-func _client_uuid_rejected():
-	"""RPC: Cliente recebe rejeição de uuid (repetida)"""
-	if multiplayer.is_server():
-		return
-	
-	_log_debug("❌ UUID rejeitada, repetida")
-	game_manager._client_uuid_rejected()
-
-func _client_uuid_accepted():
-	"""RPC: Cliente recebe uuid aceito pelo servidor"""
-	if multiplayer.is_server():
-		return
-	
-	_log_debug("✅ UUID aceito pelo servidor")
-	game_manager._client_uuid_accepted()
 
 # ===== GERENCIAMENTO DE SALAS =====
 

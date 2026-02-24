@@ -83,18 +83,12 @@ func _on_peer_disconnected(peer_id: int):
 	if _player_rpc_queues.has(peer_id):
 		_player_rpc_queues.erase(peer_id)
 
-# ===== REGISTRO DE JOGADOR =====
 
-func _handle_receive_client_uuid(_client_uuid: String):
-	"""RPC: Servidor recebe uuid do client que acabou de conectar"""
-	if not multiplayer.is_server():
-		return
-	
-	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
-		return
-	
-	var peer_id = multiplayer.get_remote_sender_id()
-	server_manager._server_receive_client_uuid(peer_id, _client_uuid)
+# ===== AUTENTICAÇÃO DE JOGADOR =====
+
+
+
+# ===== REGISTRO DE JOGADOR =====
 
 func _server_register_player_name(player_name: String):
 	"""RPC: Servidor recebe pedido de registro"""

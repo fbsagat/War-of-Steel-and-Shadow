@@ -18,6 +18,7 @@ class_name ClientRegistry
 # ===== REGISTROS (Injetados pelo initializer.gd) =====
 
 var network_manager: NetworkManager = null
+var server_manager: ServerManager = null
 var room_registry: RoomRegistry = null
 var round_registry: RoundRegistry = null
 var object_manager: ObjectManager = null
@@ -46,7 +47,6 @@ var entry_position: int = 0
 # --- Sinais de Conexão ---
 signal peer_added(peer_id: int)
 signal peer_removed(peer_id: int)
-signal player_registered(peer_id: int, player_uuid: String)
 signal player_name_registered(peer_id: int, player_name: String)
 
 # --- Sinais de Localização ---
@@ -72,7 +72,7 @@ signal player_left_round(peer_id: int, round_id: int)
 ##   "position": int,
 ##   "name": String,
 ##   "registered": bool,
-##   "connected_at": float,
+##   "last_seen": float,
 ##   "room_id": int (-1 se não estiver em sala),
 ##   "round_id": int (-1 se não estiver em rodada),
 ##   "node_path": String
@@ -116,7 +116,7 @@ func _get_next_position() -> int:
 	entry_position += 1
 	return entry_position
 
-func add_peer(peer_id: int):
+func add_peer(peer_id: int, token: String = ""):
 	"""Adiciona um novo peer conectado (ainda não registrado)"""
 	if players.has(peer_id):
 		_log_debug("⚠ Peer %d já existe" % peer_id)
@@ -124,11 +124,11 @@ func add_peer(peer_id: int):
 	
 	players[peer_id] = {
 		"id": peer_id,
-		"uuid": "",
+		"token": token,
 		"entry_position": _get_next_position(),
 		"name": "",
 		"registered": false,
-		"connected_at": Time.get_unix_time_from_system(),
+		"last_seen": Time.get_unix_time_from_system(),
 		"room_id": -1,
 		"round_id": -1,
 		"node_path": ""
@@ -157,34 +157,39 @@ func remove_peer(peer_id: int):
 	_log_debug("✓ Peer removido: %d (%s)" % [peer_id, player_name])
 	peer_removed.emit(peer_id)
 
-func register_player(peer_id: int, player_uuid: String) -> bool:
-	"""Registra uuid do jogador"""
-	if not players.has(peer_id):
-		_log_debug("❌ Tentou registrar uuid jogador inexistente: %d" % peer_id)
-		return false
-	
-	players[peer_id]["uuid"] = player_uuid
-	players[peer_id]["registered"] = true
-	
-	_log_debug("✓ Uuid do jogador registrado: %s (Session ID: %d)" % [player_uuid, peer_id])
-	player_registered.emit(peer_id, player_uuid)
-	return true
-
 func register_player_name(peer_id: int, player_name: String) -> bool:
 	"""Registra nome do jogador"""
 	if not players.has(peer_id):
 		_log_debug("❌ Tentou registrar nome de jogador inexistente: %d" % peer_id)
 		return false
 	
-	if not players[peer_id]["registered"] == true:
-		_log_debug("❌ Tentou registrar nome antes de registrar uuid: %d" % peer_id)
-		return false
-	
 	players[peer_id]["name"] = player_name
-	
-	_log_debug("✓ Nome do jogador registrado: %s (ID: %d)" % [player_name, peer_id])
+	players[peer_id]["registered"] = true
 	player_name_registered.emit(peer_id, player_name)
+	_log_debug("✓ Nome do jogador registrado: %s (ID: %d)" % [player_name, peer_id])
 	return true
+
+func update_player_id(old_peer_id: int ,new_peer_id: int):
+	"""Registra novo id do jogador"""
+
+	_log_debug("✓ Trocar peer id de jogador, antigo: %s, novo: %s" % [old_peer_id, new_peer_id])
+	if not players.has(old_peer_id):
+		print("Erro: ID antigo não encontrado.")
+		return
+	if players.has(new_peer_id):
+		print("Erro: Novo ID já existe.")
+		return
+	# Copia os dados do player antigo
+	var player_data = players[old_peer_id]
+	# Atualiza o campo interno "id"
+	player_data["id"] = new_peer_id
+	# Remove a chave antiga
+	players.erase(old_peer_id)
+	# Cria nova entrada com o novo ID
+	players[new_peer_id] = player_data
+	players[new_peer_id]["last_seen"] = Time.get_unix_time_from_system()
+	
+	_log_debug("✓ Peed id de jogador trocado com sucesso")
 
 func is_name_taken(player_name: String) -> bool:
 	"""Verifica se um nome já está em uso"""
@@ -193,14 +198,7 @@ func is_name_taken(player_name: String) -> bool:
 		if player.has("name") and player["name"].strip_edges().to_lower() == normalized_name:
 			return true
 	return false
-
-func is_uuid_taken(player_uuid: String) -> bool:
-	"""Verifica se um nome já está em uso"""
-	for player in players.values():
-		if player.has("uuid") and player["uuid"] == player_uuid:
-			return true
-	return false
-
+	
 # ===== GERENCIAMENTO DE SALAS/RODADAS =====
 
 func join_room(peer_id: int, room_id: int):

@@ -30,6 +30,7 @@ class_name ServerManager
 @export var max_clients: int = 32
 @export var is_headless : bool
 @export var public_server_name: String = "Games da PQP! Diversão garantida!"
+const SERVER_SECRET := "MUDE_PARA_UM_SEGREDO_GRANDE_E_ALEATORIO"
 
 @export_category("Default Node References")
 const map_scene : String = "res://scenes/gameplay/terrain_3d.tscn"
@@ -133,7 +134,7 @@ func _on_fast_round_verify_timeout():
 	"""Esta função é chamada automaticamente sempre que o Timer atinge o tempo configurado"""
 	if _verificar_teste_automático():
 		test_mode_check_timer.stop()
-
+		
 func _verificar_teste_automático() -> bool:
 	"""Esta função executa a lógica de verificação. Ela retorna:
 	- true  → quando a partida de teste foi iniciada
@@ -145,7 +146,7 @@ func _verificar_teste_automático() -> bool:
 		test_manager.criar_partida_teste()
 		return true
 	return false
-
+	
 func _setup_viewport_display():
 	"""Cria um TextureRect que mostra o viewport atual na tela"""
 	viewport_display = TextureRect.new()
@@ -274,15 +275,14 @@ func _on_peer_connected(peer_id: int):
 	"""Callback quando um cliente conecta ao servidor"""
 	_log_debug("✓ Cliente conectado: Peer ID %d" % peer_id)
 	
-	# Adiciona peer ao ClientRegistry
-	client_registry.add_peer(peer_id)
-	
 	# Envia configurações do servidor para o cliente
 	var configs: Dictionary = {
 		"max_players_per_room": max_players_per_room,
 		"min_players_to_start": min_players_to_start,
 		"server_name": public_server_name,
 	}
+	
+	client_registry.add_peer(peer_id)
 	
 	# Atualiza max_players_per_room e min_players_to_start para clientes
 	# atualiza nome do seridor
@@ -353,23 +353,9 @@ func _on_peer_disconnected(peer_id: int):
 	_cleanup_player_state(peer_id)
 	
 	# 4. Remove do player registry (limpeza final)
-	client_registry.remove_peer(peer_id)
+	#client_registry.remove_peer(peer_id)
 
 # ===== HANDLERS DE JOGADOR =====
-
-func _server_receive_client_uuid(peer_id: int, _client_uuid: String):
-	"""Processa uuid enviado pelo cliente ao se conectar"""
-	_log_debug("Cliente de sessão: %s, está enviando este uuid: %s" % [peer_id, _client_uuid])
-	
-	# Valida UUID única
-	if client_registry.is_uuid_taken(_client_uuid):
-		_log_debug("❌ UUID rejeitado: " + _client_uuid)
-		network_manager.rpc_id(peer_id, "_client_uuid_rejected")
-		return
-	
-	_log_debug("UUID validada e aceita para este cliente: %s, UUID: %s" % [peer_id, _client_uuid])
-	client_registry.register_player(peer_id, _client_uuid)
-	network_manager.rpc_id(peer_id, "_client_uuid_accepted")
 
 func _handle_register_player_name(peer_id: int, player_name: String):
 	"""Processa solicitação de registro de nome de jogador"""
@@ -387,6 +373,7 @@ func _handle_register_player_name(peer_id: int, player_name: String):
 	
 	if success:
 		_log_debug("✓ Jogador registrado: %s (Peer ID: %d)" % [player_name, peer_id])
+		
 		network_manager.rpc_id(peer_id, "_client_name_accepted", player_name)
 	else:
 		_log_debug("❌ Falha ao registrar jogador")
@@ -530,11 +517,16 @@ func _handle_join_room(peer_id: int, room_id: int, password: String):
 		network_manager.rpc_id(peer_id, "_client_wrong_password")
 		return
 	
+	# Cria e envia uuid de sessão de sala para este jogador
+	client_registry._generate_uuid_and_save(peer_id)
+	
 	# Adiciona à sala
 	var success = room_registry.add_player_to_room(room_id, peer_id)
 	if not success:
 		_send_error(peer_id, "Não foi possível entrar na sala (pode estar cheia ou em jogo)")
 		return
+	
+	# Define um novo uuid para esta rodada (para retorno após uma desconexão)
 	
 	_log_debug("✓ Jogador %s entrou na sala: %s" % [player["name"], room["name"]])
 	

@@ -29,7 +29,7 @@ const RECONNECT_DELAY := 2.0 # segundos
 
 @export_category("Player Identifier")
 @export var client_uuid: String = ""
-const PLAYER_UUID_FILE := "user://player_id.cfg"
+var IDENTITY_FILE : String = "user://identity.cfg"
 
 # ===== REGISTROS (Injetados pelo initializer.gd) =====
 
@@ -71,8 +71,6 @@ var objects_node: Node = null
 signal connected_to_server()
 signal connection_failed(reason: String)
 signal disconnected_from_server()
-signal uuid_rejected()
-signal uuid_accepted()
 signal rooms_list_received(success: bool, rooms: Array)
 signal joined_room(room_data: Dictionary)
 signal room_created(room_data: Dictionary)
@@ -97,26 +95,24 @@ func _ready():
 	multiplayer.connection_failed.connect(_on_connection_failed)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
 	_log_debug("Sinais de rede configurados")
-	
-	if client_uuid == "":
-		_load_or_generate_id()
-		
-	_log_debug("UUID atual deste cliente: %s" % client_uuid)
 
 func connect_inventory_signals():
 	main_menu_node.gameplay_menu_back_pressed.connect(_on_gameplay_menu_back_pressed)
 	main_menu_node.gameplay_menu_exit_game_pressed.connect(_on_gameplay_menu_exit_game_pressed)
 	main_menu_node.gameplay_menu_disconnect_f_server_pressed.connect(_on_gameplay_menu_disconnect_f_server_pressed)
+	main_menu_node.gameplay_menu_give_up_game_pressed.connect(_on_gameplay_menu_give_up_game_pressed)
 
 func initialize():
 	if main_menu_node:
 		main_menu_node.show_main_menu()
 	
 	if localhost_auto_connect:
+		_log_debug("Função de testes está ativada: Entrando no servidor localhost")
 		await get_tree().create_timer(0.25).timeout
 		join_server_by_ip(server_address, str(server_port))
 
 # ===== FUNÇÕES DE MENU e INPUT =====
+
 func _unhandled_input(event: InputEvent) -> void:
 	if not _can_process_menu_input():
 		return
@@ -202,6 +198,7 @@ func _toggle_gameplay_menu(hide: bool = false) -> void:
 		_log_debug("Mostrando menu de gameplay e exibindo ponteiro do mouse")
 
 # ===== FUNÇÕES DE CONEXÃO COM O SERVIDOR =====
+
 func join_server_by_ip(received_ip: String, received_port: String) -> bool:
 	# Validar IP/hostname
 	if received_ip and received_ip.strip_edges() != "":
@@ -340,10 +337,11 @@ func _on_connected_to_server():
 	is_connected_to_server = true
 	local_peer_id = multiplayer.get_unique_id()
 	
-	# envia o UUID pro servidor
-	send_client_uuid(client_uuid)
-	
 	_log_debug(" Cliente conectado ao servidor com sucesso! Peer ID: %d" % local_peer_id)
+	
+	if main_menu_node:
+		main_menu_node.show_name_input_menu(true)
+	
 	connected_to_server.emit()
 
 func _on_connection_failed():
@@ -474,14 +472,6 @@ func create_local_match():
 	#server_pid = OS.create_process(server_path, ["--port", "7777"])
 
 # ===== REGISTRO DE JOGADOR =====
-
-func send_client_uuid(_client_uuid: String):
-	"Envia o uuid do jogador para o servidor tomar decisões sobre ele"
-	
-	if not is_connected_to_server:
-		_show_error("Não conectado ao servidor")
-		return
-	network_manager.send_client_uuid(client_uuid)
 	
 func set_player_name(p_name: String):
 	"""Envia nome do jogador para registro no servidor"""
@@ -517,24 +507,6 @@ func _client_name_rejected(reason: String):
 		main_menu_node.show_error_name_input(reason)
 	
 	name_rejected.emit(reason)
-	
-func _client_uuid_rejected():
-	"""Callback quando o uuid do usuário é repetido"""
-	_log_debug("UUID rejeitado (repetido)")
-	
-	_on_intentional_disconnect_from_server()
-	
-	if main_menu_node:
-		main_menu_node.show_server_list_menu()
-		main_menu_node.show_error_server_list("UUID inválida")
-	uuid_rejected.emit()
-
-func _client_uuid_accepted():
-	"""Callback quando o uuid do usuário é aceito pelo servidor"""
-	_log_debug("UUID aceito pleo servidor")
-	if main_menu_node:
-		main_menu_node.show_name_input_menu(true)
-	uuid_accepted.emit()
 
 # ===== GERENCIAMENTO DE SALAS =====
 
@@ -1357,28 +1329,6 @@ func _despawn_on_client(object_id: int, round_id: int):
 	_log_debug("✓ Objeto despawnado no cliente: ID=%d" % object_id)
 
 # ===== PLAYER IDENTIFIER FUNCTIONS =====
-
-func _load_or_generate_id() -> void:
-	"""Função principal do sistema de identificação persistente de clientes (não seguro mas eficaz kkk XD)"""
-	var config := ConfigFile.new()
-	if config.load(PLAYER_UUID_FILE) == OK && config.has_section_key("Player", "id"):
-		client_uuid = config.get_value("Player", "id")
-		_log_debug("UUID carregado: %s" % client_uuid)
-	else:
-		client_uuid = _generate_unique_id()
-		_save_id()
-		_log_debug("Novo UUID gerado: %s" % client_uuid)
-	
-func _generate_unique_id() -> String:
-	# Baseado em timestamp + random para evitar colisões em testes
-	var timestamp := Time.get_unix_time_from_system()
-	var random_part := randi() % 1000000
-	return "pid_%s_%06d" % [timestamp, random_part]
-
-func _save_id() -> void:
-	var config := ConfigFile.new()
-	config.set_value("Player", "id", client_uuid)
-	config.save(PLAYER_UUID_FILE)
 
 # ===== UTILITÁRIOS =====
 
