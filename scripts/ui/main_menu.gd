@@ -16,7 +16,6 @@ signal quit_game_requested()
 signal gameplay_menu_back_pressed()
 signal gameplay_menu_exit_game_pressed()
 signal gameplay_menu_give_up_game_pressed()
-signal gameplay_menu_disconnect_f_server_pressed()
 
 # ===== REFERÊNCIAS INTERNAS =====
 
@@ -186,6 +185,7 @@ var player_count = 0
 var exit_server_button_pressed: bool = false
 var actual_player_name = ""
 var actual_server_name = ""
+var last_selected_match_id: int
 
 func _ready():
 	_log_debug("Inicializando MainMenu")
@@ -613,8 +613,7 @@ func show_name_input_menu(welcome: bool):
 		name_input_error_label.text = ""
 		name_input_error_label.visible = false
 
-func show_room_list_menu(error_visible: bool = false):
-	room_list_menu.visible = true
+func show_room_list_menu(error_visible: bool = false, match_password_visible: bool = false):
 	server_name_label.text = actual_server_name
 	current_menu_visible = room_list_menu
 	game_manager.request_rooms_list()
@@ -629,20 +628,41 @@ func show_room_list_menu(error_visible: bool = false):
 	room_list_menu.visible = true
 	current_menu_visible = room_list_menu
 	
-	if match_password_container:
-		match_password_container.visible = false
+	# Desativa o botão quando carrega o menu
+	if match_list_join_button:
+		match_list_join_button.disabled = true
+	
+	if match_password_visible:
+		if match_password_container:
+			match_password_container.visible = true
+		if match_list:
+			match_list.select(last_selected_match_id)
+			selected_match_id = last_selected_match_id + 1
+	else:
+		if match_password_container:
+			match_password_container.visible = false
 	if match_password_input:
 		match_password_input.text = ""
-	if match_list_error_label and not error_visible:
-		#match_list_error_label.text = ""
-		match_list_error_label.visible = false
-		# Desativa o botão quando carrega o menu
-		match_list_join_button.disabled = true
-	elif error_visible:
-		#match_list_error_label.visible = true
-		match_password_container.visible = true
-		match_list_join_button.disabled = false
-		
+	
+	if error_visible:
+		if match_list_error_label:
+			match_list_error_label.visible = true
+			match_list_join_button.disabled = false
+	else:
+		if match_list_error_label:
+			match_list_error_label.text = ""
+			match_list_error_label.visible = false
+	
+	if current_matches.is_empty():
+		if match_list_error_label:
+			match_list_error_label.text = "Nenhuma partida disponível no momento"
+			match_list_error_label.visible = true
+	else:
+		if current_matches.size() >= 5:
+			manual_join_button.disabled = false
+		else:
+			manual_join_button.disabled = true
+	
 func show_room_return_menu(room_name: String):
 	hide_all_menus()
 	room_return_menu.visible = true
@@ -849,10 +869,12 @@ func _on_exit_server_pressed():
 	game_manager._on_intentional_disconnect_from_server()
 
 func _on_match_list_join_pressed():
+
 	if selected_match_id <= -1:
 		show_error_room_list("Nenhuma partida selecionada")
 		return
 	
+	last_selected_match_id = selected_match_id - 1
 	var password = match_password_input.text if match_password_input else ""
 	game_manager.join_room(selected_match_id, password)
 
@@ -905,21 +927,6 @@ func populate_room_list(matches: Array):
 	current_matches = matches
 	match_list.clear()
 	selected_match_id = -1
-	
-	if match_password_container:
-		match_password_container.visible = false
-	
-	if match_list_error_label:
-		match_list_error_label.visible = false
-	
-	if matches.is_empty():
-		if match_list_error_label:
-			match_list_error_label.text = "Nenhuma partida disponível no momento"
-			match_list_error_label.visible = true
-	else:
-		if match_list_error_label:
-			match_list_error_label.text = ""
-			match_list_error_label.visible = false
 	
 	for match_data in matches:
 		var text = match_data.get("name", "Sala sem nome")  # Usa valor padrão se "name" não existir
@@ -1602,10 +1609,6 @@ func _on_game_manager_rooms_received(sucess: bool, rooms: Array):
 	if sucess:
 		populate_room_list(rooms)
 		_log_debug("Lista de salas recebida: %d salas" % rooms.size())
-		if rooms.size() >= 5:
-			manual_join_button.disabled = false
-		else:
-			manual_join_button.disabled = true
 
 func _on_game_manager_name_accepted():
 	_log_debug("Nome aceito pelo servidor")

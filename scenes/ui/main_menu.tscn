@@ -473,7 +473,6 @@ theme = SubResource("Theme_1g8jr")
 text = "Apagar"
 
 [node name="RoomListMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=1613751584]
-visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -655,6 +654,7 @@ layout_mode = 2
 text = "Sair da Sala"
 
 [node name="RoomReturnMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=1882250171]
+visible = false
 layout_mode = 0
 offset_left = 300.0
 offset_top = 250.0

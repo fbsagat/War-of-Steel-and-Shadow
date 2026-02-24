@@ -102,7 +102,6 @@ func _ready():
 func connect_inventory_signals():
 	main_menu_node.gameplay_menu_back_pressed.connect(_on_gameplay_menu_back_pressed)
 	main_menu_node.gameplay_menu_exit_game_pressed.connect(_on_gameplay_menu_exit_game_pressed)
-	main_menu_node.gameplay_menu_disconnect_f_server_pressed.connect(_on_gameplay_menu_disconnect_f_server_pressed)
 	main_menu_node.gameplay_menu_give_up_game_pressed.connect(_on_gameplay_menu_give_up_game_pressed)
 
 func initialize():
@@ -599,15 +598,14 @@ func _client_wrong_password():
 	"""Callback quando a senha está incorreta"""
 	
 	var current_menu_visible_name = main_menu_node.current_menu_visible.name
+	main_menu_node.room_list_menu.visible = true
+	_show_error("Senha incorreta")
 	
 	if main_menu_node and current_menu_visible_name == "RoomListMenu":
-		main_menu_node.show_room_list_menu(true)
-		main_menu_node.room_list_menu.visible = true
+		main_menu_node.show_room_list_menu(true, true)
 
 	if main_menu_node and current_menu_visible_name == "ManualRoomJoinMenu":
 		main_menu_node.show_manual_room_join_menu()
-		
-	_show_error("Senha incorreta")
 	
 func _client_room_name_exists():
 	"""Callback de quando já existe uma sala com o nome escolhido"""
@@ -685,9 +683,6 @@ func join_room(room_id: int, password: String = ""):
 		return
 	
 	_log_debug("Tentando entrar na sala ID: %d" % room_id)
-	
-	if main_menu_node:
-		main_menu_node.show_loading_menu("Entrando na sala...")
 	
 	network_manager.join_room(room_id, password)
 
@@ -1048,8 +1043,8 @@ func _client_error(error_message: String):
 
 func _show_error(message: String):
 	"""Mostra erro na UI apropriada"""
-	_log_debug("ERRO: " + message)
-	
+	var current = main_menu_node.current_menu_visible
+	_log_debug("ERRO (Em: %s): %s" % [current.name, message])
 	if main_menu_node:
 		if main_menu_node.connecting_menu and main_menu_node.connecting_menu.visible:
 			main_menu_node.show_error_connecting(message)
@@ -1444,6 +1439,6 @@ func _log_debug(message: String):
 	
 	# Enquanto o cliente não receber id único de peer multiplayer, não exibe no log debug
 	if unique_id == 1:
-		print("[GameManager]:Message:%s" % message)
+		print("[GameManager]:%s" % message)
 	else:
-		print("[GameManager][ClientID:%s]:Message:%s" % [unique_id, message])
+		print("[GameManager][ClientID:%s]:%s" % [unique_id, message])

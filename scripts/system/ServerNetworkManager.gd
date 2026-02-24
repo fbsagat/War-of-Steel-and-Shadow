@@ -28,7 +28,6 @@ var sync_timers: Dictionary = {}
 
 # Configurações de rate limit para pedidos de RPCs de clientes
 const RPC_RATE_LIMIT_SEC = 0.25  # 4 RPCs por segundo por jogador
-const MAX_RPC_QUEUE = 10        # Número máximo de RPCs na fila
 
 # Armazena o último timestamp de RPC por jogador
 var _player_rpc_timestamps = {}  # { peer_id: float }
@@ -82,11 +81,6 @@ func _on_peer_disconnected(peer_id: int):
 		_player_rpc_timestamps.erase(peer_id)
 	if _player_rpc_queues.has(peer_id):
 		_player_rpc_queues.erase(peer_id)
-
-
-# ===== AUTENTICAÇÃO DE JOGADOR =====
-
-
 
 # ===== REGISTRO DE JOGADOR =====
 
