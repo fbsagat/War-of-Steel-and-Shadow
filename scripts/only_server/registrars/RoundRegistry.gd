@@ -296,7 +296,7 @@ func complete_round_end(round_id: int) -> Dictionary:
 		for player in round_data["players"]:
 			client_registry.leave_round(player["id"])
 			# Limpa inventário
-			client_registry.clear_player_inventory(round_id, player["id"])
+			client_registry.clear_player_inventory(round_id, player["peer_id"])
 	
 	_log_debug("✓ Rodada %d FINALIZADA" % round_id)
 	round_ended.emit(round_data.duplicate(true))
@@ -524,7 +524,7 @@ func get_leaderboard(round_id: int) -> Array:
 		leaderboard.append({
 			"peer_id": player["id"],
 			"name": player["name"],
-			"score": round_data["scores"].get(player["id"], 0)
+			"score": round_data["scores"].get(player["peer_id"], 0)
 		})
 	
 	# Ordena por score (decrescente)

@@ -28,8 +28,11 @@ const MAX_RECONNECT_ATTEMPTS := 10
 const RECONNECT_DELAY := 2.0 # segundos
 
 @export_category("Player Identifier")
-@export var client_uuid: String = ""
-var IDENTITY_FILE : String = "user://identity.cfg"
+var UUID_FILE := "user://identity.json"
+var TOKEN_FILE := "user://server_tokens.json"
+var uuid_base : String
+var server_tokens : Dictionary = {}
+const MAX_SAVED_TOKENS: int = 50
 
 # ===== REGISTROS (Injetados pelo initializer.gd) =====
 
@@ -110,6 +113,10 @@ func initialize():
 		_log_debug("Função de testes está ativada: Entrando no servidor localhost")
 		await get_tree().create_timer(0.25).timeout
 		join_server_by_ip(server_address, str(server_port))
+	
+	# Identificação de cliente
+	uuid_base = _load_or_create_uuid()
+	server_tokens = _load_tokens()
 
 # ===== FUNÇÕES DE MENU e INPUT =====
 
@@ -291,6 +298,79 @@ func _is_valid_hostname(hostname: String) -> bool:
 	
 	return true
 
+# ===== SISTEMA DE IDENTIFIAÇÃO =====
+
+func _load_or_create_uuid() -> String:
+	"""
+	Gera identidade persistente do cliente.
+	Nunca muda após criação.
+	"""
+	if FileAccess.file_exists(UUID_FILE):
+		var data = JSON.parse_string(FileAccess.get_file_as_string(UUID_FILE))
+		return data["uuid_base"]
+
+	var crypto = Crypto.new()
+	var new_uuid = crypto.generate_random_bytes(16).hex_encode()
+
+	var file = FileAccess.open(UUID_FILE, FileAccess.WRITE)
+	file.store_string(JSON.stringify({"uuid_base": new_uuid}))
+	file.close()
+
+	return new_uuid
+
+func _load_tokens() -> Dictionary:
+	if FileAccess.file_exists(TOKEN_FILE):
+		return JSON.parse_string(FileAccess.get_file_as_string(TOKEN_FILE))
+	return {}
+
+func _save_tokens() -> void:
+	"""
+	Salva apenas os tokens mais recentes.
+	Mantém no máximo MAX_SAVED_TOKENS entradas.
+	Funciona com Dictionary simples:
+	{
+		"server_id": "token"
+	}
+	"""
+	
+	# Se exceder limite, remove os mais antigos
+	while server_tokens.size() > MAX_SAVED_TOKENS:
+		# Pega a primeira chave inserida (mais antiga)
+		var oldest_key = server_tokens.keys()[0]
+		server_tokens.erase(oldest_key)
+	
+	var file = FileAccess.open(TOKEN_FILE, FileAccess.WRITE)
+	file.store_string(JSON.stringify(server_tokens))
+	file.close()
+
+func handle_server_response(response: Dictionary) -> void:
+	"""
+	Processa resposta do servidor.
+	Salva novo token se necessário.
+	"""
+	if response["status"] == "new_token":
+		var sid = response["server_id"]
+		server_tokens[sid] = response["token"]
+		_save_tokens()
+			
+		if main_menu_node:
+			main_menu_node.show_name_input_menu(true)
+
+	elif response["status"] == "ok":
+		_log_debug("Autenticado com sucesso")
+		player_name = response["player_name"]
+		
+		if main_menu_node:
+			if player_name == "":
+				main_menu_node.show_name_input_menu(true)
+			else:
+				main_menu_node.update_name_e_connected(configs["server_name"], response["player_name"])
+				main_menu_node.show_main_menu()
+
+	elif response["status"] == "reject":
+		_log_debug("Conexão rejeitada: %s" % response.get("reason",""))
+		_on_intentional_disconnect_from_server()
+
 # ===== CALLBACKS DE CONEXÃO =====
 
 func connect_to_server():
@@ -338,9 +418,6 @@ func _on_connected_to_server():
 	local_peer_id = multiplayer.get_unique_id()
 	
 	_log_debug(" Cliente conectado ao servidor com sucesso! Peer ID: %d" % local_peer_id)
-	
-	if main_menu_node:
-		main_menu_node.show_name_input_menu(true)
 	
 	connected_to_server.emit()
 
@@ -459,6 +536,14 @@ func update_client_info(info: Dictionary):
 		if not configs.has(key) or configs[key] != new_value:
 			configs[key] = new_value
 			_log_debug("[UPDATED] %s: %s" % [str(key), str(new_value)])
+			
+		if key == "server_id":
+			var token : String = ""
+			if server_tokens.has(new_value):
+				token = server_tokens[new_value]
+
+			# Agora enviamos o hello com uuid + token
+			network_manager.send_hello_to_server(uuid_base, token)
 
 # ===== CRIAÇÃO DE REDE LOCAL =====
 
@@ -667,7 +752,7 @@ func close_room():
 	network_manager.close_room()
 	current_room = {}
 	if main_menu_node:
-		main_menu_node.show_main_menu()
+		main_menu_node.show_room_list_menu()
 
 func _client_room_closed(reason: String):
 	"""Callback quando a sala é fechada"""

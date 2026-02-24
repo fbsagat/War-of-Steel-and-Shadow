@@ -381,7 +381,7 @@ func is_player_in_room(peer_id: int, room_id: int) -> bool:
 		return false
 	
 	for player in rooms[room_id]["players"]:
-		if player["id"] == peer_id:
+		if player["peer_id"] == peer_id:
 			return true
 	return false
 
@@ -514,7 +514,7 @@ func get_room_statistics(room_id: int) -> Dictionary:
 	# Analisa histórico de rodadas
 	for round_data in room["rounds_history"]:
 		for player in round_data.get("players", []):
-			var p_id = player["id"]
+			var p_id = player["peer_id"]
 			
 			# Inicializa jogador se não existe
 			if not stats["players_participated"].has(p_id):
@@ -579,7 +579,7 @@ func get_player_stats_in_room(room_id: int, peer_id: int) -> Dictionary:
 		# Verifica se jogador participou
 		var participated = false
 		for player in round_data.get("players", []):
-			if player["id"] == peer_id:
+			if player["peer_id"] == peer_id:
 				participated = true
 				break
 		
@@ -708,7 +708,7 @@ func debug_print_all_rooms():
 		print("  Players:")
 		for player in r["players"]:
 			var host_marker = " (HOST)" if player["is_host"] else ""
-			print("    - %s [%d]%s" % [player["name"], player["id"], host_marker])
+			print("    - %s [%d]%s" % [player["name"], player["peer_id"], host_marker])
 	
 	print("\n===================================\n")
 

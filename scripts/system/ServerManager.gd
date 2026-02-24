@@ -30,7 +30,9 @@ class_name ServerManager
 @export var max_clients: int = 32
 @export var is_headless : bool
 @export var public_server_name: String = "Games da PQP! Diversão garantida!"
-const SERVER_SECRET := "MUDE_PARA_UM_SEGREDO_GRANDE_E_ALEATORIO"
+var server_id : String
+var server_secret : PackedByteArray
+const RECONNECT_TIMEOUT : float = 120.0
 
 @export_category("Default Node References")
 const map_scene : String = "res://scenes/gameplay/terrain_3d.tscn"
@@ -112,8 +114,21 @@ func initialize():
 	# das rodadas em curso, se is_headless estiver desativado
 	if not is_headless:
 		_setup_viewport_display()
+	
+	# Gera id único do servidor
+	_generate_server_identity()
 
 # ===== SETUPS =====
+
+func _generate_server_identity() -> void:
+	""" Gera:
+	- server_id (hex string pública)
+	- server_secret (bytes privados)
+	Ambos existem apenas durante esta execução.
+	"""
+	var crypto = Crypto.new()
+	server_id = crypto.generate_random_bytes(16).hex_encode()
+	server_secret = crypto.generate_random_bytes(32)
 
 func _connect_signals():
 	"""Conecta sinais dos registries"""
@@ -141,7 +156,7 @@ func _verificar_teste_automático() -> bool:
 	- false → quando ainda não há jogadores suficientes"""
 	_log_debug("Chamada periódica para iniciar o modo de testes")
 	# Executar sistema de teste automático no momento que entra e registra a quantidade de players necessária
-	var players_on_count = client_registry.get_registered_player_count()
+	var players_on_count = client_registry.get_connected_player_count()
 	if players_on_count >= simulador_players_qtd:
 		test_manager.criar_partida_teste()
 		return true
@@ -269,6 +284,59 @@ func _start_server():
 	
 	_log_debug("✓ Servidor inicializado com sucesso!")
 
+# ===== SISTEMA DE IDENTIFIAÇÃO =====
+
+func process_client_hello(payload: Dictionary, peer_id: int) -> Dictionary:
+	""" Fluxo:
+	1) Cliente envia:
+	   - uuid_base
+	   - token (opcional)
+	2) Se token válido → autentica.
+	3) Se token inválido ou ausente:
+	   - Se jogador existe e está desconectado → reconectar.
+	   - Se novo jogador → criar registro.
+	   - Gerar novo token e retornar ao cliente.
+	Retorna:
+	{
+	  "status": "ok" | "new_token" | "reject",
+	  "token": String (se new_token),
+	  "server_id": String
+	}
+	"""
+	_log_debug("process_client_hello: %s, peer_id: %s" % [payload, peer_id])
+	
+	var uuid_base : String = payload.get("uuid_base", "")
+	var client_token : String = payload.get("token", "")
+
+	if uuid_base.is_empty():
+		return {"status": "reject", "reason": "missing_uuid"}
+
+	# 🔒 Bloqueia duplicidade ativa
+	if client_registry._is_uuid_connected(uuid_base):
+		return {"status": "reject", "reason": "dup_session"}
+
+	# 🔎 Se cliente enviou token, validar
+	if not client_token.is_empty():
+		var expected = client_registry._compute_token(uuid_base)
+		if client_token == expected:
+			var old_peer_id = client_registry.get_player_by_uuid(uuid_base)
+			client_registry.update_player_id(old_peer_id["peer_id"], peer_id)
+			client_registry._register_connection(peer_id)
+			return {"status": "ok", "server_id": server_id, "player_name": old_peer_id["name"]}
+
+	# 🔄 Token inválido ou inexistente → emitir novo
+	if not client_registry.get_player_by_uuid(uuid_base):
+		client_registry.add_peer(peer_id, uuid_base)
+	client_registry._register_connection(peer_id)
+
+	var new_token = client_registry._compute_token(uuid_base)
+
+	return {
+		"status": "new_token",
+		"token": new_token,
+		"server_id": server_id
+	}
+
 # ===== CALLBACKS DE CONEXÃO =====
 
 func _on_peer_connected(peer_id: int):
@@ -280,12 +348,11 @@ func _on_peer_connected(peer_id: int):
 		"max_players_per_room": max_players_per_room,
 		"min_players_to_start": min_players_to_start,
 		"server_name": public_server_name,
+		"server_id": server_id,
 	}
 	
-	client_registry.add_peer(peer_id)
-	
 	# Atualiza max_players_per_room e min_players_to_start para clientes
-	# atualiza nome do seridor
+	# atualiza nome do seridor e envia id do servidor
 	network_manager.rpc_id(peer_id, "update_client_info", configs)
 
 func _on_peer_disconnected(peer_id: int):
@@ -300,60 +367,60 @@ func _on_peer_disconnected(peer_id: int):
 	"""
 	_log_debug("❌ Cliente desconectado: Peer ID %d" % peer_id)
 	
-	# 1. LIMPA RODADA (se estiver em uma) (se estiver vazia)
-	var p_round = round_registry.get_round_by_player_id(peer_id)
-	if not p_round.is_empty():
-		var round_id = p_round["round_id"]
-		
-		# Marca como desconectado
-		round_registry.mark_player_disconnected(round_id, peer_id)
-		_log_debug("  Marcado como desconectado na rodada %d" % round_id)
-		
-		# Remove node da cena do servidor
-		var player_node = round_registry.get_spawned_player(round_id, peer_id)
-		if player_node and is_instance_valid(player_node):
-			player_node.queue_free()
-			_log_debug("Nó do player removido da cena")
-		
-		# Remove registro de spawn
-		round_registry.unregister_spawned_player(round_id, peer_id)
-		
-		# Verifica se todos desconectaram (auto-end)
-		if round_registry.get_active_player_count(round_id) == 0:
-			_log_debug("Todos os players desconectaram - finalizando rodada")
-			round_registry.end_round(round_id, "all_disconnected")
+	## 1. LIMPA RODADA (se estiver em uma) (se estiver vazia)
+	#var p_round = round_registry.get_round_by_player_id(peer_id)
+	#if not p_round.is_empty():
+		#var round_id = p_round["round_id"]
+		#
+		## Marca como desconectado
+		#round_registry.mark_player_disconnected(round_id, peer_id)
+		#_log_debug("  Marcado como desconectado na rodada %d" % round_id)
+		#
+		## Remove node da cena do servidor
+		#var player_node = round_registry.get_spawned_player(round_id, peer_id)
+		#if player_node and is_instance_valid(player_node):
+			#player_node.queue_free()
+			#_log_debug("Nó do player removido da cena")
+		#
+		## Remove registro de spawn
+		#round_registry.unregister_spawned_player(round_id, peer_id)
+		#
+		## Verifica se todos desconectaram (auto-end)
+		#if round_registry.get_active_player_count(round_id) == 0:
+			#_log_debug("Todos os players desconectaram - finalizando rodada")
+			#round_registry.end_round(round_id, "all_disconnected")
+	#
+	## 2. LIMPA SALA (se estiver em uma)
+	#var player_data = client_registry.get_player(peer_id)
+	#var room = room_registry.get_player_room(peer_id)
+	#
+	#if not player_data.is_empty() and player_data["name"] != "":
+		#
+		#if not room.is_empty():
+			#var room_id = room["id"]
+			#
+			## Remove da sala (pode deletá-la se ficar vazia)
+			#room_registry.remove_player_from_room(room_id, peer_id)
+			#_log_debug("%s Removido da sala: %s" % [peer_id, room["name"]])
+			#
+			## Verifica se sala ainda existe antes de notificar
+			#if room_registry.room_exists(room_id):
+				#_notify_room_update(room_id)
+				#
+				## Notifica outros jogadores da sala sobre a desconexão
+				#var updated_room = room_registry.get_room(room_id)
+				#for player in updated_room["players"]:
+					#if player["peer_id"] != peer_id and _is_peer_connected(player["peer_id"]):
+						#network_manager.rpc_id(player["peer_id"], "_client_remove_player", peer_id)
+			#else:
+				#_log_debug("Sala foi deletada (ficou vazia)")
+				#_send_rooms_list_to_all()
+	#
+	## 3. Limpa estado de validação
+	#_cleanup_player_state(peer_id)
 	
-	# 2. LIMPA SALA (se estiver em uma)
-	var player_data = client_registry.get_player(peer_id)
-	var room = room_registry.get_player_room(peer_id)
-	
-	if not player_data.is_empty() and player_data["name"] != "":
-		
-		if not room.is_empty():
-			var room_id = room["id"]
-			
-			# Remove da sala (pode deletá-la se ficar vazia)
-			room_registry.remove_player_from_room(room_id, peer_id)
-			_log_debug("%s Removido da sala: %s" % [peer_id, room["name"]])
-			
-			# Verifica se sala ainda existe antes de notificar
-			if room_registry.room_exists(room_id):
-				_notify_room_update(room_id)
-				
-				# Notifica outros jogadores da sala sobre a desconexão
-				var updated_room = room_registry.get_room(room_id)
-				for player in updated_room["players"]:
-					if player["id"] != peer_id and _is_peer_connected(player["id"]):
-						network_manager.rpc_id(player["id"], "_client_remove_player", peer_id)
-			else:
-				_log_debug("Sala foi deletada (ficou vazia)")
-				_send_rooms_list_to_all()
-	
-	# 3. Limpa estado de validação
-	_cleanup_player_state(peer_id)
-	
-	# 4. Remove do player registry (limpeza final)
-	#client_registry.remove_peer(peer_id)
+	# 4. Define cliente como desconectado
+	client_registry.set_disconnected_peer(peer_id)
 
 # ===== HANDLERS DE JOGADOR =====
 
@@ -517,9 +584,6 @@ func _handle_join_room(peer_id: int, room_id: int, password: String):
 		network_manager.rpc_id(peer_id, "_client_wrong_password")
 		return
 	
-	# Cria e envia uuid de sessão de sala para este jogador
-	client_registry._generate_uuid_and_save(peer_id)
-	
 	# Adiciona à sala
 	var success = room_registry.add_player_to_room(room_id, peer_id)
 	if not success:
@@ -645,7 +709,7 @@ func _send_rooms_list_to_all():
 	# Busca todos os jogadores que NÃO estão em rodada
 	var lobby_players = []
 	for player_data in client_registry.get_all_players():
-		var peer_id = player_data["id"]
+		var peer_id = player_data["peer_id"]
 		if peer_id != 1 and not client_registry.in_round(peer_id):  # Ignora servidor (ID 1)
 			lobby_players.append(peer_id)
 	
@@ -1006,8 +1070,8 @@ func _complete_round_end(round_id: int):
 	var room = room_registry.get_room(room_id)
 	if not room.is_empty():
 		for player in room["players"]:
-			if _is_peer_connected(player["id"]):
-				network_manager.rpc_id(player["id"], "_client_return_to_room", room)
+			if _is_peer_connected(player["peer_id"]):
+				network_manager.rpc_id(player["peer_id"], "_client_return_to_room", room)
 	
 	# Atualiza lista de salas (sala volta a ficar disponível)
 	_send_rooms_list_to_all()
@@ -1164,7 +1228,7 @@ func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 	var player_node = client_registry.get_player_node(requesting_player_id)
 	var server_nearby = player_node.get_nearby_items()
 	var player = client_registry.get_player(requesting_player_id)
-	var round_ = round_registry.get_round_by_player_id(player["id"])
+	var round_ = round_registry.get_round_by_player_id(player["peer_id"])
 	var item = item_database.get_item(object["item_name"]).to_dictionary()
 	var round_players = round_registry.get_active_players_ids(round_["round_id"])
 	
@@ -1188,11 +1252,11 @@ func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 		return
 	
 	# Verifica se tem espaço no inventário
-	if client_registry.is_inventory_full(round_["round_id"], player["id"]):
+	if client_registry.is_inventory_full(round_["round_id"], player["peer_id"]):
 		_log_debug("Impossível pegar item, inventário cheio!")
 		return
 	
-	client_registry.add_item_to_inventory(round_["round_id"], player["id"], str(item["id"]), object_id)
+	client_registry.add_item_to_inventory(round_["round_id"], player["peer_id"], str(item["id"]), object_id)
 	
 	# Despawn do objeto no mapa dos clientes
 	_rpc_despawn_on_clients(round_players, round_["round_id"], object_id)
@@ -1204,7 +1268,7 @@ func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 		_log_debug("_server_validate_pick_up_item: Node removido da cena")
 	
 	# Define objeto armazenado / sai do spawned objects
-	object_manager.store_object(round_["round_id"], object_id, player["id"])
+	object_manager.store_object(round_["round_id"], object_id, player["peer_id"])
 	
 	# Executa animação no player no servidor e em seus remotos nos clientes
 	for peer_id in round_players:
@@ -1215,7 +1279,7 @@ func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 		player_node.action_pick_up_item()
 	
 	# Se o slot deste item estiver vazio, equipar este item lá automaticamente \/
-	if not client_registry.is_slot_empty(round_["round_id"], player['id'], item["type"]):
+	if not client_registry.is_slot_empty(round_["round_id"], player['peer_id'], item["type"]):
 		return
 	
 	# Se auto equip false, não equipar automaticamente
@@ -1223,7 +1287,7 @@ func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 		return
 	
 	# Equipa o item no registro do player
-	client_registry.equip_item(round_["round_id"], player['id'], item["name"], object_id)
+	client_registry.equip_item(round_["round_id"], player['peer_id'], item["name"], object_id)
 	
 	_log_debug("[ITEM]📦 Slot deste item está vazio, equipando automaticamente: Player %d equipou item %d" % [requesting_player_id, item["id"]])
 	
@@ -1243,7 +1307,7 @@ func _server_validate_equip_item(requesting_player_id: int, object_id: int, _tar
 	"""Servidor recebe pedido de equipar item, valida e redistribui"""
 
 	var player = client_registry.get_player(requesting_player_id)
-	var round_ = round_registry.get_round_by_player_id(player["id"])
+	var round_ = round_registry.get_round_by_player_id(player["peer_id"])
 	var item_id = item_database.get_item(object_manager.get_stored_object_item_name(round_["round_id"] ,object_id))["id"]
 	var players_node = round_["round_node"].get_node_or_null("Players")
 	var item = item_database.get_item_by_id(item_id)
@@ -1287,7 +1351,7 @@ func _server_validate_unequip_item(requesting_player_id: int, slot_type: String)
 	"""Servidor recebe pedido de desequipar item, valida e redistribui"""
 
 	var player = client_registry.get_player(requesting_player_id)
-	var round_ = round_registry.get_round_by_player_id(player["id"])
+	var round_ = round_registry.get_round_by_player_id(player["peer_id"])
 	var item_ = client_registry.get_equipped_item_in_slot(round_["round_id"], requesting_player_id, slot_type)
 	
 	if not item_:
@@ -1308,9 +1372,9 @@ func _server_validate_unequip_item(requesting_player_id: int, slot_type: String)
 	if not item_:
 		return
 	
-	client_registry.unequip_item(round_["round_id"], player["id"], item_slot)
+	client_registry.unequip_item(round_["round_id"], player["peer_id"], item_slot)
 	
-	_log_debug("✓ Item desequipado: %s de %s (Player %d, Rodada %d)" % [item["name"], item["type"], player["id"], round_["round_id"]])
+	_log_debug("✓ Item desequipado: %s de %s (Player %d, Rodada %d)" % [item["name"], item["type"], player["peer_id"], round_["round_id"]])
 	
 	for peer in round_["players"]:
 		var peer_id = peer["id"]
@@ -1429,7 +1493,7 @@ func _server_trainer_spawn_item(requesting_player_id: int, item_id: int):
 		item_id = 10
 	
 	var player = client_registry.get_player(requesting_player_id)
-	var round_ = round_registry.get_round_by_player_id(player["id"])
+	var round_ = round_registry.get_round_by_player_id(player["peer_id"])
 	_log_debug("[ITEM]📦 Player %s: Trainer pediu para spawnar item %d na sua frente, no round %d" % [player["name"], item_id, round_["round_id"]])
 	
 	# Verifica se o id do item é válido
@@ -1532,7 +1596,7 @@ func _server_validate_drop_item(requesting_player_id: int, obj_id: int):
 		object_manager.retrieve_stored_object(objects_node, round_["round_id"], obj_id, spawn_pos, Vector3(0, 0, 0,), requesting_player_id)
 		
 		# Remove item do inentário do player
-		client_registry.remove_item_from_inventory(round_["round_id"], player["id"], obj_id)
+		client_registry.remove_item_from_inventory(round_["round_id"], player["peer_id"], obj_id)
 		
 		# Executa ações referentes a isso no player no servidor e em seus remotos nos clientes
 		var round_players = client_registry.get_players_in_round(round_["round_id"])

@@ -634,12 +634,12 @@ func show_room_list_menu(error_visible: bool = false):
 	if match_password_input:
 		match_password_input.text = ""
 	if match_list_error_label and not error_visible:
-		match_list_error_label.text = ""
+		#match_list_error_label.text = ""
 		match_list_error_label.visible = false
 		# Desativa o botão quando carrega o menu
 		match_list_join_button.disabled = true
 	elif error_visible:
-		match_list_error_label.visible = true
+		#match_list_error_label.visible = true
 		match_password_container.visible = true
 		match_list_join_button.disabled = false
 		
@@ -916,7 +916,10 @@ func populate_room_list(matches: Array):
 		if match_list_error_label:
 			match_list_error_label.text = "Nenhuma partida disponível no momento"
 			match_list_error_label.visible = true
-		return
+	else:
+		if match_list_error_label:
+			match_list_error_label.text = ""
+			match_list_error_label.visible = false
 	
 	for match_data in matches:
 		var text = match_data.get("name", "Sala sem nome")  # Usa valor padrão se "name" não existir

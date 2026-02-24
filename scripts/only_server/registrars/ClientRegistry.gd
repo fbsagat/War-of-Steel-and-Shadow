@@ -67,12 +67,13 @@ signal player_left_round(peer_id: int, round_id: int)
 
 ## PlayerData:
 ## {
-##   "id": int,
-##   "uuid": String,
+##   "peer_id": int,
+##   "uuid_base": String,
+##   "connected": Bool,
 ##   "position": int,
 ##   "name": String,
 ##   "registered": bool,
-##   "last_seen": float,
+##   "disconnected_at": float,
 ##   "room_id": int (-1 se não estiver em sala),
 ##   "round_id": int (-1 se não estiver em rodada),
 ##   "node_path": String
@@ -116,19 +117,20 @@ func _get_next_position() -> int:
 	entry_position += 1
 	return entry_position
 
-func add_peer(peer_id: int, token: String = ""):
+func add_peer(peer_id: int, uuid_base: String = ""):
 	"""Adiciona um novo peer conectado (ainda não registrado)"""
 	if players.has(peer_id):
 		_log_debug("⚠ Peer %d já existe" % peer_id)
 		return
 	
 	players[peer_id] = {
-		"id": peer_id,
-		"token": token,
+		"peer_id": peer_id,
+		"uuid_base": uuid_base,
 		"entry_position": _get_next_position(),
 		"name": "",
 		"registered": false,
-		"last_seen": Time.get_unix_time_from_system(),
+		"connected": false,
+		"disconnected_at": Time.get_unix_time_from_system(),
 		"room_id": -1,
 		"round_id": -1,
 		"node_path": ""
@@ -136,12 +138,27 @@ func add_peer(peer_id: int, token: String = ""):
 	
 	_log_debug("✓ Peer adicionado: %d" % peer_id)
 	peer_added.emit(peer_id)
-
+	
+func set_disconnected_peer(peer_id: int):
+	if not players.has(peer_id):
+		_log_debug("⚠ Tentou definir como desconectado peer inexistente: %d" % peer_id)
+		return
+		
+	_log_debug("Definindo peer %s como desconectado no client registry" % peer_id)
+	
+	for player in players.values():
+		if player["peer_id"] == peer_id:
+			player["connected"] = false
+			player["disconnected_at"] = Time.get_unix_time_from_system()
+			
 func remove_peer(peer_id: int):
 	"""Remove um peer desconectado"""
+	
 	if not players.has(peer_id):
 		_log_debug("⚠ Tentou remover peer inexistente: %d" % peer_id)
 		return
+	
+	_log_debug("Removendo peer %s do client registry" % peer_id)
 	
 	var player = players[peer_id]
 	var player_name = player["name"] if player["name"] else "sem_nome"
@@ -169,9 +186,48 @@ func register_player_name(peer_id: int, player_name: String) -> bool:
 	_log_debug("✓ Nome do jogador registrado: %s (ID: %d)" % [player_name, peer_id])
 	return true
 
-func update_player_id(old_peer_id: int ,new_peer_id: int):
-	"""Registra novo id do jogador"""
+func _register_connection(peer_id: int):
+	"""Marca o jogador como conectado. Precisamos saber qual uuid estava usando o peer
+	 quando on_peer_disconnected for disparado."""
+	
+	if not players.has(peer_id):
+		_log_debug("❌ Tentou registrar conexão em jogador inexistente: %d" % peer_id)
+		return false
+	
+	_log_debug("Marcando peer como conectado no client registry, peer_is: %s" % peer_id)
+	
+	players[peer_id]["connected"] = true
+	players[peer_id]["peer_id"] = peer_id
+	players[peer_id]["disconnected_at"] = 0.0
 
+func _is_uuid_connected(uuid_base: String) -> bool:
+	"""
+	Verifica se já existe um jogador com este uuid_base conectado.
+
+	Evita:
+	1. Dois clientes usando o mesmo uuid ao mesmo tempo
+	2. Sessão duplicada ativa
+
+	Retorna:
+	true  -> já existe e está conectado
+	false -> não existe ou está desconectado
+	"""
+
+	for player in players.values():
+		if player.has("uuid_base") and player["uuid_base"] == uuid_base:
+			
+			# Se existir campo connected, usa ele
+			if player.has("connected"):
+				if player["connected"]:
+					_log_debug("O cliente com uuid base: %s, já existe e está conectado" % uuid_base)
+				return player["connected"]
+	
+	_log_debug("O cliente com uuid base: %s, não existe ou está desconectado" % uuid_base)
+	return false
+	
+func update_player_id(old_peer_id: int ,new_peer_id: int):
+	"""Atualiza novo peer_id do jogador"""
+	
 	_log_debug("✓ Trocar peer id de jogador, antigo: %s, novo: %s" % [old_peer_id, new_peer_id])
 	if not players.has(old_peer_id):
 		print("Erro: ID antigo não encontrado.")
@@ -317,6 +373,13 @@ func get_player(peer_id: int) -> Dictionary:
 		return {}
 	return players[peer_id].duplicate()
 
+func get_player_by_uuid(uuid_base: String) -> Dictionary:
+	for peer_id in players:
+		var player = players[peer_id]
+		if player.has("uuid_base") and player["uuid_base"] == uuid_base:
+			return player.duplicate()
+	return {}
+
 func get_player_name(peer_id: int) -> String:
 	if not players.has(peer_id):
 		return ""
@@ -337,6 +400,13 @@ func get_registered_player_count() -> int:
 	var count = 0
 	for player in players.values():
 		if player["registered"]:
+			count += 1
+	return count
+
+func get_connected_player_count() -> int:
+	var count = 0
+	for player in players.values():
+		if player["connected"]:
 			count += 1
 	return count
 
@@ -965,6 +1035,24 @@ func _cleanup_player_inventories(player_id: int):
 	for round_id in player_inventories:
 		if player_inventories[round_id].has(player_id):
 			player_inventories[round_id].erase(player_id)
+
+func _compute_token(uuid_base: String) -> String:
+	"""
+	_compute_token(uuid_base)
+
+	Gera token usando HMAC-SHA256.
+
+	Token depende de:
+	- server_secret (privado)
+	- server_id (instância)
+	- uuid_base (cliente)
+
+	Retorna hex string.
+	"""
+	var crypto = Crypto.new()
+	var message = (server_manager.server_id + ":" + uuid_base).to_utf8_buffer()
+	var hmac = crypto.hmac_digest(HashingContext.HASH_SHA256, server_manager.server_secret, message)
+	return hmac.hex_encode()
 
 # ===== DEBUG =====
 

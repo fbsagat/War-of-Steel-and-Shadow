@@ -46,6 +46,14 @@ func _get_log_prefix() -> String:
 
 # ===== FUNÇÕES RPC COMPARTILHADAS (declarações vazias) =====
 
+@rpc("any_peer", "call_remote", "unreliable")
+func server_receive_hello(_payload: Dictionary):
+	pass
+
+@rpc("authority", "call_remote", "unreliable")
+func client_receive_auth_result(_response: Dictionary):
+	pass
+
 @rpc("any_peer", "call_remote", "reliable")
 func _server_register_player_name(_player_name: String):
 	pass

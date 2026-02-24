@@ -322,6 +322,12 @@ func _client_clear_all_objects():
 
 # ===== REQUISIÇÕES DE CLIENTES =====
 
+func send_hello_to_server(_uuid_base: String, _token: String):
+	rpc_id(1, "server_receive_hello", {"uuid_base": _uuid_base, "token": _token})
+
+func client_receive_auth_result(_response: Dictionary):
+	game_manager.handle_server_response(_response)
+
 func request_pick_up_item(player_id: int, object_id: int) -> void:
 	"""Requisição do player: Chama RPC no servidor para pedir para equipar um item"""
 	rpc_id(1, "_server_pick_up_player_item", player_id, object_id)

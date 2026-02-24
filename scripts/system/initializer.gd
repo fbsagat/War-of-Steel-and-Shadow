@@ -6,7 +6,7 @@ extends Node
 ##  clientes recebem localhost_auto_connect = true)
 @export var test_mode: bool = false
 ## [TESTES] Define a quantidade de instâcias de clientes conectadas para executar fast_round
-@export var simulador_players_qtd: int = 1
+@export var simulador_players_qtd: int = 2
 ## [TESTES] Dropa itens perto dos players e ativa o trainer de cada player
 @export var trainer: bool = true
 ## Iniciar com o mouse destrancado (Cliente / apenas no modo de testes)
@@ -64,7 +64,7 @@ func _ready():
 		# padrão na psta do usuário (apenas para desenvolvimento)
 		var id_file_ = null
 		for arg in args:
-			if arg.begins_with("--id_file="):
+			if arg.begins_with("--client_id="):
 				id_file_ = arg.split("=")[1]
 		_init_client(id_file_)
 		
@@ -254,8 +254,13 @@ func _init_client(id_file_):
 	# Configurações
 	game_manager.connect_inventory_signals()
 	main_menu._connect_game_manager_signals()
+	
+	# Se definido argumento de diferenciação para testes em múltiplas intâncias
 	if id_file_:
-		game_manager.IDENTITY_FILE = id_file_
+		var UUID_string = "user://identity_%s.json" % id_file_
+		var TOKEN_string = "user://server_tokens_%s.json" % id_file_
+		game_manager.UUID_FILE = UUID_string
+		game_manager.TOKEN_FILE = TOKEN_string
 		
 	# Configurar modo de testes
 	if test_mode:

@@ -190,6 +190,13 @@ func _server_start_match(match_settings: Dictionary):
 
 # ===== REQUISIÇÕES DE CLIENTES =====
 
+func server_receive_hello(payload: Dictionary):
+	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
+		return
+	var peer_id = multiplayer.get_remote_sender_id()
+	var response = server_manager.process_client_hello(payload, peer_id)
+	rpc_id(peer_id, "client_receive_auth_result", response)
+
 func _server_pick_up_player_item(player_id, object_id):
 	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
 		return
