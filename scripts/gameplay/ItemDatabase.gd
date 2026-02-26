@@ -434,6 +434,8 @@ func _ready():
 	# Carrega database automaticamente se configurado
 	if auto_load_on_ready:
 		load_database()
+	
+	_log_debug("▶️ ItemDatabase inicializado com sucesso!")
 
 ## Carrega o database do arquivo JSON
 func load_database() -> bool:

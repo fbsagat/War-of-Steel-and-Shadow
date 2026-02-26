@@ -93,16 +93,17 @@ signal items_swapped(item_id_1: String, item_id_2: String)
 # ===== FUNÇÕES DE INICIALIZAÇÃO =====
 
 func _ready():
-	# Conecta sinais (só uma vez!)
-	multiplayer.connected_to_server.connect(_on_connected_to_server)
-	multiplayer.connection_failed.connect(_on_connection_failed)
-	multiplayer.server_disconnected.connect(_on_server_disconnected)
-	_log_debug("Sinais de rede configurados")
+	pass
 
 func connect_inventory_signals():
 	main_menu_node.gameplay_menu_back_pressed.connect(_on_gameplay_menu_back_pressed)
 	main_menu_node.gameplay_menu_exit_game_pressed.connect(_on_gameplay_menu_exit_game_pressed)
 	main_menu_node.gameplay_menu_give_up_game_pressed.connect(_on_gameplay_menu_give_up_game_pressed)
+
+func connect_muiltiplayer_signals():
+	multiplayer.connected_to_server.connect(_on_connected_to_server)
+	multiplayer.connection_failed.connect(_on_connection_failed)
+	multiplayer.server_disconnected.connect(_on_server_disconnected)
 
 func initialize():
 	if main_menu_node:
@@ -116,6 +117,10 @@ func initialize():
 	# Identificação de cliente
 	uuid_base = _load_or_create_uuid()
 	server_tokens = _load_tokens()
+	
+	connect_muiltiplayer_signals()
+	
+	_log_debug("▶️ GameManager inicializado com sucesso!")
 
 # ===== FUNÇÕES DE MENU e INPUT =====
 
@@ -1439,6 +1444,6 @@ func _log_debug(message: String):
 	
 	# Enquanto o cliente não receber id único de peer multiplayer, não exibe no log debug
 	if unique_id == 1:
-		print("[GameManager]:%s" % message)
+		print("[CLIENT][GameManager]:%s" % message)
 	else:
 		print("[GameManager][ClientID:%s]:%s" % [unique_id, message])

@@ -117,6 +117,8 @@ func initialize():
 	
 	# Gera id único do servidor
 	_generate_server_identity()
+	
+	_log_debug("▶️ Servidor inicializado com sucesso!")
 
 # ===== SETUPS =====
 
@@ -262,10 +264,13 @@ func _start_server():
 	"""Inicializa servidor dedicado e todos os subsistemas"""
 	var timestamp = Time.get_datetime_string_from_system()
 	_log_debug("========================================")
-	_log_debug("INICIANDO SERVIDOR DEDICADO")
+	_log_debug("▶️ INICIANDO SERVIDOR DEDICADO ▶️")
 	_log_debug(timestamp)
 	_log_debug("Porta: %d" % server_port)
 	_log_debug("Máximo de clientes: %d" % max_clients)
+	_log_debug("Trainer de testes: %s, Fast Round: %s" % [test_trainer, fast_round])
+	_log_debug("Min. de jogadores/sala: %s, Max. de jogadores/sala: %s" % [min_players_to_start, max_players_per_room])
+	_log_debug("Tempo de espera de reconexão(peer): %sms" % RECONNECT_TIMEOUT)
 	_log_debug("========================================")
 	
 	# Cria peer de rede
@@ -281,8 +286,6 @@ func _start_server():
 	# Conecta sinais de rede
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
-	
-	_log_debug("✓ Servidor inicializado com sucesso!")
 
 # ===== SISTEMA DE IDENTIFIAÇÃO =====
 

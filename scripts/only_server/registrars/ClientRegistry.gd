@@ -100,7 +100,7 @@ func initialize():
 		return
 	
 	_initialized = true
-	_log_debug("✓ ClientRegistry inicializado")
+	_log_debug("▶️ ClientRegistry inicializado com sucesso!")
 
 func reset():
 	"""Reseta completamente o registro (usado ao desligar servidor)"""
@@ -1135,4 +1135,4 @@ func _log_debug(message: String):
 	if initializer.activate_only_selected and not "ClientRegistry" in initializer.selected:
 		return
 		
-	print("[Server][ClientRegistry] %s" % message)
+	print("[SERVER][ClientRegistry] %s" % message)

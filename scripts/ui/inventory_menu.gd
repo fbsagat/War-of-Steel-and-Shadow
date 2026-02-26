@@ -1011,4 +1011,4 @@ func _log_debug(message: String):
 	if initializer.activate_only_selected and not "InventoryMenu" in initializer.selected:
 		return
 	
-	print("[CLIENT][InventoryMenu] %s" % message)
+	print("[CLIENT][InventoryMenu]『』: %s" % message)

@@ -23,12 +23,12 @@ var client_sync_buffer: Dictionary = {}
 # ===== FUNÇÕES DE INICIALIZAÇÃO =====
 
 func initialize():
-	_log_debug("Inicializando NetworkManager")
-	
 	# Conecta aos sinais de rede
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
 	game_manager.disconnected_from_server.connect(_on_server_disconnected)
 	multiplayer.connection_failed.connect(_on_connection_failed)
+
+	_log_debug("▶️ NetworkManager inicializado com sucesso!")
 
 func _on_connected_to_server():
 	"""Callback quando conecta ao servidor"""
@@ -55,7 +55,8 @@ func _process(delta: float):
 		_client_interpolate_all(delta)
 
 func _get_log_prefix() -> String:
-	return "[CLIENT][NetworkManager][ClientID: %d]" % cached_unique_id
+	var client_id: String = "[ClientID: %d]" % cached_unique_id  if cached_unique_id > 0 else ""
+	return "[CLIENT][NetworkManager]%s" % client_id
 
 # ===== REGISTRO DE JOGADOR =====
 

@@ -43,7 +43,7 @@ func initialize():
 	# Conectar-se ao evento de desconexão para limpar dados
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
 	
-	_log_debug("Inicializando NetworkManager")
+	_log_debug("▶️ NetworkManager inicializado com sucesso!")
 
 func _process(delta: float):
 	_server_update_sync_timers(delta)

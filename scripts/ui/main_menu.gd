@@ -188,8 +188,6 @@ var actual_server_name = ""
 var last_selected_match_id: int
 
 func _ready():
-	_log_debug("Inicializando MainMenu")
-	
 	# Configura o Control para preencher toda a tela
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	
@@ -210,7 +208,8 @@ func _ready():
 	
 	# Força centralização inicial
 	_center_window()
-
+	_log_debug("▶️ MainMenu inicializado com sucesso!")
+	
 func _process(delta):
 	# Rotaciona o ícone de carregamento
 	if is_loading and loading_icon:
@@ -1721,4 +1720,4 @@ func _log_debug(message: String):
 	if initializer.activate_only_selected and not "MainMenu" in initializer.selected:
 		return
 	
-	print("[MainMenu]: " + message)
+	print("[MainMenu]『』: " + message)

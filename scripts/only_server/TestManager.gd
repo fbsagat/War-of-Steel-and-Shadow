@@ -47,7 +47,7 @@ func initialize():
 		return
 	
 	_initialized = true
-	_log_debug("✓ TestManager inicializado")
+	_log_debug("▶️ TestManager inicializado com sucesso!")
 
 # ===== CRIAÇÃO DE PARTIDA DE TESTE =====
 func sort_num(min_val: int, max_val: int) -> int:
