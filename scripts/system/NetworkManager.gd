@@ -79,7 +79,7 @@ func _client_receive_rooms_list(_rooms: Array):
 	pass
 
 @rpc("authority", "call_remote", "reliable")
-func _client_receive_rooms_list_update(_rooms: Array):
+func all_client_receive_rooms_list(_rooms: Array):
 	pass
 
 @rpc("any_peer", "call_remote", "reliable")
@@ -96,6 +96,18 @@ func _server_join_room(_room_id: int, _password: String):
 
 @rpc("any_peer", "call_remote", "reliable")
 func _server_join_room_by_name(_room_name: String, _password: String):
+	pass
+
+@rpc("any_peer", "call_remote", "reliable")
+func server_request_update_room_settings(_changed_settings: Dictionary):
+	pass
+
+@rpc("any_peer", "call_remote", "reliable")
+func server_receive_update_room_settings(_changed_settings: Dictionary):
+	pass
+
+@rpc("authority", "call_remote", "reliable")
+func client_update_match_settings(_changed_settings: Dictionary):
 	pass
 
 @rpc("authority", "call_remote", "reliable")

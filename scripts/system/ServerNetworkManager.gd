@@ -85,9 +85,7 @@ func _on_peer_disconnected(peer_id: int):
 # ===== REGISTRO DE JOGADOR =====
 
 func _server_register_player_name(player_name: String):
-	"""RPC: Servidor recebe pedido de registro"""
-	if not multiplayer.is_server():
-		return
+	"""Servidor recebe pedido de registro"""
 	
 	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
 		return
@@ -98,15 +96,13 @@ func _server_register_player_name(player_name: String):
 # ===== GERENCIAMENTO DE SALAS =====
 
 func _server_request_rooms_list():
-	"""RPC: Servidor recebe pedido de lista de salas"""
+	"""Servidor recebe pedido de lista de salas"""
 	
 	var peer_id = multiplayer.get_remote_sender_id()
 	server_manager._handle_request_rooms_list(peer_id)
 
 func _server_create_room(room_name: String, password: String):
-	"""RPC: Servidor recebe pedido de criação de sala"""
-	if not multiplayer.is_server():
-		return
+	"""Servidor recebe pedido de criação de sala"""
 	
 	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
 		return
@@ -115,9 +111,7 @@ func _server_create_room(room_name: String, password: String):
 	server_manager._handle_create_room(peer_id, room_name, password)
 
 func _server_join_room(room_id: int, password: String):
-	"""RPC: Servidor recebe pedido de entrada em sala"""
-	if not multiplayer.is_server():
-		return
+	"""Servidor recebe pedido de entrada em sala"""
 	
 	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
 		return
@@ -126,9 +120,7 @@ func _server_join_room(room_id: int, password: String):
 	server_manager._handle_join_room(peer_id, room_id, password)
 
 func _server_join_room_by_name(room_name: String, password: String):
-	"""RPC: Servidor recebe pedido de entrada em sala por nome"""
-	if not multiplayer.is_server():
-		return
+	"""Servidor recebe pedido de entrada em sala por nome"""
 	
 	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
 		return
@@ -136,10 +128,14 @@ func _server_join_room_by_name(room_name: String, password: String):
 	var peer_id = multiplayer.get_remote_sender_id()
 	server_manager._handle_join_room_by_name(peer_id, room_name, password)
 
+@rpc("any_peer", "call_remote", "reliable")
+func server_receive_update_room_settings(_changed_settings: Dictionary):
+	"""Servidor recebe pedido de alteração de configurações de sala"""
+	var peer_id = multiplayer.get_remote_sender_id()
+	server_manager._handle_update_room_settings(peer_id, _changed_settings)
+
 func _server_leave_room():
-	"""RPC: Servidor recebe pedido de saída de sala"""
-	if not multiplayer.is_server():
-		return
+	"""Servidor recebe pedido de saída de sala"""
 	
 	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
 		return
@@ -148,9 +144,7 @@ func _server_leave_room():
 	server_manager._handle_leave_room(peer_id)
 
 func _server_close_room():
-	"""RPC: Servidor recebe pedido de fechamento de sala"""
-	if not multiplayer.is_server():
-		return
+	"""Servidor recebe pedido de fechamento de sala"""
 	
 	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
 		return
@@ -161,9 +155,7 @@ func _server_close_room():
 # ===== GERENCIAMENTO DE RODADAS =====
 
 func _server_start_round(round_settings: Dictionary):
-	"""RPC: Servidor recebe pedido de início de rodada"""
-	if not multiplayer.is_server():
-		return
+	"""Servidor recebe pedido de início de rodada"""
 	
 	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
 		return
@@ -172,9 +164,7 @@ func _server_start_round(round_settings: Dictionary):
 	server_manager._handle_start_round(peer_id, round_settings)
 
 func _server_start_match(match_settings: Dictionary):
-	"""RPC: Alias para _server_start_round"""
-	if not multiplayer.is_server():
-		return
+	"""Alias para _server_start_round"""
 	
 	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
 		return
@@ -234,7 +224,7 @@ func _server_drop_player_item(player_id, obj_id):
 # ===== ATUALIZAÇÕES DE ESTADOS DE CLIENTES =====
 
 func _server_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
-	"""RPC: Servidor recebe estado do jogador e redistribui"""
+	"""Servidor recebe estado do jogador e redistribui"""
 	
 	# AVISO: round_registry é necessário aqui - verifique se está disponível
 	var round_id = round_registry.get_round_by_player_id(p_id)["round_id"]
@@ -268,7 +258,7 @@ func _server_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, r
 
 func _server_player_animation_state(p_id: int, speed: float, attacking: bool, defending: bool,
 									jumping: bool, aiming: bool, running: bool, block_attacking: bool, on_floor: bool):
-	"""RPC: Servidor recebe estado de animação e redistribui"""
+	"""Servidor recebe estado de animação e redistribui"""
 	
 	# AVISO: round_registry é necessário aqui
 	var round_id = round_registry.get_round_by_player_id(p_id)["round_id"]
@@ -364,7 +354,7 @@ func unregister_syncable_object(object_id: int) -> void:
 # ===== SINCRONIZAÇÃO DE AÇÕES =====
 
 func _server_player_action(p_id: int, action_type: String, item_equipado_nome, anim_name: String):
-	"""RPC: Servidor recebe ação do jogador e redistribui"""
+	"""Servidor recebe ação do jogador e redistribui"""
 	
 	_log_debug("_server_player_action")
 	if server_manager.has_method("_server_player_action"):

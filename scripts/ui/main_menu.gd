@@ -100,6 +100,7 @@ signal gameplay_menu_give_up_game_pressed()
 @onready var room_start_button: Button
 @onready var room_close_button: Button
 @onready var room_leave_button: Button
+@onready var room_lock_button: Button
 @onready var room_error_label: Label
 @onready var room_status_label: Label
 
@@ -329,6 +330,7 @@ func _setup_element_references():
 	room_players_list = room_menu.find_child("PlayersList", true, false)
 	room_start_button = room_menu.find_child("StartButton", true, false)
 	room_close_button = room_menu.find_child("CloseButton", true, false)
+	room_lock_button = room_menu.find_child("LockButton", true, false)
 	room_leave_button = room_menu.find_child("LeaveButton", true, false)
 	room_error_label = room_menu.find_child("ErrorLabel", true, false)
 	room_status_label = room_menu.find_child("StatusLabel", true, false)
@@ -399,6 +401,7 @@ func _connect_button_signals():
 	# Sala (Lobby)
 	_connect_if_exists(room_menu, "StartButton", _on_room_start_pressed)
 	_connect_if_exists(room_menu, "CloseButton", _on_room_close_pressed)
+	_connect_if_exists(room_menu, "LockButton", _on_room_lock_pressed)
 	_connect_if_exists(room_menu, "LeaveButton", _on_room_leave_pressed)
 	
 	# Entrada manual de sala
@@ -1440,6 +1443,13 @@ func _on_room_start_pressed():
 func _on_room_close_pressed():
 	game_manager.close_room()
 
+func _on_room_lock_pressed():
+	var new_value = not game_manager.room_settings["locked"]
+	
+	game_manager.request_update_settings({
+		"locked": new_value
+	})
+
 func _on_room_leave_pressed():
 	game_manager.leave_room()
 	show_room_list_menu()
@@ -1498,6 +1508,8 @@ func _update_room_display(room_data: Dictionary):
 		room_start_button.disabled = _player_count < room_data.get("min_players", 1)
 	if room_close_button:
 		room_close_button.visible = is_host
+	if room_lock_button:
+		room_lock_button.visible = is_host
 	if room_leave_button:
 		room_leave_button.visible = not is_host
 	

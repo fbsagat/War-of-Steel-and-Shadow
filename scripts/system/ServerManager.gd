@@ -117,8 +117,6 @@ func initialize():
 	
 	# Gera id único do servidor
 	_generate_server_identity()
-	
-	_log_debug("▶️ Servidor inicializado com sucesso!")
 
 # ===== SETUPS =====
 
@@ -263,7 +261,7 @@ func _toggle_mouse_mode():
 func _start_server():
 	"""Inicializa servidor dedicado e todos os subsistemas"""
 	var timestamp = Time.get_datetime_string_from_system()
-	_log_debug("========================================")
+	_log_debug("================================================================")
 	_log_debug("▶️ INICIANDO SERVIDOR DEDICADO ▶️")
 	_log_debug(timestamp)
 	_log_debug("Porta: %d" % server_port)
@@ -271,7 +269,8 @@ func _start_server():
 	_log_debug("Trainer de testes: %s, Fast Round: %s" % [test_trainer, fast_round])
 	_log_debug("Min. de jogadores/sala: %s, Max. de jogadores/sala: %s" % [min_players_to_start, max_players_per_room])
 	_log_debug("Tempo de espera de reconexão(peer): %sms" % RECONNECT_TIMEOUT)
-	_log_debug("========================================")
+	_log_debug("▶️ Servidor inicializado com sucesso!")
+	_log_debug("================================================================")
 	
 	# Cria peer de rede
 	var peer = ENetMultiplayerPeer.new()
@@ -478,7 +477,7 @@ func _validate_player_name(player_name: String) -> String:
 # ===== HANDLERS DE SALAS =====
 
 func _handle_request_rooms_list(peer_id: int):
-	"""Envia lista de salas disponíveis (não em jogo) para o cliente"""
+	"""Envia lista de salas disponíveis (não em jogo) para o cliente que requisitou"""
 	_log_debug("Cliente %d solicitou lista de salas" % peer_id)
 	
 	# Valida se player está registrado
@@ -491,6 +490,26 @@ func _handle_request_rooms_list(peer_id: int):
 	_log_debug("Enviando %d salas para o cliente, qtd: " % available_rooms.size())
 	
 	network_manager.rpc_id(peer_id, "_client_receive_rooms_list", available_rooms)
+
+func _send_rooms_list_to_all():
+	"""
+	Envia lista de salas disponíveis para todos os jogadores no lobby
+	(não envia para jogadores em partida)
+	"""
+	_log_debug("Servidor enviando lista de salas para todos os jogadores fora de uma sala")
+	var available_rooms = room_registry.get_rooms_in_lobby_clean_to_menu()
+	
+	# Busca todos os jogadores que NÃO estão em salas
+	var lobby_players = []
+	for player_data in client_registry.get_all_players():
+		var peer_id = player_data["peer_id"]
+		if peer_id != 1 and not client_registry.in_room(peer_id):  # Ignora servidor (ID 1)
+			lobby_players.append(peer_id)
+	
+	# Envia lista para cada um
+	for peer_id in lobby_players:
+		if _is_peer_connected(peer_id):
+			network_manager.rpc_id(peer_id, "all_client_receive_rooms_list", available_rooms)
 
 func _handle_create_room(peer_id: int, room_name: String, password: String):
 	"""Cria uma nova sala e adiciona o criador como host"""
@@ -561,6 +580,7 @@ func _validate_room_name(room_name: String) -> String:
 
 func _handle_join_room(peer_id: int, room_id: int, password: String):
 	"""Adiciona jogador a uma sala existente por ID"""
+
 	var player = client_registry.get_player(peer_id)
 	
 	# Valida jogador
@@ -585,6 +605,12 @@ func _handle_join_room(peer_id: int, room_id: int, password: String):
 	# Verifica senha
 	if room["has_password"] and room["password"] != password:
 		network_manager.rpc_id(peer_id, "_client_wrong_password")
+		return
+	
+	# Verifica se a sala está aberta
+	var settings = room["settings"]
+	if settings.has("locked") and settings["locked"] == true:
+		_send_error(peer_id, "A sala '%s' foi trancada pelo host." % room["name"])
 		return
 	
 	# Adiciona à sala
@@ -647,6 +673,33 @@ func _handle_join_room_by_name(peer_id: int, room_name: String, password: String
 	# Notifica todos na sala sobre atualização
 	_notify_room_update(room["id"])
 
+func _handle_update_room_settings(peer_id, _changed_settings: Dictionary):
+	"""
+	Recebe pedido de alteração. Valida se quem enviou é o host. Aplica alterações e replica para todos.
+	"""
+	var room_id = client_registry.get_player_room(peer_id)
+	var room = room_registry.get_room(room_id)
+	var player = client_registry.get_player(peer_id)
+	
+	# verificar se a sala existe
+	if not room_registry.room_exists(room_id):
+		return
+	
+	# Verificar se tem um não host safado na labuta
+	if room["host_id"] != peer_id:
+		_log_debug("Tem alguém enviando comandos de host sem ser host, nome do safadão: %s, id: %s" % [player["name"], peer_id])
+		return
+	
+	# Aplica apenas o que mudou
+	for key in _changed_settings.keys():
+		room_registry.update_room_setting(room_id, key, _changed_settings[key])
+	
+	# Replica para todos clientes
+	for peer in room["players"]:
+		var peer_id_ = peer["id"]
+		if _is_peer_connected(peer_id_):
+			network_manager.rpc_id(peer_id_, "client_update_match_settings", _changed_settings)
+
 func _handle_leave_room(peer_id: int):
 	"""Remove jogador da sala atual"""
 	var player = client_registry.get_player(peer_id)
@@ -701,25 +754,6 @@ func _handle_close_room(peer_id: int):
 	
 	# Atualiza lista global
 	_send_rooms_list_to_all()
-
-func _send_rooms_list_to_all():
-	"""
-	Envia lista de salas disponíveis para todos os jogadores no lobby
-	(não envia para jogadores em partida)
-	"""
-	var available_rooms = room_registry.get_rooms_in_lobby_clean_to_menu()
-	
-	# Busca todos os jogadores que NÃO estão em rodada
-	var lobby_players = []
-	for player_data in client_registry.get_all_players():
-		var peer_id = player_data["peer_id"]
-		if peer_id != 1 and not client_registry.in_round(peer_id):  # Ignora servidor (ID 1)
-			lobby_players.append(peer_id)
-	
-	# Envia lista para cada um
-	for peer_id in lobby_players:
-		if _is_peer_connected(peer_id):
-			network_manager.rpc_id(peer_id, "_client_receive_rooms_list_update", available_rooms)
 
 func _notify_room_update(room_id: int):
 	"""Notifica todos os players de uma sala sobre atualização nos dados"""

@@ -115,7 +115,7 @@ func create_room(room_name: String, password: String, host_peer_id: int, min_pla
 		"rounds_history": [],
 		"total_rounds_played": 0,
 		"total_playtime": 0.0,
-		"settings": {}
+		"settings": {"locked": false}
 	}
 	
 	rooms[room_id] = room_data

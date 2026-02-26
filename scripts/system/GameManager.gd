@@ -68,6 +68,7 @@ var local_player_node: Node = null
 var round_node: Node = null
 var players_node: Node = null
 var objects_node: Node = null
+var room_settings: Dictionary = {"locked": false}
 
 # ===== SINAIS =====
 
@@ -642,12 +643,16 @@ func request_rooms_list():
 	network_manager.request_rooms_list()
 
 func _client_receive_rooms_list(rooms: Array):
-	"""Callback quando recebe lista de salas"""
+	"""Callback quando recebe lista de salas, requisitado pelo cliente"""
 	rooms_list_received.emit(true, rooms)
 
-func _client_receive_rooms_list_update(rooms: Array):
-	"""Callback quando recebe atualização de lista de salas"""
+func all_client_receive_rooms_list(rooms: Array):
+	"""Callback quando recebe atualização de lista de salas por prte do servidor(não requisitado)"""
 	_log_debug("Lista de salas atualizada: %d salas" % rooms.size())
+	
+	# Ignora se não estiver na lista de salas
+	if not main_menu_node.current_menu_visible.name == "RoomListMenu":
+		return
 	rooms_list_received.emit(true, rooms)
 
 func create_room(room_name: String, password: String = ""):
@@ -764,11 +769,51 @@ func _client_room_closed(reason: String):
 		_show_error(reason)
 		# Arrumar algum dia
 
+func request_update_settings(new_values: Dictionary) -> void:
+	"""
+	Envia ao servidor as configurações modificadas (apenas elas).
+	Compara com match_settings atual e envia somente o diff.
+	"""
+	
+	var changed_settings := {}
+	
+	for key in new_values.keys():
+		if not room_settings.has(key):
+			continue
+		
+		if room_settings[key] != new_values[key]:
+			changed_settings[key] = new_values[key]
+	
+	# Se nada mudou, não envia RPC
+	if changed_settings.is_empty():
+		return
+	
+	# Envia pedido ao servidor (ID 1 = servidor dedicado)
+	network_manager.server_request_update_room_settings(changed_settings)
+
+func client_update_match_settings(changed_settings: Dictionary) -> void:
+	"""
+	Atualiza apenas as configurações modificadas.
+	"""
+	
+	for key in changed_settings.keys():
+		room_settings[key] = changed_settings[key]
+	
+	# Verificar se é host; se sim, atualizar o botão de 
+	var host_id = current_room.get("host_id", -1)
+	if host_id == cached_unique_id:
+		if room_settings["locked"] == true:
+			main_menu_node.room_lock_button.text = "Liberar Sala"
+			_show_error("Sala trancada, ninguém entra!")
+		else:
+			main_menu_node.room_lock_button.text = "Trancar Sala"
+			_show_error("Sala liberada, chama a glr!")
+
 # ===== GERENCIAMENTO DE RODADAS =====
 
-func start_match(match_settings: Dictionary = {}):
+func start_match(_match_settings: Dictionary = {}):
 	"""Alias para start_round (compatibilidade)"""
-	start_round(match_settings)
+	start_round(_match_settings)
 
 func start_round(round_settings: Dictionary = {}):
 	"""Inicia uma nova rodada (apenas host, que irá solicitar início da rodada)"""

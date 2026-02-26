@@ -70,24 +70,18 @@ func register_player_name(player_name: String):
 	rpc_id(1, "_server_register_player_name", player_name)
 
 func update_client_info(info):
-	if multiplayer.is_server():
-		return
 		
 	if game_manager and game_manager.has_method("update_client_info"):
 		game_manager.update_client_info(info)
 
 func _client_name_accepted(accepted_name: String):
-	"""RPC: Cliente recebe confirmação de nome aceito"""
-	if multiplayer.is_server():
-		return
+	"""Cliente recebe confirmação de nome aceito"""
 		
 	_log_debug("Nome aceito: " + accepted_name)
 	game_manager._client_name_accepted(accepted_name)
 
 func _client_name_rejected(reason: String):
-	"""RPC: Cliente recebe rejeição de nome"""
-	if multiplayer.is_server():
-		return
+	"""Cliente recebe rejeição de nome"""
 	
 	_log_debug("❌ Nome rejeitado: " + reason)
 	game_manager._client_name_rejected(reason)
@@ -104,20 +98,16 @@ func request_rooms_list():
 	rpc_id(1, "_server_request_rooms_list")
 
 func _client_receive_rooms_list(rooms: Array):
-	"""RPC: Cliente recebe lista de salas"""
-	if multiplayer.is_server():
-		return
+	"""Cliente recebe lista de salas"""
 	
 	_log_debug("📥 Lista de salas recebida: %d salas" % rooms.size())
 	game_manager._client_receive_rooms_list(rooms)
 
-func _client_receive_rooms_list_update(rooms: Array):
-	"""RPC: Cliente recebe atualização de lista de salas"""
-	if multiplayer.is_server():
-		return
+func all_client_receive_rooms_list(rooms: Array):
+	"""Cliente recebe atualização de lista de salas"""
 	
 	_log_debug("📥 Atualização de salas recebida: %d salas" % rooms.size())
-	game_manager._client_receive_rooms_list_update(rooms)
+	game_manager.all_client_receive_rooms_list(rooms)
 
 func create_room(room_name: String, password: String = ""):
 	"""Solicita criação de sala ao servidor"""
@@ -129,9 +119,7 @@ func create_room(room_name: String, password: String = ""):
 	rpc_id(1, "_server_create_room", room_name, password)
 
 func _client_room_created(room_data: Dictionary):
-	"""RPC: Cliente recebe confirmação de sala criada"""
-	if multiplayer.is_server():
-		return
+	"""Cliente recebe confirmação de sala criada"""
 	
 	_log_debug("Sala criada: " + str(room_data.get("name", "?")))
 	game_manager._client_room_created(room_data)
@@ -155,41 +143,38 @@ func join_room_by_name(room_name: String, password: String = ""):
 	rpc_id(1, "_server_join_room_by_name", room_name, password)
 
 func _client_joined_room(room_data: Dictionary):
-	"""RPC: Cliente recebe confirmação de entrada em sala"""
-	if multiplayer.is_server():
-		return
+	"""Cliente recebe confirmação de entrada em sala"""
 	
 	_log_debug("Entrou na sala: " + str(room_data.get("name", "?")))
 	game_manager._client_joined_room(room_data)
 
+func server_request_update_room_settings(_changed_settings: Dictionary):
+	"""Cliente solicita mudar configurações de sala"""
+	rpc_id(1, "server_receive_update_room_settings", _changed_settings)
+
+func client_update_match_settings(_changed_settings: Dictionary):
+	game_manager.client_update_match_settings(_changed_settings)
+
 func _client_wrong_password():
-	"""RPC: Cliente recebe notificação de senha incorreta"""
-	if multiplayer.is_server():
-		return
+	"""Cliente recebe notificação de senha incorreta"""
 	
 	_log_debug("❌ Senha incorreta")
 	game_manager._client_wrong_password()
 
 func _client_room_name_exists():
-	"""RPC: Cliente recebe notificação de sala já tem este nome"""
-	if multiplayer.is_server():
-		return
+	"""Cliente recebe notificação de sala já tem este nome"""
 	
 	_log_debug("❌ Nome de sala já existe")
 	game_manager._client_room_name_exists()
 
 func _client_room_name_error(error: String):
-	"""RPC: Cliente recebe notificação de erro ao definir nome da sala"""
-	if multiplayer.is_server():
-		return
+	"""Cliente recebe notificação de erro ao definir nome da sala"""
 	
 	_log_debug("❌ Erro no nome da sala: " + error)
 	game_manager._client_room_name_error(error)
 
 func _client_room_not_found():
-	"""RPC: Cliente recebe notificação de sala não encontrada"""
-	if multiplayer.is_server():
-		return
+	"""Cliente recebe notificação de sala não encontrada"""
 	
 	_log_debug("❌ Sala não encontrada")
 	game_manager._client_room_not_found()
@@ -213,17 +198,13 @@ func close_room():
 	rpc_id(1, "_server_close_room")
 
 func _client_room_closed(reason: String):
-	"""RPC: Cliente recebe notificação de sala fechada"""
-	if multiplayer.is_server():
-		return
+	"""Cliente recebe notificação de sala fechada"""
 	
 	_log_debug("❌ Sala fechada: " + reason)
 	game_manager._client_room_closed(reason)
 
 func _client_room_updated(room_data: Dictionary):
-	"""RPC: Cliente recebe atualização de dados da sala"""
-	if multiplayer.is_server():
-		return
+	"""Cliente recebe atualização de dados da sala"""
 	
 	_log_debug("📥 Sala atualizada: " + str(room_data.get("name", "?")))
 	game_manager._client_room_updated(room_data)
@@ -240,33 +221,26 @@ func start_round(round_settings: Dictionary = {}):
 	rpc_id(1, "_server_start_round", round_settings)
 
 func _client_round_started(match_data: Dictionary):
-	"""RPC: Cliente recebe notificação de rodada iniciada"""
-	if multiplayer.is_server():
-		return
+	"""Cliente recebe notificação de rodada iniciada"""
 	
 	_log_debug("Rodada iniciada")
 	game_manager._client_round_started(match_data)
 
 func _client_round_ended(end_data: Dictionary):
-	"""RPC: Cliente recebe notificação de rodada finalizada"""
-	if multiplayer.is_server():
-		return
+	"""Cliente recebe notificação de rodada finalizada"""
 	
 	_log_debug("🏁 Rodada finalizada")
 	game_manager._client_round_ended(end_data)
 
 func _client_return_to_room(room_data: Dictionary):
-	"""RPC: Cliente recebe comando para voltar à sala"""
-	if multiplayer.is_server():
-		return
+	"""Cliente recebe comando para voltar à sala"""
 	
 	_log_debug("↩️ Voltando para sala")
 	game_manager._client_return_to_room(room_data)
 
 func _client_remove_player(peer_id: int):
-	"""RPC: Cliente recebe comando para remover player"""
-	if multiplayer.is_server():
-		return
+	"""Cliente recebe comando para remover player"""
+
 	_log_debug("👤 Removendo player: %d" % peer_id)
 	game_manager._client_remove_player(peer_id)
 
@@ -274,9 +248,6 @@ func _client_remove_player(peer_id: int):
 
 func _rpc_receive_spawn_on_clients(object_id: int, round_id: int, item_name: String, position: Vector3, rotation: Vector3, drop_velocity: Vector3, owner_id: int):
 	"""RPC chamado APENAS pelo servidor para spawnar objeto em clientes"""
-	
-	if multiplayer.is_server():
-		return
 	
 	_log_debug("📥 RPC recebido: spawn item ID=%d, Item=%s" % [object_id, item_name])
 	
@@ -286,9 +257,7 @@ func _rpc_receive_spawn_on_clients(object_id: int, round_id: int, item_name: Str
 		push_error("GameManager não tem método _spawn_on_client")
 
 func _rpc_client_despawn_item(object_id: int, round_id: int):
-	if multiplayer.is_server():
-		return
-	
+	"""Cliente recebe despawn de item"""
 	_log_debug("📥 RPC recebido: despawn item ID=%d" % object_id)
 	
 	# Primeiro: remove do sistema de sync
@@ -300,9 +269,6 @@ func _rpc_client_despawn_item(object_id: int, round_id: int):
 
 func _client_clear_all_objects():
 	"""RPC para limpar todos os objetos (chamado ao sair de rodada)"""
-	
-	if multiplayer.is_server():
-		return
 	
 	var count = 0
 	
@@ -375,9 +341,6 @@ func server_apply_repawn_player(player_id, position: Vector3):
 
 func server_apply_equiped_item(player_id: int, item_id: int, unnequip: bool = false, from_inv_men = false, is_swap = false):
 	"""Cliente recebe comando de equipamento equipar ou desequipar"""
-	
-	if multiplayer.is_server():
-		return
 
 	# Encontra o player e executa a mudança de item equipado
 	var player_node = game_manager.players_node.get_node_or_null(str(player_id))
@@ -388,9 +351,6 @@ func server_apply_equiped_item(player_id: int, item_id: int, unnequip: bool = fa
 
 func server_apply_drop_item(player_id: int, item_name: String):
 	"""Cliente recebe comando de drop"""
-	
-	if multiplayer.is_server():
-		return
 	
 	_log_debug("📥 Dropando equipamento: Player %d, Item %s" % [player_id, item_name])
 	
@@ -410,7 +370,7 @@ func send_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, runn
 	rpc_id(1, "_server_player_state", p_id, pos, rot, vel, running, jumping)
 
 func _client_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
-	"""RPC: Cliente recebe estado de OUTRO jogador"""
+	"""Cliente recebe estado de OUTRO jogador"""
 
 	if multiplayer.has_multiplayer_peer() and multiplayer.get_unique_id() == 1:
 		return
@@ -439,7 +399,7 @@ func send_player_animation_state(p_id: int, speed: float, attacking: bool, defen
 
 func _client_player_animation_state(p_id: int, speed: float, attacking: bool, defending: bool,
 									jumping: bool, aiming: bool, running: bool, block_attacking: bool, on_floor: bool):
-	"""RPC: Cliente recebe estado de animação de outro jogador"""
+	"""Cliente recebe estado de animação de outro jogador"""
 	
 	if multiplayer.has_multiplayer_peer() and multiplayer.get_unique_id() == 1:
 		return
@@ -452,36 +412,31 @@ func _client_player_animation_state(p_id: int, speed: float, attacking: bool, de
 # ===== ATUALIZADORES DE INVENTÁRIO DE PLAYERS =====
 
 func local_add_item_to_inventory(item_id, object_id):
-	if multiplayer.is_server():
-		return
+	"""Cliente recebe comando de adicionar item no inventário"""
 
 	if game_manager and game_manager.has_method("add_item_to_inventory"):
 		game_manager.add_item_to_inventory(item_id, object_id)
 
 func local_remove_item_from_inventory(object_id):
-	if multiplayer.is_server():
-		return
-		
+	"""Cliente recebe comando de remover item do inventário"""
+	
 	if game_manager and game_manager.has_method("remove_item_from_inventory"):
 		game_manager.remove_item_from_inventory(object_id)
 
 func local_equip_item(item_name, object_id, slot):
-	if multiplayer.is_server():
-		return
-		
+	"""Cliente recebe comando de equipar item do inventário"""
+	
 	if game_manager and game_manager.has_method("equip_item"):
 		game_manager.equip_item(item_name, object_id, slot)
 
 func local_unequip_item(item_id, slot, verify):
-	if multiplayer.is_server():
-		return
+	"""Cliente recebe comando de desequipar item do inventário"""
 		
 	if game_manager and game_manager.has_method("unequip_item"):
 		game_manager.unequip_item(int(item_id), slot, verify)
 
 func local_swap_equipped_item(new_item_name: String, dragged_item: Dictionary, existing_item_id: int, target_slot: String):
-	if multiplayer.is_server():
-		return
+	"""Cliente recebe comando de equipar/desequipar(trocar) itens do inventário"""
 		
 	if game_manager and game_manager.has_method("swap_equipped_item"):
 		game_manager.swap_equipped_item(new_item_name, dragged_item, existing_item_id, target_slot)
@@ -593,7 +548,7 @@ func send_player_action(p_id: int, action_type: String, item_equipado_nome, anim
 	rpc_id(1, "_server_player_action", p_id, action_type, item_equipado_nome, anim_name)
 
 func _client_player_action(p_id: int, action_type: String, item_equipado_nome, anim_name: String):
-	"""RPC: Cliente recebe ação de outro jogador"""
+	"""Cliente recebe ação de outro jogador"""
 	
 	if multiplayer.has_multiplayer_peer() and multiplayer.get_unique_id() == 1:
 		return
@@ -605,6 +560,7 @@ func _client_player_action(p_id: int, action_type: String, item_equipado_nome, a
 		player._client_receive_action(action_type, item_equipado_nome, anim_name)
 
 func _client_player_receive_attack(body_name):
+	"""Cliente recebe ataque"""
 	if multiplayer.has_multiplayer_peer() and multiplayer.get_unique_id() == 1:
 		return
 	
@@ -615,9 +571,7 @@ func _client_player_receive_attack(body_name):
 # ===== TRATAMENTO DE ERROS =====
 
 func _client_error(error_message: String):
-	"""RPC: Cliente recebe mensagem de erro"""
-	if multiplayer.is_server():
-		return
+	"""Cliente recebe mensagem de erro"""
 	
 	_log_debug("❌ ERRO DO SERVIDOR: " + error_message)
 	

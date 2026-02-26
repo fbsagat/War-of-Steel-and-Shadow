@@ -473,6 +473,7 @@ theme = SubResource("Theme_1g8jr")
 text = "Apagar"
 
 [node name="RoomListMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=1613751584]
+visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -579,7 +580,6 @@ layout_mode = 2
 text = "Desconectar"
 
 [node name="RoomMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=1954665922]
-visible = false
 custom_minimum_size = Vector2(1200, 600)
 layout_mode = 1
 anchors_preset = 15
@@ -623,12 +623,10 @@ item_2/text = "Fulano 3"
 item_2/selectable = false
 
 [node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer" unique_id=462777944]
-visible = false
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.71609545, 0.27946, 0, 1)
 theme_override_font_sizes/font_size = 20
-text = "Deu cagada!"
 horizontal_alignment = 1
 autowrap_mode = 3
 
@@ -643,10 +641,14 @@ layout_mode = 2
 text = "Iniciar Partida"
 
 [node name="CloseButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer/ButtonsContainer" unique_id=1171284964]
-visible = false
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 text = "Fechar Sala"
+
+[node name="LockButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer/ButtonsContainer" unique_id=1828208451]
+custom_minimum_size = Vector2(150, 40)
+layout_mode = 2
+text = "Trancar Sala"
 
 [node name="LeaveButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer/ButtonsContainer" unique_id=1735648984]
 custom_minimum_size = Vector2(150, 40)
