@@ -998,9 +998,7 @@ func add_test_items():
 	
 	_sync_quickbar()
 
-# =============================================================================
 # UTILITÁRIO DE DEBUG
-# =============================================================================
 
 func _log_debug(message: String):
 	"""Imprime mensagem de debug"""

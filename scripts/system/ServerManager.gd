@@ -579,106 +579,103 @@ func _validate_room_name(room_name: String) -> String:
 	
 	return ""
 
-func _handle_join_room(peer_id: int, room_id: int, password: String):
-	"""Adiciona jogador a uma sala existente por ID"""
+func _handle_join_room(peer_id: int, room_id: int, password: String) -> bool:
+	"""Wrapper: entra por ID"""
+	return _handle_join_room_common(peer_id, room_id, password, false)
 
-	var player = client_registry.get_player(peer_id)
+func _handle_join_room_by_name(peer_id: int, room_name: String, password: String) -> bool:
+	"""Wrapper: entra por nome"""
+	return _handle_join_room_common(peer_id, room_name, password, true)
+
+func _handle_join_room_common(peer_id: int, room_identifier: Variant, password: String, by_name: bool) -> bool:
+	var player: Dictionary = client_registry.get_player(peer_id)
 	
 	# Valida jogador
 	if player.is_empty() or not player.has("name"):
 		_send_error_to_client(peer_id, "Jogador não registrado")
-		return
+		return false
 	
-	_log_debug("Jogador %s (ID: %d) tentando entrar na sala ID: %d" % [player["name"], peer_id, room_id])
-	
-	# Verifica se já está em uma sala
-	var current_room = room_registry.get_player_room(peer_id)
-	if not current_room.is_empty():
-		_send_error_to_client(peer_id, "Você já está em uma sala. Saia primeiro.")
-		return
-	
-	# Valida sala
-	var room = room_registry.get_room(room_id)
-	if room.is_empty():
-		_send_error_to_client(peer_id, "Sala não encontrada.")
-		return
-	
-	# verifica se ele está banido da sala
-	var has_kicked = room_registry.check_kicked_timeout(room_id, player["uuid_base"], kicked_default_timer)
-	if has_kicked:
-		_send_error_to_client(peer_id, "Você foi expulso desta sala.")
-		return
-	
-	# Verifica senha
-	if room["has_password"] and room["password"] != password:
-		network_manager.rpc_id(peer_id, "_client_wrong_password")
-		return
-	
-	# Verifica se a sala está aberta
-	var settings = room["settings"]
-	if settings.has("locked") and settings["locked"] == true:
-		_send_error_to_client(peer_id, "A sala '%s' foi trancada pelo host." % room["name"])
-		return
-	
-	# Adiciona à sala
-	var success = room_registry.add_player_to_room(room_id, peer_id)
-	if not success:
-		_send_error_to_client(peer_id, "Não foi possível entrar na sala (pode estar cheia ou em jogo)")
-		return
-	
-	# Define um novo uuid para esta rodada (para retorno após uma desconexão)
-	
-	_log_debug("✓ Jogador %s entrou na sala: %s" % [player["name"], room["name"]])
-	
-	# Envia dados da sala para o jogador
-	var room_data = room_registry.get_room(room_id)
-	network_manager.rpc_id(peer_id, "_client_joined_room", room_data)
-	
-	# Notifica todos na sala sobre atualização
-	_notify_room_update(room_id)
-
-func _handle_join_room_by_name(peer_id: int, room_name: String, password: String):
-	"""Adiciona jogador a uma sala existente por nome"""
-	var player = client_registry.get_player(peer_id)
-	
-	# Valida jogador
-	if player.is_empty() or not player.has("name"):
-		_send_error_to_client(peer_id, "Jogador não registrado")
-		return
-	
-	_log_debug("Jogador %s (ID: %d) tentando entrar na sala: '%s'" % [player["name"], peer_id, room_name])
+	# Log
+	if by_name:
+		_log_debug("Jogador %s (ID: %d) tentando entrar na sala: '%s'" %
+			[player["name"], peer_id, str(room_identifier)])
+	else:
+		_log_debug("Jogador %s (ID: %d) tentando entrar na sala ID: %d" %
+			[player["name"], peer_id, int(room_identifier)])
 	
 	# Verifica se já está em uma sala
-	var current_room = room_registry.get_player_room(peer_id)
+	var current_room: Dictionary = room_registry.get_player_room(peer_id)
 	if not current_room.is_empty():
 		_send_error_to_client(peer_id, "Você já está em uma sala. Saia primeiro.")
-		return
+		return false
 	
-	# Busca sala por nome
-	var room = room_registry.get_room_by_name(room_name)
+	# Busca sala
+	var room: Dictionary = {}
+	if by_name:
+		room = room_registry.get_room_by_name(str(room_identifier))
+	else:
+		room = room_registry.get_room(int(room_identifier))
+	
 	if room.is_empty():
 		network_manager.rpc_id(peer_id, "_client_room_not_found")
-		return
+		return false
+	
+	var room_id: int = int(room["id"])
+	
+	# Verifica se está kickado (timeout)
+	var uuid_base: String = str(player.get("uuid_base", ""))
+	if uuid_base != "":
+		var has_kicked: bool = room_registry.check_kicked_timeout(
+			room_id,
+			uuid_base,
+			kicked_default_timer
+		)
+		if has_kicked:
+			_send_error_to_client(peer_id, "Você foi expulso desta sala.")
+			return false
 	
 	# Verifica senha
-	if room["has_password"] and room["password"] != password:
+	var has_password: bool = bool(room.get("has_password", false))
+	var room_password: String = str(room.get("password", ""))
+	if has_password and room_password != password:
 		network_manager.rpc_id(peer_id, "_client_wrong_password")
-		return
+		return false
 	
-	# Adiciona à sala
-	var success = room_registry.add_player_to_room(room["id"], peer_id)
+	# Verifica locked
+	var settings: Dictionary = room.get("settings", {}) as Dictionary
+	if settings.has("locked") and bool(settings["locked"]):
+		_send_error_to_client(
+			peer_id,
+			"A sala '%s' foi trancada pelo host." % room.get("name", "")
+		)
+		return false
+	
+	# Verifica lotação
+	var players_arr: Array = room.get("players", []) as Array
+	if players_arr.size() >= max_players_per_room:
+		_send_error_to_client(peer_id, "A sala está lotada.")
+		return false
+	
+	# Adiciona jogador
+	var success: bool = room_registry.add_player_to_room(room_id, peer_id)
 	if not success:
-		_send_error_to_client(peer_id, "Não foi possível entrar na sala (pode estar cheia ou em jogo)")
-		return
+		_send_error_to_client(
+			peer_id,
+			"Não foi possível entrar na sala (pode estar cheia ou em jogo)"
+		)
+		return false
 	
-	_log_debug("✓ Jogador %s entrou na sala: %s" % [player["name"], room["name"]])
+	_log_debug("✓ Jogador %s entrou na sala: %s" %
+		[player["name"], room.get("name", "")])
 	
-	# Envia dados da sala para o jogador
-	var room_data = room_registry.get_room(room["id"])
+	# Envia dados da sala para o novato
+	var room_data: Dictionary = room_registry.get_room(room_id)
 	network_manager.rpc_id(peer_id, "_client_joined_room", room_data)
 	
-	# Notifica todos na sala sobre atualização
-	_notify_room_update(room["id"])
+	# Atualiza sala para todos
+	_notify_room_update(room_id)
+	
+	return true
 
 func _handle_update_room_settings(peer_id, _changed_settings: Dictionary):
 	"""

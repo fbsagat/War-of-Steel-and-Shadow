@@ -354,14 +354,12 @@ func check_kicked_timeout(room_id: int, uuid_base: String, time_limit: float) ->
 	Se o tempo ultrapassou time_limit, remove da lista.
 	Retorna true se ainda estiver banido.
 	"""
-
+	
+	# Se não existir
 	if not rooms.has(room_id):
 		return false
 	
 	var room = rooms[room_id]
-	
-	if not room.has("kicked_players"):
-		return false
 	
 	var kicked_list: Array = room["kicked_players"]
 	var now := Time.get_unix_time_from_system()
