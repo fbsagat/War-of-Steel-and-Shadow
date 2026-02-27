@@ -30,9 +30,10 @@ class_name ServerManager
 @export var max_clients: int = 32
 @export var is_headless : bool
 @export var public_server_name: String = "Games da PQP! Diversão garantida!"
+@export var kicked_default_timer: float = 120.0 # Tempo padrão em que um cliente fica banido de uma sala
+@export var reconnect_timout : float = 120.0
 var server_id : String
 var server_secret : PackedByteArray
-const RECONNECT_TIMEOUT : float = 120.0
 
 @export_category("Default Node References")
 const map_scene : String = "res://scenes/gameplay/terrain_3d.tscn"
@@ -268,7 +269,7 @@ func _start_server():
 	_log_debug("Máximo de clientes: %d" % max_clients)
 	_log_debug("Trainer de testes: %s, Fast Round: %s" % [test_trainer, fast_round])
 	_log_debug("Min. de jogadores/sala: %s, Max. de jogadores/sala: %s" % [min_players_to_start, max_players_per_room])
-	_log_debug("Tempo de espera de reconexão(peer): %sms" % RECONNECT_TIMEOUT)
+	_log_debug("Tempo de espera de reconexão(peer): %sms" % reconnect_timout)
 	_log_debug("▶️ Servidor inicializado com sucesso!")
 	_log_debug("================================================================")
 	
@@ -599,7 +600,13 @@ func _handle_join_room(peer_id: int, room_id: int, password: String):
 	# Valida sala
 	var room = room_registry.get_room(room_id)
 	if room.is_empty():
-		_send_error_to_client(peer_id, "Sala não encontrada")
+		_send_error_to_client(peer_id, "Sala não encontrada.")
+		return
+	
+	# verifica se ele está banido da sala
+	var has_kicked = room_registry.check_kicked_timeout(room_id, player["uuid_base"], kicked_default_timer)
+	if has_kicked:
+		_send_error_to_client(peer_id, "Você foi expulso desta sala.")
 		return
 	
 	# Verifica senha
@@ -724,6 +731,36 @@ func _handle_leave_room(peer_id: int):
 	else:
 		_send_rooms_list_to_all()
 
+func _handle_kick_player(peer_id: int, _selected_player_id: int):
+	"""Servidor recebe pedido para expulsar player de sala"""
+	var room = room_registry.get_player_room(peer_id)
+	
+	# Verificar se este peer é o host de sua sala e está nela
+	if not room_registry.is_player_host(peer_id, room["id"]):
+		return
+	
+	# Verificar se a sala está vazia
+	if room.is_empty():
+		return
+	
+	# Verificar se o player alvo está na sala
+	if not room_registry.is_player_in_room(_selected_player_id, room["id"]):
+		return
+	
+	# Verificar se o host está expulsando ele mesmo kkkk
+	if peer_id == _selected_player_id:
+		return
+	
+	# Remover player da sala
+	var kicked_player = client_registry.get_player(_selected_player_id)
+	room_registry.remove_player_from_room(room["id"], _selected_player_id)
+	room_registry.add_player_to_kicked(room["id"], kicked_player["uuid_base"])
+	
+	# Atualizar a todos os clientes na sala
+	_notify_room_update(room["id"])
+	_notify_kicked_player(_selected_player_id)
+	_send_error_to_client(peer_id, "%s foi expulso da sala, ele poderá voltar novamente em um minuto" % kicked_player["name"])
+
 func _handle_close_room(peer_id: int):
 	"""Fecha uma sala (apenas host pode fazer isso)"""
 	var player = client_registry.get_player(peer_id)
@@ -766,6 +803,12 @@ func _notify_room_update(room_id: int):
 	for player in room["players"]:
 		if _is_peer_connected(player["id"]):
 			network_manager.rpc_id(player["id"], "_client_room_updated", room)
+
+func _notify_kicked_player(kicked_player_id: int):
+	"""Notifica o player de uma sala que foi kickado"""
+	_log_debug("Player %s foi expulso de sua sala, notificando" % kicked_player_id)
+	if _is_peer_connected(kicked_player_id):
+		network_manager.rpc_id(kicked_player_id, "_client_kicked_from_room")
 
 # ===== HANDLER DE INÍCIO DE RODADA =====
 

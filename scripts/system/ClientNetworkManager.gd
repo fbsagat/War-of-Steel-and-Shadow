@@ -182,6 +182,14 @@ func leave_room():
 	_log_debug("📤 Saindo da sala")
 	rpc_id(1, "_server_leave_room")
 
+func kick_player(_selected_player_id: int):
+	"""Solicita kick de player da sala atual"""
+	if not is_connected_:
+		_log_debug("❌ Erro: Não conectado ao servidor")
+		return
+
+	rpc_id(1, "_server_kick_player", _selected_player_id)
+
 func close_room():
 	"""Solicita fechamento da sala (apenas host)"""
 	if not is_connected_:
@@ -202,6 +210,11 @@ func _client_room_updated(room_data: Dictionary):
 	
 	_log_debug("📥 Sala atualizada: " + str(room_data.get("name", "?")))
 	game_manager._client_room_updated(room_data)
+
+@rpc("authority", "call_remote", "reliable")
+func _client_kicked_from_room():
+	_log_debug("Foi expulso da sala")
+	game_manager._client_kicked_from_room()
 
 # ===== GERENCIAMENTO DE RODADAS =====
 

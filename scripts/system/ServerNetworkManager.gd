@@ -143,6 +143,14 @@ func _server_leave_room():
 	var peer_id = multiplayer.get_remote_sender_id()
 	server_manager._handle_leave_room(peer_id)
 
+func _server_kick_player(_selected_player_id: int):
+	"""Servidor recebe pedido para expulsar player de sala"""
+	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
+		return
+		
+	var peer_id = multiplayer.get_remote_sender_id()
+	server_manager._handle_kick_player(peer_id, _selected_player_id)
+
 func _server_close_room():
 	"""Servidor recebe pedido de fechamento de sala"""
 	

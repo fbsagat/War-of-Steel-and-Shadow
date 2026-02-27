@@ -134,12 +134,20 @@ func _server_leave_room():
 func _server_close_room():
 	pass
 
+@rpc("any_peer", "call_remote", "reliable")
+func _server_kick_player(_selected_player_id: int):
+	pass
+
 @rpc("authority", "call_remote", "reliable")
 func _client_room_closed(_reason: String):
 	pass
 
 @rpc("authority", "call_remote", "reliable")
 func _client_room_updated(_room_data: Dictionary):
+	pass
+
+@rpc("authority", "call_remote", "reliable")
+func _client_kicked_from_room():
 	pass
 
 @rpc("any_peer", "call_remote", "reliable")

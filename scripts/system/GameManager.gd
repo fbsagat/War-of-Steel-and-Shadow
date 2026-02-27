@@ -621,7 +621,7 @@ func _client_room_name_error(error_msg : String):
 func _client_room_not_found():
 	"""Callback quando a sala não é encontrada"""
 	if main_menu_node:
-		main_menu_node.show_room_list_menu()
+		main_menu_node.show_room_list_menu(true, false)
 		main_menu_node.match_password_container.visible = true
 		main_menu_node._show_error_("Sala não encontrada", main_menu_node.match_list_error_label, "Red")
 
@@ -734,6 +734,33 @@ func _client_room_updated(room_data: Dictionary):
 	
 	room_updated.emit(room_data)
 
+func kick_player(_selected_player_id: int):
+	"""Envia pedido para expulsar um player da sala (somente para o host)"""
+	
+	# Verificação local se é o host (add redundancia)
+	var host_id = -1
+	var _player_name: String
+	
+	for player in current_room["players"]:
+		if player.get("id") == _selected_player_id:
+			_player_name = player["name"]
+	
+	for player in current_room["players"]:
+		if player.get("is_host", false):
+			host_id = player["id"]
+	if host_id == local_peer_id:
+		network_manager.kick_player(_selected_player_id)
+		_log_debug("Pedido para expulsar player, id: %s feito ao servidor" % _selected_player_id)
+
+func _client_kicked_from_room():
+	"""Recebe notificação do servidor de que foi expulso da sala em que está"""
+	var name_room = current_room["name"]
+	current_room = {}
+	
+	if main_menu_node:
+		main_menu_node.show_room_list_menu(true, false)
+		main_menu_node._show_error_("Você foi expulso da sala %s" % name_room, main_menu_node.match_list_error_label, "Red")
+
 func leave_room():
 	"""Sai da sala atual"""
 	if current_room.is_empty():
@@ -757,7 +784,7 @@ func close_room():
 	network_manager.close_room()
 	current_room = {}
 	if main_menu_node:
-		main_menu_node.show_room_list_menu()
+		main_menu_node.show_room_list_menu(true, false)
 
 func _client_room_closed(reason: String):
 	"""Callback quando a sala é fechada"""
@@ -765,8 +792,8 @@ func _client_room_closed(reason: String):
 	current_room = {}
 	
 	if main_menu_node:
-		main_menu_node.show_room_list_menu()
 		main_menu_node._show_error_(reason, main_menu_node.match_list_error_label, "Red")
+		main_menu_node.show_room_list_menu(true)
 
 func request_update_settings(new_values: Dictionary) -> void:
 	"""

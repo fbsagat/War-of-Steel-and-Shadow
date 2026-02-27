@@ -49,6 +49,7 @@ signal room_state_changed(room_id: int, in_game: bool)
 ##   "has_password": bool,
 ##   "host_id": int,
 ##   "players": Array[PlayerInRoom],  # [{id, name, is_host}]
+##   "kicked_players": Array[KickedPlayer],  # [{id, name, is_host}]
 ##   "min_players": int,
 ##   "max_players": int,
 ##   "in_game": bool,
@@ -108,6 +109,7 @@ func create_room(room_name: String, password: String, host_peer_id: int, min_pla
 		"has_password": not password.is_empty(),
 		"host_id": host_peer_id,
 		"players": [],
+		"kicked_players": [],
 		"min_players": min_players,
 		"max_players": max_players,
 		"in_game": false,
@@ -319,6 +321,69 @@ func add_player_to_room(room_id: int, peer_id: int) -> bool:
 	
 	return true
 
+func add_player_to_kicked(room_id: int, uuid_base: String) -> bool:
+	"""
+	Adiciona jogador à lista de jogadores expulsos
+	Atualiza ClientRegistry automaticamente
+	"""
+	if not rooms.has(room_id):
+		_log_debug("❌ Sala %d não existe" % room_id)
+		return false
+	
+	var room = rooms[room_id]
+	
+	# Verifica se sala está em jogo (não pode kickar de sala durante partida)
+	if room["in_game"]:
+		_log_debug("❌ Sala %d está em partida" % room_id)
+		return false
+	
+	var player_ = client_registry.get_player_by_uuid(uuid_base)
+	
+	room["kicked_players"].append({
+		"uuid_base": uuid_base,
+		"time": Time.get_unix_time_from_system()
+	})
+	
+	_log_debug("✓ Player '%s' (%s) add como expulso da sala '%s'" % [player_["name"], player_["uuid_base"], room["name"]])
+	
+	return true
+
+func check_kicked_timeout(room_id: int, uuid_base: String, time_limit: float) -> bool:
+	"""
+	Verifica se o jogador ainda está banido.
+	Se o tempo ultrapassou time_limit, remove da lista.
+	Retorna true se ainda estiver banido.
+	"""
+
+	if not rooms.has(room_id):
+		return false
+	
+	var room = rooms[room_id]
+	
+	if not room.has("kicked_players"):
+		return false
+	
+	var kicked_list: Array = room["kicked_players"]
+	var now := Time.get_unix_time_from_system()
+
+	# Percorrer de trás pra frente para poder remover
+	for i in range(kicked_list.size() - 1, -1, -1):
+		var entry = kicked_list[i]
+		
+		if entry["uuid_base"] == uuid_base:
+			var elapsed : float = now - entry["time"]
+			
+			# Se passou do limite → remove
+			if elapsed >= time_limit:
+				kicked_list.remove_at(i)
+				_log_debug("✓ Banimento expirado para %s na sala %d" % [uuid_base, room_id])
+				return false
+			
+			# Ainda está dentro do tempo
+			return true
+	
+	return false
+
 func remove_player_from_room(room_id: int, peer_id: int) -> bool:
 	"""
 	Remove jogador da sala
@@ -381,7 +446,7 @@ func is_player_in_room(peer_id: int, room_id: int) -> bool:
 		return false
 	
 	for player in rooms[room_id]["players"]:
-		if player["peer_id"] == peer_id:
+		if player["id"] == peer_id:
 			return true
 	return false
 

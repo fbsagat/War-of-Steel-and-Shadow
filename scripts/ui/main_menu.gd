@@ -101,6 +101,7 @@ signal gameplay_menu_give_up_game_pressed()
 @onready var room_close_button: Button
 @onready var room_leave_button: Button
 @onready var room_lock_button: Button
+@onready var kick_player_button: Button
 @onready var room_error_label: Label
 @onready var room_status_label: Label
 
@@ -181,8 +182,10 @@ var inventory_mode: bool = false # True se está com inventário aberto
 var current_menu_visible: CenterContainer = null
 var current_matches = []
 var current_servers = []
+var current_players = []
 var selected_match_id = -1
 var selected_server_id = -1
+var selected_player_id = -1
 var previous_menu: CenterContainer = null
 var is_loading = false
 var player_count = 0
@@ -339,6 +342,8 @@ func _setup_element_references():
 	if room_name_input:
 		room_name_input.text_submitted.connect(_on_create_match_confirm_pressed)
 	room_password_input = create_room_menu.find_child("RoomPasswordInput", true, false)
+	if room_password_input:
+		room_password_input.text_submitted.connect(_on_create_match_confirm_pressed)
 	create_room_error_label = create_room_menu.find_child("ErrorLabel", true, false)
 	
 	# Menu de sala (lobby)
@@ -347,6 +352,7 @@ func _setup_element_references():
 	room_start_button = room_menu.find_child("StartButton", true, false)
 	room_close_button = room_menu.find_child("CloseButton", true, false)
 	room_lock_button = room_menu.find_child("LockButton", true, false)
+	kick_player_button = room_menu.find_child("KickPlayer", true, false)
 	room_leave_button = room_menu.find_child("LeaveButton", true, false)
 	room_error_label = room_menu.find_child("ErrorLabel", true, false)
 	room_status_label = room_menu.find_child("StatusLabel", true, false)
@@ -418,7 +424,11 @@ func _connect_button_signals():
 	_connect_if_exists(room_menu, "StartButton", _on_room_start_pressed)
 	_connect_if_exists(room_menu, "CloseButton", _on_room_close_pressed)
 	_connect_if_exists(room_menu, "LockButton", _on_room_lock_pressed)
+	_connect_if_exists(room_menu, "KickPlayer", _on_room_kick_player_pressed)
 	_connect_if_exists(room_menu, "LeaveButton", _on_room_leave_pressed)
+	
+	if room_players_list:
+		room_players_list.item_selected.connect(_on_player_list_player_selected)
 	
 	# Entrada manual de sala
 	_connect_if_exists(manual_room_join_menu, "BackButton", _on_manual_room_join_back_pressed)
@@ -904,6 +914,7 @@ func _on_match_item_selected(index: int):
 	var has_password = current_matches[index]["has_password"]
 	
 	if match_password_container:
+		match_password_input.text = ""
 		match_password_container.visible = has_password
 	
 	# Ativa o botão quando seleciona alguma sala
@@ -1455,7 +1466,29 @@ func _on_room_lock_pressed():
 func _on_room_leave_pressed():
 	game_manager.leave_room()
 	show_room_list_menu()
-	
+
+func _on_player_list_player_selected(index: int) -> void:
+	if index < 0 or index >= current_players.size():
+		_log_debug("Índice de partida inválido: %d" % index)
+		selected_player_id = -1
+		if kick_player_button:
+			kick_player_button.disabled = true
+		return
+
+	var selected_player = current_players[index]
+	selected_player_id = selected_player["id"]
+
+	var is_host_selected: bool = selected_player.get("is_host", false)
+
+	if kick_player_button:
+		kick_player_button.disabled = is_host_selected
+
+func _on_room_kick_player_pressed():
+	if selected_player_id <= 0:
+		_show_error_("Nenhum player selecionado", room_error_label, "Red")
+		return
+	game_manager.kick_player(selected_player_id)
+
 # ===== ATUALIZAÇÃO DO MENU DE SALA =====
 
 func _update_room_display(room_data: Dictionary):
@@ -1464,6 +1497,7 @@ func _update_room_display(room_data: Dictionary):
 		return
 	
 	var _player_count = room_data.get("players", []).size()
+	current_players = room_data.get("players", [])
 	
 	# Atualiza nome da sala
 	if room_name_label and room_data.has("name"):
@@ -1514,7 +1548,10 @@ func _update_room_display(room_data: Dictionary):
 		room_lock_button.visible = is_host
 	if room_leave_button:
 		room_leave_button.visible = not is_host
-	
+	if kick_player_button:
+		kick_player_button.visible = is_host
+		kick_player_button.disabled = true
+		
 	# Limpa mensagens de erro
 	if room_error_label:
 		room_error_label.text = ""
@@ -1540,7 +1577,7 @@ func _show_error_(message: String, label: Label, color: String = "green"):
 		label.text = message
 		label.modulate = _color_modulate
 
-	iniciar_timer(2, label)
+	iniciar_timer(4, label)
 	_log_debug("%s: %s" % [label.name, message])
 
 func show_error_connecting(message: String):
@@ -1708,4 +1745,4 @@ func _log_debug(message: String):
 	if initializer.activate_only_selected and not "MainMenu" in initializer.selected:
 		return
 	
-	print("[MainMenu]『』: " + message)
+	print("[CLIENT][MainMenu]『』: " + message)

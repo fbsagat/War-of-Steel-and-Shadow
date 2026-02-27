@@ -573,7 +573,6 @@ layout_mode = 2
 text = "Desconectar"
 
 [node name="RoomMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=1954665922]
-visible = false
 custom_minimum_size = Vector2(1200, 600)
 layout_mode = 1
 anchors_preset = 15
@@ -601,20 +600,13 @@ label_settings = SubResource("LabelSettings_uhagc")
 horizontal_alignment = 1
 
 [node name="ScrollContainer" type="ScrollContainer" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer" unique_id=377148629]
-custom_minimum_size = Vector2(800, 450)
+custom_minimum_size = Vector2(800, 480)
 layout_mode = 2
 
 [node name="PlayersList" type="ItemList" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer/ScrollContainer" unique_id=1673682770]
-custom_minimum_size = Vector2(800, 600)
+custom_minimum_size = Vector2(910, 600)
 layout_mode = 2
 allow_search = false
-item_count = 3
-item_0/text = "Fulano 1"
-item_0/selectable = false
-item_1/text = "Fulano 2"
-item_1/selectable = false
-item_2/text = "Fulano 3"
-item_2/selectable = false
 
 [node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer" unique_id=462777944]
 custom_minimum_size = Vector2(400, 0)
@@ -648,6 +640,12 @@ text = "Trancar Sala"
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 text = "Sair da Sala"
+
+[node name="KickPlayer" type="Button" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer/ButtonsContainer" unique_id=1569459578]
+custom_minimum_size = Vector2(150, 40)
+layout_mode = 2
+text = "Expulsar jogador
+"
 
 [node name="RoomReturnMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=1882250171]
 visible = false
