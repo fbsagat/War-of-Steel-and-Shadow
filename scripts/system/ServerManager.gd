@@ -482,7 +482,7 @@ func _handle_request_rooms_list(peer_id: int):
 	
 	# Valida se player está registrado
 	if not client_registry.is_player_registered(peer_id):
-		_send_error(peer_id, "Jogador não registrado")
+		_send_error_to_client(peer_id, "Jogador não registrado")
 		return
 	
 	# Busca salas disponíveis (fora de jogo)
@@ -517,7 +517,7 @@ func _handle_create_room(peer_id: int, room_name: String, password: String):
 	
 	# Valida jogador
 	if player.is_empty() or not player.has("name"):
-		_send_error(peer_id, "Jogador não registrado")
+		_send_error_to_client(peer_id, "Jogador não registrado")
 		return
 	
 	_log_debug("Criando sala '%s' para jogador %s (ID: %d)" % [room_name, player["name"], peer_id])
@@ -530,13 +530,13 @@ func _handle_create_room(peer_id: int, room_name: String, password: String):
 	
 	# Verifica se nome já existe
 	if room_registry.room_name_exists(room_name):
-		network_manager.rpc_id(peer_id, "_client_room_name_exists")
+		network_manager.rpc_id(peer_id, "_client_room_name_error", "Já existe uma sala com o nome escolhido")
 		return
 	
 	# Verifica se jogador já está em uma sala
 	var current_room = room_registry.get_player_room(peer_id)
 	if not current_room.is_empty():
-		_send_error(peer_id, "Você já está em uma sala")
+		_send_error_to_client(peer_id, "Você já está em uma sala")
 		return
 	
 	# Cria sala
@@ -549,7 +549,7 @@ func _handle_create_room(peer_id: int, room_name: String, password: String):
 	)
 	
 	if room_data.is_empty():
-		_send_error(peer_id, "Erro ao criar sala")
+		_send_error_to_client(peer_id, "Erro ao criar sala")
 		return
 	
 	_log_debug("✓ Sala criada: %s (ID: %d, Host: %s)" % [room_name, room_data["id"], player["name"]])
@@ -585,7 +585,7 @@ func _handle_join_room(peer_id: int, room_id: int, password: String):
 	
 	# Valida jogador
 	if player.is_empty() or not player.has("name"):
-		_send_error(peer_id, "Jogador não registrado")
+		_send_error_to_client(peer_id, "Jogador não registrado")
 		return
 	
 	_log_debug("Jogador %s (ID: %d) tentando entrar na sala ID: %d" % [player["name"], peer_id, room_id])
@@ -593,13 +593,13 @@ func _handle_join_room(peer_id: int, room_id: int, password: String):
 	# Verifica se já está em uma sala
 	var current_room = room_registry.get_player_room(peer_id)
 	if not current_room.is_empty():
-		_send_error(peer_id, "Você já está em uma sala. Saia primeiro.")
+		_send_error_to_client(peer_id, "Você já está em uma sala. Saia primeiro.")
 		return
 	
 	# Valida sala
 	var room = room_registry.get_room(room_id)
 	if room.is_empty():
-		_send_error(peer_id, "Sala não encontrada")
+		_send_error_to_client(peer_id, "Sala não encontrada")
 		return
 	
 	# Verifica senha
@@ -610,13 +610,13 @@ func _handle_join_room(peer_id: int, room_id: int, password: String):
 	# Verifica se a sala está aberta
 	var settings = room["settings"]
 	if settings.has("locked") and settings["locked"] == true:
-		_send_error(peer_id, "A sala '%s' foi trancada pelo host." % room["name"])
+		_send_error_to_client(peer_id, "A sala '%s' foi trancada pelo host." % room["name"])
 		return
 	
 	# Adiciona à sala
 	var success = room_registry.add_player_to_room(room_id, peer_id)
 	if not success:
-		_send_error(peer_id, "Não foi possível entrar na sala (pode estar cheia ou em jogo)")
+		_send_error_to_client(peer_id, "Não foi possível entrar na sala (pode estar cheia ou em jogo)")
 		return
 	
 	# Define um novo uuid para esta rodada (para retorno após uma desconexão)
@@ -636,7 +636,7 @@ func _handle_join_room_by_name(peer_id: int, room_name: String, password: String
 	
 	# Valida jogador
 	if player.is_empty() or not player.has("name"):
-		_send_error(peer_id, "Jogador não registrado")
+		_send_error_to_client(peer_id, "Jogador não registrado")
 		return
 	
 	_log_debug("Jogador %s (ID: %d) tentando entrar na sala: '%s'" % [player["name"], peer_id, room_name])
@@ -644,7 +644,7 @@ func _handle_join_room_by_name(peer_id: int, room_name: String, password: String
 	# Verifica se já está em uma sala
 	var current_room = room_registry.get_player_room(peer_id)
 	if not current_room.is_empty():
-		_send_error(peer_id, "Você já está em uma sala. Saia primeiro.")
+		_send_error_to_client(peer_id, "Você já está em uma sala. Saia primeiro.")
 		return
 	
 	# Busca sala por nome
@@ -661,7 +661,7 @@ func _handle_join_room_by_name(peer_id: int, room_name: String, password: String
 	# Adiciona à sala
 	var success = room_registry.add_player_to_room(room["id"], peer_id)
 	if not success:
-		_send_error(peer_id, "Não foi possível entrar na sala (pode estar cheia ou em jogo)")
+		_send_error_to_client(peer_id, "Não foi possível entrar na sala (pode estar cheia ou em jogo)")
 		return
 	
 	_log_debug("✓ Jogador %s entrou na sala: %s" % [player["name"], room["name"]])
@@ -737,7 +737,7 @@ func _handle_close_room(peer_id: int):
 	
 	# Verifica se é host
 	if room["host_id"] != peer_id:
-		_send_error(peer_id, "Apenas o host pode fechar a sala")
+		_send_error_to_client(peer_id, "Apenas o host pode fechar a sala")
 		return
 	
 	_log_debug("Host %s fechou a sala: %s" % [player["name"], room["name"]])
@@ -785,24 +785,24 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 	
 	# Valida jogador
 	if player.is_empty() or not player.has("name"):
-		_send_error(peer_id, "Jogador não registrado")
+		_send_error_to_client(peer_id, "Jogador não registrado")
 		return
 	
 	# Valida sala
 	var room = room_registry.get_player_room(peer_id)
 	if room.is_empty():
-		_send_error(peer_id, "Você não está em nenhuma sala")
+		_send_error_to_client(peer_id, "Você não está em nenhuma sala")
 		return
 	
 	# Verifica se é host
 	if room["host_id"] != peer_id:
-		_send_error(peer_id, "Apenas o host pode iniciar a rodada")
+		_send_error_to_client(peer_id, "Apenas o host pode iniciar a rodada")
 		return
 	
 	# Valida requisitos para iniciar
 	if not room_registry.can_start_match(room["id"]):
 		var reqs = room_registry.get_match_requirements(room["id"])
-		_send_error(peer_id, "Requisitos não atendidos: %d/%d jogadores (mínimo: %d)" % [
+		_send_error_to_client(peer_id, "Requisitos não atendidos: %d/%d jogadores (mínimo: %d)" % [
 			reqs["current_players"],
 			reqs["max_players"],
 			reqs["min_players"]
@@ -811,7 +811,7 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 	
 	# Verifica se sala já está em jogo
 	if room_registry.is_room_in_game(room["id"]):
-		_send_error(peer_id, "A sala já está em uma rodada")
+		_send_error_to_client(peer_id, "A sala já está em uma rodada")
 		return
 	
 	# LOG DO INÍCIO
@@ -860,7 +860,7 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 	round_node.add_child(objects_node)
 	
 	if round_data.is_empty():
-		_send_error(peer_id, "Erro ao criar rodada")
+		_send_error_to_client(peer_id, "Erro ao criar rodada")
 		return
 	
 	# Atualiza estado da sala
@@ -1875,7 +1875,7 @@ func _kick_player(peer_id: int, reason: String):
 	
 	# Envia notificação de kick
 	if _is_peer_connected(peer_id):
-		network_manager.rpc_id(peer_id, "_client_error", "🚫 Você foi desconectado: " + reason)
+		network_manager.rpc_id(peer_id, "_server_to_client_error", "🚫 Você foi desconectado: " + reason)
 	
 	# Desconecta após 1 segundo
 	await get_tree().create_timer(1.0).timeout
@@ -1884,11 +1884,11 @@ func _kick_player(peer_id: int, reason: String):
 		multiplayer.multiplayer_peer.disconnect_peer(peer_id)
 		_log_debug("✓ Player desconectado")
 
-func _send_error(peer_id: int, message: String):
+func _send_error_to_client(peer_id: int, message: String):
 	"""Envia mensagem de erro para um cliente"""
 	_log_debug("❌ Enviando erro para cliente %d: %s" % [peer_id, message])
 	if _is_peer_connected(peer_id):
-		network_manager.rpc_id(peer_id, "_client_error", message)
+		network_manager.rpc_id(peer_id, "_server_to_client_error", message)
 
 func _is_peer_connected(peer_id: int) -> bool:
 	"""Verifica se um peer ainda está conectado"""

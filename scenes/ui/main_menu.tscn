@@ -44,7 +44,7 @@ font_size = 24
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_6dd3c"]
 bg_color = Color(0.13, 0.81149995, 1, 1)
 
-[node name="MainMenu" type="Control" unique_id=1416588749 node_paths=PackedStringArray("exit_button")]
+[node name="MainMenu" type="Control" unique_id=1416588749]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -52,7 +52,6 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_fe2o3")
-exit_button = NodePath("CanvasLayer/CenterContainer/Control/ExitConfirmMenu/VBoxContainer/ButtonsContainer/ExitButton")
 
 [node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=2047922715]
 follow_viewport_enabled = true
@@ -194,7 +193,6 @@ label_settings = SubResource("LabelSettings_m1kxf")
 horizontal_alignment = 1
 
 [node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/NameInputMenu/VBoxContainer" unique_id=443092279]
-visible = false
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.71609545, 0.27946, 0, 1)
@@ -245,12 +243,10 @@ text = "Conectando ao servidor..."
 horizontal_alignment = 1
 
 [node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/ConnectingMenu/VBoxContainer" unique_id=1565524780]
-visible = false
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.71609545, 0.27946, 0, 1)
 theme_override_font_sizes/font_size = 20
-text = "Deu cagada!"
 horizontal_alignment = 1
 autowrap_mode = 3
 
@@ -323,7 +319,6 @@ disabled = true
 text = "Apagar"
 
 [node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/ServerListMenu/VBoxContainer" unique_id=1220290634]
-visible = false
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.71609545, 0.27946, 0, 1)
@@ -405,7 +400,6 @@ layout_mode = 2
 max_length = 5
 
 [node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/AddServerMenu/VBoxContainer" unique_id=545644132]
-visible = false
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.71609545, 0.27946, 0, 1)
@@ -527,7 +521,6 @@ alignment = 1
 secret = true
 
 [node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer" unique_id=1980915856]
-visible = false
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.71609545, 0.27946, 0, 1)
@@ -580,6 +573,7 @@ layout_mode = 2
 text = "Desconectar"
 
 [node name="RoomMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=1954665922]
+visible = false
 custom_minimum_size = Vector2(1200, 600)
 layout_mode = 1
 anchors_preset = 15
@@ -767,7 +761,6 @@ max_length = 5
 virtual_keyboard_type = 2
 
 [node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/ManualServerJoinMenu/VBoxContainer" unique_id=777535074]
-visible = false
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.71609545, 0.27946, 0, 1)
@@ -838,7 +831,6 @@ placeholder_text = "Deixe vazio se não tiver senha"
 secret = true
 
 [node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/ManualRoomJoinMenu/VBoxContainer" unique_id=1721544639]
-visible = false
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.71609545, 0.27946, 0, 1)
@@ -961,12 +953,11 @@ alignment = 1
 secret = true
 
 [node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/CreateRoomMenu/VBoxContainer" unique_id=1697487319]
-visible = false
-custom_minimum_size = Vector2(400, 0)
+custom_minimum_size = Vector2(500, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.71609545, 0.27946, 0, 1)
 theme_override_font_sizes/font_size = 20
-text = "Deu cagada!"
+text = "O nome deve ter no máximo 20 caracteres"
 horizontal_alignment = 1
 autowrap_mode = 3
 

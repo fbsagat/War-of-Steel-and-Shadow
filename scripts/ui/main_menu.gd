@@ -58,7 +58,7 @@ signal gameplay_menu_give_up_game_pressed()
 @onready var add_server_port_input: LineEdit
 @onready var add_server_error_label: Label
 
-# Menu de lista de partidas
+# Menu de lista de salas
 @onready var match_list: ItemList
 @onready var match_password_input: LineEdit
 @onready var match_password_container: VBoxContainer
@@ -81,7 +81,7 @@ signal gameplay_menu_give_up_game_pressed()
 # Menu de entrada manual de sala
 @onready var manual_room_name_input: LineEdit
 @onready var manual_room_password_input: LineEdit
-@onready var manual_join_error_label: Label
+@onready var manual_room_join_error_label: Label
 
 # Menu de entrada manual de servidor
 @onready var manual_server_ip_input: LineEdit
@@ -137,7 +137,10 @@ signal gameplay_menu_give_up_game_pressed()
 
 @onready var exit_confirm_label: Label
 @onready var warning_label: Label
-@export var exit_button: Button
+@onready var exit_button: Button
+
+@export var timer: Timer
+var current_label: Label
 
 @export var debug_mode : bool = true
 @export var start_unlocked_mouse: bool = false
@@ -209,6 +212,13 @@ func _ready():
 	
 	# Força centralização inicial
 	_center_window()
+	
+	# Timer de error label
+	timer = Timer.new()
+	timer.one_shot = true
+	add_child(timer)
+	timer.timeout.connect(_timeout_quando_terminar)
+	
 	_log_debug("▶️ MainMenu inicializado com sucesso!")
 	
 func _process(delta):
@@ -293,8 +303,14 @@ func _setup_element_references():
 	
 	# Adicionar servidor
 	add_server_name_input = add_server_menu.find_child("AddServerNameInput", true, false)
+	if add_server_name_input:
+		add_server_name_input.text_submitted.connect(_on_confirm_add_server_pressed)
 	add_server_ip_input = add_server_menu.find_child("AddServerIpInput", true, false)
+	if add_server_ip_input:
+		add_server_ip_input.text_submitted.connect(_on_confirm_add_server_pressed)
 	add_server_port_input = add_server_menu.find_child("AddServerPortInput", true, false)
+	if add_server_port_input:
+		add_server_port_input.text_submitted.connect(_on_confirm_add_server_pressed)
 	add_server_error_label = add_server_menu.find_child("ErrorLabel", true, false)
 	
 	# Lista de salas
@@ -311,7 +327,7 @@ func _setup_element_references():
 	# Entrada manual de sala
 	manual_room_name_input = manual_room_join_menu.find_child("ManualRoomNameInput", true, false)
 	manual_room_password_input = manual_room_join_menu.find_child("ManualRoomPasswordInput", true, false)
-	manual_join_error_label = manual_room_join_menu.find_child("ErrorLabel", true, false)
+	manual_room_join_error_label = manual_room_join_menu.find_child("ErrorLabel", true, false)
 	
 	# Entrada manual de servidor
 	manual_server_ip_input = manual_server_join_menu.find_child("ManualServerIpInput", true, false)
@@ -424,7 +440,7 @@ func _connect_button_signals():
 	_connect_if_exists(options_menu, "BackButton", _on_options_back_pressed)
 	
 	# Connecting menu
-	_connect_if_exists(connecting_menu, "CancelButton", _on_cancel_cancel_pressed)
+	_connect_if_exists(connecting_menu, "CancelButton", _on_connecting_menu_cancel_pressed)
 	
 	# Loading menu
 	_connect_if_exists(loading_menu, "CancelButton", _on_loading_cancel_pressed)
@@ -506,7 +522,6 @@ func show_connecting_menu():
 		connecting_label.text = "Conectando ao servidor"
 	if connecting_error_label:
 		connecting_error_label.text = ""
-		connecting_error_label.visible = false
 
 func show_server_list_menu():
 	var servers : Array = server_list_manager.get_items()
@@ -519,7 +534,9 @@ func show_server_list_menu():
 	
 	if server_list_error_label:
 		server_list_error_label.text = ""
-		server_list_error_label.visible = false
+		
+	if servers.is_empty():
+		_show_error_("Nenhum servidor disponível no momento", server_list_error_label, "Red")
 	
 	# desabilita botões quando carrega o menu
 	server_list_join_button.disabled = true
@@ -536,7 +553,6 @@ func show_add_server_menu():
 	add_server_ip_input.text = ""
 	add_server_port_input.text = ""
 	add_server_error_label.text = ""
-	add_server_error_label.visible = false
 
 func show_delete_server_menu():
 	hide_all_menus()
@@ -613,7 +629,6 @@ func show_name_input_menu(welcome: bool):
 		player_name_input.grab_focus()
 	if name_input_error_label:
 		name_input_error_label.text = ""
-		name_input_error_label.visible = false
 
 func show_room_list_menu(error_visible: bool = false, match_password_visible: bool = false):
 	server_name_label.text = actual_server_name
@@ -648,17 +663,13 @@ func show_room_list_menu(error_visible: bool = false, match_password_visible: bo
 	
 	if error_visible:
 		if match_list_error_label:
-			match_list_error_label.visible = true
 			match_list_join_button.disabled = false
 	else:
 		if match_list_error_label:
 			match_list_error_label.text = ""
-			match_list_error_label.visible = false
 	
 	if current_matches.is_empty():
-		if match_list_error_label:
-			match_list_error_label.text = "Nenhuma partida disponível no momento"
-			match_list_error_label.visible = true
+		_show_error_("Nenhuma partida disponível no momento", match_list_error_label, "Yellow")
 	else:
 		if current_matches.size() >= 5:
 			manual_join_button.disabled = false
@@ -681,9 +692,8 @@ func show_manual_room_join_menu():
 		manual_room_name_input.grab_focus()
 	if manual_room_password_input:
 		manual_room_password_input.text = ""
-	if manual_join_error_label:
-		manual_join_error_label.text = ""
-		manual_join_error_label.visible = false
+	if manual_room_join_error_label:
+		manual_room_join_error_label.text = ""
 
 func show_manual_server_join_menu():
 	hide_all_menus()
@@ -698,7 +708,6 @@ func show_manual_server_join_menu():
 		manual_server_port_input.text = "7777"
 	if manual_server_join_error_label:
 		manual_server_join_error_label.text = ""
-		manual_server_join_error_label.visible = false
 
 func show_create_local_match_menu():
 	hide_all_menus()
@@ -717,7 +726,6 @@ func show_create_match_menu():
 		room_password_input.text = ""
 	if create_room_error_label:
 		create_room_error_label.text = ""
-		create_room_error_label.visible = false
 
 func show_how_to_play_menu():
 	hide_all_menus()
@@ -810,15 +818,15 @@ func _on_name_confirm_pressed(text: String = ""):
 	var p_name = player_name_input.text.strip_edges()
 	
 	if p_name.is_empty():
-		show_error_name_input("O nome não pode estar vazio")
+		_show_error_("O nome não pode estar vazio", name_input_error_label, "Red")
 		return
 	
 	if p_name.length() < 3:
-		show_error_name_input("O nome deve ter pelo menos 3 caracteres")
+		_show_error_("O nome deve ter mais de 3 caracteres", name_input_error_label, "Red")
 		return
 	
 	if p_name.length() > 20:
-		show_error_name_input("O nome deve ter no máximo 20 caracteres")
+		_show_error_("O nome deve ter no máximo 20 caracteres", name_input_error_label, "Red")
 		return
 	
 	game_manager.set_player_name(p_name)
@@ -873,7 +881,7 @@ func _on_exit_server_pressed():
 func _on_match_list_join_pressed():
 
 	if selected_match_id <= -1:
-		show_error_room_list("Nenhuma partida selecionada")
+		_show_error_("Nenhuma partida selecionada", match_list_error_label, "Red")
 		return
 	
 	last_selected_match_id = selected_match_id - 1
@@ -897,8 +905,6 @@ func _on_match_item_selected(index: int):
 	
 	if match_password_container:
 		match_password_container.visible = has_password
-	if match_list_error_label:
-		match_list_error_label.visible = false
 	
 	# Ativa o botão quando seleciona alguma sala
 	match_list_join_button.disabled = false
@@ -907,12 +913,6 @@ func populate_server_list(servers: Array):
 	current_servers = servers
 	server_list.clear()
 	selected_server_id = -1
-	
-	if servers.is_empty():
-		if server_list_error_label:
-			server_list_error_label.text = "Nenhum servidor disponível no momento"
-			server_list_error_label.visible = true
-		return
 	
 	for server_data in servers:
 		var server_name = server_data.get("nome", "Nome não inserido")
@@ -951,13 +951,13 @@ func _on_manual_room_join_confirm_pressed():
 	var password = manual_room_password_input.text if manual_room_password_input else ""
 	
 	if room_name.is_empty():
-		show_error_manual_join("Nome da sala não pode estar vazio")
+		_show_error_("Nome da sala não pode estar vazio", manual_room_join_error_label, "Red")
 		return
 	
 	game_manager.request_rooms_list()
 	var success : Array = await game_manager.rooms_list_received
 	if not success[0]:
-		show_error_manual_join("Erro ao buscar salas")
+		_show_error_("Erro ao buscar salas", manual_room_join_error_label, "Red")
 		return
 	
 	var found: bool = false
@@ -966,7 +966,7 @@ func _on_manual_room_join_confirm_pressed():
 			found = true
 	
 	if not found:
-		show_error_manual_join("Sala não encontrada")
+		_show_error_("Sala não encontrada", manual_room_join_error_label, "Red")
 		return
 	
 	game_manager.join_room_by_name(room_name, password)
@@ -994,7 +994,7 @@ func _on_server_list_add_pressed():
 	
 func _on_server_list_delete_pressed():
 	if selected_server_id <= 0:
-		show_error_server_list("Nenhum servidor selecionado")
+		_show_error_("Nenhum servidor selecionado", server_list_error_label, "Red")
 		return
 		
 	show_delete_server_menu()
@@ -1003,7 +1003,7 @@ func _on_server_list_delete_pressed():
 func _on_server_list_enter_pressed():
 	# Não faz nada se não selecionar nenhum
 	if selected_server_id <= 0:
-		show_error_server_list("Nenhum servidor selecionado")
+		_show_error_("Nenhum servidor selecionado", server_list_error_label, "Red")
 		return
 	
 	var item = server_list_manager.get_item_by_id(selected_server_id)
@@ -1018,57 +1018,58 @@ func _on_add_server_back_pressed():
 	show_server_list_menu()
 	_log_debug("Voltar! não vou mais adicionar servidor na lista de servidores")
 
-func _on_confirm_add_server_pressed():
+func _on_confirm_add_server_pressed(_text_submited = ""):
 	# Validados para campos vazios
 	if add_server_ip_input.text.is_empty() or add_server_name_input.text.is_empty() or add_server_port_input.text.is_empty():
-		show_error_add_server("Campo não pode estar vazio")
+		_show_error_("Campo não pode estar vazio", add_server_error_label, "Red")
 		return
 	
 	# Validador para nome do servidor
 	if add_server_name_input.text.length() <= 3:
-		show_error_add_server("Nome do servidor deve ter mais de 3 caracteres")
+		_show_error_("Nome do servidor deve ter mais de 3 caracteres", add_server_error_label, "Red")
 		return
 	
 	# Validador para IPs
 	var ip = add_server_ip_input.text
 	for c in ip:
 		if not (c >= "0" and c <= "9" or c == "."):
-			show_error_add_server("IP inválido")
+			_show_error_("IP inválido", add_server_error_label, "Red")
 			return
 
 	var parts: PackedStringArray = ip.split(".")
 	if parts.size() != 4:
-		show_error_add_server("IP inválido")
+		_show_error_("IP inválido", add_server_error_label, "Red")
 		return
 
 	for part in parts:
 		if part.is_empty():
-			show_error_add_server("IP inválido")
+			_show_error_("IP inválido", add_server_error_label, "Red")
 			return
 
 		if not part.is_valid_int():
-			show_error_add_server("IP inválido")
+			_show_error_("IP inválido", add_server_error_label, "Red")
 			return
 
 		var value := part.to_int()
 		if value < 0 or value > 255:
-			show_error_add_server("IP inválido")
+			_show_error_("IP inválido", add_server_error_label, "Red")
 			return
 	
 	# Validador para porta: bloqueia letras e qualquer coisa que não seja número
 	if not add_server_port_input.text.is_valid_int():
-		show_error_add_server("Porta inválida")
+		_show_error_("Porta inválida", add_server_error_label, "Red")
 		return
 	
 	# Validador para porta: Bloqueia porta menor que 1 e maior que 65535
 	var port_number := add_server_port_input.text.to_int()
 	if port_number < 1 or port_number > 65535:
-		show_error_add_server("Porta inválida")
+		_show_error_("Porta inválida", add_server_error_label, "Red")
 		return
 	
 	if server_list_manager:
 		server_list_manager.add_item(add_server_name_input.text, add_server_ip_input.text, int(add_server_port_input.text))
 	show_server_list_menu()
+	_show_error_("Servidor adicionado", server_list_error_label, "Yellow")
 	
 	_log_debug("Adicionando servidor na lista de servidores")
 
@@ -1080,6 +1081,7 @@ func _on_confirm_delete_server_pressed():
 	server_list_manager.remove_item(selected_server_id)
 	show_server_list_menu()
 	_log_debug("Apagando este servidor da lista")
+	_show_error_("Servidor apagado", server_list_error_label, "Yellow")
 
 func _on_rename_button_pressed():
 	_log_debug("Botão de renomear pressionado")
@@ -1106,7 +1108,7 @@ func _on_create_match_confirm_pressed(text: String = ""):
 	var password = room_password_input.text if room_password_input else ""
 	
 	if room_name.is_empty():
-		show_error_create_room("Nome da sala não pode estar vazio")
+		_show_error_("Nome da sala não pode estar vazio", create_room_error_label, "Red")
 		return
 	
 	game_manager.create_room(room_name, password)
@@ -1162,12 +1164,12 @@ func _on_options_back_pressed():
 	load_options()
 	show_main_menu()
 	
-func _on_cancel_cancel_pressed():
-	show_main_menu()
+func _on_connecting_menu_cancel_pressed():
+	show_server_list_menu()
 	
 func _on_loading_cancel_pressed():
-	show_main_menu()
 	game_manager._on_intentional_disconnect_from_server()
+	show_server_list_menu()
 	
 func save_options():
 	_log_debug("Salvando configurações...")
@@ -1438,7 +1440,7 @@ func _apply_audio_settings():
 # ===== CALLBACKS DO MENU DE SALA (LOBBY) =====
 
 func _on_room_start_pressed():
-	game_manager.start_match()
+	game_manager.start_round()
 
 func _on_room_close_pressed():
 	game_manager.close_room()
@@ -1516,7 +1518,6 @@ func _update_room_display(room_data: Dictionary):
 	# Limpa mensagens de erro
 	if room_error_label:
 		room_error_label.text = ""
-		room_error_label.visible = false
 		
 func update_name_e_connected(server_name: String, player_name: String):
 	if main_menu:
@@ -1528,40 +1529,19 @@ func update_name_e_connected(server_name: String, player_name: String):
 		
 # ===== FUNÇÕES DE MENSAGENS DE ERRO =====
 
-func show_error_room_list(message: String):
-	if match_list_error_label:
-		match_list_error_label.text = message
-		match_list_error_label.visible = true
-		match_list_error_label.modulate = Color(1.0, 0.3, 0.3)
-	_log_debug("Lista de partidas: " + message)
+func _show_error_(message: String, label: Label, color: String = "green"):
+	var colors := {
+		"green": Color(0.2, 1.0, 0.0, 1.0),
+		"yellow": Color(1.0, 0.755, 0.3, 1.0),
+		"red": Color(1.0, 0.3, 0.3, 1.0)
+	}
+	var _color_modulate: Color = colors.get(color.to_lower(), colors["green"])
+	if label:
+		label.text = message
+		label.modulate = _color_modulate
 
-func show_error_server_list(message: String):
-	if server_list_error_label:
-		server_list_error_label.text = message
-		server_list_error_label.visible = true
-		server_list_error_label.modulate = Color(1.0, 0.3, 0.3)
-	_log_debug("Lista de servidores: " + message)
-
-func show_error_manual_join(message: String):
-	if manual_join_error_label:
-		manual_join_error_label.text = message
-		manual_join_error_label.visible = true
-		manual_join_error_label.modulate = Color(1.0, 0.3, 0.3)
-	_log_debug("Entrada manual: " + message)
-
-func show_error_create_room(message: String):
-	if create_room_error_label:
-		create_room_error_label.text = message
-		create_room_error_label.visible = true
-		create_room_error_label.modulate = Color(1.0, 0.3, 0.3)
-	_log_debug("Criar partida: " + message)
-
-func show_error_name_input(message: String):
-	if name_input_error_label:
-		name_input_error_label.text = message
-		name_input_error_label.visible = true
-		name_input_error_label.modulate = Color(1.0, 0.3, 0.3)
-	_log_debug("Escolha de nome: " + message)
+	iniciar_timer(2, label)
+	_log_debug("%s: %s" % [label.name, message])
 
 func show_error_connecting(message: String):
 	if connecting_error_label:
@@ -1569,20 +1549,14 @@ func show_error_connecting(message: String):
 		connecting_error_label.visible = true
 		connecting_error_label.modulate = Color(1.0, 0.3, 0.3)
 	_log_debug("Conexão: " + message)
+	
+func iniciar_timer(_tempo: float, _label: Label):
+	timer.stop()
+	timer.start(_tempo)
+	current_label = _label
 
-func show_error_room(message: String):
-	if room_error_label:
-		room_error_label.text = message
-		room_error_label.visible = true
-		room_error_label.modulate = Color(1.0, 0.3, 0.3)
-	_log_debug("Sala: " + message)
-
-func show_error_add_server(message: String):
-	if add_server_error_label:
-		add_server_error_label.text = message
-		add_server_error_label.visible = true
-		add_server_error_label.modulate = Color(1.0, 0.3, 0.3)
-	_log_debug("Add server: " + message)
+func _timeout_quando_terminar():
+	current_label.text = ""
 
 # ===== FUNÇÕES DE CONTROLE DE CARREGAMENTO =====
 
@@ -1608,7 +1582,9 @@ func _on_game_manager_connected():
 
 func _on_game_manager_connection_failed(reason: String):
 	_log_debug("Falha na conexão: " + reason)
-	show_error_connecting("Falha ao conectar: " + reason)
+	if game_manager.main_menu_node:
+		game_manager.main_menu_node.show_connecting_menu()
+		show_error_connecting("Falha ao conectar: " + reason)
 
 func _on_game_manager_disconnected():
 	_log_debug("Desconectado do servidor")
@@ -1649,13 +1625,13 @@ func _on_game_manager_error(error_message: String):
 	_log_debug("Erro: " + error_message)
 	# Mostra erro no contexto apropriado
 	if room_menu.visible:
-		show_error_room(error_message)
+		_show_error_(error_message, room_error_label, "Red")
 	elif room_list_menu.visible:
-		show_error_room_list(error_message)
+		_show_error_(error_message, match_list_error_label, "Red")
 	elif create_room_menu.visible:
-		show_error_create_room(error_message)
+		_show_error_(error_message, create_room_error_label, "Red")
 	elif manual_room_join_menu.visible:
-		show_error_manual_join(error_message)
+		_show_error_(error_message, manual_room_join_error_label, "Red")
 
 # ===== CALLBACKS DE VÍDEO =====
 

@@ -442,7 +442,6 @@ func _on_server_disconnected():
 	# Inicia processo de reconexão
 	# Mostra menu de reconexão
 	if main_menu_node:
-		main_menu_node.show_main_menu()
 		main_menu_node.show_connecting_menu()
 		main_menu_node.show_error_connecting("Conexão perdida. Tentando reconectar...")
 	
@@ -566,7 +565,7 @@ func create_local_match():
 func set_player_name(p_name: String):
 	"""Envia nome do jogador para registro no servidor"""
 	if not is_connected_to_server:
-		_show_error("Não conectado ao servidor")
+		main_menu_node._show_error_("Não conectado ao servidor", main_menu_node.name_input_error_label, "Red")
 		return
 	
 	_log_debug("Tentando registrar nome: " + p_name)
@@ -594,7 +593,7 @@ func _client_name_rejected(reason: String):
 		# Se player_name for "", é tela de welcome, se já ter algum nome definido, tela de renomeação 
 		var condition = true if player_name == "" else false
 		main_menu_node.show_name_input_menu(condition)
-		main_menu_node.show_error_name_input(reason)
+		main_menu_node._show_error_(reason, main_menu_node.add_server_error_label, "Red")
 	
 	name_rejected.emit(reason)
 
@@ -605,39 +604,35 @@ func _client_wrong_password():
 	
 	var current_menu_visible_name = main_menu_node.current_menu_visible.name
 	main_menu_node.room_list_menu.visible = true
-	_show_error("Senha incorreta")
+	main_menu_node._show_error_("Senha incorreta", main_menu_node.match_list_error_label, "Red")
 	
 	if main_menu_node and current_menu_visible_name == "RoomListMenu":
 		main_menu_node.show_room_list_menu(true, true)
 
 	if main_menu_node and current_menu_visible_name == "ManualRoomJoinMenu":
 		main_menu_node.show_manual_room_join_menu()
-	
-func _client_room_name_exists():
-	"""Callback de quando já existe uma sala com o nome escolhido"""
-	if main_menu_node:
-		main_menu_node.show_create_match_menu()
-		_show_error("Já existe uma sala com o nome escolhido")
-
+		
 func _client_room_name_error(error_msg : String):
-	"""Callback de quando já existe uma sala com o nome escolhido"""
+	"""Callback de quando existe um erro com o nome da sala"""
 	if main_menu_node:
 		main_menu_node.show_create_match_menu()
-		_show_error(error_msg)
+		main_menu_node._show_error_(error_msg, main_menu_node.create_room_error_label, "Red")
 
 func _client_room_not_found():
 	"""Callback quando a sala não é encontrada"""
 	if main_menu_node:
 		main_menu_node.show_room_list_menu()
 		main_menu_node.match_password_container.visible = true
-		_show_error("Sala não encontrada")
+		main_menu_node._show_error_("Sala não encontrada", main_menu_node.match_list_error_label, "Red")
 
 func request_rooms_list():
 	_log_debug("📤 Solicitando lista de salas")
 	
 	# Cancelar pedido se não ter nome do player
 	if player_name.is_empty():
-		_show_error("Nome do jogador não definido")
+		if main_menu_node:
+			main_menu_node.show_name_input_menu(true)
+		main_menu_node._show_error_("Nome do jogador não definido", main_menu_node.name_input_error_label, "Red")
 		return
 		
 	network_manager.request_rooms_list()
@@ -658,11 +653,13 @@ func all_client_receive_rooms_list(rooms: Array):
 func create_room(room_name: String, password: String = ""):
 	"""Cria uma nova sala"""
 	if not is_connected_to_server:
-		_show_error("Não conectado ao servidor")
+		main_menu_node._show_error_("Não conectado ao servidor", main_menu_node.match_list_error_label, "Red")
 		return
 	
 	if player_name.is_empty():
-		_show_error("Nome do jogador não definido")
+		if main_menu_node:
+			main_menu_node.show_name_input_menu(true)
+		main_menu_node._show_error_("Nome do jogador não definido", main_menu_node.name_input_error_label, "Red")
 		return
 	
 	_log_debug("Criando sala: '%s' (Senha: %s)" % [room_name, "Sim" if password else "Não"])
@@ -685,11 +682,13 @@ func _client_room_created(room_data: Dictionary):
 func join_room(room_id: int, password: String = ""):
 	"""Entra em uma sala por ID"""
 	if not is_connected_to_server:
-		_show_error("Não conectado ao servidor")
+		main_menu_node._show_error_("Não conectado ao servidor", main_menu_node.match_list_error_label, "Red")
 		return
 	
 	if player_name.is_empty():
-		_show_error("Nome do jogador não definido")
+		if main_menu_node:
+			main_menu_node.show_name_input_menu(true)
+		main_menu_node._show_error_("Nome do jogador não definido", main_menu_node.name_input_error_label, "Red")
 		return
 	
 	_log_debug("Tentando entrar na sala ID: %d" % room_id)
@@ -699,11 +698,13 @@ func join_room(room_id: int, password: String = ""):
 func join_room_by_name(room_name: String, password: String = ""):
 	"""Entra em uma sala por nome"""
 	if not is_connected_to_server:
-		_show_error("Não conectado ao servidor")
+		main_menu_node._show_error_("Não conectado ao servidor", main_menu_node.match_list_error_label, "Red")
 		return
 	
 	if player_name.is_empty():
-		_show_error("Nome do jogador não definido")
+		if main_menu_node:
+			main_menu_node.show_name_input_menu(true)
+		main_menu_node._show_error_("Nome do jogador não definido", main_menu_node.name_input_error_label, "Red")
 		return
 	
 	_log_debug("Tentando entrar na sala: '%s'" % room_name)
@@ -750,7 +751,6 @@ func close_room():
 		return
 	
 	if current_room["host_id"] != local_peer_id:
-		_show_error("Apenas o host pode fechar a sala")
 		return
 	
 	_log_debug("Fechando sala: %s" % current_room["name"])
@@ -766,8 +766,7 @@ func _client_room_closed(reason: String):
 	
 	if main_menu_node:
 		main_menu_node.show_room_list_menu()
-		_show_error(reason)
-		# Arrumar algum dia
+		main_menu_node._show_error_(reason, main_menu_node.match_list_error_label, "Red")
 
 func request_update_settings(new_values: Dictionary) -> void:
 	"""
@@ -804,16 +803,12 @@ func client_update_match_settings(changed_settings: Dictionary) -> void:
 	if host_id == cached_unique_id:
 		if room_settings["locked"] == true:
 			main_menu_node.room_lock_button.text = "Liberar Sala"
-			_show_error("Sala trancada, ninguém entra!")
+			main_menu_node._show_error_("Sala trancada, ninguém entra!", main_menu_node.room_error_label, "Yellow")
 		else:
 			main_menu_node.room_lock_button.text = "Trancar Sala"
-			_show_error("Sala liberada, chama a glr!")
+			main_menu_node._show_error_("Sala liberada, chama a glr!", main_menu_node.room_error_label, "Yellow")
 
 # ===== GERENCIAMENTO DE RODADAS =====
-
-func start_match(_match_settings: Dictionary = {}):
-	"""Alias para start_round (compatibilidade)"""
-	start_round(_match_settings)
 
 func start_round(round_settings: Dictionary = {}):
 	"""Inicia uma nova rodada (apenas host, que irá solicitar início da rodada)"""
@@ -822,15 +817,14 @@ func start_round(round_settings: Dictionary = {}):
 		return
 	
 	if current_room["host_id"] != local_peer_id:
-		_show_error("Apenas o host pode iniciar a rodada")
 		return
 	
 	if current_room.players.size() < configs.min_players_to_start:
-		_show_error("Pelo menos %d jogadores são necessários para iniciar uma rodada" % 1)
+		main_menu_node._show_error_("Pelo menos %d jogadores são necessários para iniciar uma rodada" % 1, main_menu_node.room_error_label, "Yellow")
 		return
 	
 	_log_debug("Solicitando início da rodada...")
-	network_manager.start_round(round_settings)
+	network_manager.request_start_round(round_settings)
 	
 func _client_round_started(match_data: Dictionary):
 	"""Callback quando a rodada inicia"""
@@ -1085,27 +1079,27 @@ func _handle_connection_error(message: String):
 	
 	connection_failed.emit(message)
 
-func _client_error(error_message: String):
+func _server_to_client_error(error_message: String):
 	"""Callback quando recebe erro do servidor"""
 	_log_debug("Erro recebido do servidor: " + error_message)
 	_show_error(error_message)
 	error_occurred.emit(error_message)
 
-func _show_error(message: String):
+func _show_error(message: String, color= "Red"):
 	"""Mostra erro na UI apropriada"""
 	var current = main_menu_node.current_menu_visible
 	_log_debug("ERRO (Em: %s): %s" % [current.name, message])
 	if main_menu_node:
 		if main_menu_node.connecting_menu and main_menu_node.connecting_menu.visible:
-			main_menu_node.show_error_connecting(message)
+			main_menu_node._show_error_(message, main_menu_node.connecting_error_label, color)
 		elif main_menu_node.room_menu and main_menu_node.room_menu.visible:
-			main_menu_node.show_error_room(message)
+			main_menu_node._show_error_(message, main_menu_node.room_error_label, color)
 		elif main_menu_node.room_list_menu and main_menu_node.room_list_menu.visible:
-			main_menu_node.show_error_room_list(message)
+			main_menu_node._show_error_(message, main_menu_node.match_list_error_label, color)
 		elif main_menu_node.manual_room_join_menu and main_menu_node.manual_room_join_menu.visible:
-			main_menu_node.show_error_manual_join(message)
+			main_menu_node._show_error_(message, main_menu_node.manual_room_join_error_label, color)
 		elif main_menu_node.create_room_menu and main_menu_node.create_room_menu.visible:
-			main_menu_node.show_error_create_room(message)
+			main_menu_node._show_error_(message, main_menu_node.create_room_error_label, color)
 
 # ===== SISTEMA DE INVENTÁRIO POR RODADA =====
 	
@@ -1457,8 +1451,6 @@ func _despawn_on_client(object_id: int, round_id: int):
 	network_manager.unregister_syncable_object(object_id)
 	
 	_log_debug("✓ Objeto despawnado no cliente: ID=%d" % object_id)
-
-# ===== PLAYER IDENTIFIER FUNCTIONS =====
 
 # ===== UTILITÁRIOS =====
 

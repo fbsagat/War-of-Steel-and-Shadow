@@ -161,12 +161,6 @@ func _client_wrong_password():
 	_log_debug("❌ Senha incorreta")
 	game_manager._client_wrong_password()
 
-func _client_room_name_exists():
-	"""Cliente recebe notificação de sala já tem este nome"""
-	
-	_log_debug("❌ Nome de sala já existe")
-	game_manager._client_room_name_exists()
-
 func _client_room_name_error(error: String):
 	"""Cliente recebe notificação de erro ao definir nome da sala"""
 	
@@ -211,7 +205,7 @@ func _client_room_updated(room_data: Dictionary):
 
 # ===== GERENCIAMENTO DE RODADAS =====
 
-func start_round(round_settings: Dictionary = {}):
+func request_start_round(round_settings: Dictionary = {}):
 	"""Solicita início de rodada (apenas host é respondido)"""
 	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
@@ -570,10 +564,10 @@ func _client_player_receive_attack(body_name):
 
 # ===== TRATAMENTO DE ERROS =====
 
-func _client_error(error_message: String):
+func _server_to_client_error(error_message: String):
 	"""Cliente recebe mensagem de erro"""
 	
 	_log_debug("❌ ERRO DO SERVIDOR: " + error_message)
 	
-	if game_manager and game_manager.has_method("_client_error"):
-		game_manager._client_error(error_message)
+	if game_manager and game_manager.has_method("_server_to_client_error"):
+		game_manager._server_to_client_error(error_message)

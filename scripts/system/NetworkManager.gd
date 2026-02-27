@@ -119,10 +119,6 @@ func _client_wrong_password():
 	pass
 
 @rpc("authority", "call_remote", "reliable")
-func _client_room_name_exists():
-	pass
-
-@rpc("authority", "call_remote", "reliable")
 func _client_room_name_error(_error: String):
 	pass
 
@@ -283,5 +279,5 @@ func _client_player_receive_attack(_body_name):
 	pass
 
 @rpc("authority", "call_remote", "reliable")
-func _client_error(_error_message: String):
+func _server_to_client_error(_error_message: String):
 	pass

@@ -18,7 +18,7 @@ var activate_only_selected: bool = true
 # Disponíveis: "Server", "NetworkManager", "TestManager", "GameManager", "RoomRegistry"
 # "RoundRegistry", "ClientRegistry", "Player_node", "ObjectManager", "MapManager", "MainMenu"
 # "ItemDatabase", "InventoryMenu", "DroppedItem"
-var selected: Array = ["Server", "ClientRegistry", "TestManager", "NetworkManager", "GameManager"]
+var selected: Array = ["Server", "ClientRegistry", "TestManager", "NetworkManager", "GameManager", "MainMenu"]
 
 # Referências
 ## Manager de rede, gerencia comunicação entre servidor e clientes
