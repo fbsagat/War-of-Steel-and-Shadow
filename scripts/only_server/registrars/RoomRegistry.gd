@@ -665,25 +665,52 @@ func get_player_stats_in_room(room_id: int, peer_id: int) -> Dictionary:
 
 # ===== VALIDAÇÕES PARA INICIAR PARTIDA =====
 
-func can_start_match(room_id: int) -> bool:
+func can_start_match(room_id: int, peer_id: int) -> Array:
 	"""
 	Verifica se sala pode iniciar partida:
-	- Não está em jogo
-	- Tem jogadores suficientes
 	"""
-	if not rooms.has(room_id):
-		return false
 	
+	# Verifica se a sala existe no registro
+	if not rooms.has(room_id):
+		return [false, "A sala não existe"]
+	
+	# Se existe, pega
 	var room = rooms[room_id]
 	
+	var players_ids: Array
+	for player: Dictionary in room["players"]:
+		players_ids.append(player["id"])
+	
+	# Verificar se o requerente está na sala
+	if not peer_id in players_ids:
+		return [false, "Você não está na sala"]
+	
+	# Verifica se a sala está em jogo
 	if room["in_game"]:
-		return false
+		return [false, "A sala já está em jogo"]
 	
+	# Verifica se a sala está vazia
+	if room.is_empty():
+		return [false, "A sala está vazia"]
+	
+	# Verifica se a sala preenche o mínimo de players
 	if room["players"].size() < room["min_players"]:
-		return false
+		return [false, "A sala não preenche o mínimo de players"]
 	
-	return true
-
+	# Verifica se a sala respeira o máximo de players
+	if room["players"].size() > room["max_players"]:
+		return [false, "A sala não preenche o máximo de players"]
+	
+	# Verifica se requerente é host
+	if room["host_id"] != peer_id:
+		return [false, "Apenas o host pode iniciar a rodada"]
+	
+	# Verifica se sala já está em jogo
+	if is_room_in_game(room["id"]):
+		return [false, "A sala já está em uma rodada"]
+	
+	return [true, ""]
+	
 func get_match_requirements(room_id: int) -> Dictionary:
 	"""
 	Retorna informações sobre requisitos para iniciar partida
@@ -698,9 +725,6 @@ func get_match_requirements(room_id: int) -> Dictionary:
 		"current_players": room["players"].size(),
 		"min_players": room["min_players"],
 		"max_players": room["max_players"],
-		"can_start": can_start_match(room_id),
-		"in_game": room["in_game"],
-		"missing_players": max(0, room["min_players"] - room["players"].size())
 	}
 
 # ===== CONFIGURAÇÕES DA SALA =====

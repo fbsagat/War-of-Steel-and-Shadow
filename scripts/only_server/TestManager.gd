@@ -153,9 +153,9 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 			_log_debug("  ⚠ Falha ao adicionar jogador %s à sala" % players[i]["name"])
 	
 	# Valida requisitos para iniciar
-	if not room_registry.can_start_match(room_id):
+	if not room_registry.can_start_match(room_id, players[0]["id"]):
 		var reqs = room_registry.get_match_requirements(room_id)
-		print("[111]reqs: ", reqs)
+
 		_log_debug("❌ Requisitos não atendidos: %d/%d jogadores (mínimo: %d)" % [
 			reqs["current_players"],
 			reqs["max_players"],

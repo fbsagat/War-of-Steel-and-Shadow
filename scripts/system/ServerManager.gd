@@ -27,7 +27,7 @@ class_name ServerManager
 
 @export_category("Server Settings")
 @export var server_port: int = 7777
-@export var max_clients: int = 32
+@export var max_clients: int = 64
 @export var is_headless : bool
 @export var public_server_name: String = "Games da PQP! Diversão garantida!"
 @export var kicked_default_timer: float = 120.0 # Tempo padrão em que um cliente fica banido de uma sala
@@ -42,7 +42,7 @@ const camera_controller : String = "res://scenes/system/camera_controller.tscn"
 const server_camera : String = "res://scenes/server_scenes/server_camera.tscn"
 
 @export_category("Room Settings")
-@export var max_players_per_room: int = 12
+@export var max_players_per_room: int = 20
 @export var min_players_to_start: int = 1
 
 @export_category("Round Settings")
@@ -830,30 +830,11 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 	
 	# Valida sala
 	var room = room_registry.get_player_room(peer_id)
-	if room.is_empty():
-		_send_error_to_client(peer_id, "Você não está em nenhuma sala")
+	var response = room_registry.can_start_match(room["id"], peer_id)
+	if not response[0]:
+		_send_error_to_client(peer_id, response[1])
 		return
-	
-	# Verifica se é host
-	if room["host_id"] != peer_id:
-		_send_error_to_client(peer_id, "Apenas o host pode iniciar a rodada")
-		return
-	
-	# Valida requisitos para iniciar
-	if not room_registry.can_start_match(room["id"]):
-		var reqs = room_registry.get_match_requirements(room["id"])
-		_send_error_to_client(peer_id, "Requisitos não atendidos: %d/%d jogadores (mínimo: %d)" % [
-			reqs["current_players"],
-			reqs["max_players"],
-			reqs["min_players"]
-		])
-		return
-	
-	# Verifica se sala já está em jogo
-	if room_registry.is_room_in_game(room["id"]):
-		_send_error_to_client(peer_id, "A sala já está em uma rodada")
-		return
-	
+		
 	# LOG DO INÍCIO
 	_log_debug("========================================")
 	_log_debug("HOST INICIANDO RODADA")
@@ -867,7 +848,7 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 	_log_debug("========================================")
 	
 	# Cria rodada no RoundRegistry
-	# IMPORTANTE: Isso JÁ chama client_registry.join_round() para cada player
+	# IMPORTANTE: Isso já chama client_registry.join_round() para cada player
 	var round_data = round_registry.create_round(
 		room["id"],
 		room["name"],
