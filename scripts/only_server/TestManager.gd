@@ -152,19 +152,10 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 		if not success:
 			_log_debug("  ⚠ Falha ao adicionar jogador %s à sala" % players[i]["name"])
 	
-	# Valida requisitos para iniciar
-	if not room_registry.can_start_match(room_id, players[0]["id"]):
-		var reqs = room_registry.get_match_requirements(room_id)
-
-		_log_debug("❌ Requisitos não atendidos: %d/%d jogadores (mínimo: %d)" % [
-			reqs["current_players"],
-			reqs["max_players"],
-			reqs["min_players"]
-		])
-		return
-	
-	if room_registry.is_room_in_game(room_id):
-		_log_debug("❌ A sala já está em uma rodada")
+	# Valida requisitos para iniciar (teste de função)
+	var response = room_registry.can_start_match(room_id, players[0]["id"])
+	if not response[0]:
+		_log_debug(response[1])
 		return
 	
 	# Cria rodada no RoundRegistry
@@ -278,12 +269,12 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 	# Atualiza lista de salas para os players no menu
 	server_manager._send_rooms_list_to_all()
 	
-	_log_debug("========================================")
+	_log_debug("==============================================")
 	_log_debug("✓ PARTIDA DE TESTE INICIADA COM SUCESSO")
 	_log_debug("  Jogadores: %d" % players_qtd)
 	_log_debug("  Sala: %s (ID: %d)" % [nome_sala, room_id])
 	_log_debug("  Rodada: %d" % round_data["round_id"])
-	_log_debug("========================================")
+	_log_debug("==============================================")
 
 # ===== INSTANCIAÇÃO NO SERVIDOR =====
 
