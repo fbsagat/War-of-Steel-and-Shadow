@@ -1779,7 +1779,7 @@ func _server_trainer_repawn_player(player_id):
 
 func attack_validation(group: String, player_id: int, actual_weapon: String, body_name: int):
 	
-	if group == "player":
+	if group == "remote_player":
 		var player_uuid = client_registry.get_uuid_by_peer_id(player_id)
 		var round_ = round_registry.get_round_by_player_uuid(player_uuid)
 		var round_players = client_registry.get_players_in_round(round_["round_id"])

@@ -360,8 +360,6 @@ func send_player_animation_state(p_id: int, speed: float, attacking: bool, defen
 
 func _client_player_animation_state(p_id: int, speed: float, attacking: bool, defending: bool,
 									jumping: bool, aiming: bool, running: bool, block_attacking: bool, on_floor: bool):
-	if multiplayer.has_multiplayer_peer() and multiplayer.get_unique_id() == 1:
-		return
 	var player = game_manager.players_node.get_node_or_null(str(p_id))
 	if player and player.has_method("_client_receive_animation_state"):
 		player._client_receive_animation_state(speed, attacking, defending, jumping,
@@ -450,16 +448,13 @@ func send_player_action(p_id: int, action_type: String, item_equipado_nome, anim
 	rpc_id(1, "_server_player_action", p_id, action_type, item_equipado_nome, anim_name)
 
 func _client_player_action(p_id: int, action_type: String, item_equipado_nome, anim_name: String):
-	if multiplayer.has_multiplayer_peer() and multiplayer.get_unique_id() == 1:
-		return
 	_log_debug("⚔️ Recebendo ação: Player %d - %s" % [p_id, action_type])
 	var player = game_manager.players_node.get_node_or_null(str(p_id))
 	if player and player.has_method("_client_receive_action"):
 		player._client_receive_action(action_type, item_equipado_nome, anim_name)
 
 func _client_receive_attack(body_name):
-	if multiplayer.has_multiplayer_peer() and multiplayer.get_unique_id() == 1:
-		return
+	_log_debug("⚔️ Player %s recebendo dano" % body_name)
 	var player = game_manager.players_node.get_node_or_null(str(body_name))
 	if player and player.has_method("take_damage"):
 		player.take_damage()

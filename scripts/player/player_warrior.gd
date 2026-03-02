@@ -711,18 +711,16 @@ func _on_hitbox_body_entered(body: Node, hitbox_area: Area3D) -> void:
 	# Só o nó dos players no servidor processam hitboxes
 	if not _is_server:
 		return
-	
+
 	# Não acerta a sí próprio
 	if body.name == str(player_id):
 		return
-	
+
 	# Se for inimigo ou outro player
-	if body.is_in_group("enemy") or body.is_in_group("player") and (is_attacking or is_block_attacking):
-		
+	if body.is_in_group("enemy") or body.is_in_group("remote_player") and (is_attacking or is_block_attacking):
 		# evita bater várias vezes no mesmo alvo durante o mesmo swing
 		if body in hit_targets:
 			return
-		
 		var group: String = ""
 		# apenas inimigos
 		if body.is_in_group("enemy"):
@@ -732,9 +730,9 @@ func _on_hitbox_body_entered(body: Node, hitbox_area: Area3D) -> void:
 			_log_debug("%s foi acertado por %s" % [body.name, hitbox_area.get_parent().name])
 		
 		# apenas outros players
-		if body.is_in_group("player"):
+		if body.is_in_group("remote_player"):
 			hit_targets.append(body)
-			group = "player"
+			group = "remote_player"
 			_log_debug("%s foi acertado por %s" % [body.name, hitbox_area.get_parent().name])
 		
 		if server_manager and server_manager.has_method("attack_validation"):
