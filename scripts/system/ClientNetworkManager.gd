@@ -182,7 +182,7 @@ func leave_room():
 	_log_debug("📤 Saindo da sala")
 	rpc_id(1, "_server_leave_room")
 
-func kick_player(_selected_player_id: int):
+func kick_player_from_room(_selected_player_id: String):
 	"""Solicita kick de player da sala atual"""
 	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
@@ -378,19 +378,20 @@ func send_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, runn
 
 func _client_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
 	"""Cliente recebe estado de OUTRO jogador"""
-
-	if multiplayer.has_multiplayer_peer() and multiplayer.get_unique_id() == 1:
-		return
 	
 	# ENCONTRA O PLAYER NA CENA (nome = player_id)
 	var player = game_manager.players_node.get_node_or_null(str(p_id))
 	
+	# se não encontrar
 	if not player:
+		_log_debug("Erro! _client_player_state não encontrou nó remoto de %s" % str(p_id))
 		return
 	
 	# CHAMA FUNÇÃO NO PLAYER PARA ATUALIZAR
 	if player.has_method("_client_receive_state"):
 		player._client_receive_state(pos, rot, vel, running, jumping)
+	else:
+		_log_debug("Erro! _client_player_state não encontrou método _client_receive_state no nó remoto de %s" % str(p_id))
 
 # ===== SINCRONIZAÇÃO DE ESTADOS DE ANIMAÇÕES =====
 

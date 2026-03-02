@@ -374,7 +374,7 @@ func handle_server_response(response: Dictionary) -> void:
 
 	elif response["status"] == "reject":
 		_log_debug("Conexão rejeitada: %s" % response.get("reason",""))
-		_on_intentional_disconnect_from_server()
+		_disconnect_from_server()
 
 # ===== CALLBACKS DE CONEXÃO =====
 
@@ -447,7 +447,7 @@ func _on_server_disconnected():
 	
 	if reconnect_attempts >= MAX_RECONNECT_ATTEMPTS:
 		_log_debug("Falha ao reconectar. Voltando ao menu.")
-		_on_intentional_disconnect_from_server()
+		_disconnect_from_server()
 		return
 
 	reconnect_attempts += 1
@@ -472,8 +472,8 @@ func _try_reconnect():
 		_log_debug("Voltando para a partida")
 		main_menu_node.hide_main_menu()
 
-func _on_intentional_disconnect_from_server(notify: bool = false):
-	"""Dispara quando o cliente desconecta do servidor intencionalmente
+func _disconnect_from_server(notify: bool = false):
+	"""Dispara quando o cliente quer desconectar do servidor intencionalmente
 	Aqui o jogo deve retornar para a tela inicial, desconectado do servidor, tudo resetado e sem 
 	possibilidade de o cliente retornar ao round em que estava
 	notify = avisa o servidor.
@@ -483,6 +483,7 @@ func _on_intentional_disconnect_from_server(notify: bool = false):
 	
 	if notify:
 		_log_debug("Avisando servidor")
+		# Fazer a função
 	
 	# Iniciando reset completo
 	# Fecha conexão com o servidor
@@ -523,7 +524,7 @@ func _on_gameplay_menu_exit_game_pressed():
 
 func _on_gameplay_menu_disconnect_f_server_pressed():
 	_log_debug("_on_gameplay_menu_disconnect_f_server_pressed")
-	_on_intentional_disconnect_from_server(true)
+	_disconnect_from_server(true)
 
 func _on_gameplay_menu_give_up_game_pressed():
 	_log_debug("_on_gameplay_menu_give_up_game_pressed")
@@ -593,7 +594,7 @@ func _client_name_rejected(reason: String):
 		# Se player_name for "", é tela de welcome, se já ter algum nome definido, tela de renomeação 
 		var condition = true if player_name == "" else false
 		main_menu_node.show_name_input_menu(condition)
-		main_menu_node._show_error_(reason, main_menu_node.add_server_error_label, "Red")
+		main_menu_node._show_error_(reason, main_menu_node.name_input_error_label, "Red")
 	
 	name_rejected.emit(reason)
 
@@ -604,13 +605,14 @@ func _client_wrong_password():
 	
 	var current_menu_visible_name = main_menu_node.current_menu_visible.name
 	main_menu_node.room_list_menu.visible = true
-	main_menu_node._show_error_("Senha incorreta", main_menu_node.match_list_error_label, "Red")
 	
 	if main_menu_node and current_menu_visible_name == "RoomListMenu":
+		main_menu_node._show_error_("Senha incorreta", main_menu_node.match_list_error_label, "Red")
 		main_menu_node.show_room_list_menu(true, true)
 
 	if main_menu_node and current_menu_visible_name == "ManualRoomJoinMenu":
-		main_menu_node.show_manual_room_join_menu()
+		main_menu_node._show_error_("Senha incorreta", main_menu_node.manual_room_join_error_label, "Red")
+		main_menu_node.show_manual_room_join_menu(true)
 		
 func _client_room_name_error(error_msg : String):
 	"""Callback de quando existe um erro com o nome da sala"""
@@ -734,7 +736,7 @@ func _client_room_updated(room_data: Dictionary):
 	
 	room_updated.emit(room_data)
 
-func kick_player(_selected_player_id: int):
+func kick_player_from_room(_selected_player_id: String):
 	"""Envia pedido para expulsar um player da sala (somente para o host)"""
 	
 	# Verificação local se é o host (add redundancia)
@@ -742,14 +744,14 @@ func kick_player(_selected_player_id: int):
 	var _player_name: String
 	
 	for player in current_room["players"]:
-		if player.get("id") == _selected_player_id:
+		if player.get("uuid_base") == _selected_player_id:
 			_player_name = player["name"]
 	
 	for player in current_room["players"]:
 		if player.get("is_host", false):
 			host_id = player["id"]
-	if host_id == local_peer_id:
-		network_manager.kick_player(_selected_player_id)
+	if host_id == uuid_base:
+		network_manager.kick_player_from_room(_selected_player_id)
 		_log_debug("Pedido para expulsar player, id: %s feito ao servidor" % _selected_player_id)
 
 func _client_kicked_from_room():
@@ -777,7 +779,7 @@ func close_room():
 		_log_debug("Não está em nenhuma sala")
 		return
 	
-	if current_room["host_id"] != local_peer_id:
+	if current_room["host_id"] != uuid_base:
 		return
 	
 	_log_debug("Fechando sala: %s" % current_room["name"])
@@ -827,7 +829,7 @@ func client_update_match_settings(changed_settings: Dictionary) -> void:
 	
 	# Verificar se é host; se sim, atualizar o botão de 
 	var host_id = current_room.get("host_id", -1)
-	if host_id == cached_unique_id:
+	if host_id == uuid_base:
 		if room_settings["locked"] == true:
 			main_menu_node.room_lock_button.text = "Liberar Sala"
 			main_menu_node._show_error_("Sala trancada, ninguém entra!", main_menu_node.room_error_label, "Yellow")
@@ -843,7 +845,7 @@ func start_round(round_settings: Dictionary = {}):
 		_log_debug("Não está em nenhuma sala")
 		return
 	
-	if current_room["host_id"] != local_peer_id:
+	if current_room["host_id"] != uuid_base:
 		return
 	
 	if current_room.players.size() < configs.min_players_to_start:
@@ -897,8 +899,8 @@ func _start_round_locally(match_data: Dictionary):
 	
 	for player in match_data["players"]:
 		var is_host = " [HOST]" if player["is_host"] else ""
-		var is_me = " [GUEST]" if player["id"] == local_peer_id else ""
-		_log_debug("- %s (ID: %d)%s%s" % [player["name"], player["id"], is_host, is_me])
+		var is_me = " [GUEST]" if player["id"] == uuid_base else ""
+		_log_debug("- %s (ID: %s)%s%s" % [player["name"], player["id"], is_host, is_me])
 	
 	_log_debug("========================================")
 	
@@ -931,7 +933,7 @@ func _start_round_locally(match_data: Dictionary):
 	# Spawna todos os jogadores
 	for player_data in match_data["players"]:
 		var spawn_data = match_data["spawn_data"][player_data["id"]]
-		var is_local = player_data["id"] == local_peer_id
+		var is_local = player_data["id"] == uuid_base
 		_spawn_player(player_data, spawn_data, is_local, match_data)
 	
 	round_started.emit()
@@ -946,6 +948,7 @@ func _start_round_locally(match_data: Dictionary):
 func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bool, _match_data: Dictionary):
 	"""Spawna players para cada cliente, cada cliente recebe X execuções,
 	 a do seu jogador local e a do(s) jogador(es) remoto(s), sendo o seu = local"""
+	print("player_dataplayer_data: ", player_data)
 	# Verifica duplicação
 	var player_name_ = str(player_data["id"])
 	var camera_name = player_name_ + "_Camera"
@@ -964,7 +967,7 @@ func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bo
 	
 	# Injeta configurações
 	player_instance.name = player_name_
-	player_instance.player_id = player_data["id"]
+	player_instance.player_id = player_data["session_id"]
 	player_instance.player_name = player_data["name"]
 	
 	# Injeta dependências
@@ -977,7 +980,10 @@ func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bo
 	
 	# Inicializa jogador
 	var spawn_info = map_manager.get_spawn_data(spawn_data["spawn_index"])
-	player_instance.initialize(player_data["id"], player_data["name"], spawn_info["position"])
+	print("player_data: ", player_data)
+	# player data vem player_data: { "id": "4ec07b7bf8edf8bdd9600e7dc8a3a4a4", "name": "fbfb", "is_host": true }
+	# Verificar o que fazer pois atualmente o player_instance.initialize recebe como primeiro parametro um int
+	player_instance.initialize(player_data["session_id"], player_data["name"], spawn_info["position"])
 	player_instance.rotation = spawn_info["rotation"]
 	player_instance.setup_name_label()
 	player_instance.initializer = initializer

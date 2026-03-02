@@ -241,8 +241,7 @@ func get_nearby_items(
 	radius: float = pickup_radius,
 	_collision_mask: int = pickup_collision_mask,
 	max_results: int = max_pickup_results,
-	sort_by_distance: bool = true
-) -> Array:
+	sort_by_distance: bool = true) -> Array:
 	"""
 	Retorna itens próximos do player usando PhysicsShapeQuery
 	

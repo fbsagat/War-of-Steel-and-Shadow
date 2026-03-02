@@ -135,7 +135,7 @@ func _server_close_room():
 	pass
 
 @rpc("any_peer", "call_remote", "reliable")
-func _server_kick_player(_selected_player_id: int):
+func _server_kick_player(_selected_player_id: String):
 	pass
 
 @rpc("authority", "call_remote", "reliable")

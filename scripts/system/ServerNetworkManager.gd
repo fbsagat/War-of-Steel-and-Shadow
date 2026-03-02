@@ -143,13 +143,13 @@ func _server_leave_room():
 	var peer_id = multiplayer.get_remote_sender_id()
 	server_manager._handle_leave_room(peer_id)
 
-func _server_kick_player(_selected_player_id: int):
+func _server_kick_player(_selected_player_id: String):
 	"""Servidor recebe pedido para expulsar player de sala"""
 	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
 		return
 		
 	var peer_id = multiplayer.get_remote_sender_id()
-	server_manager._handle_kick_player(peer_id, _selected_player_id)
+	server_manager._handle_kick_player_from_room(peer_id, _selected_player_id)
 
 func _server_close_room():
 	"""Servidor recebe pedido de fechamento de sala"""
@@ -232,14 +232,7 @@ func _server_drop_player_item(player_id, obj_id):
 # ===== ATUALIZAÇÕES DE ESTADOS DE CLIENTES =====
 
 func _server_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
-	"""Servidor recebe estado do jogador e redistribui"""
-	
-	# AVISO: round_registry é necessário aqui - verifique se está disponível
-	var round_id = round_registry.get_round_by_player_id(p_id)["round_id"]
-	var players_round = round_registry.get_active_players_ids(round_id)
-	
-	if not (multiplayer.has_multiplayer_peer() and multiplayer.get_unique_id() == 1):
-		return
+	"""Servidor recebe estado do jogador e redistribui, para ele próprio e para os remotos do remetente"""
 	
 	# VALIDAÇÃO: O remetente é quem diz ser?
 	var sender_id = multiplayer.get_remote_sender_id()
@@ -248,28 +241,35 @@ func _server_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, r
 		return
 	
 	# OPCIONAL: Validação anti-cheat
-	if server_manager and server_manager.enable_anticheat:
-		if not server_manager._validate_player_movement(p_id, pos, vel):
-			push_warning("⚠️ Movimento suspeito detectado: Jogador %d" % p_id)
-			if server_manager.has_method("_kick_player"):
-				server_manager._kick_player(p_id, "Movimento suspeito detectado")
-			return
+	#if server_manager and server_manager.enable_anticheat:
+		#if not server_manager._validate_player_movement(p_id, pos, vel):
+			#push_warning("⚠️ Movimento suspeito detectado: Jogador %d" % p_id)
+			#if server_manager.has_method("_kick_player"):
+				#server_manager._kick_player(p_id, "Movimento suspeito detectado")
+			#return
 	
 	server_manager._apply_player_state_on_server(p_id, pos, rot, vel, running, jumping)
 	
-	# REDISTRIBUI PARA TODOS OS OUTROS CLIENTES
+	var sender_uuid = client_registry.get_uuid_by_peer_id(p_id)
+	var round_id = round_registry.get_round_by_player_uuid(sender_uuid)["round_id"]
+	var players_round = round_registry.get_active_players_ids(round_id)
+	
+	# Redistribui para todos os outros clientes
 	for peer_id in players_round:
-		if peer_id != p_id:
-			rpc_id(peer_id, "_client_player_state", p_id, pos, rot, vel, running, jumping)
+		# Se for outro, enviar (não precisa pra sí mesmo)
+		if peer_id != sender_uuid:
+			var session_id = client_registry.get_peer_id_by_uuid(peer_id)
+			rpc_id(session_id, "_client_player_state", p_id, pos, rot, vel, running, jumping)
 
 # ===== SINCRONIZAÇÃO DE ESTADOS DE ANIMAÇÕES =====
 
 func _server_player_animation_state(p_id: int, speed: float, attacking: bool, defending: bool,
 									jumping: bool, aiming: bool, running: bool, block_attacking: bool, on_floor: bool):
 	"""Servidor recebe estado de animação e redistribui"""
+	var player_uuid = client_registry.get_uuid_by_peer_id(p_id)
 	
 	# AVISO: round_registry é necessário aqui
-	var round_id = round_registry.get_round_by_player_id(p_id)["round_id"]
+	var round_id = round_registry.get_round_by_player_uuid(player_uuid)["round_id"]
 	var players_round = round_registry.get_active_players_ids(round_id)
 	
 	if not (multiplayer.has_multiplayer_peer() and multiplayer.get_unique_id() == 1):
@@ -282,8 +282,9 @@ func _server_player_animation_state(p_id: int, speed: float, attacking: bool, de
 	
 	# Propaga para todos os outros clientes
 	for peer_id in players_round:
-		if peer_id != p_id:
-			rpc_id(peer_id, "_client_player_animation_state", p_id, speed, attacking, 
+		if peer_id != player_uuid:
+			var session_id = client_registry.get_peer_id_by_uuid(peer_id)
+			rpc_id(session_id, "_client_player_animation_state", int(p_id), speed, attacking, 
 				   defending, jumping, aiming, running, block_attacking, on_floor)
 
 # ===== SINCRONIZAÇÃO DE OBJETOS =====

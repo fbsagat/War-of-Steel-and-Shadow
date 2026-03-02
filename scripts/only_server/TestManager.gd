@@ -104,23 +104,25 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 	var players: Array = []
 	for i in range(num_players):
 		var peer_id = connected_peers[i]
+		var _uuid_base = client_registry.get_uuid_by_peer_id(peer_id)
 		
 		# Verifica se peer já está registrado
-		var player_data = client_registry.get_player(peer_id)
+		var player_data = client_registry.get_player(_uuid_base)
 			
 		# Registra com nome padrão
 		var player_name = "TestPlayer%d - %d" % [i + 1, peer_id]
-		var success = client_registry.register_player_name(peer_id, player_name)
+		var success = client_registry.register_player_name(_uuid_base, player_name)
 
 		if not success:
-			_log_debug("❌ Falha ao registrar jogador %d" % peer_id)
+			_log_debug("❌ Falha ao registrar jogador %d" % _uuid_base)
 			continue
 		
-		player_data = client_registry.get_player(peer_id)
+		player_data = client_registry.get_player(_uuid_base)
 		
 		# Adiciona à lista de jogadores
 		players.append({
-			"id": peer_id,
+			"peer_id": peer_id,
+			"uuid_base": _uuid_base,
 			"name": player_data["name"],
 			"is_host": (i == 0)  # Primeiro é o host
 		})
@@ -135,7 +137,7 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 	var room_data = room_registry.create_room(
 		nome_sala,
 		"",  # Sem senha
-		players[0]["id"],  # Host é o primeiro jogador
+		players[0]["uuid_base"],  # Host é o primeiro jogador
 		server_manager.min_players_to_start,
 		server_manager.max_players_per_room
 	)
@@ -148,12 +150,12 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 	
 	# Adiciona outros jogadores à sala (host já foi adicionado)
 	for i in range(1, players.size()):
-		var success = room_registry.add_player_to_room(room_id, players[i]["id"])
+		var success = room_registry.add_player_to_room(room_id, players[i]["uuid_base"])
 		if not success:
 			_log_debug("  ⚠ Falha ao adicionar jogador %s à sala" % players[i]["name"])
 	
 	# Valida requisitos para iniciar (teste de função)
-	var response = room_registry.can_start_match(room_id, players[0]["id"])
+	var response = room_registry.can_start_match(room_id, players[0]["uuid_base"])
 	if not response[0]:
 		_log_debug(response[1])
 		return
@@ -241,8 +243,9 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 	_log_debug("  ✓ Enviando dados para clientes...")
 	
 	# Envia comando de início para todos os clientes
+	print("[222]: match_data players: ", match_data["players"])
 	for room_player in match_data["players"]:
-		network_manager.rpc_id(room_player["id"], "_client_round_started", match_data)
+		network_manager.rpc_id(room_player["session_id"], "_client_round_started", match_data)
 
 	# Instancia rodada no servidor
 	await _server_instantiate_round(match_data, players_node, round_node)
@@ -363,7 +366,8 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 		push_error("TestManager: player_data inválido: faltam 'id' ou 'name'")
 		return
 	
-	var p_id = player_data["id"]
+	var p_uuid = player_data["id"]
+	var p_session_id = player_data["session_id"]
 	var p_name = player_data["name"]
 	
 	# Carrega e instancia a cena do player
@@ -378,8 +382,8 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 		return
 	
 	# Configura identificação básica
-	player_instance.name = str(p_id)
-	player_instance.player_id = p_id
+	player_instance.name = str(p_session_id)
+	player_instance.player_id = p_session_id
 	player_instance.player_name = p_name
 	player_instance._is_server = true
 	player_instance.add_to_group("remote_player")
@@ -408,20 +412,20 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 	
 	# VALIDA QUE ESTÁ NA ÁRVORE
 	if not player_instance.is_inside_tree():
-		push_error("TestManager CRÍTICO: Player %d não foi adicionado à árvore!" % p_id)
+		push_error("TestManager CRÍTICO: Player %d não foi adicionado à árvore!" % p_uuid)
 		player_instance.queue_free()
 		return
 	
 	# REGISTRA NO ClientRegistry
-	client_registry.register_player_node(p_id, player_instance)
+	client_registry.register_player_node(p_uuid, player_instance)
 	
 	# Debug: Verifica registro
 	if debug_mode:
-		var registered_path = client_registry.get_player_node_path(p_id)
+		var registered_path = client_registry.get_player_node_path(p_uuid)
 		if registered_path.is_empty():
-			push_warning("TestManager: node_path vazio após registro (player %d)" % p_id)
+			push_warning("TestManager: node_path vazio após registro (player %d)" % p_uuid)
 		else:
-			_log_debug("Player node registrado: %d → %s" % [p_id, registered_path])
+			_log_debug("Player node registrado: %s → %s" % [p_uuid, registered_path])
 	
 	# Calcula posição de spawn
 	var spawn_pos = Vector3.ZERO
@@ -440,24 +444,25 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 	
 	# Inicializa o player
 	if player_instance.has_method("initialize"):
-		player_instance.initialize(p_id, p_name, spawn_pos)
+		player_instance.initialize(p_session_id, p_name, spawn_pos)
 	
 	# Registra no RoundRegistry
-	round_registry.register_spawned_player(round_id, p_id, player_instance)
+	round_registry.register_spawned_player(round_id, p_uuid, player_instance)
 	
 	# Inicializa estado de validação no ServerManager
 	if server_manager.player_states != null:
-		server_manager.player_states[p_id] = {
+		server_manager.player_states[p_uuid] = {
 			"pos": spawn_pos,
 			"vel": Vector3.ZERO,
 			"rot": Vector3.ZERO,
 			"timestamp": Time.get_ticks_msec()
 		}
 	
-	_log_debug("✓ Player spawnado: %s (ID: %d)" % [p_name, p_id])
+	_log_debug("✓ Player spawnado: %s (ID: %s)" % [p_name, p_uuid])
 
 func on_spawn_requested(_character) -> void:
-	var _round_id = client_registry.get_player_round(_character.player_id)
+	var uuid_base = client_registry.get_uuid_by_peer_id(_character.player_id)
+	var _round_id = client_registry.get_player_round(uuid_base)
 	var _round = round_registry.get_round(_round_id)
 	var objects_node = _round["round_node"].get_node_or_null("Objects")
 	var potions = ["potion_glass_heal", "potion_glass_stamina", "potion_glass_poison"]

@@ -191,7 +191,8 @@ func collect(collector_id: int) -> bool:
 		return false
 	
 	# Validação de distância
-	var player_node = server_manager.client_registry.get_player_node(collector_id)
+	var player_uuid = server_manager.client_registry.get_uuid_by_peer_id(collector_id)
+	var player_node = server_manager.client_registry.get_player_node(player_uuid)
 	if player_node:
 		var distance = global_position.distance_to(player_node.global_position)
 		if distance > collection_radius * 1.5:

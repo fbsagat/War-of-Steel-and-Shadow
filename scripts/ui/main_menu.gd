@@ -329,7 +329,11 @@ func _setup_element_references():
 	
 	# Entrada manual de sala
 	manual_room_name_input = manual_room_join_menu.find_child("ManualRoomNameInput", true, false)
+	if manual_room_name_input:
+		manual_room_name_input.text_submitted.connect(_on_manual_room_join_confirm_pressed)
 	manual_room_password_input = manual_room_join_menu.find_child("ManualRoomPasswordInput", true, false)
+	if manual_room_password_input:
+		manual_room_password_input.text_submitted.connect(_on_manual_room_join_confirm_pressed)
 	manual_room_join_error_label = manual_room_join_menu.find_child("ErrorLabel", true, false)
 	
 	# Entrada manual de servidor
@@ -640,7 +644,7 @@ func show_name_input_menu(welcome: bool):
 	if name_input_error_label:
 		name_input_error_label.text = ""
 
-func show_room_list_menu(error_visible: bool = false, match_password_visible: bool = false):
+func show_room_list_menu(_error_visible: bool = false, match_password_visible: bool = false):
 	server_name_label.text = actual_server_name
 	current_menu_visible = room_list_menu
 	game_manager.request_rooms_list()
@@ -670,10 +674,8 @@ func show_room_list_menu(error_visible: bool = false, match_password_visible: bo
 			match_password_container.visible = false
 	if match_password_input:
 		match_password_input.text = ""
-	
-	if error_visible:
-		if match_list_error_label:
-			match_list_join_button.disabled = false
+	if _error_visible and match_list_join_button:
+		match_list_join_button.disabled = false
 	else:
 		if match_list_error_label:
 			match_list_error_label.text = ""
@@ -681,7 +683,7 @@ func show_room_list_menu(error_visible: bool = false, match_password_visible: bo
 	if current_matches.is_empty():
 		_show_error_("Nenhuma partida disponível no momento", match_list_error_label, "Yellow")
 	else:
-		if current_matches.size() >= 5:
+		if current_matches.size() >= 1:
 			manual_join_button.disabled = false
 		else:
 			manual_join_button.disabled = true
@@ -692,7 +694,7 @@ func show_room_return_menu(room_name: String):
 	current_menu_visible = room_return_menu
 	room_return_room_label.text = room_name
 	
-func show_manual_room_join_menu():
+func show_manual_room_join_menu(show_error: bool = false):
 	hide_all_menus()
 	manual_room_join_menu.visible = true
 	current_menu_visible = manual_room_join_menu
@@ -702,7 +704,7 @@ func show_manual_room_join_menu():
 		manual_room_name_input.grab_focus()
 	if manual_room_password_input:
 		manual_room_password_input.text = ""
-	if manual_room_join_error_label:
+	if manual_room_join_error_label and not show_error:
 		manual_room_join_error_label.text = ""
 
 func show_manual_server_join_menu():
@@ -886,7 +888,7 @@ func _on_match_list_back_pressed():
 	show_main_menu()
 
 func _on_exit_server_pressed():
-	game_manager._on_intentional_disconnect_from_server()
+	game_manager._disconnect_from_server()
 
 func _on_match_list_join_pressed():
 
@@ -954,8 +956,9 @@ func populate_room_list(matches: Array):
 		text += " (%d/%d)" % [players, max_players]
 		match_list.add_item(text)
 		
-func _on_manual_room_join_confirm_pressed():
-	if not manual_room_name_input:
+func _on_manual_room_join_confirm_pressed(_input: String = ""):
+	# Valida se não tem nada no campo e se está na tela de estiver no menu de nme input
+	if not manual_room_name_input and current_menu_visible != manual_room_name_input:
 		return
 	
 	var room_name = manual_room_name_input.text.strip_edges()
@@ -975,6 +978,9 @@ func _on_manual_room_join_confirm_pressed():
 	for room in success[1]:
 		if room.get("name", "") == room_name:
 			found = true
+		if room.get("locked", "") == true:
+			_show_error_("A sala foi trancada pelo host", manual_room_join_error_label, "Red")
+			return
 	
 	if not found:
 		_show_error_("Sala não encontrada", manual_room_join_error_label, "Red")
@@ -1179,7 +1185,7 @@ func _on_connecting_menu_cancel_pressed():
 	show_server_list_menu()
 	
 func _on_loading_cancel_pressed():
-	game_manager._on_intentional_disconnect_from_server()
+	game_manager._disconnect_from_server()
 	show_server_list_menu()
 	
 func save_options():
@@ -1484,10 +1490,10 @@ func _on_player_list_player_selected(index: int) -> void:
 		kick_player_button.disabled = is_host_selected
 
 func _on_room_kick_player_pressed():
-	if selected_player_id <= 0:
+	if selected_player_id <= "":
 		_show_error_("Nenhum player selecionado", room_error_label, "Red")
 		return
-	game_manager.kick_player(selected_player_id)
+	game_manager.kick_player_from_room(selected_player_id)
 
 # ===== ATUALIZAÇÃO DO MENU DE SALA =====
 
@@ -1534,9 +1540,8 @@ func _update_room_display(room_data: Dictionary):
 		room_status_label.text = "Jogadores: %d/%d" % [_player_count, max_players]
 	
 	# 🔑 Detecta se O JOGADOR LOCAL é o host
-	var meu_peer_id = multiplayer.get_unique_id()
 	var host_id = room_data.get("host_id", -1)
-	var is_host = (meu_peer_id == host_id)
+	var is_host = (game_manager.uuid_base == host_id)
 	
 	# Controla visibilidade dos botões baseado se é host
 	if room_start_button:
