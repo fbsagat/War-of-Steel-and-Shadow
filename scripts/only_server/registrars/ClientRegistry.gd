@@ -447,7 +447,7 @@ func add_item_to_inventory(round_id: int, uuid_base: String, item_id: String, ob
 	_log_debug("✓ Item adicionado: %s (ID: %s, Object: %d) → %s (Rodada %d)" % [item_name, item_id, object_id, uuid_base, round_id])
 
 	var peer_id = get_peer_id_by_uuid(uuid_base)
-	network_manager.rpc_id(peer_id, "local_add_item_to_inventory", item_id, object_id)
+	network_manager.rpc_id(peer_id, "_client_add_item_to_inventory", item_id, object_id)
 	return true
 
 func remove_item_from_inventory(round_id: int, uuid_base: String, object_id: int) -> bool:
@@ -473,7 +473,7 @@ func remove_item_from_inventory(round_id: int, uuid_base: String, object_id: int
 	_log_debug("✓ Item removido: object_id=%d (%s) de %s (Rodada %d)" % [object_id, item_name, uuid_base, round_id])
 
 	var peer_id = get_peer_id_by_uuid(uuid_base)
-	network_manager.rpc_id(peer_id, "local_remove_item_from_inventory", object_id)
+	network_manager.rpc_id(peer_id, "_client_remove_item_from_inventory", object_id)
 	return true
 
 func equip_item(round_id: int, uuid_base: String, item_name: String, object_id, slot: String = "") -> bool:
@@ -519,7 +519,7 @@ func equip_item(round_id: int, uuid_base: String, item_name: String, object_id, 
 	_log_debug("✓ Item equipado: %s em %s (%s, Rodada %d)" % [item_name, slot, uuid_base, round_id])
 
 	var peer_id = get_peer_id_by_uuid(uuid_base)
-	network_manager.rpc_id(peer_id, "local_equip_item", item_name, object_id, slot)
+	network_manager.rpc_id(peer_id, "_client_equip_item", item_name, object_id, slot)
 	return true
 
 func unequip_item(round_id: int, uuid_base: String, slot: String, verify: bool = true) -> bool:
@@ -549,7 +549,7 @@ func unequip_item(round_id: int, uuid_base: String, slot: String, verify: bool =
 	_log_debug("✓ Item desequipado: %s de %s (%s, Rodada %d)" % [item_name, slot, uuid_base, round_id])
 
 	var peer_id = get_peer_id_by_uuid(uuid_base)
-	network_manager.rpc_id(peer_id, "local_unequip_item", item_data["item_id"], slot, verify)
+	network_manager.rpc_id(peer_id, "_client_unequip_item", item_data["item_id"], slot, verify)
 	return true
 
 func swap_equipped_item(round_id: int, uuid_base: String, new_item_name: String, inventory_item: Dictionary, equiped_item_id: int, target_slot: String) -> bool:
@@ -589,7 +589,7 @@ func swap_equipped_item(round_id: int, uuid_base: String, new_item_name: String,
 	])
 
 	var peer_id = get_peer_id_by_uuid(uuid_base)
-	network_manager.rpc_id(peer_id, "local_swap_equipped_item", new_item_name, inventory_item, equiped_item_id, target_slot)
+	network_manager.rpc_id(peer_id, "_client_swap_equipped_item", new_item_name, inventory_item, equiped_item_id, target_slot)
 	return true
 
 func clear_player_inventory(round_id: int, uuid_base: String):

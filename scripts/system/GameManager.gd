@@ -532,7 +532,7 @@ func _on_gameplay_menu_give_up_game_pressed():
 # ===== ATUALIZAÇÃO DE CONFIGURAÇÕES =====
 
 func update_client_info(info: Dictionary):
-	_log_debug("Atualizando configurações do servidor:")
+	_log_debug("Atualizando configurações do servidor: %s" % info)
 	
 	for key in info.keys():
 		var new_value = info[key]
@@ -651,11 +651,11 @@ func _client_receive_room_return_request(_room_name: String):
 
 func _request_return_to_room():
 	"""Cliente envia resposta dizendo que quer voltar à partida em que estava"""
-	network_manager._request_return_exit(true)
+	network_manager.request_return_exit(true)
 	
 func _request_exit_from_room():
 	"""Cliente envia resposta dizendo que quer abandonar a partida em que estava"""
-	network_manager._request_return_exit(false)
+	network_manager.request_return_exit(false)
 
 func all_client_receive_rooms_list(rooms: Array):
 	"""Callback quando recebe atualização de lista de salas por prte do servidor(não requisitado)"""
@@ -831,7 +831,7 @@ func request_update_settings(new_values: Dictionary) -> void:
 		return
 	
 	# Envia pedido ao servidor (ID 1 = servidor dedicado)
-	network_manager.server_request_update_room_settings(changed_settings)
+	network_manager.request_update_room_settings(changed_settings)
 
 func client_update_match_settings(changed_settings: Dictionary) -> void:
 	"""
@@ -962,7 +962,6 @@ func _start_round_locally(match_data: Dictionary):
 func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bool, _match_data: Dictionary):
 	"""Spawna players para cada cliente, cada cliente recebe X execuções,
 	 a do seu jogador local e a do(s) jogador(es) remoto(s), sendo o seu = local"""
-	print("player_dataplayer_data: ", player_data)
 	# Verifica duplicação
 	var player_name_ = str(player_data["id"])
 	var camera_name = player_name_ + "_Camera"
@@ -994,9 +993,6 @@ func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bo
 	
 	# Inicializa jogador
 	var spawn_info = map_manager.get_spawn_data(spawn_data["spawn_index"])
-	print("player_data: ", player_data)
-	# player data vem player_data: { "id": "4ec07b7bf8edf8bdd9600e7dc8a3a4a4", "name": "fbfb", "is_host": true }
-	# Verificar o que fazer pois atualmente o player_instance.initialize recebe como primeiro parametro um int
 	player_instance.initialize(player_data["session_id"], player_data["name"], spawn_info["position"])
 	player_instance.rotation = spawn_info["rotation"]
 	player_instance.setup_name_label()
@@ -1142,6 +1138,7 @@ func _show_error(message: String, color= "Red"):
 		elif main_menu_node.room_menu and main_menu_node.room_menu.visible:
 			main_menu_node._show_error_(message, main_menu_node.room_error_label, color)
 		elif main_menu_node.room_list_menu and main_menu_node.room_list_menu.visible:
+			main_menu_node.show_room_list_menu(true, true)
 			main_menu_node._show_error_(message, main_menu_node.match_list_error_label, color)
 		elif main_menu_node.manual_room_join_menu and main_menu_node.manual_room_join_menu.visible:
 			main_menu_node._show_error_(message, main_menu_node.manual_room_join_error_label, color)

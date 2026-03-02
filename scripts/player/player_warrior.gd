@@ -1331,7 +1331,7 @@ func handle_test_drop_item_call() -> void:
 		return
 		
 	if network_manager and network_manager.is_connected:
-		network_manager.handle_test_drop_item_call(player_id)
+		network_manager.request_trainer_drop_item(player_id)
 
 # Ações do player (Respawnar novamente)
 func handle_test_repawn_player_call():
@@ -1339,7 +1339,7 @@ func handle_test_repawn_player_call():
 		return
 	
 	if network_manager and network_manager.is_connected:
-		network_manager.handle_test_repawn_player_call(player_id)
+		network_manager.request_trainer_respawn_player(player_id)
 	
 # Executa quando o player equipa algum item / muda visual do modelo
 func apply_visual_equip_on_player_node(item_mapped_id, unnequip = false, from_inv_men = false):

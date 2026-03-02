@@ -197,7 +197,7 @@ func _send_spawn_to_clients(round_id: int, object_id: int, item_name: String, po
 			continue
 		
 		# ✅ Envia RPC individual via NetworkManager
-		network_manager._rpc_receive_spawn_on_clients.rpc_id(
+		network_manager._client_spawn_item.rpc_id(
 			player_id,
 			object_id,
 			round_id,
@@ -349,7 +349,7 @@ func _send_despawn_to_clients(round_id: int, object_id: int):
 			continue
 		
 		# ✅ Envia RPC individual
-		network_manager._rpc_client_despawn_item.rpc_id(player_id, object_id, round_id)
+		network_manager._client_despawn_item.rpc_id(player_id, object_id, round_id)
 
 func _is_peer_connected(peer_id: int) -> bool:
 	"""Verifica se um peer está conectado"""

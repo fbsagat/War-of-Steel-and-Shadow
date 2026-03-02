@@ -672,6 +672,7 @@ func show_room_list_menu(_error_visible: bool = false, match_password_visible: b
 	else:
 		if match_password_container:
 			match_password_container.visible = false
+			
 	if match_password_input:
 		match_password_input.text = ""
 	if _error_visible and match_list_join_button:
