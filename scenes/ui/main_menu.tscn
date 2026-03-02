@@ -648,7 +648,6 @@ text = "Expulsar jogador
 "
 
 [node name="RoomReturnMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=1882250171]
-visible = false
 layout_mode = 0
 offset_left = 300.0
 offset_top = 250.0
@@ -671,11 +670,14 @@ alignment = 1
 
 [node name="RoomReturnLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/RoomReturnMenu/VBoxContainer" unique_id=179588088]
 layout_mode = 2
-text = "Você ainda está em uma partida"
+text = "Você ainda está em uma sala"
 horizontal_alignment = 1
 
 [node name="RoomName" type="Label" parent="CanvasLayer/CenterContainer/Control/RoomReturnMenu/VBoxContainer" unique_id=67493652]
 layout_mode = 2
+theme_override_colors/font_color = Color(0.8249483, 0.60931164, 7.70092e-07, 1)
+theme_override_font_sizes/font_size = 20
+text = "Nome da sala"
 horizontal_alignment = 1
 
 [node name="RoomReturnLabel2" type="Label" parent="CanvasLayer/CenterContainer/Control/RoomReturnMenu/VBoxContainer" unique_id=512385289]
@@ -707,6 +709,7 @@ theme_override_colors/font_color = Color(0.92, 0, 0, 1)
 text = "Abandonar de vez"
 
 [node name="ManualServerJoinMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=720256835]
+visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0

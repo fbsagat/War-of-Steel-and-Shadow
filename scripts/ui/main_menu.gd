@@ -377,7 +377,7 @@ func _setup_element_references():
 	exit_button = exit_confirm_menu.find_child("ExitButton", true, false)
 	
 	# Menu de retorna à partida
-	room_return_room_label = exit_confirm_menu.find_child("RoomName", true, false)
+	room_return_room_label = room_return_menu.find_child("RoomName", true, false)
 
 func _connect_button_signals():
 	# Menu principal
@@ -647,7 +647,7 @@ func show_name_input_menu(welcome: bool):
 func show_room_list_menu(_error_visible: bool = false, match_password_visible: bool = false):
 	server_name_label.text = actual_server_name
 	current_menu_visible = room_list_menu
-	game_manager.request_rooms_list()
+	game_manager._request_rooms_list()
 	
 	var success : Array = await game_manager.rooms_list_received
 	if not success[0]:
@@ -877,12 +877,14 @@ func _on_room_return_menu_back_pressed():
 
 func _on_room_return_menu_continue_pressed():
 	"""Cliente sinalizou que quer retornar à partida em que estava (personagem aguardando reconexão)"""
-	pass
+	if current_menu_visible == room_return_menu:
+		game_manager._request_return_to_room()
 	
 func _on_room_return_menu_exit_pressed():
 	"""Cliente sinalizou que não quer mais retornar à partida em que estava (personagem sai da 
-	partida pra sempre/cliente não encontra mais sala disponível para ele)"""
-	pass
+	partida pra sempre/cliente não encontra mais a sala disponível para ele)"""
+	if current_menu_visible == room_return_menu:
+		game_manager._request_exit_from_room()
 
 func _on_match_list_back_pressed():
 	show_main_menu()
@@ -968,7 +970,7 @@ func _on_manual_room_join_confirm_pressed(_input: String = ""):
 		_show_error_("Nome da sala não pode estar vazio", manual_room_join_error_label, "Red")
 		return
 	
-	game_manager.request_rooms_list()
+	game_manager._request_rooms_list()
 	var success : Array = await game_manager.rooms_list_received
 	if not success[0]:
 		_show_error_("Erro ao buscar salas", manual_room_join_error_label, "Red")

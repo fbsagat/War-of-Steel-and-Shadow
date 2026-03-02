@@ -97,11 +97,26 @@ func request_rooms_list():
 	_log_debug("📤 Solicitando lista de salas")
 	rpc_id(1, "_server_request_rooms_list")
 
+func _request_return_exit(_chosen: bool):
+	"""Cliente envia resposta dizendo que quer voltar ou abandonar partida em que estava
+	true: quer voltar / false: quer abandonar"""
+	if not is_connected_:
+		_log_debug("❌ Erro: Não conectado ao servidor")
+		return
+	_log_debug("Enviando resposta de retorno à sala/partida/abandono")
+	rpc_id(1, "_server_request_return_exit")
+
 func _client_receive_rooms_list(rooms: Array):
 	"""Cliente recebe lista de salas"""
 	
 	_log_debug("📥 Lista de salas recebida: %d salas" % rooms.size())
 	game_manager._client_receive_rooms_list(rooms)
+
+func _client_receive_room_return_request(_room_name: String):
+	"""Cliente recebe requisição do servidor para retornar à sala onde estava"""
+	
+	_log_debug("Recebendo requisição do servidor para retornar à sala onde estava: %s" % _room_name)
+	game_manager._client_receive_room_return_request(_room_name)
 
 func all_client_receive_rooms_list(rooms: Array):
 	"""Cliente recebe atualização de lista de salas"""

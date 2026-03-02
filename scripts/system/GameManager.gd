@@ -472,7 +472,7 @@ func _try_reconnect():
 		_log_debug("Voltando para a partida")
 		main_menu_node.hide_main_menu()
 
-func _disconnect_from_server(notify: bool = false):
+func _disconnect_from_server(notify_server: bool = false):
 	"""Dispara quando o cliente quer desconectar do servidor intencionalmente
 	Aqui o jogo deve retornar para a tela inicial, desconectado do servidor, tudo resetado e sem 
 	possibilidade de o cliente retornar ao round em que estava
@@ -481,7 +481,7 @@ func _disconnect_from_server(notify: bool = false):
 	
 	_log_debug("Cliente desconectado intencionalmente do servidor, resetando estado do cliente e voltando ao menu principal")
 	
-	if notify:
+	if notify_server:
 		_log_debug("Avisando servidor")
 		# Fazer a função
 	
@@ -627,7 +627,7 @@ func _client_room_not_found():
 		main_menu_node.match_password_container.visible = true
 		main_menu_node._show_error_("Sala não encontrada", main_menu_node.match_list_error_label, "Red")
 
-func request_rooms_list():
+func _request_rooms_list():
 	_log_debug("📤 Solicitando lista de salas")
 	
 	# Cancelar pedido se não ter nome do player
@@ -642,6 +642,20 @@ func request_rooms_list():
 func _client_receive_rooms_list(rooms: Array):
 	"""Callback quando recebe lista de salas, requisitado pelo cliente"""
 	rooms_list_received.emit(true, rooms)
+
+func _client_receive_room_return_request(_room_name: String):
+	"""Cliente recebe requisição do servidor para retornar à sala onde estava ou abandonar"""
+	_log_debug("Recebendo requisição do servidor para retornar à sala onde estava: %s" % _room_name)
+	if main_menu_node:
+			main_menu_node.show_room_return_menu(_room_name)
+
+func _request_return_to_room():
+	"""Cliente envia resposta dizendo que quer voltar à partida em que estava"""
+	network_manager._request_return_exit(true)
+	
+func _request_exit_from_room():
+	"""Cliente envia resposta dizendo que quer abandonar a partida em que estava"""
+	network_manager._request_return_exit(false)
 
 func all_client_receive_rooms_list(rooms: Array):
 	"""Callback quando recebe atualização de lista de salas por prte do servidor(não requisitado)"""

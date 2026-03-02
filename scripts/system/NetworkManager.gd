@@ -74,8 +74,16 @@ func _client_name_rejected(_reason: String):
 func _server_request_rooms_list():
 	pass
 
+@rpc("any_peer", "call_remote", "reliable")
+func _server_request_return_exit(_chosen: bool):
+	pass
+
 @rpc("authority", "call_remote", "reliable")
 func _client_receive_rooms_list(_rooms: Array):
+	pass
+
+@rpc("authority", "call_remote", "reliable")
+func _client_receive_room_return_request(_room_name: String):
 	pass
 
 @rpc("authority", "call_remote", "reliable")

@@ -101,6 +101,10 @@ func _server_request_rooms_list():
 	var peer_id = multiplayer.get_remote_sender_id()
 	server_manager._handle_request_rooms_list(peer_id)
 
+func _server_request_return_exit(_chosen: bool):
+	"""Servidor recebe resposta de cliente sobre voltar ou abandonar partida em que estava
+	true: quer voltar / false: quer abandonar"""
+
 func _server_create_room(room_name: String, password: String):
 	"""Servidor recebe pedido de criação de sala"""
 	

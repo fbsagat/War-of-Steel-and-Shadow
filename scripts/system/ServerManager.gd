@@ -488,11 +488,24 @@ func _handle_request_rooms_list(peer_id: int):
 		_send_error_to_client(peer_id, "Jogador não registrado")
 		return
 	
-	# Busca salas disponíveis (fora de jogo)
-	var available_rooms = room_registry.get_rooms_in_lobby_clean_to_menu()
-	_log_debug("Enviando %d salas para o cliente, qtd: " % available_rooms.size())
-	
-	network_manager.rpc_id(peer_id, "_client_receive_rooms_list", available_rooms)
+	# Verificar se jogador está em uma sala
+	if client_registry.in_room(player_uuid):
+		# Se estiver em uma sala, perguntar se quer retornar para ela
+		var room_id = client_registry.get_player_room(player_uuid)
+		var room = room_registry.get_room(room_id)
+		network_manager.rpc_id(peer_id, "_client_receive_room_return_request", room["name"])
+	else:
+		# Se não estiver, enviar lista de salas para ele escolher
+		# Busca salas disponíveis (fora de jogo)
+		var available_rooms = room_registry.get_rooms_in_lobby_clean_to_menu()
+		_log_debug("Enviando %d salas para o cliente, qtd: " % available_rooms.size())
+		network_manager.rpc_id(peer_id, "_client_receive_rooms_list", available_rooms)
+		
+	# Depois: Se ele clicar em retornar, se estiver em uma round em andamento, retornar para o round, se
+	# não estiver ou round não está mais em andamento, retornar para a sala apenas (verificar no momento).
+	# Se ele clicar em 'sair de vez': Retirar (descarregar nós e mudar estados) o jogador da 
+	# sala/partida(no servidor e cliente(caso esteja) e enviar normalmente a lista de salas
+	# pra ele escolher.
 
 func _send_rooms_list_to_all():
 	"""
