@@ -243,7 +243,6 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 	_log_debug("  ✓ Enviando dados para clientes...")
 	
 	# Envia comando de início para todos os clientes
-	print("[222]: match_data players: ", match_data["players"])
 	for room_player in match_data["players"]:
 		network_manager.rpc_id(room_player["session_id"], "_client_round_started", match_data)
 

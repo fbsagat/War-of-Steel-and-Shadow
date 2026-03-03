@@ -738,9 +738,8 @@ func _on_hitbox_body_entered(body: Node, hitbox_area: Area3D) -> void:
 		if server_manager and server_manager.has_method("attack_validation"):
 			server_manager.attack_validation(group, player_id, actual_weapon.name, int(body.name))
 
-@rpc("authority", "call_remote", "unreliable")
 func take_damage():
-	"""Jogador local ou remoto recebe dano de golpe"""
+	"""Jogador local ou remoto recebe dano de golpe, animção, sons e etc"""
 	
 	# Animação de hit
 	var random_hit = ["parameters/Hit_B/request", "parameters/Hit_A/request"].pick_random()
