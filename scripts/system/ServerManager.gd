@@ -1431,7 +1431,7 @@ func _server_validate_equip_item(requesting_player_id: int, object_id: int, _tar
 	for peer in round_["players"]:
 		var session_id = client_registry.get_peer_id_by_uuid(peer["id"])
 		if _is_peer_connected(session_id):
-			network_manager.rpc_id(session_id, "server_apply_equiped_item", requesting_player_id, item_id, false, true)
+			network_manager.rpc_id(session_id, "_client_apply_equip", requesting_player_id, item_id, false, true)
 	
 	# Aplica visual tbm na cena do servidor
 	var player_node = players_node.get_node_or_null(str(requesting_player_id))
@@ -1472,7 +1472,7 @@ func _server_validate_unequip_item(requesting_player_id: int, slot_type: String)
 	for peer in round_["players"]:
 		var player_session_id = client_registry.get_peer_id_by_uuid(peer["id"])
 		if _is_peer_connected(player_session_id):
-			network_manager.rpc_id(player_session_id, "server_apply_equiped_item", requesting_player_id, int(item_id), true, true)
+			network_manager.rpc_id(player_session_id, "_client_apply_equip", requesting_player_id, int(item_id), true, true)
 	
 	# Aplica na cena do servidor (atualizar visual)
 	var player_node = players_node.get_node_or_null(str(requesting_player_id))
@@ -1570,7 +1570,7 @@ func _server_validate_swap_items(dragged_item_id: String, target_item_id: String
 		player_node.execute_item_swap()
 		
 	# Clientes:
-	# server_apply_equiped_item executa ambas: apply_visual_equip_on_player_node e execute_item_swap
+	# _client_apply_equip executa ambas: apply_visual_equip_on_player_node e execute_item_swap
 	for peer in round_data["players"]:
 		var player_session_id = client_registry.get_peer_id_by_uuid(peer["id"])
 		if _is_peer_connected(player_session_id):
@@ -1773,7 +1773,7 @@ func _server_trainer_repawn_player(player_id):
 	for peer in round_["players"]:
 		var player_session_id = client_registry.get_peer_id_by_uuid(peer["id"])
 		if _is_peer_connected(player_session_id):
-			network_manager.rpc_id(player_session_id, "server_apply_repawn_player", player_id, map_manager.spawn_center)
+			network_manager.rpc_id(player_session_id, "_client_apply_respawn", player_id, map_manager.spawn_center)
 		
 # ===== VALIDAÇÕES DE AÇÕES DO PLAYER =====
 
