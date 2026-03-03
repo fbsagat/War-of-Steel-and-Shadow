@@ -51,7 +51,7 @@ var initializer = null
 # ===== VARIÁVEIS INTERNAS =====
 
 ## Detecta se está rodando como servidor dedicado
-var _is_server: bool = false
+var is_server: bool = false
 
 # CLASSE ITEMDATA
 
@@ -434,15 +434,10 @@ func _ready():
 	# Carrega database automaticamente se configurado
 	if auto_load_on_ready:
 		load_database()
-	
-	_log_debug("▶️ ItemDatabase inicializado com sucesso!")
 
 ## Carrega o database do arquivo JSON
 func load_database() -> bool:
 	# Detecta se é servidor
-	var args = OS.get_cmdline_args()
-	_is_server = "--server" in args
-	
 	var start_time = Time.get_ticks_msec()
 	
 	if not _load_json_data():
@@ -455,6 +450,7 @@ func load_database() -> bool:
 	if log_stats:
 		_log_stats()
 	
+	_log_debug("▶️ ItemDatabase inicializado com sucesso!")
 	return true
 
 ## Recarrega o database (útil para hot-reload em desenvolvimento)
@@ -469,6 +465,8 @@ func reload_database() -> bool:
 
 ## Carrega e parseia o arquivo JSON
 func _load_json_data() -> bool:
+	_log_debug("✓ Registrando itens")
+	
 	# Verifica existência do arquivo
 	if not FileAccess.file_exists(json_path):
 		push_error("[ItemDatabase] Arquivo JSON não encontrado: %s" % json_path)
@@ -1348,6 +1346,6 @@ func _log_debug(message: String):
 	if initializer.activate_only_selected and not "ItemDatabase" in initializer.selected:
 		return
 	
-	var prefix = "[SERVER]" if _is_server else "[CLIENT]"
+	var prefix = "[SERVER]" if is_server else "[CLIENT]"
 	print("%s[ItemDatabase] %s" % [prefix, message])
 	

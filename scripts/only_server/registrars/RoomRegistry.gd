@@ -72,7 +72,7 @@ func initialize():
 		return
 
 	_initialized = true
-	_log_debug("✓ RoomRegistry inicializado")
+	_log_debug("▶️ RoomRegistry inicializado")
 
 func reset():
 	"""Reseta completamente o registro (usado ao desligar servidor)"""

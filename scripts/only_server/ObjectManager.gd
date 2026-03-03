@@ -84,7 +84,7 @@ func initialize():
 		return
 	
 	_initialized = true
-	_log_debug("✓ ObjectManager inicializado")
+	_log_debug("✓ ObjectManager inicializado com sucesso!")
 
 func reset():
 	"""Reseta completamente o manager"""

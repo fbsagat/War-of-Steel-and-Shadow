@@ -322,6 +322,8 @@ func _setup_element_references():
 	match_password_container = room_list_menu.find_child("PasswordContainer", true, false)
 	if match_password_container:
 		match_password_input = match_password_container.find_child("PasswordInput", true, false)
+		if match_password_input:
+			match_password_input.text_submitted.connect(_on_match_list_join_pressed)
 	match_list_error_label = room_list_menu.find_child("ErrorLabel", true, false)
 	match_list_join_button = room_list_menu.find_child("JoinButton", true, false)
 	manual_join_button = room_list_menu.find_child("ManualJoinButton", true, false)
@@ -893,7 +895,7 @@ func _on_match_list_back_pressed():
 func _on_exit_server_pressed():
 	game_manager._disconnect_from_server()
 
-func _on_match_list_join_pressed():
+func _on_match_list_join_pressed(_text_password: String = ""):
 
 	if selected_match_id <= -1:
 		_show_error_("Nenhuma partida selecionada", match_list_error_label, "Red")

@@ -85,7 +85,7 @@ func initialize():
 
 	_setup_global_timers()
 	_initialized = true
-	_log_debug("✓ RoundRegistry inicializado")
+	_log_debug("▶️ RoundRegistry inicializado")
 
 func reset():
 	"""Reseta completamente o registro (usado ao desligar servidor)"""

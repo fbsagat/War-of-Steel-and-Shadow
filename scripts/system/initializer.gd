@@ -176,6 +176,7 @@ func _init_server(is_headless):
 	server_manager.is_headless = is_headless
 	network_manager.server_is_headless = is_headless
 	map_manager.is_server = true
+	item_database.is_server = true
 	
 	# Configurar modo de testes
 	if test_mode:
@@ -266,7 +267,7 @@ func _init_client(id_file_):
 	if test_mode:
 		game_manager.localhost_auto_connect = true
 		main_menu.start_unlocked_mouse = start_unlocked_mouse
-	
+	item_database.is_server = false
 	# Aguarda até que os nós tenham sido adicionados à árvore
 	await get_tree().process_frame
 	
