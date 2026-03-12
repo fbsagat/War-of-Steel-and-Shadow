@@ -643,19 +643,19 @@ func _client_receive_rooms_list(rooms: Array):
 	"""Callback quando recebe lista de salas, requisitado pelo cliente"""
 	rooms_list_received.emit(true, rooms)
 
-func _client_receive_room_return_request(_room_name: String):
-	"""Cliente recebe requisição do servidor para retornar à sala onde estava ou abandonar"""
-	_log_debug("Recebendo requisição do servidor para retornar à sala onde estava: %s" % _room_name)
+func _client_receive_round_return_request(_room_name: String):
+	"""Cliente recebe requisição do servidor para retornar à partida onde estava ou abandonar"""
+	_log_debug("Recebendo requisição do servidor para retornar à prtid onde estava: %s" % _room_name)
 	if main_menu_node:
-			main_menu_node.show_room_return_menu(_room_name)
+			main_menu_node.show_round_return_menu(_room_name)
 
-func _request_return_to_room():
+func _request_return_to_round():
 	"""Cliente envia resposta dizendo que quer voltar à partida em que estava"""
-	network_manager.request_return_exit(true)
+	network_manager._server_request_return_or_exit(true)
 	
-func _request_exit_from_room():
+func _request_exit_from_round():
 	"""Cliente envia resposta dizendo que quer abandonar a partida em que estava"""
-	network_manager.request_return_exit(false)
+	network_manager._server_request_return_or_exit(false)
 
 func all_client_receive_rooms_list(rooms: Array):
 	"""Callback quando recebe atualização de lista de salas por prte do servidor(não requisitado)"""
@@ -874,6 +874,11 @@ func _client_round_started(match_data: Dictionary):
 	_log_debug("Rodada iniciada pelo servidor!")
 	_start_round_locally(match_data)
 
+func _client_round_return(match_data: Dictionary):
+	"""Callback quando o jogador retorna à rodada"""
+	_log_debug("retornando à rodada")
+	_return_round_locally(match_data)
+
 func _client_round_ended(end_data: Dictionary):
 	"""Callback quando a rodada termina"""
 	_log_debug("========================================")
@@ -946,9 +951,8 @@ func _start_round_locally(match_data: Dictionary):
 
 	# Spawna todos os jogadores
 	for player_data in match_data["players"]:
-		var spawn_data = match_data["spawn_data"][player_data["id"]]
 		var is_local = player_data["id"] == uuid_base
-		_spawn_player(player_data, spawn_data, is_local, match_data)
+		_spawn_player(player_data, is_local, match_data)
 	
 	round_started.emit()
 	
@@ -959,11 +963,72 @@ func _start_round_locally(match_data: Dictionary):
 	
 	_log_debug("Rodada carregada no cliente")
 
-func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bool, _match_data: Dictionary):
+func _return_round_locally(match_data: Dictionary):
+	"""Retorna à rodada localmente no cliente"""
+	_log_debug("========================================")
+	_log_debug("INICIANDO RODADA")
+	_log_debug("Sala: ID %d" % match_data["room_id"])
+	_log_debug("Rodada: ID %d" % match_data["round_id"])
+	_log_debug("Mapa: %s" % match_data["map_scene"])
+	_log_debug("Jogadores participantes:")
+	
+	for player in match_data["players"]:
+		var is_host = " [HOST]" if player["is_host"] else ""
+		var is_me = " [GUEST]" if player["id"] == uuid_base else ""
+		_log_debug("- %s (ID: %s)%s%s" % [player["name"], player["id"], is_host, is_me])
+	
+	_log_debug("========================================")
+	
+	is_in_round = true
+	
+	# Esconde o menu
+	if main_menu_node:
+		main_menu_node.hide_main_menu()
+	
+	# Criar cena de organização do round
+	round_node = Node.new()
+	round_node.name = "Round"
+	
+	# Adiciona à raiz
+	get_tree().root.add_child(round_node)
+	
+	# Cria nós organizacionais
+	players_node = Node.new()
+	players_node.name = "Players"
+	round_node.add_child(players_node)
+
+	objects_node = Node.new()
+	objects_node.name = "Objects"
+	round_node.add_child(objects_node)
+	
+	# Carrega o mapa
+	await map_manager.load_map(match_data["map_scene"], round_node)
+	await map_manager.apply_map_configs(match_data["settings"])
+
+	# Spawna todos os jogadores
+	for player_data in match_data["players"]:
+		# \/ Se for igual, retorna true
+		var is_local = player_data["id"] == uuid_base
+		_spawn_player(player_data, is_local, match_data)
+	
+	round_started.emit()
+	
+	# Filtrar uns itens e deixar numa variável(current_round) para uso durante a partida
+	# Modifique em filtrar_dict_invertido a lista de itens que devem retornar do dicionário match_data
+	var filtered_round_data = filtrar_dict_invertido(match_data)
+	current_round = filtered_round_data
+	
+	_log_debug("Rodada carregada no cliente")
+
+func _spawn_player(player_data: Dictionary, is_local: bool, _match_data: Dictionary):
 	"""Spawna players para cada cliente, cada cliente recebe X execuções,
-	 a do seu jogador local e a do(s) jogador(es) remoto(s), sendo o seu = local"""
+	 a do seu jogador local e a do(s) jogador(es) remoto(s), sendo o seu = local
+	player_data: { "id": "c3fabada6625ae19d44ed7df0eced246", "session_id": 504040370, 
+	"name": "TestPlayer1 - 504040370", "is_host": false, "is_offline": false }"""
+	
 	# Verifica duplicação
 	var player_name_ = str(player_data["id"])
+	print("player_name_: ", player_name_)
 	var camera_name = player_name_ + "_Camera"
 	
 	if players_node.has_node(player_name_):
@@ -992,9 +1057,9 @@ func _spawn_player(player_data: Dictionary, spawn_data: Dictionary, is_local: bo
 	players_node.add_child(player_instance)
 	
 	# Inicializa jogador
-	var spawn_info = map_manager.get_spawn_data(spawn_data["spawn_index"])
-	player_instance.initialize(player_data["session_id"], player_data["name"], spawn_info["position"])
-	player_instance.rotation = spawn_info["rotation"]
+	var player_pos = _match_data["settings"]["spawn_points"][player_data["session_id"]]
+	player_instance.initialize(player_data["session_id"], player_data["name"], player_pos["position"])
+	player_instance.rotation = player_pos["rotation"]
 	player_instance.setup_name_label()
 	player_instance.initializer = initializer
 
@@ -1081,6 +1146,11 @@ func _client_remove_player(peer_id : int):
 		var player_node = players_node.get_node_or_null(str(peer_id))
 		if player_node:
 			player_node.queue_free()
+
+func _client_update_character_peer_id(_uuid_base: String, _new_peer_id: int):
+	"""Atualiza o id de sessão do cliente reconectado no round para manutenção de sincronia"""
+	_log_debug("👤 Atualizando session id de remoto: %s" % [_uuid_base, _new_peer_id])
+	pass
 
 func _cleanup_local_round():
 	"""Limpa todos os objetos da rodada no cliente"""

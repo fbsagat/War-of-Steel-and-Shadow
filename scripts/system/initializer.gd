@@ -4,7 +4,7 @@ extends Node
 ## [TESTES] Usa o TestManager para iniciar uma partida logo na execução (localhost)
 ## (configura server e clients / server cria round e inicia partida com primeiros clientes /
 ##  clientes recebem localhost_auto_connect = true)
-@export var test_mode: bool = false
+@export var test_mode: bool = true
 ## [TESTES] Define a quantidade de instâcias de clientes conectadas para executar fast_round
 @export var simulador_players_qtd: int = 2
 ## [TESTES] Dropa itens perto dos players e ativa o trainer de cada player
@@ -136,6 +136,7 @@ func _init_server(is_headless):
 	client_registry.initializer = self
 	
 	# RoomRegistry precisa de:
+	room_registry.server_manager = server_manager
 	room_registry.client_registry = client_registry
 	room_registry.round_registry = round_registry
 	room_registry.object_manager = object_manager

@@ -82,7 +82,7 @@ func _server_request_rooms_list():
 	pass
 
 @rpc("any_peer", "call_remote", "reliable")
-func _server_request_return_exit(_chosen: bool):
+func _server_request_return_or_exit(_chosen: bool):
 	pass
 
 @rpc("authority", "call_remote", "reliable")
@@ -90,7 +90,7 @@ func _client_receive_rooms_list(_rooms: Array):
 	pass
 
 @rpc("authority", "call_remote", "reliable")
-func _client_receive_room_return_request(_room_name: String):
+func _client_receive_round_return_request(_room_name: String):
 	pass
 
 @rpc("authority", "call_remote", "reliable")
@@ -176,6 +176,10 @@ func _client_round_started(_match_data: Dictionary):
 	pass
 
 @rpc("authority", "call_remote", "reliable")
+func _client_round_return(_match_data: Dictionary):
+	pass
+
+@rpc("authority", "call_remote", "reliable")
 func _client_round_ended(_end_data: Dictionary):
 	pass
 
@@ -185,6 +189,10 @@ func _client_return_to_room(_room_data: Dictionary):
 
 @rpc("authority", "call_remote", "reliable")
 func _client_remove_player(_peer_id: int):
+	pass
+
+@rpc("authority", "call_remote", "reliable")
+func _client_update_character_peer_id(_uuid_base: String, _new_peer_id: int):
 	pass
 
 # ===== SPAWN DE OBJETOS =====

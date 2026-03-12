@@ -53,6 +53,7 @@ var entry_position: int = 0
 signal peer_added(uuid_base: String)
 signal peer_removed(uuid_base: String)
 signal player_name_registered(uuid_base: String, player_name: String)
+signal peer_id_updated(uuid_base: String, new_peer_id: int)
 
 # --- Sinais de Localização ---
 signal player_joined_room(uuid_base: String, room_id: int)
@@ -150,10 +151,20 @@ func update_peer_id(uuid_base: String, new_peer_id: int):
 
 	var old_peer_id = players[uuid_base]["peer_id"]
 	players[uuid_base]["peer_id"] = new_peer_id
+	
+	# Se o cliente ter um personagem ativo em um round, atualizar seu novo id para os outros clientes no round
+	var round_id = in_round(uuid_base)
+	if round_id:
+		var round_ = get_players_in_round(round_id)
+		for player_uuid in round_:
+			var peer_id = get_peer_id_by_uuid(player_uuid)
+			network_manager.rpc_id(peer_id, "_client_update_character_peer_id", uuid_base, new_peer_id)
+	
 	_log_debug("✓ peer_id atualizado para %s: %d → %d" % [uuid_base, old_peer_id, new_peer_id])
-
+	peer_id_updated.emit(uuid_base, new_peer_id)
+	
 func set_disconnected_peer(peer_id: int):
-	"""Marca jogador como desconectado a partir do peer_id da sessão."""
+	"""Marca jogador como desconectado do servidor a partir do peer_id da sessão."""
 	var uuid_base = get_uuid_by_peer_id(peer_id)
 	if uuid_base.is_empty():
 		_log_debug("⚠ Tentou desconectar peer inexistente: %d" % peer_id)
@@ -161,7 +172,25 @@ func set_disconnected_peer(peer_id: int):
 
 	players[uuid_base]["connected"] = false
 	players[uuid_base]["disconnected_at"] = Time.get_unix_time_from_system()
-	_log_debug("Peer %d (uuid=%s) marcado como desconectado" % [peer_id, uuid_base])
+	set_disconnected_peer_from_room_and_round(peer_id)
+
+func set_disconnected_peer_from_room_and_round(peer_id: int, from_room: bool = true, from_round: bool = true):
+	"""Marca jogador como desconectado de sala e round a partir do peer_id da sessão."""
+
+	var uuid_base = get_uuid_by_peer_id(peer_id)
+	if uuid_base.is_empty():
+		_log_debug("⚠ Tentou desconectar peer inexistente: %d" % peer_id)
+		return
+		
+	var room = get_player_room(uuid_base)
+	if room > 0 and from_room:
+		_log_debug("Definindo player como desconectado da sala em que está")
+		room_registry._set_disconnected_peer(peer_id, room)
+		
+	var round_ = get_player_round(uuid_base)
+	if round_ > 0 and from_round:
+		_log_debug("Definindo player como desconectado da rodada em que está")
+		round_registry._mark_player_disconnected(round_, uuid_base)
 
 func remove_peer(peer_id: int):
 	"""Remove jogador desconectado a partir do peer_id da sessão."""
@@ -207,8 +236,7 @@ func _register_connection(uuid_base: String):
 	_log_debug("Peer uuid=%s marcado como conectado" % uuid_base)
 
 func _is_uuid_connected(uuid_base: String) -> bool:
-	"""Verifica se já existe jogador com este uuid_base conectado.
-	Agora é O(1) pois uuid_base é a chave do dicionário."""
+	"""Verifica se já existe jogador com este uuid_base conectado"""
 	if players.has(uuid_base):
 		return players[uuid_base].get("connected", false)
 	return false

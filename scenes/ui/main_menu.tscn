@@ -647,7 +647,7 @@ layout_mode = 2
 text = "Expulsar jogador
 "
 
-[node name="RoomReturnMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=1882250171]
+[node name="RoundReturnMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=1882250171]
 layout_mode = 0
 offset_left = 300.0
 offset_top = 250.0
@@ -656,52 +656,52 @@ offset_bottom = 550.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="ReferenceRect" type="ReferenceRect" parent="CanvasLayer/CenterContainer/Control/RoomReturnMenu" unique_id=1001448031]
+[node name="ReferenceRect" type="ReferenceRect" parent="CanvasLayer/CenterContainer/Control/RoundReturnMenu" unique_id=1001448031]
 custom_minimum_size = Vector2(600, 300)
 layout_mode = 2
 border_color = Color(0, 0, 0, 1)
 border_width = 2.0
 editor_only = false
 
-[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/RoomReturnMenu" unique_id=1327503922]
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/RoundReturnMenu" unique_id=1327503922]
 layout_mode = 2
 theme_override_constants/separation = 10
 alignment = 1
 
-[node name="RoomReturnLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/RoomReturnMenu/VBoxContainer" unique_id=179588088]
+[node name="RoundReturnLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/RoundReturnMenu/VBoxContainer" unique_id=179588088]
 layout_mode = 2
 text = "Você ainda está em uma sala"
 horizontal_alignment = 1
 
-[node name="RoomName" type="Label" parent="CanvasLayer/CenterContainer/Control/RoomReturnMenu/VBoxContainer" unique_id=67493652]
+[node name="RoomName" type="Label" parent="CanvasLayer/CenterContainer/Control/RoundReturnMenu/VBoxContainer" unique_id=67493652]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.8249483, 0.60931164, 7.70092e-07, 1)
 theme_override_font_sizes/font_size = 20
 text = "Nome da sala"
 horizontal_alignment = 1
 
-[node name="RoomReturnLabel2" type="Label" parent="CanvasLayer/CenterContainer/Control/RoomReturnMenu/VBoxContainer" unique_id=512385289]
+[node name="RoundReturnLabel2" type="Label" parent="CanvasLayer/CenterContainer/Control/RoundReturnMenu/VBoxContainer" unique_id=512385289]
 layout_mode = 2
 text = "O que quer fazer?
 "
 horizontal_alignment = 1
 
-[node name="ButtonsContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/RoomReturnMenu/VBoxContainer" unique_id=870354864]
+[node name="ButtonsContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/RoundReturnMenu/VBoxContainer" unique_id=870354864]
 layout_mode = 2
 theme_override_constants/separation = 40
 alignment = 1
 
-[node name="BackButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoomReturnMenu/VBoxContainer/ButtonsContainer" unique_id=1163074505]
+[node name="BackButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoundReturnMenu/VBoxContainer/ButtonsContainer" unique_id=1163074505]
 custom_minimum_size = Vector2(150, 50)
 layout_mode = 2
 text = "Voltar"
 
-[node name="ContinueButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoomReturnMenu/VBoxContainer/ButtonsContainer" unique_id=761280715]
+[node name="ContinueButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoundReturnMenu/VBoxContainer/ButtonsContainer" unique_id=761280715]
 custom_minimum_size = Vector2(150, 50)
 layout_mode = 2
 text = "Retornar à partida"
 
-[node name="ExitButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoomReturnMenu/VBoxContainer/ButtonsContainer" unique_id=1758799351]
+[node name="ExitButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoundReturnMenu/VBoxContainer/ButtonsContainer" unique_id=1758799351]
 custom_minimum_size = Vector2(150, 50)
 layout_mode = 2
 theme = SubResource("Theme_1g8jr")

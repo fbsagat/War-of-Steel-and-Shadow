@@ -29,7 +29,7 @@ signal gameplay_menu_give_up_game_pressed()
 @onready var main_menu: CenterContainer
 @onready var room_menu: CenterContainer
 @onready var room_list_menu: CenterContainer
-@onready var room_return_menu: CenterContainer
+@onready var round_return_menu: CenterContainer
 @onready var manual_room_join_menu: CenterContainer
 @onready var manual_server_join_menu: CenterContainer
 @onready var create_room_menu: CenterContainer
@@ -106,7 +106,7 @@ signal gameplay_menu_give_up_game_pressed()
 @onready var room_status_label: Label
 
 # Menu de retorna à sala/partida
-@onready var room_return_room_label: Label
+@onready var round_return_room_label: Label
 
 # Menu de opções
 @onready var volume_slider: HSlider
@@ -239,7 +239,7 @@ func _setup_menu_references():
 	name_input_menu = control_pai.get_node("NameInputMenu")
 	main_menu = control_pai.get_node("MainMenu")
 	room_menu = control_pai.get_node("RoomMenu")
-	room_return_menu = control_pai.get_node("RoomReturnMenu")
+	round_return_menu = control_pai.get_node("RoundReturnMenu")
 	room_list_menu = control_pai.get_node("RoomListMenu")
 	manual_room_join_menu = control_pai.get_node("ManualRoomJoinMenu")
 	manual_server_join_menu = control_pai.get_node("ManualServerJoinMenu")
@@ -379,7 +379,7 @@ func _setup_element_references():
 	exit_button = exit_confirm_menu.find_child("ExitButton", true, false)
 	
 	# Menu de retorna à partida
-	room_return_room_label = room_return_menu.find_child("RoomName", true, false)
+	round_return_room_label = round_return_menu.find_child("RoomName", true, false)
 
 func _connect_button_signals():
 	# Menu principal
@@ -471,9 +471,9 @@ func _connect_button_signals():
 	_connect_if_exists(exit_confirm_menu, "ExitButton", _on_exit_confirm_menu_exit_pressed)
 	
 	# Menu de retorno à sala/partida
-	_connect_if_exists(room_return_menu, "BackButton", _on_room_return_menu_back_pressed)
-	_connect_if_exists(room_return_menu, "ContinueButton", _on_room_return_menu_continue_pressed)
-	_connect_if_exists(room_return_menu, "ExitButton", _on_room_return_menu_exit_pressed)
+	_connect_if_exists(round_return_menu, "BackButton", _on_round_return_menu_back_pressed)
+	_connect_if_exists(round_return_menu, "ContinueButton", _on_round_return_menu_continue_pressed)
+	_connect_if_exists(round_return_menu, "ExitButton", _on_round_return_menu_exit_pressed)
 	
 func _connect_if_exists(parent: Node,button_name: String,callback: Callable,set_focus: bool = false):
 	var button = parent.find_child(button_name, true, false)
@@ -691,11 +691,11 @@ func show_room_list_menu(_error_visible: bool = false, match_password_visible: b
 		else:
 			manual_join_button.disabled = true
 	
-func show_room_return_menu(room_name: String):
+func show_round_return_menu(room_name: String):
 	hide_all_menus()
-	room_return_menu.visible = true
-	current_menu_visible = room_return_menu
-	room_return_room_label.text = room_name
+	round_return_menu.visible = true
+	current_menu_visible = round_return_menu
+	round_return_room_label.text = room_name
 	
 func show_manual_room_join_menu(show_error: bool = false):
 	hide_all_menus()
@@ -801,7 +801,7 @@ func hide_all_menus():
 	loading_menu.visible = false
 	gameplay_menu.visible = false
 	exit_confirm_menu.visible = false
-	room_return_menu.visible = false
+	round_return_menu.visible = false
 	
 func get_current_visible_menu() -> CenterContainer:
 	if main_menu.visible: return main_menu
@@ -811,7 +811,7 @@ func get_current_visible_menu() -> CenterContainer:
 	if delete_server_menu.visible: return delete_server_menu
 	if room_menu.visible: return room_menu
 	if room_list_menu.visible: return room_list_menu
-	if room_return_menu.visible: return room_return_menu
+	if round_return_menu.visible: return round_return_menu
 	if manual_room_join_menu.visible: return manual_room_join_menu
 	if manual_server_join_menu.visible: return manual_server_join_menu
 	if create_room_menu.visible: return create_room_menu
@@ -875,19 +875,19 @@ func _on_quit_pressed():
 
 # ===== CALLBACKS DO MENU DE LISTA DE PARTIDAS =====
 
-func _on_room_return_menu_back_pressed():
+func _on_round_return_menu_back_pressed():
 	show_main_menu()
 
-func _on_room_return_menu_continue_pressed():
+func _on_round_return_menu_continue_pressed():
 	"""Cliente sinalizou que quer retornar à partida em que estava (personagem aguardando reconexão)"""
-	if current_menu_visible == room_return_menu:
-		game_manager._request_return_to_room()
+	if current_menu_visible == round_return_menu:
+		game_manager._request_return_to_round()
 	
-func _on_room_return_menu_exit_pressed():
+func _on_round_return_menu_exit_pressed():
 	"""Cliente sinalizou que não quer mais retornar à partida em que estava (personagem sai da 
-	partida pra sempre/cliente não encontra mais a sala disponível para ele)"""
-	if current_menu_visible == room_return_menu:
-		game_manager._request_exit_from_room()
+	partida pra sempre"""
+	if current_menu_visible == round_return_menu:
+		game_manager._request_exit_from_round()
 
 func _on_match_list_back_pressed():
 	show_main_menu()

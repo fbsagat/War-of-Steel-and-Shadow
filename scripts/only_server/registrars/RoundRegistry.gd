@@ -82,7 +82,10 @@ func initialize():
 	if _initialized:
 		_log_debug("⚠ RoundRegistry já inicializado")
 		return
-
+	
+	# Conecta sinais
+	client_registry.peer_id_updated.connect(_on_peer_id_updated)
+	
 	_setup_global_timers()
 	_initialized = true
 	_log_debug("▶️ RoundRegistry inicializado")
@@ -323,7 +326,7 @@ func unregister_spawned_player(round_id: int, uuid_base: String):
 		_log_debug("✓ uuid=%s despawnado da rodada %d" % [uuid_base, round_id])
 		player_despawned_from_round.emit(round_id, uuid_base)
 
-func mark_player_disconnected(round_id: int, uuid_base: String):
+func _mark_player_disconnected(round_id: int, uuid_base: String):
 	"""Marca player como desconectado durante a rodada (não remove da rodada)."""
 	if not rounds.has(round_id):
 		return
@@ -647,6 +650,14 @@ func _gerar_paletas_cores() -> Array:
 			"ambient_sky": Color(0.6, 0.3, 0.2), "ambient_ground": Color(0.3, 0.2, 0.1)
 		}
 	]
+
+func _on_peer_id_updated(uuid_base: String, new_peer_id: int):
+	for round_id in rounds:
+		for player in rounds[round_id]["players"]:
+			if player["id"] == uuid_base:
+				player["session_id"] = new_peer_id
+				_log_debug("✓ session_id atualizado para uuid=%s na rodada %d" % [uuid_base, round_id])
+				return
 
 func _log_debug(message: String):
 	if not debug_mode:

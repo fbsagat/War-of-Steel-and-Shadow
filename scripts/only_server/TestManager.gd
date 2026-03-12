@@ -213,16 +213,7 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 	
 	# Gera spawn points
 	var players_qtd = round_registry.get_total_players(round_data["round_id"])
-	var spawn_points = map_manager._create_spawn_points(players_qtd)
-	
-	# Gera dados de spawn para cada jogador
-	var spawn_data = {}
-	for i in range(room_data["players"].size()):
-		var p = room_data["players"][i]
-		spawn_data[p["id"]] = {
-			"spawn_index": i,
-			"team": 0
-		}
+	var spawn_points = map_manager._create_spawn_points(room_data["players"])
 	
 	# Atualiza settings da rodada
 	var round_settings = round_data.get("settings", {})
@@ -237,7 +228,6 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 		"map_scene": map_scene,
 		"settings": round_settings,
 		"players": room_data["players"],
-		"spawn_data": spawn_data
 	}
 	
 	_log_debug("  ✓ Enviando dados para clientes...")
@@ -300,7 +290,7 @@ func _server_instantiate_round(match_data: Dictionary, players_node, round_node)
 	
 	# Spawna todos os jogadores
 	for player_data in match_data["players"]:
-		var spawn_data = match_data["spawn_data"][player_data["id"]]
+		var spawn_data = match_data["settings"]["spawn_points"][player_data["session_id"]]
 		_spawn_player_on_server(player_data, spawn_data, match_data["round_id"], players_node)
 	
 	# Cria câmera livre se não estiver em modo headless(sem renderização)
@@ -429,12 +419,12 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 	# Calcula posição de spawn
 	var spawn_pos = Vector3.ZERO
 	
-	if map_manager and map_manager.has_method("get_spawn_position"):
-		var spawn_index = spawn_data.get("spawn_index", 0)
-		spawn_pos = map_manager.get_spawn_position(spawn_index)
-		_log_debug("Spawn position: %s (index: %d)" % [spawn_pos, spawn_index])
-	else:
-		push_warning("TestManager: MapManager não disponível, usando posição (0,0,0)")
+	#if map_manager and map_manager.has_method("get_spawn_position"):
+		#var spawn_index = spawn_data.get("spawn_index", 0)
+		#spawn_pos = map_manager.get_spawn_position(spawn_index)
+		#_log_debug("Spawn position: %s (index: %d)" % [spawn_pos, spawn_index])
+	#else:
+		#push_warning("TestManager: MapManager não disponível, usando posição (0,0,0)")
 	
 	# CONFIGURA TRANSFORM
 	if player_instance is Node3D:

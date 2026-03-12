@@ -1255,7 +1255,7 @@ func initialize(p_id: int, p_name: String, spawn_pos: Vector3):
 	player_name = p_name
 	
 	# Nome do nó recebe ID do player
-	name = str(player_id)
+	name = player_name
 	
 	# Posiciona no spawn
 	global_position = spawn_pos

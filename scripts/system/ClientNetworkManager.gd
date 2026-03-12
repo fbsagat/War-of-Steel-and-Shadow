@@ -92,13 +92,13 @@ func request_rooms_list():
 	_log_debug("📤 Solicitando lista de salas")
 	rpc_id(1, "_server_request_rooms_list")
 
-func request_return_exit(chosen: bool):
+func _server_request_return_or_exit(chosen: bool):
 	"""Helper local: envia resposta sobre voltar (true) ou abandonar (false) a partida"""
 	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
 	_log_debug("Enviando resposta de retorno à sala/partida/abandono")
-	rpc_id(1, "_server_request_return_exit", chosen)
+	rpc_id(1, "_server_request_return_or_exit", chosen)
 
 func create_room(room_name: String, password: String = ""):
 	if not is_connected_:
@@ -151,9 +151,9 @@ func _client_receive_rooms_list(rooms: Array):
 	_log_debug("📥 Lista de salas recebida: %d salas" % rooms.size())
 	game_manager._client_receive_rooms_list(rooms)
 
-func _client_receive_room_return_request(_room_name: String):
+func _client_receive_round_return_request(_room_name: String):
 	_log_debug("Recebendo requisição do servidor para retornar à sala: %s" % _room_name)
-	game_manager._client_receive_room_return_request(_room_name)
+	game_manager._client_receive_round_return_request(_room_name)
 
 func _client_broadcast_rooms_list(rooms: Array):
 	_log_debug("📥 Atualização de salas recebida: %d salas" % rooms.size())
@@ -211,6 +211,10 @@ func _client_round_started(match_data: Dictionary):
 	_log_debug("Rodada iniciada")
 	game_manager._client_round_started(match_data)
 
+func _client_round_return(match_data: Dictionary):
+	_log_debug("retornando à rodada")
+	game_manager._client_round_return(match_data)
+
 func _client_round_ended(end_data: Dictionary):
 	_log_debug("🏁 Rodada finalizada")
 	game_manager._client_round_ended(end_data)
@@ -223,6 +227,9 @@ func _client_remove_player(peer_id: int):
 	_log_debug("👤 Removendo player: %d" % peer_id)
 	game_manager._client_remove_player(peer_id)
 
+func _client_update_character_peer_id(_uuid_base: String, _new_peer_id: int):
+	_log_debug("👤 Atualizando session id de remoto: %s" % [_uuid_base, _new_peer_id])
+	game_manager._client_update_character_peer_id(_uuid_base, _new_peer_id)
 
 # ===== SPAWN DE OBJETOS — RECEBIMENTOS DO SERVIDOR =====
 

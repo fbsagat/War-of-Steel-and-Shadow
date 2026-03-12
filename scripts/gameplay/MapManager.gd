@@ -33,7 +33,7 @@ var initializer = null
 var current_map: Node = null
 
 ## Lista de pontos de spawn encontrados no mapa
-var spawn_points: Array = []
+var spawn_points: Dictionary = {}
 
 ## Índices de spawn já utilizados (para evitar sobreposição)
 var used_spawn_indices: Array = []
@@ -83,7 +83,8 @@ func apply_map_configs(settings: Dictionary = {}):
 	await get_tree().process_frame
 	
 	# Encontra os pontos de spawn
-	spawn_points = settings["spawn_points"]
+	if settings.has("spawn_points"):
+		spawn_points = settings["spawn_points"]
 	spawn_points_ready.emit(spawn_points.size())
 	
 	# Aplica configurações ao mapa (se o mapa tiver método configure)
@@ -97,13 +98,14 @@ func apply_map_configs(settings: Dictionary = {}):
 
 # ===== GERENCIAMENTO DE SPAWN POINTS =====
 
-func _create_spawn_points(match_players_count: int) -> Array:
+func _create_spawn_points(players: Array) -> Dictionary:
 	"""
 	Gera pontos de spawn em formação circular
 	Suporta de 1 a 14 jogadores com distribuição uniforme
 	
 	Retorna Array de Dictionaries: [{position: Vector3, rotation: Vector3}]
 	"""
+	var match_players_count = players.size()
 	spawn_points.clear()
 	
 	central_spawn = current_map.get_node_or_null("central_spawn") as Node3D
@@ -113,11 +115,15 @@ func _create_spawn_points(match_players_count: int) -> Array:
 	# Caso especial: apenas 1 jogador
 	if match_players_count == 1:
 
-		var spawn_data = {
+		var spawn := {
 			"position": spawn_center + Vector3(0, spawn_height, spawn_radius),
-			"rotation": Vector3(0, PI, 0)  # Olhando para o centro
+			"rotation": Vector3(0, PI, 0)
 		}
-		spawn_points.append(spawn_data)
+
+		var peer_id: int = players[0]["session_id"]
+
+		spawn_points[peer_id] = spawn
+
 		_log_debug("✓ Spawn point único criado no centro")
 		return spawn_points
 		
@@ -125,6 +131,7 @@ func _create_spawn_points(match_players_count: int) -> Array:
 	match_players_count = clamp(match_players_count, 1, 14)
 	
 	# Gera pontos em círculo
+	
 	for i in range(match_players_count):
 		# Distribui uniformemente em círculo
 		var angle = (i * 2.0 * PI) / match_players_count
@@ -150,13 +157,14 @@ func _create_spawn_points(match_players_count: int) -> Array:
 		# Adiciona variação aleatória à rotação
 		rotation_y += randf_range(-rotation_variance, rotation_variance)
 		
-		var spawn_data = {
+		var spawn := {
 			"position": final_position,
 			"rotation": Vector3(0, rotation_y, 0)
 		}
 
-		spawn_points.append(spawn_data)
+		var peer_id: int = players[i]["session_id"]
 
+		spawn_points[peer_id] = spawn
 	_log_debug("✓ Spawn points criados: %d jogadores em círculo (raio: %.1f)" % [spawn_points.size(), spawn_radius])
 	return spawn_points
 

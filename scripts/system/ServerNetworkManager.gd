@@ -85,9 +85,9 @@ func _server_request_rooms_list():
 	var peer_id = multiplayer.get_remote_sender_id()
 	server_manager._handle_request_rooms_list(peer_id)
 
-func _server_request_return_exit(_chosen: bool):
-	"""Servidor recebe resposta de cliente sobre voltar (true) ou abandonar (false)"""
-	pass  # implementar lógica aqui
+func _server_request_return_or_exit(_chosen: bool):
+	var peer_id = multiplayer.get_remote_sender_id()
+	server_manager._handle_request_return_or_exit(peer_id, _chosen)
 
 func _server_create_room(room_name: String, password: String):
 	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
@@ -107,7 +107,6 @@ func _server_join_room_by_name(room_name: String, password: String):
 	var peer_id = multiplayer.get_remote_sender_id()
 	server_manager._handle_join_room_by_name(peer_id, room_name, password)
 
-@rpc("any_peer", "call_remote", "reliable")
 func _server_update_room_settings(changed_settings: Dictionary):
 	var peer_id = multiplayer.get_remote_sender_id()
 	server_manager._handle_update_room_settings(peer_id, changed_settings)

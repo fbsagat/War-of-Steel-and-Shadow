@@ -20,6 +20,7 @@ class_name RoomRegistry
 
 # ===== REGISTROS (Injetados pelo initializer.gd) =====
 
+var server_manager = null
 var client_registry = null
 var round_registry = null
 var object_manager = null
@@ -51,7 +52,7 @@ signal room_state_changed(room_id: int, in_game: bool)
 ##   "password": String,
 ##   "has_password": bool,
 ##   "host_id": String,           # uuid_base do host
-##   "players": Array[PlayerInRoom],  # [{id: uuid_base, name, is_host}]
+##   "players": Array[PlayerInRoom],  # [{id: uuid_base, name, is_host, is_offline}]
 ##   "kicked_players": Array,     # [{uuid_base, time}]
 ##   "min_players": int,
 ##   "max_players": int,
@@ -70,7 +71,10 @@ func initialize():
 	if _initialized:
 		_log_debug("⚠ RoomRegistry já inicializado")
 		return
-
+	
+	# Conecta sinais
+	client_registry.peer_id_updated.connect(_on_peer_id_updated)
+	
 	_initialized = true
 	_log_debug("▶️ RoomRegistry inicializado")
 
@@ -131,6 +135,7 @@ func create_room(room_name: String, password: String, host_uuid: String, min_pla
 
 func remove_room(room_id: int) -> bool:
 	"""Remove sala completamente após remover todos os jogadores."""
+	
 	if not rooms.has(room_id):
 		_log_debug("⚠ Tentou remover sala inexistente: %d" % room_id)
 		return false
@@ -285,7 +290,8 @@ func add_player_to_room(room_id: int, uuid_base: String) -> bool:
 		"id": uuid_base,
 		"session_id": player_id,
 		"name": player_name,
-		"is_host": is_host
+		"is_host": is_host,
+		"is_offline": false,
 	})
 
 	if client_registry:
@@ -344,10 +350,11 @@ func check_kicked_timeout(room_id: int, uuid_base: String, time_limit: float) ->
 
 	return false
 
-func remove_player_from_room(room_id: int, uuid_base: String) -> bool:
-	"""Remove jogador da sala. Transfere host se necessário. Remove sala se ficar vazia."""
+func remove_player_from_room(room_id: int, uuid_base: String) -> String:
+	"""Remove jogador da sala. Transfere host se necessário. Remove sala se ficar vazia.
+	retorna "" se não mudar de host, retorna a uuid do host quando novo host selecionado"""
 	if not rooms.has(room_id):
-		return false
+		return ""
 
 	var room = rooms[room_id]
 	var player_index = -1
@@ -359,7 +366,7 @@ func remove_player_from_room(room_id: int, uuid_base: String) -> bool:
 
 	if player_index == -1:
 		_log_debug("⚠ uuid=%s não está na sala %d" % [uuid_base, room_id])
-		return false
+		return ""
 
 	var player_name = room["players"][player_index]["name"]
 	var was_host = room["players"][player_index]["is_host"]
@@ -377,11 +384,11 @@ func remove_player_from_room(room_id: int, uuid_base: String) -> bool:
 		room["host_id"] = room["players"][0]["id"]
 		_log_debug("✓ Novo host da sala '%s': uuid=%s" % [room["name"], room["host_id"]])
 		host_changed.emit(room_id, room["host_id"])
+		return room["host_id"]
 
 	if room["players"].is_empty():
 		remove_room(room_id)
-
-	return true
+	return ""
 
 func get_player_room(uuid_base: String) -> Dictionary:
 	"""Retorna sala em que o jogador está (ou {} se não estiver em nenhuma)."""
@@ -426,6 +433,22 @@ func is_room_in_game(room_id: int) -> bool:
 	if not rooms.has(room_id):
 		return false
 	return rooms[room_id]["in_game"]
+
+func _set_disconnected_peer(peer_id: int, room_id: int):
+	"""Executada pelo client registry. Marca jogador como desconectado a partir do peer_id da sessão."""
+	var uuid_base = client_registry.get_uuid_by_peer_id(peer_id)
+	
+	if uuid_base.is_empty():
+		_log_debug("⚠ Tentou desconectar peer inexistente: %d" % peer_id)
+		return
+		
+	if not rooms.has(room_id):
+		return
+		
+	for player in rooms[room_id].get("players", []):
+		if player["id"] == uuid_base:
+			player["is_offline"] = true
+			_log_debug("⚠ uuid=%s marcado como desconectado na sala %s" % [uuid_base, rooms[room_id]["id"]])
 
 # ===== HISTÓRICO DE RODADAS =====
 
@@ -644,6 +667,14 @@ func update_room_setting(room_id: int, key: String, value):
 	_log_debug("✓ Setting '%s' atualizado na sala %d" % [key, room_id])
 
 # ===== UTILITÁRIOS =====
+
+func _on_peer_id_updated(uuid_base: String, new_peer_id: int):
+	for room_id in rooms:
+		for player in rooms[room_id]["players"]:
+			if player["id"] == uuid_base:
+				player["session_id"] = new_peer_id
+				_log_debug("✓ session_id atualizado para uuid=%s na sala %d" % [uuid_base, room_id])
+				return
 
 func get_room_count() -> int:
 	return rooms.size()
