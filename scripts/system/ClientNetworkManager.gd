@@ -228,7 +228,7 @@ func _client_remove_player(peer_id: int):
 	game_manager._client_remove_player(peer_id)
 
 func _client_update_character_peer_id(_uuid_base: String, _new_peer_id: int):
-	_log_debug("👤 Atualizando session id de remoto: %s" % [_uuid_base, _new_peer_id])
+	_log_debug("👤 Atualizando session id de remoto: %s para %d" % [_uuid_base, _new_peer_id])
 	game_manager._client_update_character_peer_id(_uuid_base, _new_peer_id)
 
 # ===== SPAWN DE OBJETOS — RECEBIMENTOS DO SERVIDOR =====

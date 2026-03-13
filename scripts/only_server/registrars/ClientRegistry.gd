@@ -153,12 +153,34 @@ func update_peer_id(uuid_base: String, new_peer_id: int):
 	players[uuid_base]["peer_id"] = new_peer_id
 	
 	# Se o cliente ter um personagem ativo em um round, atualizar seu novo id para os outros clientes no round
+	# Apenas os que estão conectados
 	var round_id = in_round(uuid_base)
 	if round_id:
 		var round_ = get_players_in_round(round_id)
 		for player_uuid in round_:
-			var peer_id = get_peer_id_by_uuid(player_uuid)
-			network_manager.rpc_id(peer_id, "_client_update_character_peer_id", uuid_base, new_peer_id)
+			# Se estiver conectado e não for o próprio,
+			# _handle_request_return_or_exit já vai criar como novo session id.
+			if players[player_uuid]["connected"] == true and player_uuid != uuid_base:
+				var peer_id = get_peer_id_by_uuid(player_uuid)
+				network_manager.rpc_id(peer_id, "_client_update_character_peer_id", uuid_base, new_peer_id)
+	
+	# Atualizar também no round do servidor
+	var node = get_player_node(uuid_base)
+	if node:
+		node.name = str(new_peer_id)
+		node.player_id = new_peer_id
+		
+		# Atualizar o node path
+		# pega o path do parent
+		var parent_path := str(node.get_parent().get_path())
+		# cria novo path com session_id no final
+		var new_path := parent_path + "/" + str(new_peer_id)
+		players[uuid_base]["node_path"] = new_path
+		players_cache[uuid_base] = new_path
+		_log_debug("Node path atualizado: %s, para este peer_id %d" % [new_path, new_peer_id])
+		
+	else:
+		_log_debug("⚠ Servidor tentou atualizar o node deste player (%s) no servidor e não conseguiu" % uuid_base)
 	
 	_log_debug("✓ peer_id atualizado para %s: %d → %d" % [uuid_base, old_peer_id, new_peer_id])
 	peer_id_updated.emit(uuid_base, new_peer_id)

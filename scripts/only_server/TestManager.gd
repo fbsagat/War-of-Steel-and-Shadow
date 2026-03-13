@@ -110,7 +110,10 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 		var player_data = client_registry.get_player(_uuid_base)
 			
 		# Registra com nome padrão
-		var player_name = "TestPlayer%d - %d" % [i + 1, peer_id]
+		var player_uuid = client_registry.get_uuid_by_peer_id(peer_id)
+		var start = player_uuid.substr(0, 4)
+		var end = player_uuid.substr(player_uuid.length() - 4, 4)
+		var player_name = "TestPlayer%d - %s" % [i + 1, start + "[...]" + end]
 		var success = client_registry.register_player_name(_uuid_base, player_name)
 
 		if not success:
@@ -334,20 +337,6 @@ func _server_instantiate_round(match_data: Dictionary, players_node, round_node)
 func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, round_id: int, players_node):
 	"""
 	Spawna um jogador no servidor (versão autoritativa)
-	
-	ORDEM CRÍTICA:
-	1. Valida dados
-	2. Carrega e instancia cena
-	3. Configura identificação
-	4. Adiciona à árvore
-	5. Aguarda processamento completo
-	6. Valida que está na árvore
-	7. Registra no ClientRegistry
-	8. Calcula posição de spawn
-	9. Configura transform
-	10. Inicializa player
-	11. Registra no RoundRegistry
-	12. Inicializa estado de validação
 	"""
 	
 	# Validações iniciais
@@ -356,8 +345,6 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 		return
 	
 	var p_uuid = player_data["id"]
-	var p_session_id = player_data["session_id"]
-	var p_name = player_data["name"]
 	
 	# Carrega e instancia a cena do player
 	var player_scene = preload(server_manager.player_scene)
@@ -370,18 +357,15 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 		push_error("TestManager: Falha ao instanciar player_scene")
 		return
 	
-	# Configura identificação básica
-	player_instance.name = str(p_session_id)
-	player_instance.player_id = p_session_id
-	player_instance.player_name = p_name
-	player_instance._is_server = true
+	# Adiciona aos grupos
 	player_instance.add_to_group("remote_player")
 	player_instance.add_to_group("player")
 	
 	# IMPORTANTE: No servidor, nenhum player é "local"
 	player_instance.is_local_player = false
+	player_instance._is_server = true
 	
-	# ADICIONA À ÁRVORE PRIMEIRO
+	# Adiciona player à cena
 	players_node.add_child(player_instance)
 	
 	# Injeta dependências
@@ -389,6 +373,11 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 	player_instance.network_manager = network_manager
 	player_instance.server_manager = server_manager
 	player_instance.initializer = initializer
+	
+	# Inicializa jogador (configura identificação básica)
+	player_instance.initialize(player_data["name"], player_data["session_id"], player_data["id"], spawn_data["position"])
+	player_instance.rotation = spawn_data["rotation"]
+	player_instance.setup_name_label()
 	
 	# Preenche terreno e central_spawn
 	player_instance.terrain_ = map_manager.current_map
@@ -408,46 +397,22 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 	# REGISTRA NO ClientRegistry
 	client_registry.register_player_node(p_uuid, player_instance)
 	
-	# Debug: Verifica registro
-	if debug_mode:
-		var registered_path = client_registry.get_player_node_path(p_uuid)
-		if registered_path.is_empty():
-			push_warning("TestManager: node_path vazio após registro (player %d)" % p_uuid)
-		else:
-			_log_debug("Player node registrado: %s → %s" % [p_uuid, registered_path])
-	
-	# Calcula posição de spawn
-	var spawn_pos = Vector3.ZERO
-	
-	#if map_manager and map_manager.has_method("get_spawn_position"):
-		#var spawn_index = spawn_data.get("spawn_index", 0)
-		#spawn_pos = map_manager.get_spawn_position(spawn_index)
-		#_log_debug("Spawn position: %s (index: %d)" % [spawn_pos, spawn_index])
-	#else:
-		#push_warning("TestManager: MapManager não disponível, usando posição (0,0,0)")
-	
-	# CONFIGURA TRANSFORM
-	if player_instance is Node3D:
-		player_instance.global_position = spawn_pos
-		player_instance.global_rotation = Vector3.ZERO
-	
-	# Inicializa o player
-	if player_instance.has_method("initialize"):
-		player_instance.initialize(p_session_id, p_name, spawn_pos)
-	
 	# Registra no RoundRegistry
 	round_registry.register_spawned_player(round_id, p_uuid, player_instance)
 	
 	# Inicializa estado de validação no ServerManager
-	if server_manager.player_states != null:
-		server_manager.player_states[p_uuid] = {
-			"pos": spawn_pos,
-			"vel": Vector3.ZERO,
-			"rot": Vector3.ZERO,
-			"timestamp": Time.get_ticks_msec()
-		}
+	server_manager.player_states[p_uuid] = {
+		"pos": spawn_data["position"],
+		"vel": Vector3.ZERO,
+		"rot": spawn_data["rotation"],
+		"timestamp": Time.get_ticks_msec()
+	}
 	
-	_log_debug("✓ Player spawnado: %s (ID: %s)" % [p_name, p_uuid])
+	_log_debug("✓ Player spawnado no servidor: %s (ID: %s) em %s" % [
+		player_data["name"], 
+		player_data["id"],
+		spawn_data["position"]
+	])
 
 func on_spawn_requested(_character) -> void:
 	var uuid_base = client_registry.get_uuid_by_peer_id(_character.player_id)

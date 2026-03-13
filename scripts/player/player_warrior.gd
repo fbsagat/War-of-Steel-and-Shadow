@@ -76,6 +76,7 @@ var last_anim_state: Dictionary = {}
 
 # Identificação multiplayer
 var player_id: int = 0
+var player_uuid: String = ""
 var player_name: String = ""
 var is_local_player: bool = false
 var _is_server: bool = false
@@ -740,7 +741,6 @@ func _on_hitbox_body_entered(body: Node, hitbox_area: Area3D) -> void:
 
 func take_damage():
 	"""Jogador local ou remoto recebe dano de golpe, animção, sons e etc"""
-	
 	# Animação de hit
 	var random_hit = ["parameters/Hit_B/request", "parameters/Hit_A/request"].pick_random()
 	animation_tree.set(random_hit, AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
@@ -1249,13 +1249,14 @@ func set_as_local_player():
 	
 	add_to_group("player")
 
-func initialize(p_id: int, p_name: String, spawn_pos: Vector3):
+func initialize(p_name: String, p_id: int, p_uuid: String, spawn_pos: Vector3):
 	"""Inicializa o player com dados multiplayer"""
-	player_id = p_id
 	player_name = p_name
+	player_id = p_id
+	player_uuid = p_uuid
 	
 	# Nome do nó recebe ID do player
-	name = player_name
+	name = str(p_id)
 	
 	# Posiciona no spawn
 	global_position = spawn_pos
@@ -1263,7 +1264,7 @@ func initialize(p_id: int, p_name: String, spawn_pos: Vector3):
 	
 	# Atualiza label de nome
 	if name_label:
-		name_label.text = player_name
+		name_label.text = p_name
 		setup_name_label()
 	
 	# Configuração de processos

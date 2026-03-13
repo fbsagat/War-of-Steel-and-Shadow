@@ -1028,7 +1028,6 @@ func _spawn_player(player_data: Dictionary, is_local: bool, _match_data: Diction
 	
 	# Verifica duplicação
 	var player_name_ = str(player_data["id"])
-	print("player_name_: ", player_name_)
 	var camera_name = player_name_ + "_Camera"
 	
 	if players_node.has_node(player_name_):
@@ -1043,25 +1042,20 @@ func _spawn_player(player_data: Dictionary, is_local: bool, _match_data: Diction
 	var player_scene_ = preload(player_scene)
 	var player_instance = player_scene_.instantiate()
 	
-	# Injeta configurações
-	player_instance.name = player_name_
-	player_instance.player_id = player_data["session_id"]
-	player_instance.player_name = player_data["name"]
-	
 	# Injeta dependências
 	player_instance.item_database = item_database
 	player_instance.network_manager = network_manager
+	player_instance.initializer = initializer
 	player_instance.game_manager = self
 	
 	# Adiciona player à cena PRIMEIRO
 	players_node.add_child(player_instance)
 	
-	# Inicializa jogador
+	# Inicializa jogador (configura identificação básica)
 	var player_pos = _match_data["settings"]["spawn_points"][player_data["session_id"]]
-	player_instance.initialize(player_data["session_id"], player_data["name"], player_pos["position"])
+	player_instance.initialize(player_data["name"], player_data["session_id"], player_data["id"], player_pos["position"])
 	player_instance.rotation = player_pos["rotation"]
 	player_instance.setup_name_label()
-	player_instance.initializer = initializer
 
 	# Configuração ESPECÍFICA por tipo de jogador
 	if is_local:
@@ -1106,7 +1100,7 @@ func _spawn_player(player_data: Dictionary, is_local: bool, _match_data: Diction
 		#player_instance.terrain_ = map_manager.current_map
 		#player_instance.central_spawn = player_instance.terrain_.get_node_or_null("central_spawn")
 		
-		_log_debug("Jogador local spawnado: %s" % player_name_)
+		_log_debug("🧍🏼Jogador local spawnado: %s na posição: %s" % [player_name_, player_pos["position"]])
 	else:
 		# Jogador remoto: NÃO tem câmera atribuída
 		player_instance.camera_controller = null
@@ -1114,7 +1108,7 @@ func _spawn_player(player_data: Dictionary, is_local: bool, _match_data: Diction
 		player_instance.add_to_group("player")
 		player_instance.add_to_group("remote_player")
 		
-		_log_debug("Jogador remoto spawnado: %s" % player_name_)
+		_log_debug("🧍🏼Jogador remoto spawnado: %s na posição: %s" % [player_name_, player_pos["position"]])
 
 func _client_return_to_room(room_data: Dictionary):
 	"""Callback quando deve retornar à sala"""
@@ -1148,9 +1142,18 @@ func _client_remove_player(peer_id : int):
 			player_node.queue_free()
 
 func _client_update_character_peer_id(_uuid_base: String, _new_peer_id: int):
-	"""Atualiza o id de sessão do cliente reconectado no round para manutenção de sincronia"""
-	_log_debug("👤 Atualizando session id de remoto: %s" % [_uuid_base, _new_peer_id])
-	pass
+	"""Atualiza o id de sessão do cliente reconectado no round para manutenção de sincronia, 
+	isso acontece nos clientes que inda estão no round"""
+	_log_debug("👤 Atualizando session id de remoto: %s para %d" % [_uuid_base, _new_peer_id])
+	
+	if not players_node:
+		return
+		
+	for child in players_node.get_children():
+		if child.player_uuid == _uuid_base:
+			child.name = str(_new_peer_id)
+			child.player_id = _new_peer_id
+			child.set_multiplayer_authority(_new_peer_id)
 
 func _cleanup_local_round():
 	"""Limpa todos os objetos da rodada no cliente"""

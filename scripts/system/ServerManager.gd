@@ -89,7 +89,7 @@ var initializer = null
 var next_room_id: int = 1
 
 ## Rastreamento de estados dos jogadores para validação anti-cheat
-## Formato: {peer_id: {pos: Vector3, vel: Vector3, rot: Vector3, timestamp: int}}
+## Formato: {peer_uuid: {pos: Vector3, vel: Vector3, rot: Vector3, timestamp: int}}
 var player_states: Dictionary = {}
 
 # ===== INICIALIZAÇÃO DO MANAGER =====
@@ -483,6 +483,7 @@ func _handle_request_rooms_list(peer_id: int):
 		# Se estiver em uma partida, perguntar se quer retornar para ela
 		var room_id = client_registry.get_player_room(player_uuid)
 		var room = room_registry.get_room(room_id)
+		_log_debug("Requisitando para cliente %d retorno à partida em que estava ao desconectar")
 		network_manager.rpc_id(peer_id, "_client_receive_round_return_request", room["name"])
 	else:
 		# Se não estiver, enviar lista de salas para ele escolher
@@ -554,21 +555,18 @@ func _handle_request_return_or_exit(peer_id: int, chosen: bool):
 				"settings": round_["settings"],
 				"players": round_["players"],
 			}
+			match_data["settings"]["spawn_points"] = {}
+
+			for player in round_["players"]:
+				# {peer_uuid: {pos: Vector3, vel: Vector3, rot: Vector3, timestamp: int}}
+				var position: Vector3 = player_states[player["id"]].get("pos")
+				var rotation: Vector3 = player_states[player["id"]].get("rot")
+				match_data["settings"]["spawn_points"][player["session_id"]] = {
+					"position": position,
+					"rotation": rotation}
 			
-			# Prepara pacote de dados para enviar aos clientes
-			# Adiciona dados de posição para spawn de players
-			# As session_ids (ex: 1963732664) devem estar atualizadas para as novas deste cliente (já implementado)
-			# 2. Depois fazer um for para criar var spawn e add em match_data["settings"]["spawn_points"]
-			# Abaixo um exemplo de como deve ficar:
-			# Ex: spawn = { 1963732664: { "position": (8.101107, 0.385641, -7.800414), "rotation": (0.0, -1.149644, 0.0) }
-			# Ex: spawn = { 1696722083: { "position": (2.00074, 0.385641, -7.260236), "rotation": (0.0, -0.204024, 0.0) } }
-			
-			# Ex: match_data["settings"]["spawn_points"][player_peer_id] = spawn
-			
-			# Muda o nome do nó remoto dele no servidor e nos outros clientes
-			var player_node = client_registry.get_player_node(player_uuid)
-			player_node.name = str(peer_id)
-			client_registry.register_player_node(player_uuid, player_node)
+			# Define o player como conectado de novo no round
+			round_registry._unmark_player_disconnected(round_["round_id"], player_uuid)
 			
 			# Envia comando de retorno para o cliente
 			network_manager.rpc_id(peer_id, "_client_round_return", match_data)
@@ -1130,16 +1128,21 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, pl
 	"""
 	var player_scene_ : PackedScene = preload(player_scene)
 	var player_instance = player_scene_.instantiate()
+	var p_uuid = player_data["id"]
+	
+	# Adiciona aos grupos
+	player_instance.add_to_group("remote_player")
+	player_instance.add_to_group("player")
 	
 	# CONFIGURAÇÃO CRÍTICA: Nome = ID do peer
 	player_instance.name = str(player_data["session_id"])
 	player_instance.player_id = player_data["session_id"]
 	player_instance.player_name = player_data["name"]
 	player_instance._is_server = true
-	player_instance.add_to_group("remote_player")
 	
 	# IMPORTANTE: No servidor, nenhum player é "local"
 	player_instance.is_local_player = false
+	player_instance._is_server = true
 	
 	# Adiciona à cena
 	players_node.add_child(player_instance)
@@ -1150,6 +1153,11 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, pl
 	player_instance.server_manager = self
 	player_instance.initializer = initializer
 	
+	# Inicializa jogador (configura identificação básica)
+	player_instance.initialize(player_data["name"], player_data["session_id"], player_data["id"], spawn_data["position"])
+	player_instance.rotation = spawn_data["rotation"]
+	player_instance.setup_name_label()
+	
 	# Preenche terreno e central_spawn
 	player_instance.terrain_ = map_manager.current_map
 	player_instance.central_spawn = player_instance.terrain_.get_node_or_null("central_spawn")
@@ -1157,20 +1165,15 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, pl
 	# Registra node no ClientRegistry
 	client_registry.register_player_node(player_data["id"], player_instance)
 	
-	# Posiciona
-	var player_sesion_id = client_registry.get_peer_id_by_uuid(player_data["id"])
-	player_instance.initialize(player_sesion_id, player_data["name"], spawn_data["position"])
-	
 	# Registra no RoundRegistry
 	var p_round = round_registry.get_round_by_player_uuid(player_data["id"])
-	if not p_round.is_empty():
-		round_registry.register_spawned_player(p_round["round_id"], player_data["id"], player_instance)
+	round_registry.register_spawned_player(p_round["round_id"], player_data["id"], player_instance)
 	
 	# INICIALIZA ESTADO PARA VALIDAÇÃO ANTI-CHEAT
-	player_states[player_data["id"]] = {
+	player_states[p_uuid] = {
 		"pos": spawn_data["position"],
 		"vel": Vector3.ZERO,
-		"rot": Vector3.ZERO,
+		"rot": spawn_data["rotation"],
 		"timestamp": Time.get_ticks_msec()
 	}
 	
@@ -1276,7 +1279,7 @@ func _cleanup_round_objects(round_id: int):
 
 # ===== VALIDAÇÃO ANTI-CHEAT =====
 
-func _validate_player_movement(p_id: int, pos: Vector3, vel: Vector3, rot: Vector3 = Vector3.ZERO) -> bool:
+func _validate_player_movement(p_uuid: String, pos: Vector3, vel: Vector3, rot: Vector3 = Vector3.ZERO) -> bool:
 	"""
 	Valida se o movimento do jogador é razoável (anti-cheat)
 	
@@ -1287,14 +1290,14 @@ func _validate_player_movement(p_id: int, pos: Vector3, vel: Vector3, rot: Vecto
 	
 	Retorna true se válido, false se suspeito de hack
 	"""
-	
+
 	# Se anti-cheat desativado, sempre aceita
 	if not enable_anticheat:
 		return true
 	
 	# Se não tem estado anterior, aceita (primeira sincronização)
-	if not player_states.has(p_id):
-		player_states[p_id] = {
+	if not player_states.has(p_uuid):
+		player_states[p_uuid] = {
 			"pos": pos,
 			"vel": vel,
 			"rot": rot,
@@ -1302,7 +1305,7 @@ func _validate_player_movement(p_id: int, pos: Vector3, vel: Vector3, rot: Vecto
 		}
 		return true
 	
-	var last_state = player_states[p_id]
+	var last_state = player_states[p_uuid]
 	var current_time = Time.get_ticks_msec()
 	var time_diff = (current_time - last_state["timestamp"]) / 1000.0
 	
@@ -1318,7 +1321,7 @@ func _validate_player_movement(p_id: int, pos: Vector3, vel: Vector3, rot: Vecto
 	
 	if distance > max_distance:
 		_log_debug("⚠️ ANTI-CHEAT: Distância suspeita")
-		_log_debug("Player: %d" % p_id)
+		_log_debug("Player: %s" % p_uuid)
 		_log_debug("Distância: %.2f m em %.3f s" % [distance, time_diff])
 		_log_debug("Máximo: %.2f m" % max_distance)
 		_log_debug("Velocidade: %.2f m/s (máx: %.2f m/s)" % [distance/time_diff, max_player_speed * speed_tolerance])
@@ -1329,7 +1332,7 @@ func _validate_player_movement(p_id: int, pos: Vector3, vel: Vector3, rot: Vecto
 	
 	if reported_speed > max_player_speed * speed_tolerance:
 		_log_debug("⚠️ ANTI-CHEAT: Velocidade reportada suspeita")
-		_log_debug("Player: %d" % p_id)
+		_log_debug("Player: %s" % p_uuid)
 		_log_debug("Reportada: %.2f m/s" % reported_speed)
 		_log_debug("Máximo: %.2f m/s" % (max_player_speed * speed_tolerance))
 		return false
@@ -1339,13 +1342,13 @@ func _validate_player_movement(p_id: int, pos: Vector3, vel: Vector3, rot: Vecto
 	
 	if abs(actual_speed - reported_speed) > max_player_speed * 0.5:
 		_log_debug("⚠️ ANTI-CHEAT: Discrepância entre velocidade real e reportada")
-		_log_debug("Player: %d" % p_id)
+		_log_debug("Player: %s" % p_uuid)
 		_log_debug("Real: %.2f m/s" % actual_speed)
 		_log_debug("Reportada: %.2f m/s" % reported_speed)
 		# Nota: Não retorna false aqui, pois pode ser lag legítimo
 	
 	# ATUALIZA ESTADO PARA PRÓXIMA VALIDAÇÃO
-	player_states[p_id] = {
+	player_states[p_uuid] = {
 		"pos": pos,
 		"vel": vel,
 		"rot": rot,
@@ -1372,7 +1375,7 @@ func _apply_player_state_on_server(p_id: int, pos: Vector3, rot: Vector3, vel: V
 	node.velocity = vel
 	
 	# Atualiza player_states para validação futura
-	player_states[p_id] = {
+	player_states[player_uuid] = {
 		"pos": pos,
 		"rot": rot,
 		"vel": vel,

@@ -340,6 +340,24 @@ func _mark_player_disconnected(round_id: int, uuid_base: String):
 	_add_event(round_id, "player_disconnected", {"uuid_base": uuid_base})
 	_log_debug("⚠ uuid=%s marcado como desconectado na rodada %d" % [uuid_base, round_id])
 
+func _unmark_player_disconnected(round_id: int, uuid_base: String):
+	"""Remove player da lista de desconectados da rodada."""
+
+	if not rounds.has(round_id):
+		return
+
+	var round_data = rounds[round_id]
+	var disconnected: Array = round_data["disconnected_players"]
+
+	var index := disconnected.find(uuid_base)
+	if index == -1:
+		return
+
+	disconnected.remove_at(index)
+
+	_add_event(round_id, "player_reconnected", {"uuid_base": uuid_base})
+	_log_debug("✓ uuid=%s removido de disconnected_players na rodada %d" % [uuid_base, round_id])
+
 func get_spawned_player(round_id: int, uuid_base: String) -> Node:
 	"""Retorna node do player spawnado (ou null se não encontrado)."""
 	if not rounds.has(round_id):
@@ -382,6 +400,19 @@ func get_active_players_ids(round_id: int) -> Array:
 
 func get_active_player_count(round_id: int) -> int:
 	return get_active_players(round_id).size()
+
+func get_all_players_ids(round_id: int) -> Array:
+	"""Retorna lista de uuid_bases dos jogadores (ativos ou não)."""
+	if not rounds.has(round_id):
+		return []
+
+	var round_data = rounds[round_id]
+	var all = []
+
+	for player_data in round_data["players"]:
+		all.append(player_data["id"])
+
+	return all
 
 # ===== EVENTOS DA RODADA =====
 
