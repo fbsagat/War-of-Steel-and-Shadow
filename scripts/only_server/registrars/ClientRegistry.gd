@@ -170,6 +170,14 @@ func update_peer_id(uuid_base: String, new_peer_id: int):
 		node.name = str(new_peer_id)
 		node.player_id = new_peer_id
 		
+		# Se visual_debug true, atualiza name_label poir mudou o id de sessão (peer_id)
+		# Se visual_debug false, não precisa atualizar pois o nome não muda na reconexão
+		if server_manager.visual_debug:
+			var start = uuid_base.substr(0, 4)
+			var end = uuid_base.substr(uuid_base.length() - 4, 4)
+			var player_name = get_player_name(uuid_base)
+			node.name_label.text = "%s\n%s[...]%s\n%s" % [player_name, start, end, new_peer_id]
+		
 		# Atualizar o node path
 		# pega o path do parent
 		var parent_path := str(node.get_parent().get_path())
@@ -448,6 +456,7 @@ func get_connected_player_count() -> int:
 
 func init_player_inventory(round_id: int, uuid_base: String) -> bool:
 	"""Inicializa inventário do jogador em uma rodada específica."""
+
 	if not is_player_registered(uuid_base):
 		push_error("ClientRegistry: Tentou inicializar inventário de UUID %s não registrado" % uuid_base)
 		return false

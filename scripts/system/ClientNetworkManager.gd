@@ -233,10 +233,10 @@ func _client_update_character_peer_id(_uuid_base: String, _new_peer_id: int):
 
 # ===== SPAWN DE OBJETOS — RECEBIMENTOS DO SERVIDOR =====
 
-func _client_spawn_item(object_id: int, round_id: int, item_name: String, position: Vector3, rotation: Vector3, drop_velocity: Vector3, owner_id: int):
+func _client_spawn_item(object_id: int, round_id: int, item_name: String, position: Vector3, rotation: Vector3, drop_velocity: Vector3, owner_uuid: String):
 	_log_debug("📥 Spawn item ID=%d, Item=%s" % [object_id, item_name])
 	if game_manager.has_method("_spawn_on_client"):
-		game_manager._spawn_on_client(object_id, round_id, item_name, position, rotation, drop_velocity, owner_id)
+		game_manager._spawn_on_client(object_id, round_id, item_name, position, rotation, drop_velocity, owner_uuid)
 	else:
 		push_error("GameManager não tem método _spawn_on_client")
 
@@ -325,7 +325,7 @@ func _client_remove_item_from_inventory(object_id):
 
 func _client_equip_item(item_name, object_id, slot):
 	if game_manager and game_manager.has_method("equip_item"):
-		game_manager.equip_item(item_name, object_id, slot)
+		game_manager.equip_item(object_id, slot, item_name)
 
 func _client_unequip_item(item_id, slot, verify):
 	if game_manager and game_manager.has_method("unequip_item"):
@@ -457,15 +457,17 @@ func send_player_action(p_id: int, action_type: String, item_equipado_nome, anim
 func _client_player_action(p_id: int, action_type: String, item_equipado_nome, anim_name: String):
 	_log_debug("⚔️ Recebendo ação: Player %d - %s" % [p_id, action_type])
 	var player = game_manager.players_node.get_node_or_null(str(p_id))
+
 	if player and player.has_method("_client_receive_action"):
 		player._client_receive_action(action_type, item_equipado_nome, anim_name)
+		_log_debug("Ação do player recebida!")
 
-func _client_receive_attack(body_name):
-	_log_debug("⚔️ Player %s recebendo dano" % body_name)
-	var player = game_manager.players_node.get_node_or_null(str(body_name))
+func _client_receive_attack(victim_session_id):
+	_log_debug("⚔️ Player %s recebendo dano" % victim_session_id)
+	var player = game_manager.players_node.get_node_or_null(str(victim_session_id))
+
 	if player and player.has_method("take_damage"):
 		player.take_damage()
-
 
 # ===== ERROS =====
 

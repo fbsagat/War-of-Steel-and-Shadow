@@ -198,7 +198,7 @@ func _client_update_character_peer_id(_uuid_base: String, _new_peer_id: int):
 # ===== SPAWN DE OBJETOS =====
 
 @rpc("authority", "call_remote", "reliable")
-func _client_spawn_item(_object_id: int, _round_id: int, _item_name: String, _position: Vector3, _rotation: Vector3, _drop_velocity: Vector3, _owner_id: int):
+func _client_spawn_item(_object_id: int, _round_id: int, _item_name: String, _position: Vector3, _rotation: Vector3, _drop_velocity: Vector3, _owner_uuid: String):
 	pass
 
 @rpc("authority", "call_remote", "reliable")

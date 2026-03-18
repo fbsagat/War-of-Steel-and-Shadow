@@ -279,6 +279,6 @@ func unregister_syncable_object(object_id: int) -> void:
 # ===== AÇÕES (ATAQUES, DEFESA) =====
 
 func _server_player_action(p_id: int, action_type: String, item_equipado_nome, anim_name: String):
-	_log_debug("_server_player_action")
+
 	if server_manager.has_method("_server_player_action"):
 		server_manager._server_player_action(p_id, action_type, item_equipado_nome, anim_name)

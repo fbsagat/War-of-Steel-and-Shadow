@@ -47,7 +47,7 @@ signal round_created(round_data: Dictionary)
 signal round_started(round_id: int)
 signal round_ending(round_id: int, reason: String)
 signal round_ended(round_data: Dictionary)
-signal all_players_disconnected(round_id: int)
+#signal all_players_disconnected(round_id: int)
 signal player_spawned_in_round(round_id: int, uuid_base: String, player_node: Node)
 signal player_despawned_from_round(round_id: int, uuid_base: String)
 
@@ -72,7 +72,8 @@ signal player_despawned_from_round(round_id: int, uuid_base: String)
 ##   "map_manager": Node,
 ##   "round_node": Node,
 ##   "spawned_players": Dictionary,    # {uuid_base: Node}
-##   "round_timer": Timer
+##   "round_timer": Timer,
+##   "empty_since": null
 ## }
 
 # ===== INICIALIZAÇÃO =====
@@ -86,7 +87,6 @@ func initialize():
 	# Conecta sinais
 	client_registry.peer_id_updated.connect(_on_peer_id_updated)
 	
-	_setup_global_timers()
 	_initialized = true
 	_log_debug("▶️ RoundRegistry inicializado")
 
@@ -105,14 +105,6 @@ func reset():
 	rounds.clear()
 	_initialized = false
 	_log_debug("🔄 RoundRegistry resetado")
-
-func _setup_global_timers():
-	disconnect_check_timer = Timer.new()
-	disconnect_check_timer.wait_time = disconnect_check_interval
-	disconnect_check_timer.autostart = false
-	disconnect_check_timer.one_shot = false
-	disconnect_check_timer.timeout.connect(_check_all_disconnected)
-	add_child(disconnect_check_timer)
 
 # ===== GERENCIAMENTO DE RODADAS =====
 
@@ -148,7 +140,8 @@ func create_round(room_id: int, room_name: String, players: Array, settings: Dic
 		"round_node": null,
 		"map_manager": null,
 		"spawned_players": {},
-		"round_timer": null
+		"round_timer": null,
+		"empty_since": null
 	}
 
 	# Inicializa scores zerados (chave = uuid_base)
@@ -303,6 +296,25 @@ func cleanup_inactive_rounds():
 			_log_debug("Round %d inativo por >%.1fs. Limpando..." % [round_id, inactive_threshold])
 			end_round(round_id)
 
+func mark_empty_round(round_id):
+	"""Marca sala como vazia"""
+	
+	if not rounds.has(round_id):
+		_log_debug("⚠ Tentou marcar como vazia sala inexistente: %d" % round_id)
+		return false
+		
+	var round_ = rounds[round_id]
+	round_["empty_since"] = Time.get_unix_time_from_system()
+	
+func unmark_empty_round(round_id):
+	"""Marca sala como não vazia"""
+	if not rounds.has(round_id):
+		_log_debug("⚠ Tentou marcar como preenchida sala inexistente: %d" % round_id)
+		return false
+	
+	var round_ = rounds[round_id]
+	round_["empty_since"] = null
+
 # ===== GERENCIAMENTO DE PLAYERS SPAWNADOS =====
 
 func register_spawned_player(round_id: int, uuid_base: String, player_node: Node):
@@ -338,6 +350,11 @@ func _mark_player_disconnected(round_id: int, uuid_base: String):
 
 	round_data["disconnected_players"].append(uuid_base)
 	_add_event(round_id, "player_disconnected", {"uuid_base": uuid_base})
+	
+	# Marca round como vazio se 'disconnected_players' ter a mesma quantidade de players que 'players'
+	if round_data["disconnected_players"].size() == round_data["players"].size():
+		mark_empty_round(round_id)
+	
 	_log_debug("⚠ uuid=%s marcado como desconectado na rodada %d" % [uuid_base, round_id])
 
 func _unmark_player_disconnected(round_id: int, uuid_base: String):
@@ -356,6 +373,11 @@ func _unmark_player_disconnected(round_id: int, uuid_base: String):
 	disconnected.remove_at(index)
 
 	_add_event(round_id, "player_reconnected", {"uuid_base": uuid_base})
+	
+	# Marca round como não vazio se 'disconnected_players' ter menos quantidade de players que 'players'
+	if round_data["disconnected_players"].size() < round_data["players"].size():
+		unmark_empty_round(round_id)
+		
 	_log_debug("✓ uuid=%s removido de disconnected_players na rodada %d" % [uuid_base, round_id])
 
 func get_spawned_player(round_id: int, uuid_base: String) -> Node:
@@ -487,22 +509,6 @@ func get_leaderboard(round_id: int) -> Array:
 
 	leaderboard.sort_custom(func(a, b): return a["score"] > b["score"])
 	return leaderboard
-
-# ===== VERIFICAÇÕES AUTOMÁTICAS =====
-
-func _check_all_disconnected():
-	for round_id in rounds:
-		var round_data = rounds[round_id]
-
-		if round_data["state"] != "playing":
-			continue
-
-		if get_active_player_count(round_id) == 0:
-			_log_debug("⚠ Todos os jogadores desconectaram da rodada %d!" % round_id)
-			all_players_disconnected.emit(round_id)
-
-			if auto_end_on_all_disconnected:
-				end_round(round_id, "all_disconnected")
 
 # ===== QUERIES DE ESTADO =====
 

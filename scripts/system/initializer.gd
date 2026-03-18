@@ -7,6 +7,8 @@ extends Node
 @export var test_mode: bool = true
 ## [TESTES] Define a quantidade de instâcias de clientes conectadas para executar fast_round
 @export var simulador_players_qtd: int = 2
+## Ativa/desativa o debug visual na gameplay
+@export var visual_debug: bool = true
 ## [TESTES] Dropa itens perto dos players e ativa o trainer de cada player
 @export var trainer: bool = true
 ## Iniciar com o mouse destrancado (Cliente / apenas no modo de testes)
@@ -18,7 +20,7 @@ var activate_only_selected: bool = false
 # Disponíveis: "Server", "NetworkManager", "TestManager", "GameManager", "RoomRegistry"
 # "RoundRegistry", "ClientRegistry", "Player_node", "ObjectManager", "MapManager", "MainMenu"
 # "ItemDatabase", "InventoryMenu", "DroppedItem"
-var selected: Array = ["Server", "ClientRegistry", "TestManager", "NetworkManager", "GameManager", "Player_node"]
+var selected: Array = ["Server", "TestManager", "NetworkManager", "GameManager", "Player_node"]
 
 # Referências
 ## Manager de rede, gerencia comunicação entre servidor e clientes
@@ -183,8 +185,8 @@ func _init_server(is_headless):
 	if test_mode:
 		server_manager.fast_round = true
 		server_manager.simulador_players_qtd = simulador_players_qtd
-	if trainer:
-		server_manager.test_trainer = true
+	server_manager.test_trainer = trainer
+	server_manager.visual_debug = visual_debug
 	
 	# Aguarda até que os nós tenham sido adicionados à árvore
 	await get_tree().process_frame
@@ -268,7 +270,10 @@ func _init_client(id_file_):
 	if test_mode:
 		game_manager.localhost_auto_connect = true
 		main_menu.start_unlocked_mouse = start_unlocked_mouse
+	game_manager.visual_debug = visual_debug
+		
 	item_database.is_server = false
+	
 	# Aguarda até que os nós tenham sido adicionados à árvore
 	await get_tree().process_frame
 	

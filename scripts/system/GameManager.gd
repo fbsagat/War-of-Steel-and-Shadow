@@ -21,6 +21,7 @@ const camera_controller : String = "res://scenes/gameplay/camera_controller.tscn
 
 @export_category("Debug")
 @export var debug_mode: bool = true
+@export var visual_debug: bool = false
 
 @export_category("Reconection Settings")
 @export var reconnect_attempts := 0
@@ -56,7 +57,7 @@ var current_round: Dictionary = {}
 var connection_start_time: float = 0.0
 var cached_unique_id: int = 0
 ## Objetos spawnados organizados por rodada
-## {round_id: {object_id: {node: Node, item_name: String, owner_id: int}}}
+## {round_id: {object_id: {node: Node, item_name: String, owner_uuid: int}}}
 var spawned_objects: Dictionary = {}
 var local_inventory: Dictionary = {} # Inventário(de itens e equipamentos) local do player.
 
@@ -966,7 +967,7 @@ func _start_round_locally(match_data: Dictionary):
 func _return_round_locally(match_data: Dictionary):
 	"""Retorna à rodada localmente no cliente"""
 	_log_debug("========================================")
-	_log_debug("INICIANDO RODADA")
+	_log_debug("RETORNANDO À RODADA")
 	_log_debug("Sala: ID %d" % match_data["room_id"])
 	_log_debug("Rodada: ID %d" % match_data["round_id"])
 	_log_debug("Mapa: %s" % match_data["map_scene"])
@@ -1011,6 +1012,42 @@ func _return_round_locally(match_data: Dictionary):
 		var is_local = player_data["id"] == uuid_base
 		_spawn_player(player_data, is_local, match_data)
 	
+	# Atualiza visual de equipamentos para cada personagem, incluindo local
+	# (local deve usar funções do game manager add_item_to_inventory e equip_item antes de 
+	# apply_visual_equip_on_player_node no nó do personagem)
+	
+	for player_uuid in match_data["equipped_items"]:
+		var slots = match_data["equipped_items"][player_uuid]
+		for slot_name in slots:
+			var item = slots[slot_name]
+			if item.is_empty():
+				continue
+			var item_id = item.get("item_id")
+			var object_id = item.get("object_id")
+			var node = players_node.get_node_or_null(str(player_uuid))
+			if player_uuid == multiplayer.get_unique_id():
+				var item_name = item_database.get_item_by_id(int(item_id))["name"]
+				add_item_to_inventory(item_id, object_id)
+				equip_item(object_id, "", item_name)
+				node.apply_visual_equip_on_player_node(item_id)
+			else:
+				node.apply_visual_equip_on_player_node(item_id)
+	
+	# Atualiza visual de itens no inventário do player local
+	for item in match_data["player_items"]:
+		add_item_to_inventory(item["item_id"], item["object_id"])
+	
+	# Spawna objetos com localização(e outros atributos) atual na partida
+	for object_id in match_data["round_objects"]:
+		var item = match_data["round_objects"][object_id]
+		var round_id = item["round_id"]
+		var name_ = item["item_name"]
+		var position = item["position"]
+		var rotation = item["rotation"]
+		var velocity = item["drop_velocity"]
+		var owner_ = item["owner_uuid"]
+		_spawn_on_client(object_id, round_id, name_, position, rotation, velocity, owner_)
+	
 	round_started.emit()
 	
 	# Filtrar uns itens e deixar numa variável(current_round) para uso durante a partida
@@ -1018,7 +1055,7 @@ func _return_round_locally(match_data: Dictionary):
 	var filtered_round_data = filtrar_dict_invertido(match_data)
 	current_round = filtered_round_data
 	
-	_log_debug("Rodada carregada no cliente")
+	_log_debug("Rodada recarregada no cliente")
 
 func _spawn_player(player_data: Dictionary, is_local: bool, _match_data: Dictionary):
 	"""Spawna players para cada cliente, cada cliente recebe X execuções,
@@ -1150,9 +1187,15 @@ func _client_update_character_peer_id(_uuid_base: String, _new_peer_id: int):
 		return
 		
 	for child in players_node.get_children():
-		if child.player_uuid == _uuid_base:
+		if child is CharacterBody3D and child.player_uuid == _uuid_base:
 			child.name = str(_new_peer_id)
 			child.player_id = _new_peer_id
+			
+			if visual_debug:
+				var start = _uuid_base.substr(0, 4)
+				var end = _uuid_base.substr(_uuid_base.length() - 4, 4)
+				child.name_label.text = "%s\n%s[...]%s\n%s" % [player_name, start, end, _new_peer_id]
+			
 			child.set_multiplayer_authority(_new_peer_id)
 
 func _cleanup_local_round():
@@ -1211,7 +1254,7 @@ func _show_error(message: String, color= "Red"):
 		elif main_menu_node.room_menu and main_menu_node.room_menu.visible:
 			main_menu_node._show_error_(message, main_menu_node.room_error_label, color)
 		elif main_menu_node.room_list_menu and main_menu_node.room_list_menu.visible:
-			main_menu_node.show_room_list_menu(true, true)
+			main_menu_node.show_room_list_menu(true, false)
 			main_menu_node._show_error_(message, main_menu_node.match_list_error_label, color)
 		elif main_menu_node.manual_room_join_menu and main_menu_node.manual_room_join_menu.visible:
 			main_menu_node._show_error_(message, main_menu_node.manual_room_join_error_label, color)
@@ -1261,8 +1304,8 @@ func add_item_to_inventory(item_id: String, object_id: int) -> bool:
 	var item_type = item_database.get_type(item_name)
 	var icon_path = "res://material/collectibles_icons/%s.png" % item_name
 	
+	# Emite o sinal
 	item_added.emit(str(object_id), item_name, item_type, icon_path)
-	# signal item_added(object_id: String, item_name: String, item_type: String, slot_id: String, icon_path: String)
 	
 	_log_debug("✓ Item adicionado: %s (ID: %s, Object: %d)" % [item_name, item_id, object_id])
 
@@ -1293,7 +1336,7 @@ func remove_item_from_inventory(object_id: int) -> bool:
 	
 	return true
 
-func equip_item(item_name: String, object_id, item_slot: String = "") -> bool:
+func equip_item(object_id, item_slot: String = "", item_name: String = "") -> bool:
 	"""
 	Equipa item em um slot (detecta automaticamente se não especificado)
 	Slots válidos: hand-right, hand-left, head, body, back
@@ -1443,7 +1486,7 @@ func clear_player_inventory():
 
 # ===== SPAWN DE OBJETOS =====
 
-func _spawn_on_client(object_id: int, round_id: int, item_name: String, position: Vector3, rotation: Vector3, drop_velocity: Vector3, owner_id: int):
+func _spawn_on_client(object_id: int, round_id: int, item_name: String, position: Vector3, rotation: Vector3, drop_velocity: Vector3, owner_uuid: String):
 	"""
 	Spawna objeto no cliente (chamado via RPC)
 	"""
@@ -1479,7 +1522,7 @@ func _spawn_on_client(object_id: int, round_id: int, item_name: String, position
 	
 	# Nome consistente com servidor
 	item_node.name = "Object_%d_%s_%d" % [object_id, item_name, round_id]
-	_log_debug("[ITEM]📦 Spawnando no cliente: %s - %s" % [owner_id, item_node.name])
+	_log_debug("[ITEM]📦 Spawnando no cliente: %s - %s" % [owner_uuid, item_node.name])
 	
 	# Injeta dependências
 	item_node.network_manager = network_manager
@@ -1506,7 +1549,7 @@ func _spawn_on_client(object_id: int, round_id: int, item_name: String, position
 	# Inicializa item
 	if item_node.has_method("initialize"):
 		var item_full_data = item_database.get_item_full_info(item_name)
-		item_node.initialize(object_id, round_id, item_name, item_full_data, owner_id, drop_velocity)
+		item_node.initialize(object_id, round_id, item_name, item_full_data, owner_uuid, drop_velocity)
 	# ✅ CORRIGIDO: Registra com estrutura correta
 	if not spawned_objects.has(round_id):
 		spawned_objects[round_id] = {}
@@ -1514,7 +1557,7 @@ func _spawn_on_client(object_id: int, round_id: int, item_name: String, position
 	spawned_objects[round_id][object_id] = {
 		"node": item_node,
 		"item_name": item_name,
-		"owner_id": owner_id,
+		"owner_uuid": owner_uuid,
 		"spawn_time": Time.get_unix_time_from_system()
 	}
 	

@@ -110,10 +110,8 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 		var player_data = client_registry.get_player(_uuid_base)
 			
 		# Registra com nome padrão
-		var player_uuid = client_registry.get_uuid_by_peer_id(peer_id)
-		var start = player_uuid.substr(0, 4)
-		var end = player_uuid.substr(player_uuid.length() - 4, 4)
-		var player_name = "TestPlayer%d - %s" % [i + 1, start + "[...]" + end]
+		#var player_uuid = client_registry.get_uuid_by_peer_id(peer_id)
+		var player_name = "TestPlayer%d" % [i + 1]
 		var success = client_registry.register_player_name(_uuid_base, player_name)
 
 		if not success:

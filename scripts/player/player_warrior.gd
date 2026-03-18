@@ -734,10 +734,10 @@ func _on_hitbox_body_entered(body: Node, hitbox_area: Area3D) -> void:
 		if body.is_in_group("remote_player"):
 			hit_targets.append(body)
 			group = "remote_player"
-			_log_debug("%s foi acertado por %s" % [body.name, hitbox_area.get_parent().name])
+			_log_debug("%s foi acertado em %s" % [body.name, hitbox_area.get_parent().name])
 		
 		if server_manager and server_manager.has_method("attack_validation"):
-			server_manager.attack_validation(group, player_id, actual_weapon.name, int(body.name))
+			server_manager.attack_validation(group, player_id, actual_weapon.name, body.player_id)
 
 func take_damage():
 	"""Jogador local ou remoto recebe dano de golpe, animção, sons e etc"""
@@ -1049,8 +1049,6 @@ func _client_receive_action(action_type: String, item_equipado_nome, anim_name: 
 	match action_type:
 		"attack":
 			# Atualiza is_attacking
-			if not is_attacking:
-				is_attacking = true
 				
 				# Atualiza actual_weapon
 				var weapon_node_path = item_database.get_item(item_equipado_nome)["model_node_link"]
@@ -1064,8 +1062,6 @@ func _client_receive_action(action_type: String, item_equipado_nome, anim_name: 
 		
 		"block_attack":
 			# Atualiza is_block_attacking
-			if not is_block_attacking:
-				is_block_attacking = true
 				
 				# Atualiza actual_weapon
 				var weapon_node_path = item_database.get_item(item_equipado_nome)["model_node_link"]
@@ -1078,12 +1074,9 @@ func _client_receive_action(action_type: String, item_equipado_nome, anim_name: 
 					"parameters/Attack/request")
 		
 		"defend_start":
-			is_defending = true
 			animation_tree.set("parameters/Blocking/blend_amount", 1.0)
 		
 		"defend_stop":
-			is_defending = false
-			is_attacking = false
 			animation_tree.set("parameters/Blocking/blend_amount", 0.0)
 			
 # ===== AÇÕES DO JOGADOR =====
@@ -1264,9 +1257,19 @@ func initialize(p_name: String, p_id: int, p_uuid: String, spawn_pos: Vector3):
 	
 	# Atualiza label de nome
 	if name_label:
-		name_label.text = p_name
+		var debug_enabled = server_manager.visual_debug if _is_server else game_manager.visual_debug
+		
+		name_label.text = (
+			"%s\n%s[...]%s\n%s" % [
+				p_name,
+				player_uuid.substr(0, 4),
+				player_uuid.substr(player_uuid.length() - 4, 4),
+				player_id
+			]
+		) if debug_enabled else p_name
+			
 		setup_name_label()
-	
+		
 	# Configuração de processos
 	if not is_local_player:
 		# Remotos não processam input
@@ -1367,7 +1370,7 @@ func action_pick_up_item_call():
 			_log_debug("Nenhum item por perto")
 		return
 	var object = found[0]
-	_log_debug("Player %d pediu para pegar o item %d" % [player_id, object.object_id])
+	_log_debug("Player %s pediu para pegar o item %d" % [player_name, object.object_id])
 	if network_manager and network_manager.is_connected and object:
 		network_manager.request_pick_up_item(player_id, object.object_id)
 		
@@ -1539,7 +1542,7 @@ func _log_debug(message: String):
 		return
 	
 	var prefix = "[SERVER]" if _is_server else "[CLIENT]"
-	print("%s[PlayerNode][ClientID: %d]: %s" % [prefix, player_id, message])
+	print("%s[PlayerNode][S_ID: %d][Nome: %s]: %s" % [prefix, player_id, player_name, message])
 		
 func verificar_rede():
 	var peer = multiplayer.multiplayer_peer
