@@ -950,6 +950,11 @@ func get_player_node_path(uuid_base: String) -> String:
 		return ""
 	return players[uuid_base].get("node_path", "")
 
+func clear_player_node_path(uuid_base: String):
+	if not players.has(uuid_base):
+		return ""
+	players[uuid_base]["node_path"] = ""
+
 # ===== FUNÇÕES INTERNAS =====
 
 func _get_player_inventory(round_id: int, uuid_base: String) -> Dictionary:

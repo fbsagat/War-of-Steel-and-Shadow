@@ -37,7 +37,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.466239, 0.38564134, -4.0823
 
 [node name="Sky3D" parent="." unique_id=2011906563 instance=ExtResource("3_t70ke")]
 editor_time_enabled = false
-current_time = 9.756026666666664
+current_time = 17.05
 minutes_per_day = 15.0
 
 [node name="Terrain3DParticles" parent="." unique_id=268241865 node_paths=PackedStringArray("terrain") instance=ExtResource("2_t70ke")]

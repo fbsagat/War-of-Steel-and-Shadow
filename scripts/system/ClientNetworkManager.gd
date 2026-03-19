@@ -291,16 +291,28 @@ func request_drop_item(player_id, obj_id):
 # ===== ITENS — APLICAÇÃO VISUAL NO CLIENTE (chamados pelo servidor) =====
 
 func _client_apply_pick_up(player_id):
+	
+	if not game_manager.players_node:
+		return
+	
 	var player_node = game_manager.players_node.get_node_or_null(str(player_id))
 	if player_node and player_node.has_method("action_pick_up_item"):
 		player_node.action_pick_up_item()
 
 func _client_apply_respawn(player_id, position: Vector3):
+	
+	if not game_manager.players_node:
+		return
+		
 	var player_node = game_manager.players_node.get_node_or_null(str(player_id))
 	if player_node and player_node.has_method("_respawn_player"):
 		player_node._respawn_player(position)
 
 func _client_apply_equip(player_id: int, item_id: int, unequip: bool = false, from_inv_men = false, is_swap = false):
+
+	if not game_manager.players_node:
+		return
+		
 	var player_node = game_manager.players_node.get_node_or_null(str(player_id))
 	if player_node and player_node.has_method("apply_visual_equip_on_player_node"):
 		player_node.apply_visual_equip_on_player_node(item_id, unequip, from_inv_men)
@@ -309,6 +321,10 @@ func _client_apply_equip(player_id: int, item_id: int, unequip: bool = false, fr
 
 func _client_apply_drop(player_id: int, item_name: String):
 	_log_debug("📥 Dropando equipamento: Player %d, Item %s" % [player_id, item_name])
+	
+	if not game_manager.players_node:
+		return
+	
 	var player_node = game_manager.players_node.get_node_or_null(str(player_id))
 	if player_node and player_node.has_method("execute_item_drop"):
 		player_node.execute_item_drop()
@@ -345,6 +361,10 @@ func send_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, runn
 	rpc_id(1, "_server_player_state", p_id, pos, rot, vel, running, jumping)
 
 func _client_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
+	
+	if not game_manager.players_node:
+		return
+	
 	var player = game_manager.players_node.get_node_or_null(str(p_id))
 	if not player:
 		_log_debug("Erro! _client_player_state não encontrou nó remoto de %s" % str(p_id))
@@ -367,6 +387,10 @@ func send_player_animation_state(p_id: int, speed: float, attacking: bool, defen
 
 func _client_player_animation_state(p_id: int, speed: float, attacking: bool, defending: bool,
 									jumping: bool, aiming: bool, running: bool, block_attacking: bool, on_floor: bool):
+	
+	if not game_manager.players_node:
+		return
+		
 	var player = game_manager.players_node.get_node_or_null(str(p_id))
 	if player and player.has_method("_client_receive_animation_state"):
 		player._client_receive_animation_state(speed, attacking, defending, jumping,
@@ -456,6 +480,10 @@ func send_player_action(p_id: int, action_type: String, item_equipado_nome, anim
 
 func _client_player_action(p_id: int, action_type: String, item_equipado_nome, anim_name: String):
 	_log_debug("⚔️ Recebendo ação: Player %d - %s" % [p_id, action_type])
+	
+	if not game_manager.players_node:
+		return
+	
 	var player = game_manager.players_node.get_node_or_null(str(p_id))
 
 	if player and player.has_method("_client_receive_action"):
@@ -464,6 +492,10 @@ func _client_player_action(p_id: int, action_type: String, item_equipado_nome, a
 
 func _client_receive_attack(victim_session_id):
 	_log_debug("⚔️ Player %s recebendo dano" % victim_session_id)
+	
+	if not game_manager.players_node:
+		return
+	
 	var player = game_manager.players_node.get_node_or_null(str(victim_session_id))
 
 	if player and player.has_method("take_damage"):

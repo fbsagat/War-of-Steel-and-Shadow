@@ -528,7 +528,12 @@ func _on_gameplay_menu_disconnect_f_server_pressed():
 	_disconnect_from_server(true)
 
 func _on_gameplay_menu_give_up_game_pressed():
-	_log_debug("_on_gameplay_menu_give_up_game_pressed")
+	_cleanup_local_round()
+	network_manager._server_request_return_or_exit(false)
+	
+	# Volta para o menu da sala
+	if main_menu_node:
+		main_menu_node.show_main_menu()
 
 # ===== ATUALIZAÇÃO DE CONFIGURAÇÕES =====
 
@@ -1202,11 +1207,6 @@ func _cleanup_local_round():
 	"""Limpa todos os objetos da rodada no cliente"""
 	_log_debug("Limpando objetos da rodada...")
 	
-	# Remove players
-	for child in players_node.get_children():
-		if child.is_in_group("player") or child.is_in_group("camera_controller"):
-			child.queue_free()
-	
 	local_player_node = null
 	
 	# Limpa objetos spawnados
@@ -1220,12 +1220,8 @@ func _cleanup_local_round():
 	
 	spawned_objects.clear()
 	
-	## Remove mapa
-	#if map_manager:
-		#map_manager.unload_map()
-		#map_manager.queue_free()
-		#map_manager = null
-	
+	round_node.queue_free()
+
 	_log_debug("✓ Limpeza completa")
 
 # ===== TRATAMENTO DE ERROS =====

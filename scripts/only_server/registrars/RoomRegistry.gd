@@ -32,6 +32,7 @@ var initializer = null
 var rooms: Dictionary = {}
 
 var _initialized: bool = false
+var max_id: int  = 0
 
 # ===== SINAIS =====
 
@@ -87,11 +88,8 @@ func reset():
 # ===== GERENCIAMENTO DE SALAS =====
 
 func _get_next_room_id() -> int:
-	var max_id = 0
-	for room_id in rooms:
-		if room_id > max_id:
-			max_id = room_id
-	return max_id + 1
+	max_id += 1
+	return max_id
 
 func create_room(room_name: String, password: String, host_uuid: String, min_players: int, max_players: int) -> Dictionary:
 	"""Cria nova sala. Retorna RoomData completo ou {} se falhar."""
@@ -686,7 +684,6 @@ func get_total_players_count() -> int:
 	return total
 
 func get_next_room_id() -> int:
-	var max_id = 0
 	for room_id in rooms:
 		if room_id > max_id:
 			max_id = room_id

@@ -21,7 +21,6 @@ class_name RoundRegistry
 
 @export_group("Auto-End Settings")
 @export var disconnect_check_interval: float = 2.0
-@export var auto_end_on_all_disconnected: bool = true
 
 @export_group("Debug")
 @export var debug_mode: bool = true
@@ -40,6 +39,7 @@ var rounds: Dictionary = {}
 
 var disconnect_check_timer: Timer = null
 var _initialized: bool = false
+var max_id: int = 0
 
 # ===== SINAIS =====
 
@@ -63,15 +63,17 @@ signal player_despawned_from_round(round_id: int, uuid_base: String)
 ##   "start_time": float,
 ##   "end_time": float,
 ##   "duration": float,
-##   "winner": Dictionary,             # {uuid_base, name, score}
-##   "scores": Dictionary,             # {uuid_base: score}
+##   "winner": Dictionary,                     # {uuid_base, name, score}
+##   "scores": Dictionary,                     # {uuid_base: score}
 ##   "events": Array[Event],
-##   "disconnected_players": Array[String],  # uuid_bases desconectados
+##   "disconnected_players": Array[String],    # uuid_bases desconectados
+##   "quitted_players": Array[String],          # uuid_bases plyers que sairm permanentemente
 ##   "end_reason": String,
-##   "state": String,                  # "loading", "playing", "ending", "results"
+##   "state": String,                          # "loading", "playing", "ending", "results"
+##   "is_spawned",
 ##   "map_manager": Node,
 ##   "round_node": Node,
-##   "spawned_players": Dictionary,    # {uuid_base: Node}
+##   "spawned_players": Dictionary,            # {uuid_base: Node}
 ##   "round_timer": Timer,
 ##   "empty_since": null
 ## }
@@ -135,6 +137,7 @@ func create_round(room_id: int, room_name: String, players: Array, settings: Dic
 		"scores": {},
 		"events": [],
 		"disconnected_players": [],
+		"quitted_players": [],
 		"end_reason": "",
 		"state": "loading",
 		"round_node": null,
@@ -196,7 +199,7 @@ func start_round(round_id: int):
 func end_round(round_id: int, reason: String = "completed", winner_data: Dictionary = {}) -> Dictionary:
 	"""Finaliza rodada (muda estado para 'ending').
 	winner_data deve conter {uuid_base, name, score}.
-	reason: 'completed', 'timeout', 'all_disconnected'."""
+	reason: 'completed', 'timeout', 'all_quitted'."""
 	if not rounds.has(round_id):
 		_log_debug("⚠ Tentou finalizar rodada inexistente: %d" % round_id)
 		return {}
@@ -329,13 +332,17 @@ func register_spawned_player(round_id: int, uuid_base: String, player_node: Node
 	player_spawned_in_round.emit(round_id, uuid_base, player_node)
 
 func unregister_spawned_player(round_id: int, uuid_base: String):
-	"""Remove registro de player spawnado."""
+	"""Remove registro de player spawnado e adiciona uuid em quitted_players"""
 	if not rounds.has(round_id):
 		return
 
 	if rounds[round_id]["spawned_players"].has(uuid_base):
 		rounds[round_id]["spawned_players"].erase(uuid_base)
 		_log_debug("✓ uuid=%s despawnado da rodada %d" % [uuid_base, round_id])
+		
+		# Adiciona em quitted_players
+		rounds[round_id]["quitted_players"].append(uuid_base)
+		
 		player_despawned_from_round.emit(round_id, uuid_base)
 
 func _mark_player_disconnected(round_id: int, uuid_base: String):
@@ -380,6 +387,11 @@ func _unmark_player_disconnected(round_id: int, uuid_base: String):
 		
 	_log_debug("✓ uuid=%s removido de disconnected_players na rodada %d" % [uuid_base, round_id])
 
+func remove_player(round_id: int, player_uuid: String):
+	"""Remove um player de um round"""
+	rounds[round_id]["players"] = rounds[round_id]["players"].filter(func(p):
+		return p["id"] != player_uuid)
+
 func get_spawned_player(round_id: int, uuid_base: String) -> Node:
 	"""Retorna node do player spawnado (ou null se não encontrado)."""
 	if not rounds.has(round_id):
@@ -391,6 +403,28 @@ func get_all_spawned_players(round_id: int) -> Array:
 	if not rounds.has(round_id):
 		return []
 	return rounds[round_id]["spawned_players"].values()
+
+func get_all_spawned_players_uuids(round_id: int) -> Array:
+	"""Retorna array com todos os nodes de players spawnados."""
+	if not rounds.has(round_id):
+		return []
+	
+	var spawned_players: Array = []
+	for spawned in rounds[round_id]["spawned_players"].values():
+		spawned_players.append(spawned.get("player_uuid"))
+	
+	return spawned_players
+
+func get_round_players_spawned_filter(round_id: int) -> Array:
+	"""Retorna players de um round filtrando/removendo os não spawnados."""
+	# Filtrar players que ainda estão na partida (apenas spawned players)
+	var round_spawned = get_all_spawned_players_uuids(round_id)
+	var round_ = get_round(round_id)
+	var all_players = round_["players"]
+
+	var filtered_players = all_players.filter(func(p):
+		return p["id"] in round_spawned)
+	return filtered_players
 
 func get_active_players(round_id: int) -> Array:
 	"""Retorna lista de PlayerData dos jogadores ATIVOS (não desconectados)."""
@@ -563,11 +597,8 @@ func get_active_rounds_count() -> int:
 # ===== UTILITÁRIOS =====
 
 func _get_next_round_id() -> int:
-	var max_id = 0
-	for round_id in rounds:
-		if round_id > max_id:
-			max_id = round_id
-	return max_id + 1
+	max_id += 1
+	return max_id
 
 ## Gera um dicionário com configurações randômicas para o Sky3D
 func sky3d_config_generator() -> Dictionary:
