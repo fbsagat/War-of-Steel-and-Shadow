@@ -203,6 +203,7 @@ func _toggle_inventory_menu(hide: bool = false) -> void:
 
 # Gameplay menu
 func _toggle_gameplay_menu(hide: bool = false) -> void:
+	
 	if main_menu_node == null:
 		return
 	
@@ -548,6 +549,8 @@ func _disconnect_from_server(notify_server: bool = false):
 		
 	# Reset completo do estado
 	peer = null
+	inventory_menu = false
+	gameplay_menu = false
 	is_connected_to_server = false
 	is_in_round = false
 	is_connecting = false
@@ -1296,6 +1299,8 @@ func _cleanup_local_round():
 	
 	local_player_node = null
 	is_in_round = false
+	inventory_menu = false
+	gameplay_menu = false
 	
 	# Limpa objetos spawnados
 	for round_id in spawned_objects.keys():
