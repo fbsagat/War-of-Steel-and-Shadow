@@ -197,7 +197,12 @@ func _server_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, r
 		return
 	server_manager._apply_player_state_on_server(p_id, pos, rot, vel, running, jumping)
 	var sender_uuid = client_registry.get_uuid_by_peer_id(p_id)
-	var round_id = round_registry.get_round_by_player_uuid(sender_uuid)["round_id"]
+	var round_ = round_registry.get_round_by_player_uuid(sender_uuid)
+	
+	if not round_:
+		return
+		
+	var round_id = round_["round_id"]
 	var players_round = round_registry.get_active_players_ids(round_id)
 	
 	for peer_id in players_round:

@@ -483,8 +483,9 @@ func _handle_request_rooms_list(peer_id: int):
 	"""Envia lista de salas disponíveis (não em jogo) para o cliente que requisitou"""
 	_log_debug("Cliente %d solicitou lista de salas" % peer_id)
 	
-	# Valida se player está registrado
 	var player_uuid = client_registry.get_uuid_by_peer_id(peer_id)
+	
+	# Valida se player está registrado
 	if not client_registry.is_player_registered(player_uuid):
 		_send_error_to_client(peer_id, "Jogador não registrado")
 		return
@@ -696,6 +697,10 @@ func _handle_create_room(peer_id: int, room_name: String, password: String):
 	var player_uuid = client_registry.get_uuid_by_peer_id(peer_id)
 	var player = client_registry.get_player(player_uuid)
 	
+	# Se estiver em um partida não executa
+	if client_registry.in_round(player_uuid):
+		return
+	
 	# Valida jogador
 	if player.is_empty() or not player.has("name"):
 		_send_error_to_client(peer_id, "Jogador não registrado")
@@ -770,6 +775,10 @@ func _handle_join_room_by_name(peer_id: int, room_name: String, password: String
 func _handle_join_room_common(peer_id: int, room_identifier: Variant, password: String, by_name: bool) -> bool:
 	var player_uuid = client_registry.get_uuid_by_peer_id(peer_id)
 	var player = client_registry.get_player(player_uuid)
+	
+	# Se estiver em um partida não executa
+	if client_registry.in_round(player_uuid):
+		return false
 	
 	# Valida jogador
 	if player.is_empty() or not player.has("name"):
@@ -867,6 +876,10 @@ func _handle_update_room_settings(peer_id, _changed_settings: Dictionary):
 	var room = room_registry.get_room(room_id)
 	var player = client_registry.get_player(player_uuid)
 	
+	# Se estiver em um partida não executa
+	if client_registry.in_round(player_uuid):
+		return
+	
 	# verificar se a sala existe
 	if not room_registry.room_exists(room_id):
 		return
@@ -890,6 +903,10 @@ func _handle_leave_room(peer_id: int):
 	"""Remove jogador da sala atual"""
 	var player_uuid = client_registry.get_uuid_by_peer_id(peer_id)
 	var player = client_registry.get_player(player_uuid)
+	
+	# Se estiver em um partida não executa
+	if client_registry.in_round(player_uuid):
+		return
 	
 	if player.is_empty() or not player.has("name"):
 		return
@@ -917,6 +934,10 @@ func _handle_kick_player_from_room(peer_id: int, _selected_player_uuid: String):
 	# Informações do requerente
 	var player_uuid = client_registry.get_uuid_by_peer_id(peer_id)
 	var room = room_registry.get_player_room(player_uuid)
+	
+	# Se estiver em um partida não executa
+	if client_registry.in_round(player_uuid):
+		return
 	
 	# Verificar se este peer é o host de sua sala e está nela
 	if not room_registry.is_player_host(player_uuid, room["id"]):
@@ -950,6 +971,10 @@ func _handle_close_room(peer_id: int):
 	var player = client_registry.get_player(player_uuid)
 	
 	if player.is_empty() or not player.has("name"):
+		return
+	
+	# Se estiver em um partida não executa
+	if client_registry.in_round(player_uuid):
 		return
 	
 	var room = room_registry.get_player_room(player_uuid)

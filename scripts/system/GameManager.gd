@@ -674,6 +674,10 @@ func all_client_receive_rooms_list(rooms: Array):
 
 func create_room(room_name: String, password: String = ""):
 	"""Cria uma nova sala"""
+	
+	if is_in_round:
+		return
+	
 	if not is_connected_to_server:
 		main_menu_node._show_error_("Não conectado ao servidor", main_menu_node.match_list_error_label, "Red")
 		return
@@ -703,6 +707,10 @@ func _client_room_created(room_data: Dictionary):
 
 func join_room(room_id: int, password: String = ""):
 	"""Entra em uma sala por ID"""
+	
+	if is_in_round:
+		return
+	
 	if not is_connected_to_server:
 		main_menu_node._show_error_("Não conectado ao servidor", main_menu_node.match_list_error_label, "Red")
 		return
@@ -719,6 +727,10 @@ func join_room(room_id: int, password: String = ""):
 
 func join_room_by_name(room_name: String, password: String = ""):
 	"""Entra em uma sala por nome"""
+	
+	if is_in_round:
+		return
+	
 	if not is_connected_to_server:
 		main_menu_node._show_error_("Não conectado ao servidor", main_menu_node.match_list_error_label, "Red")
 		return
@@ -759,6 +771,9 @@ func _client_room_updated(room_data: Dictionary):
 func kick_player_from_room(_selected_player_id: String):
 	"""Envia pedido para expulsar um player da sala (somente para o host)"""
 	
+	if is_in_round:
+		return
+	
 	# Verificação local se é o host (add redundancia)
 	var host_id = -1
 	var _player_name: String
@@ -785,6 +800,10 @@ func _client_kicked_from_room():
 
 func leave_room():
 	"""Sai da sala atual"""
+	
+	if is_in_round:
+		return
+		
 	if current_room.is_empty():
 		_log_debug("Não está em nenhuma sala")
 		return
@@ -795,6 +814,10 @@ func leave_room():
 
 func close_room():
 	"""Fecha a sala atual (apenas host)"""
+	
+	if is_in_round:
+		return
+	
 	if current_room.is_empty():
 		_log_debug("Não está em nenhuma sala")
 		return
@@ -823,6 +846,9 @@ func request_update_settings(new_values: Dictionary) -> void:
 	Compara com match_settings atual e envia somente o diff.
 	"""
 	
+	if is_in_round:
+		return
+	
 	var changed_settings := {}
 	
 	for key in new_values.keys():
@@ -840,9 +866,7 @@ func request_update_settings(new_values: Dictionary) -> void:
 	network_manager.request_update_room_settings(changed_settings)
 
 func client_update_match_settings(changed_settings: Dictionary) -> void:
-	"""
-	Atualiza apenas as configurações modificadas.
-	"""
+	"""Callback que atualiza apenas as configurações modificadas."""
 	
 	for key in changed_settings.keys():
 		room_settings[key] = changed_settings[key]
@@ -861,6 +885,10 @@ func client_update_match_settings(changed_settings: Dictionary) -> void:
 
 func start_round(round_settings: Dictionary = {}):
 	"""Inicia uma nova rodada (apenas host, que irá solicitar início da rodada)"""
+	
+	if is_in_round:
+		return
+	
 	if current_room.is_empty():
 		_log_debug("Não está em nenhuma sala")
 		return
@@ -1208,6 +1236,7 @@ func _cleanup_local_round():
 	_log_debug("Limpando objetos da rodada...")
 	
 	local_player_node = null
+	is_in_round = false
 	
 	# Limpa objetos spawnados
 	for round_id in spawned_objects.keys():

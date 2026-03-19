@@ -669,8 +669,9 @@ func show_room_list_menu(_error_visible: bool = false, match_password_visible: b
 		if match_password_container:
 			match_password_container.visible = true
 		if match_list:
-			match_list.select(last_selected_match_id)
-			selected_match_id = last_selected_match_id + 1
+			if last_selected_match_id < match_list.get_item_count():
+				match_list.select(last_selected_match_id)
+				selected_match_id = last_selected_match_id + 1
 	else:
 		if match_password_container:
 			match_password_container.visible = false
