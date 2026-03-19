@@ -35,6 +35,7 @@ var free_camera: Camera3D = null
 # Estado de inicialização
 var _initialized: bool = false
 
+var actual_camera: Camera3D = null
 var dummy_camera: Camera3D
 
 # ===== INICIALIZAÇÃO =====
@@ -46,7 +47,7 @@ func initialize():
 		return
 	
 	_initialized = true
-	_log_debug("✓ TestManager inicializado")
+	_log_debug("▶️ TestManager inicializado com sucesso!")
 
 # ===== CRIAÇÃO DE PARTIDA DE TESTE =====
 func sort_num(min_val: int, max_val: int) -> int:
@@ -103,43 +104,41 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 	var players: Array = []
 	for i in range(num_players):
 		var peer_id = connected_peers[i]
+		var _uuid_base = client_registry.get_uuid_by_peer_id(peer_id)
 		
 		# Verifica se peer já está registrado
-		var player_data = client_registry.get_player(peer_id)
+		var player_data = client_registry.get_player(_uuid_base)
+			
+		# Registra com nome padrão
+		#var player_uuid = client_registry.get_uuid_by_peer_id(peer_id)
+		var player_name = "TestPlayer%d" % [i + 1]
+		var success = client_registry.register_player_name(_uuid_base, player_name)
+
+		if not success:
+			_log_debug("❌ Falha ao registrar jogador %d" % _uuid_base)
+			continue
 		
-		if player_data.is_empty() or not player_data["registered"]:
-			# Adiciona peer se não existe
-			if player_data.is_empty():
-				client_registry.add_peer(peer_id)
-			
-			# Registra com nome padrão
-			var player_name = "TestPlayer%d - %d" % [i + 1, peer_id]
-			var success = client_registry.register_player(peer_id, player_name)
-			
-			if not success:
-				_log_debug("❌ Falha ao registrar jogador %d" % peer_id)
-				continue
-			
-			player_data = client_registry.get_player(peer_id)
+		player_data = client_registry.get_player(_uuid_base)
 		
 		# Adiciona à lista de jogadores
 		players.append({
-			"id": peer_id,
+			"peer_id": peer_id,
+			"uuid_base": _uuid_base,
 			"name": player_data["name"],
 			"is_host": (i == 0)  # Primeiro é o host
 		})
 		
 		_log_debug("  ✓ Jogador registrado: %s (ID: %d)" % [player_data["name"], peer_id])
-	
+
 	if players.is_empty():
 		_log_debug("❌ Nenhum jogador válido para criar partida")
 		return
-	
+
 	# Cria sala no RoomRegistry
 	var room_data = room_registry.create_room(
 		nome_sala,
 		"",  # Sem senha
-		players[0]["id"],  # Host é o primeiro jogador
+		players[0]["uuid_base"],  # Host é o primeiro jogador
 		server_manager.min_players_to_start,
 		server_manager.max_players_per_room
 	)
@@ -147,28 +146,19 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 	if room_data.is_empty():
 		_log_debug("❌ Falha ao criar sala!")
 		return
-	
-	_log_debug("  ✓ Sala criada: '%s' (ID: %d)" % [nome_sala, room_id])
+
+	_log_debug(" ✓ Sala criada: '%s' (ID: %d)" % [nome_sala, room_id])
 	
 	# Adiciona outros jogadores à sala (host já foi adicionado)
 	for i in range(1, players.size()):
-		var success = room_registry.add_player_to_room(room_id, players[i]["id"])
+		var success = room_registry.add_player_to_room(room_id, players[i]["uuid_base"])
 		if not success:
 			_log_debug("  ⚠ Falha ao adicionar jogador %s à sala" % players[i]["name"])
 	
-	# Valida requisitos para iniciar
-	if not room_registry.can_start_match(room_id):
-		var reqs = room_registry.get_match_requirements(room_id)
-		print("[111]reqs: ", reqs)
-		_log_debug("❌ Requisitos não atendidos: %d/%d jogadores (mínimo: %d)" % [
-			reqs["current_players"],
-			reqs["max_players"],
-			reqs["min_players"]
-		])
-		return
-	
-	if room_registry.is_room_in_game(room_id):
-		_log_debug("❌ A sala já está em uma rodada")
+	# Valida requisitos para iniciar (teste de função)
+	var response = room_registry.can_start_match(room_id, players[0]["uuid_base"])
+	if not response[0]:
+		_log_debug(response[1])
 		return
 	
 	# Cria rodada no RoundRegistry
@@ -224,16 +214,7 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 	
 	# Gera spawn points
 	var players_qtd = round_registry.get_total_players(round_data["round_id"])
-	var spawn_points = map_manager._create_spawn_points(players_qtd)
-	
-	# Gera dados de spawn para cada jogador
-	var spawn_data = {}
-	for i in range(room_data["players"].size()):
-		var p = room_data["players"][i]
-		spawn_data[p["id"]] = {
-			"spawn_index": i,
-			"team": 0
-		}
+	var spawn_points = map_manager._create_spawn_points(room_data["players"])
 	
 	# Atualiza settings da rodada
 	var round_settings = round_data.get("settings", {})
@@ -248,15 +229,14 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 		"map_scene": map_scene,
 		"settings": round_settings,
 		"players": room_data["players"],
-		"spawn_data": spawn_data
 	}
 	
 	_log_debug("  ✓ Enviando dados para clientes...")
 	
 	# Envia comando de início para todos os clientes
 	for room_player in match_data["players"]:
-		network_manager.rpc_id(room_player["id"], "_client_round_started", match_data)
-	
+		network_manager.rpc_id(room_player["session_id"], "_client_round_started", match_data)
+
 	# Instancia rodada no servidor
 	await _server_instantiate_round(match_data, players_node, round_node)
 	
@@ -282,12 +262,12 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 	# Atualiza lista de salas para os players no menu
 	server_manager._send_rooms_list_to_all()
 	
-	_log_debug("========================================")
+	_log_debug("==============================================")
 	_log_debug("✓ PARTIDA DE TESTE INICIADA COM SUCESSO")
 	_log_debug("  Jogadores: %d" % players_qtd)
 	_log_debug("  Sala: %s (ID: %d)" % [nome_sala, room_id])
 	_log_debug("  Rodada: %d" % round_data["round_id"])
-	_log_debug("========================================")
+	_log_debug("==============================================")
 
 # ===== INSTANCIAÇÃO NO SERVIDOR =====
 
@@ -296,8 +276,8 @@ func _server_instantiate_round(match_data: Dictionary, players_node, round_node)
 	Instancia a rodada no servidor (mapa e players)
 	Similar ao ServerManager, mas com validações extras para testes
 	"""
-	
-	_log_debug("  Instanciando rodada no servidor...")
+
+	_log_debug(" Instanciando rodada no servidor...")
 	
 	# Aplica configurações de mapa
 	await map_manager.apply_map_configs(match_data["settings"])
@@ -311,12 +291,12 @@ func _server_instantiate_round(match_data: Dictionary, players_node, round_node)
 	
 	# Spawna todos os jogadores
 	for player_data in match_data["players"]:
-		var spawn_data = match_data["spawn_data"][player_data["id"]]
+		var spawn_data = match_data["settings"]["spawn_points"][player_data["session_id"]]
 		_spawn_player_on_server(player_data, spawn_data, match_data["round_id"], players_node)
 	
-	# Cria câmera livre se não estiver em modo headless
-	var actual_camera: Camera3D = null
+	# Cria câmera livre se não estiver em modo headless(sem renderização)
 	if not server_manager.is_headless:
+		_log_debug("Criando câmera livre: Não está em modo headless")
 		actual_camera = preload(server_manager.server_camera).instantiate()
 		actual_camera.name = "FreeCamera"
 		round_node.add_child(actual_camera)
@@ -324,7 +304,7 @@ func _server_instantiate_round(match_data: Dictionary, players_node, round_node)
 		actual_camera.current = true
 		await get_tree().process_frame
 	else:
-		# Se estiver em modo headless criar uma câmera dummy
+		_log_debug("Criando câmera dummy: Está em modo headless")
 		actual_camera = Camera3D.new()
 		actual_camera.name = "DummyCamera"
 		round_node.add_child(actual_camera)
@@ -339,13 +319,10 @@ func _server_instantiate_round(match_data: Dictionary, players_node, round_node)
 	# Configura o Terrain3D para usar actual_camera
 	if terrain_3d:
 		terrain_3d.set_camera(actual_camera)
+		# Ativa o physics_process após atribuir a câmera
+		terrain_3d.set_physics_process(true)
 	else:
 		push_warning("terrain_3d não encontrado para configurar câmera")
-	
-	# Tira ui (desnecessária para o servidor)
-	var ui = get_tree().root.get_node_or_null("MainMenu")
-	if ui:
-		ui.queue_free()
 	
 	# Se não headless, joga este primeiro round para a camera do servidor
 	if not server_manager.is_headless and match_data["round_id"] <= 1:
@@ -358,20 +335,6 @@ func _server_instantiate_round(match_data: Dictionary, players_node, round_node)
 func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, round_id: int, players_node):
 	"""
 	Spawna um jogador no servidor (versão autoritativa)
-	
-	ORDEM CRÍTICA:
-	1. Valida dados
-	2. Carrega e instancia cena
-	3. Configura identificação
-	4. Adiciona à árvore
-	5. Aguarda processamento completo
-	6. Valida que está na árvore
-	7. Registra no ClientRegistry
-	8. Calcula posição de spawn
-	9. Configura transform
-	10. Inicializa player
-	11. Registra no RoundRegistry
-	12. Inicializa estado de validação
 	"""
 	
 	# Validações iniciais
@@ -379,8 +342,7 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 		push_error("TestManager: player_data inválido: faltam 'id' ou 'name'")
 		return
 	
-	var p_id = player_data["id"]
-	var p_name = player_data["name"]
+	var p_uuid = player_data["id"]
 	
 	# Carrega e instancia a cena do player
 	var player_scene = preload(server_manager.player_scene)
@@ -393,18 +355,15 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 		push_error("TestManager: Falha ao instanciar player_scene")
 		return
 	
-	# Configura identificação básica
-	player_instance.name = str(p_id)
-	player_instance.player_id = p_id
-	player_instance.player_name = p_name
-	player_instance._is_server = true
+	# Adiciona aos grupos
 	player_instance.add_to_group("remote_player")
 	player_instance.add_to_group("player")
 	
 	# IMPORTANTE: No servidor, nenhum player é "local"
 	player_instance.is_local_player = false
+	player_instance._is_server = true
 	
-	# ADICIONA À ÁRVORE PRIMEIRO
+	# Adiciona player à cena
 	players_node.add_child(player_instance)
 	
 	# Injeta dependências
@@ -412,6 +371,11 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 	player_instance.network_manager = network_manager
 	player_instance.server_manager = server_manager
 	player_instance.initializer = initializer
+	
+	# Inicializa jogador (configura identificação básica)
+	player_instance.initialize(player_data["name"], player_data["session_id"], player_data["id"], spawn_data["position"])
+	player_instance.rotation = spawn_data["rotation"]
+	player_instance.setup_name_label()
 	
 	# Preenche terreno e central_spawn
 	player_instance.terrain_ = map_manager.current_map
@@ -424,56 +388,33 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 	
 	# VALIDA QUE ESTÁ NA ÁRVORE
 	if not player_instance.is_inside_tree():
-		push_error("TestManager CRÍTICO: Player %d não foi adicionado à árvore!" % p_id)
+		push_error("TestManager CRÍTICO: Player %d não foi adicionado à árvore!" % p_uuid)
 		player_instance.queue_free()
 		return
 	
 	# REGISTRA NO ClientRegistry
-	client_registry.register_player_node(p_id, player_instance)
-	
-	# Debug: Verifica registro
-	if debug_mode:
-		var registered_path = client_registry.get_player_node_path(p_id)
-		if registered_path.is_empty():
-			push_warning("TestManager: node_path vazio após registro (player %d)" % p_id)
-		else:
-			_log_debug("Player node registrado: %d → %s" % [p_id, registered_path])
-	
-	# Calcula posição de spawn
-	var spawn_pos = Vector3.ZERO
-	
-	if map_manager and map_manager.has_method("get_spawn_position"):
-		var spawn_index = spawn_data.get("spawn_index", 0)
-		spawn_pos = map_manager.get_spawn_position(spawn_index)
-		_log_debug("Spawn position: %s (index: %d)" % [spawn_pos, spawn_index])
-	else:
-		push_warning("TestManager: MapManager não disponível, usando posição (0,0,0)")
-	
-	# CONFIGURA TRANSFORM
-	if player_instance is Node3D:
-		player_instance.global_position = spawn_pos
-		player_instance.global_rotation = Vector3.ZERO
-	
-	# Inicializa o player
-	if player_instance.has_method("initialize"):
-		player_instance.initialize(p_id, p_name, spawn_pos)
+	client_registry.register_player_node(p_uuid, player_instance)
 	
 	# Registra no RoundRegistry
-	round_registry.register_spawned_player(round_id, p_id, player_instance)
+	round_registry.register_spawned_player(round_id, p_uuid, player_instance)
 	
 	# Inicializa estado de validação no ServerManager
-	if server_manager.player_states != null:
-		server_manager.player_states[p_id] = {
-			"pos": spawn_pos,
-			"vel": Vector3.ZERO,
-			"rot": Vector3.ZERO,
-			"timestamp": Time.get_ticks_msec()
-		}
+	server_manager.player_states[p_uuid] = {
+		"pos": spawn_data["position"],
+		"vel": Vector3.ZERO,
+		"rot": spawn_data["rotation"],
+		"timestamp": Time.get_ticks_msec()
+	}
 	
-	_log_debug("✓ Player spawnado: %s (ID: %d)" % [p_name, p_id])
+	_log_debug("✓ Player spawnado no servidor: %s (ID: %s) em %s" % [
+		player_data["name"], 
+		player_data["id"],
+		spawn_data["position"]
+	])
 
 func on_spawn_requested(_character) -> void:
-	var _round_id = client_registry.get_player_round(_character.player_id)
+	var uuid_base = client_registry.get_uuid_by_peer_id(_character.player_id)
+	var _round_id = client_registry.get_player_round(uuid_base)
 	var _round = round_registry.get_round(_round_id)
 	var objects_node = _round["round_node"].get_node_or_null("Objects")
 	var potions = ["potion_glass_heal", "potion_glass_stamina", "potion_glass_poison"]

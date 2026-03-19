@@ -40,7 +40,7 @@ var object_id: int = -1
 var round_id: int = -1
 var item_name: String = ""
 var item_data: Dictionary = {}
-var owner_id: int = -1
+var owner_uuid: String = ""
 var initial_velocity: Vector3 = Vector3.ZERO
 var lifetime_timer: Timer = null
 var is_collected: bool = false
@@ -53,14 +53,14 @@ func initialize(
 	_round_id: int,
 	_item_name: String,
 	_item_data: Dictionary,
-	_owner_id: int,
+	_owner_uuid: String,
 	_initial_velocity: Vector3
 ):
 	object_id = _object_id
 	round_id = _round_id
 	item_name = _item_name
 	item_data = _item_data
-	owner_id = _owner_id
+	owner_uuid = _owner_uuid
 	initial_velocity = _initial_velocity
 	spawn_time = Time.get_unix_time_from_system()
 	
@@ -191,7 +191,8 @@ func collect(collector_id: int) -> bool:
 		return false
 	
 	# Validação de distância
-	var player_node = server_manager.client_registry.get_player_node(collector_id)
+	var player_uuid = server_manager.client_registry.get_uuid_by_peer_id(collector_id)
+	var player_node = server_manager.client_registry.get_player_node(player_uuid)
 	if player_node:
 		var distance = global_position.distance_to(player_node.global_position)
 		if distance > collection_radius * 1.5:

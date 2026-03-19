@@ -1,51 +1,53 @@
 extends Node
 
 # Configurações
-## [TESTES] Usa o TestManager para iniciar logo uma partida na execução
-## (configura server e clients / clients recebem localhost_auto_connect = true)
+## [TESTES] Usa o TestManager para iniciar uma partida logo na execução (localhost)
+## (configura server e clients / server cria round e inicia partida com primeiros clientes /
+##  clientes recebem localhost_auto_connect = true)
 @export var test_mode: bool = true
 ## [TESTES] Define a quantidade de instâcias de clientes conectadas para executar fast_round
-@export var simulador_players_qtd: int = 2
+@export var simulador_players_qtd: int = 1
+## Ativa/desativa o debug visual na gameplay
+@export var visual_debug: bool = true
 ## [TESTES] Dropa itens perto dos players e ativa o trainer de cada player
 @export var trainer: bool = true
-## Iniciar com o mouse destrancado (client)
+## Iniciar com o mouse destrancado (Cliente / apenas no modo de testes)
 @export var start_unlocked_mouse: bool = true
 
 # Instruções para debug
 ## Executa _log_debug apenas nos itens selecionados
-var activate_only_selected: bool = false
+var activate_only_selected: bool = true
 # Disponíveis: "Server", "NetworkManager", "TestManager", "GameManager", "RoomRegistry"
 # "RoundRegistry", "ClientRegistry", "Player_node", "ObjectManager", "MapManager", "MainMenu"
 # "ItemDatabase", "InventoryMenu", "DroppedItem"
-var selected: Array = ["GameManager", "Server", "NetworkManager"]
+var selected: Array = ["Player_node"]
 
 # Referências
 ## Manager de rede, gerencia comunicação entre servidor e clientes
 var network_manager: NetworkManager = null
-
 ## Manager principal do servidor
 var server_manager: ServerManager = null
-
 ## Manager principal dos clientes
 var game_manager: Node = null
-
-## Manager que gerencia lista de servidores salvos em persistência
+## Manager que gerencia lista de servidores salvos em persistência para os clientes
 var server_list_manager: ServerListManager = null
-
 ## Carrega a base de dados de itens de gameplay, comum entre servidor e clientes
 var item_database: ItemDatabase = null
+## Gerenciador de mapas e spawns de players
+var map_manager: Node = null
 
+## Managers auxiliares para o servidor
+## Gerenciador autoritativo de objetos no mundo
+var object_manager: ObjectManager = null
+## Ferramenta de desenvolvimento para testes automatizados
+var test_manager: TestManager = null
 ## Registro do servidor, classe de players, classe de salas e classe de partidas
 var client_registry : ClientRegistry = null
 var room_registry: RoomRegistry = null
 var round_registry: RoundRegistry = null
 
-## Managers auxiliares para o servidor
-var object_manager: ObjectManager = null
-var test_manager: TestManager = null
-var map_manager: Node = null
-
-# Menu de inicialização para os clientes
+## Managers auxiliares para os clienes
+## Menu de inicialização
 var main_menu: Control = null
 
 func _ready():
@@ -60,7 +62,13 @@ func _ready():
 	if is_server:
 		_init_server(is_headless)
 	else:
-		_init_client()
+		# Injetar uuid do argumento client_uuid, substituindo a verificação
+		# padrão na psta do usuário (apenas para desenvolvimento)
+		var id_file_ = null
+		for arg in args:
+			if arg.begins_with("--client_id="):
+				id_file_ = arg.split("=")[1]
+		_init_client(id_file_)
 		
 func _init_server(is_headless):
 	# Instancia managers e registros
@@ -122,6 +130,7 @@ func _init_server(is_headless):
 	
 	# ClientRegistry precisa de:
 	client_registry.network_manager = network_manager
+	client_registry.server_manager = server_manager
 	client_registry.room_registry = room_registry
 	client_registry.round_registry = round_registry
 	client_registry.object_manager = object_manager
@@ -129,6 +138,7 @@ func _init_server(is_headless):
 	client_registry.initializer = self
 	
 	# RoomRegistry precisa de:
+	room_registry.server_manager = server_manager
 	room_registry.client_registry = client_registry
 	room_registry.round_registry = round_registry
 	room_registry.object_manager = object_manager
@@ -166,15 +176,17 @@ func _init_server(is_headless):
 	test_manager.initializer = self
 	
 	# configurações
+	server_manager.is_headless = is_headless
 	network_manager.server_is_headless = is_headless
 	map_manager.is_server = true
+	item_database.is_server = true
 	
 	# Configurar modo de testes
 	if test_mode:
 		server_manager.fast_round = true
 		server_manager.simulador_players_qtd = simulador_players_qtd
-	if trainer:
-		server_manager.test_trainer = true
+	server_manager.test_trainer = trainer
+	server_manager.visual_debug = visual_debug
 	
 	# Aguarda até que os nós tenham sido adicionados à árvore
 	await get_tree().process_frame
@@ -189,7 +201,7 @@ func _init_server(is_headless):
 	item_database.load_database()
 	object_manager.initialize()
 
-func _init_client():
+func _init_client(id_file_):
 	# Instancia managers e registros
 	var network_manager_scene: PackedScene = load("res://scenes/system/client_network_manager.tscn")
 	var game_manager_scene: PackedScene = load("res://scenes/system/game_manager.tscn")
@@ -244,13 +256,22 @@ func _init_client():
 	item_database.initializer = self
 	
 	# Configurações
-	game_manager.connect_inventory_signals()
 	main_menu._connect_game_manager_signals()
 	
+	# Se definido argumento de diferenciação para testes em múltiplas intâncias
+	if id_file_:
+		var UUID_string = "user://identity_%s.json" % id_file_
+		var TOKEN_string = "user://server_tokens_%s.json" % id_file_
+		game_manager.UUID_FILE = UUID_string
+		game_manager.TOKEN_FILE = TOKEN_string
+		
 	# Configurar modo de testes
 	if test_mode:
 		game_manager.localhost_auto_connect = true
 		main_menu.start_unlocked_mouse = start_unlocked_mouse
+	game_manager.visual_debug = visual_debug
+		
+	item_database.is_server = false
 	
 	# Aguarda até que os nós tenham sido adicionados à árvore
 	await get_tree().process_frame
