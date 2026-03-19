@@ -412,16 +412,17 @@ func _handle_animations(move_dir):
 		var dist = global_position.distance_to(local_player.global_position)
 		is_distant = dist > disable_physics_distance
 	
-	if is_aiming:
-		animation_tree["parameters/Locomotion/blend_position"] = speed
-	else:
-		animation_tree["parameters/Locomotion/blend_position"] = speed
+	if not _is_server:
+		if is_aiming:
+			animation_tree["parameters/Locomotion/blend_position"] = speed
+		else:
+			animation_tree["parameters/Locomotion/blend_position"] = speed
 	
-	# Bobbing
-	if move_dir.length() > 0.1 or speed > 0.1:
-		animation_tree["parameters/bobbing/add_amount"] = bobbing_intensity * speed
-	else:
-		animation_tree["parameters/bobbing/add_amount"] = 0
+		# Bobbing
+		if move_dir.length() > 0.1 or speed > 0.1:
+			animation_tree["parameters/bobbing/add_amount"] = bobbing_intensity * speed
+		else:
+			animation_tree["parameters/bobbing/add_amount"] = 0
 	
 	# ✅ Transições de pulo (usa remote_is_on_floor para remotos distantes)
 	var floor_state = remote_is_on_floor if is_distant else is_on_floor()
@@ -978,7 +979,7 @@ func _interpolate_remote_player(delta: float):
 @rpc("authority", "call_remote", "unreliable")
 func _client_receive_state(pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
 	"""Recebe estado de outros jogadores e define alvos para interpolação"""
-
+	
 	if is_local_player:
 		return  # Ignora para si mesmo
 	
@@ -1007,9 +1008,7 @@ func _client_receive_animation_state(speed: float, attacking: bool, defending: b
 	# ATUALIZA ESTADOS
 	is_attacking = attacking
 	is_defending = defending
-	is_jumping = jumping
 	is_aiming = aiming
-	is_running = running
 	is_block_attacking = block_attacking
 	remote_is_on_floor = on_floor  # ✅ Usa estado recebido da rede
 	

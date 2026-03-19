@@ -195,7 +195,10 @@ func _server_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, r
 	if sender_id != p_id:
 		push_warning("⚠️ Jogador %d tentou enviar estado do jogador %d" % [sender_id, p_id])
 		return
+	
+	# Aplica no nó do servidor
 	server_manager._apply_player_state_on_server(p_id, pos, rot, vel, running, jumping)
+	
 	var sender_uuid = client_registry.get_uuid_by_peer_id(p_id)
 	var round_ = round_registry.get_round_by_player_uuid(sender_uuid)
 	
@@ -212,11 +215,14 @@ func _server_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, r
 
 func _server_player_animation_state(p_id: int, speed: float, attacking: bool, defending: bool,
 									jumping: bool, aiming: bool, running: bool, block_attacking: bool, on_floor: bool):
+
 	var sender_id = multiplayer.get_remote_sender_id()
 	if sender_id != p_id:
 		return
-	if not (multiplayer.has_multiplayer_peer() and multiplayer.get_unique_id() == 1):
-		return
+	
+	# Aplica no nó do servidor
+	server_manager._apply_animation_state_on_server(p_id, speed, attacking, defending, jumping, aiming, running, block_attacking, on_floor)
+
 	var player_uuid = client_registry.get_uuid_by_peer_id(p_id)
 	var round_id = round_registry.get_round_by_player_uuid(player_uuid)["round_id"]
 	var players_round = round_registry.get_active_players_ids(round_id)
@@ -225,7 +231,6 @@ func _server_player_animation_state(p_id: int, speed: float, attacking: bool, de
 			var session_id = client_registry.get_peer_id_by_uuid(peer_id)
 			rpc_id(session_id, "_client_player_animation_state", int(p_id), speed, attacking,
 				   defending, jumping, aiming, running, block_attacking, on_floor)
-
 
 # ===== SINCRONIZAÇÃO DE OBJETOS =====
 

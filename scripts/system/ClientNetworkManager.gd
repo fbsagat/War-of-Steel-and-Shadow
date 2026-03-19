@@ -387,7 +387,7 @@ func send_player_animation_state(p_id: int, speed: float, attacking: bool, defen
 
 func _client_player_animation_state(p_id: int, speed: float, attacking: bool, defending: bool,
 									jumping: bool, aiming: bool, running: bool, block_attacking: bool, on_floor: bool):
-	
+										
 	if not game_manager.players_node:
 		return
 		

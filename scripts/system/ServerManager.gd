@@ -1451,6 +1451,7 @@ func _validate_player_movement(p_uuid: String, pos: Vector3, vel: Vector3, rot: 
 # ===== SINCRONIZAÇÃO =====
 
 func _apply_player_state_on_server(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
+	
 	var player_uuid = client_registry.get_uuid_by_peer_id(p_id)
 	#var player = client_registry.get_player(player_uuid)
 	var node = client_registry.get_player_node(player_uuid)
@@ -1474,6 +1475,19 @@ func _apply_player_state_on_server(p_id: int, pos: Vector3, rot: Vector3, vel: V
 		"jumping": jumping,
 		"timestamp": Time.get_ticks_msec()
 	}
+
+func _apply_animation_state_on_server(p_id: int, speed: float, attacking: bool, defending: bool,
+									jumping: bool, aiming: bool, running: bool, block_attacking: bool, on_floor: bool):
+										
+	var player_uuid = client_registry.get_uuid_by_peer_id(p_id)
+	#var player = client_registry.get_player(player_uuid)
+	var node = client_registry.get_player_node(player_uuid)
+	if not (node and node.is_inside_tree()):
+		return
+		
+	if node and node.has_method("_client_receive_animation_state"):
+		node._client_receive_animation_state(speed, attacking, defending, jumping,
+											   aiming, running, block_attacking, on_floor)
 
 func _rpc_despawn_on_clients(player_ids: Array, round_id: int, object_id: int):
 	"""
@@ -1998,11 +2012,6 @@ func _server_player_action(p_id: int, action_type: String, item_equipado_nome, a
 	var player = client_registry.get_player_round(player_uuid)
 	var round_id = round_registry.get_round_by_player_uuid(player_uuid)["round_id"]
 	var players_round = round_registry.get_active_players_ids(round_id)
-	
-	# Remover depois
-	# Ignora pedidos do servidor (redundancia)
-	#if not (multiplayer.has_multiplayer_peer() and multiplayer.get_unique_id() == 1):
-		#return
 	
 	# Ignora o próprio player
 	var sender_id = multiplayer.get_remote_sender_id()
