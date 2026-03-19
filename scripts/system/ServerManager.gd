@@ -91,9 +91,6 @@ var initializer = null
 
 # ===== VARIÁVEIS INTERNAS =====
 
-## ID incremental para criação de salas
-var next_room_id: int = 1
-
 ## Rastreamento de estados dos jogadores para validação anti-cheat
 ## Formato: {peer_uuid: {pos: Vector3, vel: Vector3, rot: Vector3, timestamp: int}}
 var player_states: Dictionary = {}
@@ -656,8 +653,6 @@ func _player_exit_from_round(player_room_id: int, peer_id: int, player_uuid: Str
 		for player in p_round["players"]:
 			if player["session_id"] != peer_id and _is_peer_connected(player["session_id"]):
 				network_manager.rpc_id(player["session_id"], "_client_remove_player", peer_id)
-		
-		# Fazer o sistema que é executado quando o tempo de espera de retorno do player é excedido
 		
 		# Remove registro de spawn, limpa node path e remove do round
 		round_registry.unregister_spawned_player(round_id, player_uuid)

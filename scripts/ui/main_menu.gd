@@ -456,7 +456,7 @@ func _connect_button_signals():
 	_connect_if_exists(options_menu, "BackButton", _on_options_back_pressed)
 	
 	# Connecting menu
-	_connect_if_exists(connecting_menu, "CancelButton", _on_connecting_menu_cancel_pressed)
+	_connect_if_exists(connecting_menu, "ReturnButton", _on_connecting_menu_return_pressed)
 	
 	# Loading menu
 	_connect_if_exists(loading_menu, "CancelButton", _on_loading_cancel_pressed)
@@ -1187,7 +1187,8 @@ func _on_options_back_pressed():
 	load_options()
 	show_main_menu()
 	
-func _on_connecting_menu_cancel_pressed():
+func _on_connecting_menu_return_pressed():
+	game_manager._disconnect_from_server()
 	show_server_list_menu()
 	
 func _on_loading_cancel_pressed():

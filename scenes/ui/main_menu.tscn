@@ -258,7 +258,7 @@ layout_mode = 2
 theme_override_constants/separation = 40
 alignment = 1
 
-[node name="CancelButton" type="Button" parent="CanvasLayer/CenterContainer/Control/ConnectingMenu/VBoxContainer/ButtonsContainer" unique_id=1767557064]
+[node name="ReturnButton" type="Button" parent="CanvasLayer/CenterContainer/Control/ConnectingMenu/VBoxContainer/ButtonsContainer" unique_id=1767557064]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 text = "Voltar"
@@ -648,6 +648,7 @@ text = "Expulsar jogador
 "
 
 [node name="RoundReturnMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=1882250171]
+visible = false
 layout_mode = 0
 offset_left = 300.0
 offset_top = 250.0

@@ -256,7 +256,6 @@ func _init_client(id_file_):
 	item_database.initializer = self
 	
 	# Configurações
-	game_manager.connect_inventory_signals()
 	main_menu._connect_game_manager_signals()
 	
 	# Se definido argumento de diferenciação para testes em múltiplas intâncias

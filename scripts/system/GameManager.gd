@@ -12,7 +12,6 @@ const DEFAULT_SERVER_PORT: int = 7777
 @export var server_address: String = DEFAULT_SERVER_ADDRESS
 @export var server_port: int = DEFAULT_SERVER_PORT
 @export var localhost_auto_connect: bool = false
-var peer: ENetMultiplayerPeer
 
 @export_category("Default Node References")
 const map_scene : String = "res://scenes/system/terrain_3d.tscn"
@@ -24,9 +23,10 @@ const camera_controller : String = "res://scenes/gameplay/camera_controller.tscn
 @export var visual_debug: bool = false
 
 @export_category("Reconection Settings")
-@export var reconnect_attempts := 0
-const MAX_RECONNECT_ATTEMPTS := 10
+@export var reconnect_attempts :int = 0
+const MAX_RECONNECT_ATTEMPTS : int = 5
 const RECONNECT_DELAY := 2.0 # segundos
+var reconnect_timer: Timer
 
 @export_category("Player Identifier")
 var UUID_FILE := "user://identity.json"
@@ -60,6 +60,7 @@ var cached_unique_id: int = 0
 ## {round_id: {object_id: {node: Node, item_name: String, owner_uuid: int}}}
 var spawned_objects: Dictionary = {}
 var local_inventory: Dictionary = {} # Inventário(de itens e equipamentos) local do player.
+var peer: ENetMultiplayerPeer
 
 # ===== REFERÊNCIAS INTERNAS =====
 
@@ -97,16 +98,6 @@ signal items_swapped(item_id_1: String, item_id_2: String)
 func _ready():
 	pass
 
-func connect_inventory_signals():
-	main_menu_node.gameplay_menu_back_pressed.connect(_on_gameplay_menu_back_pressed)
-	main_menu_node.gameplay_menu_exit_game_pressed.connect(_on_gameplay_menu_exit_game_pressed)
-	main_menu_node.gameplay_menu_give_up_game_pressed.connect(_on_gameplay_menu_give_up_game_pressed)
-
-func connect_muiltiplayer_signals():
-	multiplayer.connected_to_server.connect(_on_connected_to_server)
-	multiplayer.connection_failed.connect(_on_connection_failed)
-	multiplayer.server_disconnected.connect(_on_server_disconnected)
-
 func initialize():
 	if main_menu_node:
 		main_menu_node.show_main_menu()
@@ -120,9 +111,27 @@ func initialize():
 	uuid_base = _load_or_create_uuid()
 	server_tokens = _load_tokens()
 	
+	connect_inventory_signals()
 	connect_muiltiplayer_signals()
+	setup_reconection_timer()
 	
 	_log_debug("▶️ GameManager inicializado com sucesso!")
+
+func setup_reconection_timer():
+	reconnect_timer = Timer.new()
+	reconnect_timer.one_shot = true
+	add_child(reconnect_timer)
+	reconnect_timer.timeout.connect(_on_reconnect_timeout)
+
+func connect_inventory_signals():
+	main_menu_node.gameplay_menu_back_pressed.connect(_on_gameplay_menu_back_pressed)
+	main_menu_node.gameplay_menu_exit_game_pressed.connect(_on_gameplay_menu_exit_game_pressed)
+	main_menu_node.gameplay_menu_give_up_game_pressed.connect(_on_gameplay_menu_give_up_game_pressed)
+
+func connect_muiltiplayer_signals():
+	multiplayer.connected_to_server.connect(_on_connected_to_server)
+	multiplayer.connection_failed.connect(_on_connection_failed)
+	multiplayer.server_disconnected.connect(_on_server_disconnected)
 
 # ===== FUNÇÕES DE MENU e INPUT =====
 
@@ -354,6 +363,7 @@ func handle_server_response(response: Dictionary) -> void:
 	Processa resposta do servidor.
 	Salva novo token se necessário.
 	"""
+
 	if response["status"] == "new_token":
 		var sid = response["server_id"]
 		server_tokens[sid] = response["token"]
@@ -414,6 +424,9 @@ func _on_connected_to_server():
 	"""Callback quando conecta com sucesso ao servidor"""
 	# Só leia get_unique_id() quando o peer estiver ativo
 
+	if not is_connecting:
+		return
+
 	if verificar_rede():
 		# garante que o peer foi realmente configurado
 		if multiplayer.has_multiplayer_peer():
@@ -431,14 +444,35 @@ func _on_connection_failed():
 	"""Dispara quando a tentativa de conexão falha."""
 	_log_debug("Falha ao conectar ao servidor")
 
+func _on_reconnect_timeout() -> void:
+	if not is_connecting:
+		return
+
+	_log_debug("Tempo esgotado aguardando conexão.")
+
+	# ❗ IMPORTANTE: limpar antes de tentar de novo
+	multiplayer.multiplayer_peer = null
+	peer = null
+	_try_reconnect()
+
+func _schedule_next_retry() -> void:
+	if reconnect_attempts >= MAX_RECONNECT_ATTEMPTS:
+		_log_debug("Não foi possível reconectar.")
+		is_connecting = false
+		_on_reconnect_gave_up()
+		return
+
+	# Limpa o peer atual antes de tentar de novo
+	multiplayer.multiplayer_peer = null
+	peer = null
+
+	reconnect_timer.start(RECONNECT_DELAY)
+
 func _on_server_disconnected():
 	"""Dispara quando o cliente já estava conectado, mas perde a conexão com o servidor.
 	Aqui o jogo deve mostrar o menu de reconexão, se não conseguir no tempo e tentativas determinadas,
 	desconecta totalmente e reseta, se conseguir, esconde a tela de reconexão e volta à partida normalmente"""
 	_log_debug("Conexão perdida com o servidor, tentando reconectar para voltar à partida")
-	
-	# Espera 1 segundo antes de iniciar tentativas
-	await get_tree().create_timer(1.0).timeout
 	
 	# Inicia processo de reconexão
 	# Mostra menu de reconexão
@@ -446,32 +480,49 @@ func _on_server_disconnected():
 		main_menu_node.show_connecting_menu()
 		main_menu_node.show_error_connecting("Conexão perdida. Tentando reconectar...")
 	
+	start_reconnect(server_address, server_port)
+
+func start_reconnect(address: String, port: int) -> void:
+	server_address = address
+	server_port = port
+	reconnect_attempts = 0
+	is_connecting = true
+	_try_reconnect()
+
+func _try_reconnect() -> void:
 	if reconnect_attempts >= MAX_RECONNECT_ATTEMPTS:
-		_log_debug("Falha ao reconectar. Voltando ao menu.")
-		_disconnect_from_server()
+		_log_debug("Desistiu de reconectar após %d tentativas." % MAX_RECONNECT_ATTEMPTS)
+		is_connecting = false
+		_on_reconnect_gave_up()
 		return
 
 	reconnect_attempts += 1
-	_log_debug("Tentando reconectar... Tentativa %s" % reconnect_attempts)
-
-	await get_tree().create_timer(RECONNECT_DELAY).timeout
-	_try_reconnect()
-
-func _try_reconnect():
+	main_menu_node.show_error_connecting(
+		"Conexão perdida. Tentando reconectar... \ntentativa %s/%s" % [reconnect_attempts, MAX_RECONNECT_ATTEMPTS])
+	_log_debug("Tentando reconectar... tentativa %d/%d" % [reconnect_attempts, MAX_RECONNECT_ATTEMPTS])
+	
+	# Cria um peer novo para cada tentativa
+	peer = ENetMultiplayerPeer.new()
 	var result := peer.create_client(server_address, server_port)
 
 	if result != OK:
-		_log_debug("Erro ao criar cliente ENet.")
+		_log_debug("Erro ao criar cliente ENet. Código: %s" % str(result))
+		_schedule_next_retry()
 		return
-	
-	# Se conseguir reconectar fazer isso
-	_log_debug("Conseguiu reconectar")
+
 	multiplayer.multiplayer_peer = peer
+
+	# Se o servidor estiver offline, o resultado real virá por signal
+	# Este timer serve como fallback caso a rede demore demais
+	reconnect_timer.start(RECONNECT_DELAY)
+
+func _on_reconnect_gave_up() -> void:
+	
+	_disconnect_from_server()
 	if main_menu_node:
 		main_menu_node.show_main_menu()
-	if round_node:
-		_log_debug("Voltando para a partida")
-		main_menu_node.hide_main_menu()
+
+	_log_debug("Conexão perdida permanentemente.")
 
 func _disconnect_from_server(notify_server: bool = false):
 	"""Dispara quando o cliente quer desconectar do servidor intencionalmente
