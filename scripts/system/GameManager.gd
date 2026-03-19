@@ -205,7 +205,10 @@ func _toggle_inventory_menu(hide: bool = false) -> void:
 func _toggle_gameplay_menu(hide: bool = false) -> void:
 	if main_menu_node == null:
 		return
-
+	
+	if not local_player_node:
+		return
+	
 	if hide:
 		# Esconder gameplay menu
 		local_player_node.stop_movment = false
@@ -571,8 +574,13 @@ func _disconnect_from_server(notify_server: bool = false):
 # ===== EXECUÇÃO DE BOTÕES DE CONEXÃO =====
 
 func _on_gameplay_menu_exit_game_pressed():
+	_cleanup_local_round()
+	
+	# Volta para o menu da sala
+	if main_menu_node:
+		main_menu_node.show_main_menu()
+		
 	_log_debug("_on_gameplay_menu_exit_game_pressed")
-	pass
 
 func _on_gameplay_menu_disconnect_f_server_pressed():
 	_log_debug("_on_gameplay_menu_disconnect_f_server_pressed")
@@ -1300,7 +1308,8 @@ func _cleanup_local_round():
 	
 	spawned_objects.clear()
 	
-	round_node.queue_free()
+	if round_node:
+		round_node.queue_free()
 
 	_log_debug("✓ Limpeza completa")
 
