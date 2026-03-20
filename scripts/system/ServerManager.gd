@@ -464,8 +464,8 @@ func _validate_player_name(player_name: String) -> String:
 	if trimmed_name.is_empty():
 		return "O nome não pode estar vazio"
 	
-	if trimmed_name.length() < 3:
-		return "O nome deve ter pelo menos 3 caracteres"
+	if trimmed_name.length() < 5:
+		return "O nome deve ter pelo menos 5 caracteres"
 	
 	if trimmed_name.length() > 20:
 		return "O nome deve ter no máximo 20 caracteres"
@@ -1260,7 +1260,7 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, pl
 	
 	# Inicializa jogador (configura identificação básica)
 	var color: Color = Color(0.0, 0.0, 0.0, 1.0)
-	var final_color = player_data["color"] if player_data["color"] else color
+	var final_color = player_data["character"]["color"] if player_data["character"]["color"] else color
 	player_instance.initialize(player_data["name"], final_color, player_data["session_id"], player_data["id"], spawn_data["position"])
 	player_instance.rotation = spawn_data["rotation"]
 	player_instance.setup_name_label()

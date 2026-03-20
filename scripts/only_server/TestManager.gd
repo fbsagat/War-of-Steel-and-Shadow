@@ -153,41 +153,6 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 		if not success:
 			_log_debug("  ⚠ Falha ao adicionar jogador %s à sala" % players[i]["name"])
 	
-	# Definir cores dos personagens dos jogadores
-	var colors = [
-		Color(1, 0.2, 0.2),      # Vermelho
-		Color(0.2, 1, 0.2),      # Verde
-		Color(0.2, 0.2, 1),      # Azul
-		Color(1, 1, 0.2),        # Amarelo
-		Color(1, 0.2, 1),        # Magenta
-		Color(0.2, 1, 1),        # Ciano
-		
-		Color(1, 0.5, 0.2),      # Laranja
-		Color(0.6, 0.2, 1),      # Roxo
-		Color(0.2, 0.6, 1),      # Azul claro
-		Color(0.6, 1, 0.2),      # Verde limão
-		
-		Color(1, 0.2, 0.6),      # Rosa forte
-		Color(0.2, 1, 0.6),      # Verde água
-		Color(0.6, 0.6, 0.6),    # Cinza
-		Color(1, 0.8, 0.2),      # Dourado
-		Color(0.8, 0.4, 0.1),    # Marrom
-		
-		Color(0.4, 0.2, 0.1),    # Marrom escuro
-		Color(0.2, 0.4, 0.8),    # Azul médio
-		Color(0.8, 0.2, 0.4),    # Rosa escuro
-		Color(0.4, 0.8, 0.2),    # Verde médio
-		Color(0.9, 0.9, 0.9)     # Branco suave
-	]
-	
-	for player in room_data["players"]:
-		if colors.is_empty():
-			break
-		
-		var index = randi() % colors.size()
-		player["color"] = colors[index]
-		colors.remove_at(index)
-	
 	# Valida requisitos para iniciar (teste de função)
 	var response = room_registry.can_start_match(room_id, players[0]["uuid_base"])
 	if not response[0]:
@@ -407,7 +372,7 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 	
 	# Inicializa jogador (configura identificação básica)
 	var color: Color = Color(0.0, 0.0, 0.0, 1.0)
-	var final_color = player_data["color"] if player_data["color"] else color
+	var final_color: Color = player_data["character"]["color"] if player_data["character"]["color"] else color
 	player_instance.initialize(player_data["name"], final_color, player_data["session_id"],
 	 player_data["id"], spawn_data["position"])
 	player_instance.rotation = spawn_data["rotation"]
