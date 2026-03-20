@@ -290,6 +290,7 @@ func add_player_to_room(room_id: int, uuid_base: String) -> bool:
 		"name": player_name,
 		"is_host": is_host,
 		"is_offline": false,
+		"character": _create_default_character()
 	})
 
 	if client_registry:
@@ -299,6 +300,12 @@ func add_player_to_room(room_id: int, uuid_base: String) -> bool:
 	player_joined_room.emit(room_id, uuid_base)
 
 	return true
+
+func _create_default_character() -> Dictionary:
+	var character_data: Dictionary
+	var color: Color
+	character_data["color"] = color
+	return character_data
 
 func add_player_to_kicked(room_id: int, uuid_base: String) -> bool:
 	"""Adiciona jogador à lista de expulsos."""

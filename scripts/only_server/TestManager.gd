@@ -110,16 +110,11 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 		var player_data = client_registry.get_player(_uuid_base)
 			
 		# Registra com nome padrão
-		#var player_uuid = client_registry.get_uuid_by_peer_id(peer_id)
 		var player_name = "TestPlayer%d" % [i + 1]
-		var success = client_registry.register_player_name(_uuid_base, player_name)
+		client_registry.register_player_name(_uuid_base, player_name)
 		
 		# Atualiza o cliente
 		network_manager.rpc_id(peer_id, "_client_name_accepted", player_name)
-
-		if not success:
-			_log_debug("❌ Falha ao registrar jogador %d" % _uuid_base)
-			continue
 		
 		player_data = client_registry.get_player(_uuid_base)
 		
@@ -158,6 +153,41 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 		if not success:
 			_log_debug("  ⚠ Falha ao adicionar jogador %s à sala" % players[i]["name"])
 	
+	# Definir cores dos personagens dos jogadores
+	var colors = [
+		Color(1, 0.2, 0.2),      # Vermelho
+		Color(0.2, 1, 0.2),      # Verde
+		Color(0.2, 0.2, 1),      # Azul
+		Color(1, 1, 0.2),        # Amarelo
+		Color(1, 0.2, 1),        # Magenta
+		Color(0.2, 1, 1),        # Ciano
+		
+		Color(1, 0.5, 0.2),      # Laranja
+		Color(0.6, 0.2, 1),      # Roxo
+		Color(0.2, 0.6, 1),      # Azul claro
+		Color(0.6, 1, 0.2),      # Verde limão
+		
+		Color(1, 0.2, 0.6),      # Rosa forte
+		Color(0.2, 1, 0.6),      # Verde água
+		Color(0.6, 0.6, 0.6),    # Cinza
+		Color(1, 0.8, 0.2),      # Dourado
+		Color(0.8, 0.4, 0.1),    # Marrom
+		
+		Color(0.4, 0.2, 0.1),    # Marrom escuro
+		Color(0.2, 0.4, 0.8),    # Azul médio
+		Color(0.8, 0.2, 0.4),    # Rosa escuro
+		Color(0.4, 0.8, 0.2),    # Verde médio
+		Color(0.9, 0.9, 0.9)     # Branco suave
+	]
+	
+	for player in room_data["players"]:
+		if colors.is_empty():
+			break
+		
+		var index = randi() % colors.size()
+		player["color"] = colors[index]
+		colors.remove_at(index)
+	
 	# Valida requisitos para iniciar (teste de função)
 	var response = room_registry.can_start_match(room_id, players[0]["uuid_base"])
 	if not response[0]:
@@ -172,7 +202,7 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 	
 	# Obtém dados atualizados da sala
 	room_data = room_registry.get_room(room_id)
-
+	
 	# Cria rodada
 	var round_data = round_registry.create_round(
 		room_id,
@@ -376,9 +406,11 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 	player_instance.initializer = initializer
 	
 	# Inicializa jogador (configura identificação básica)
-	player_instance.initialize(player_data["name"], player_data["session_id"], player_data["id"], spawn_data["position"])
+	var color: Color = Color(0.0, 0.0, 0.0, 1.0)
+	var final_color = player_data["color"] if player_data["color"] else color
+	player_instance.initialize(player_data["name"], final_color, player_data["session_id"],
+	 player_data["id"], spawn_data["position"])
 	player_instance.rotation = spawn_data["rotation"]
-	player_instance.setup_name_label()
 	
 	# Preenche terreno e central_spawn
 	player_instance.terrain_ = map_manager.current_map

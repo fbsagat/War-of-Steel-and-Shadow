@@ -1211,9 +1211,10 @@ func _spawn_player(player_data: Dictionary, is_local: bool, _match_data: Diction
 	
 	# Inicializa jogador (configura identificação básica)
 	var player_pos = _match_data["settings"]["spawn_points"][player_data["session_id"]]
-	player_instance.initialize(player_data["name"], player_data["session_id"], player_data["id"], player_pos["position"])
+	var color: Color = Color(0.0, 0.0, 0.0, 1.0)
+	var final_color = player_data["color"] if player_data["color"] else color
+	player_instance.initialize(player_data["name"], final_color, player_data["session_id"], player_data["id"], player_pos["position"])
 	player_instance.rotation = player_pos["rotation"]
-	player_instance.setup_name_label()
 
 	# Configuração ESPECÍFICA por tipo de jogador
 	if is_local:

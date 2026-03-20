@@ -1259,7 +1259,9 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, pl
 	player_instance.initializer = initializer
 	
 	# Inicializa jogador (configura identificação básica)
-	player_instance.initialize(player_data["name"], player_data["session_id"], player_data["id"], spawn_data["position"])
+	var color: Color = Color(0.0, 0.0, 0.0, 1.0)
+	var final_color = player_data["color"] if player_data["color"] else color
+	player_instance.initialize(player_data["name"], final_color, player_data["session_id"], player_data["id"], spawn_data["position"])
 	player_instance.rotation = spawn_data["rotation"]
 	player_instance.setup_name_label()
 	
