@@ -4,9 +4,11 @@ extends Node
 ## [TESTES] Usa o TestManager para iniciar uma partida logo na execução (localhost)
 ## (configura server e clients / server cria round e inicia partida com primeiros clientes /
 ##  clientes recebem localhost_auto_connect = true)
-@export var test_mode: bool = false
+@export var test_mode: bool = true
 ## [TESTES] Define a quantidade de instâcias de clientes conectadas para executar fast_round
 @export var simulador_players_qtd: int = 2
+## Ativa/desativa o debug visual na gameplay
+@export var visual_debug: bool = true
 ## [TESTES] Dropa itens perto dos players e ativa o trainer de cada player
 @export var trainer: bool = true
 ## Iniciar com o mouse destrancado (Cliente / apenas no modo de testes)
@@ -14,11 +16,11 @@ extends Node
 
 # Instruções para debug
 ## Executa _log_debug apenas nos itens selecionados
-var activate_only_selected: bool = false
+var activate_only_selected: bool = true
 # Disponíveis: "Server", "NetworkManager", "TestManager", "GameManager", "RoomRegistry"
 # "RoundRegistry", "ClientRegistry", "Player_node", "ObjectManager", "MapManager", "MainMenu"
 # "ItemDatabase", "InventoryMenu", "DroppedItem"
-var selected: Array = ["Server", "TestManager", "NetworkManager", "GameManager"]
+var selected: Array = ["Server", "NetworkManager", "TestManager", "GameManager"]
 
 # Referências
 ## Manager de rede, gerencia comunicação entre servidor e clientes
@@ -62,23 +64,23 @@ func _ready():
 	else:
 		# Injetar uuid do argumento client_uuid, substituindo a verificação
 		# padrão na psta do usuário (apenas para desenvolvimento)
-		var client_uuid_ = null
+		var id_file_ = null
 		for arg in args:
-			if arg.begins_with("--client_uuid="):
-				client_uuid_ = arg.split("=")[1]
-		_init_client(client_uuid_)
+			if arg.begins_with("--client_id="):
+				id_file_ = arg.split("=")[1]
+		_init_client(id_file_)
 		
 func _init_server(is_headless):
 	# Instancia managers e registros
-	var network_manager_scene: PackedScene = load("res://scenes/system/server_network_manager.tscn")
-	var server_manager_scene: PackedScene = load("res://scenes/system/server_manager.tscn")
-	client_registry = load("res://scripts/only_server/registrars/ClientRegistry.gd").new()
-	room_registry = load("res://scripts/only_server/registrars/RoomRegistry.gd").new()
-	round_registry = load("res://scripts/only_server/registrars/RoundRegistry.gd").new()
-	map_manager = load("res://scripts/gameplay/MapManager.gd").new()
-	item_database = load("res://scripts/gameplay/ItemDatabase.gd").new()
-	object_manager = load("res://scripts/only_server/ObjectManager.gd").new()
-	test_manager = load("res://scripts/only_server/TestManager.gd").new()
+	var network_manager_scene: PackedScene = preload("res://scenes/system/server_network_manager.tscn")
+	var server_manager_scene: PackedScene = preload("res://scenes/system/server_manager.tscn")
+	client_registry = preload("res://scripts/only_server/registrars/ClientRegistry.gd").new()
+	room_registry = preload("res://scripts/only_server/registrars/RoomRegistry.gd").new()
+	round_registry = preload("res://scripts/only_server/registrars/RoundRegistry.gd").new()
+	map_manager = preload("res://scripts/system/MapManager.gd").new()
+	item_database = preload("res://scripts/gameplay/ItemDatabase.gd").new()
+	object_manager = preload("res://scripts/only_server/ObjectManager.gd").new()
+	test_manager = preload("res://scripts/only_server/TestManager.gd").new()
 	
 	network_manager = network_manager_scene.instantiate()
 	server_manager = server_manager_scene.instantiate()
@@ -128,6 +130,7 @@ func _init_server(is_headless):
 	
 	# ClientRegistry precisa de:
 	client_registry.network_manager = network_manager
+	client_registry.server_manager = server_manager
 	client_registry.room_registry = room_registry
 	client_registry.round_registry = round_registry
 	client_registry.object_manager = object_manager
@@ -135,6 +138,7 @@ func _init_server(is_headless):
 	client_registry.initializer = self
 	
 	# RoomRegistry precisa de:
+	room_registry.server_manager = server_manager
 	room_registry.client_registry = client_registry
 	room_registry.round_registry = round_registry
 	room_registry.object_manager = object_manager
@@ -175,13 +179,14 @@ func _init_server(is_headless):
 	server_manager.is_headless = is_headless
 	network_manager.server_is_headless = is_headless
 	map_manager.is_server = true
+	item_database.is_server = true
 	
 	# Configurar modo de testes
 	if test_mode:
 		server_manager.fast_round = true
 		server_manager.simulador_players_qtd = simulador_players_qtd
-	if trainer:
-		server_manager.test_trainer = true
+	server_manager.test_trainer = trainer
+	server_manager.visual_debug = visual_debug
 	
 	# Aguarda até que os nós tenham sido adicionados à árvore
 	await get_tree().process_frame
@@ -196,14 +201,14 @@ func _init_server(is_headless):
 	item_database.load_database()
 	object_manager.initialize()
 
-func _init_client(client_uuid_):
+func _init_client(id_file_):
 	# Instancia managers e registros
-	var network_manager_scene: PackedScene = load("res://scenes/system/client_network_manager.tscn")
-	var game_manager_scene: PackedScene = load("res://scenes/system/game_manager.tscn")
-	var main_menu_scene: PackedScene = load("res://scenes/ui/main_menu.tscn")
-	item_database = load("res://scripts/gameplay/ItemDatabase.gd").new()
-	map_manager = load("res://scripts/gameplay/MapManager.gd").new()
-	server_list_manager = load("res://scripts/system/serverlist_manager.gd").new()
+	var network_manager_scene: PackedScene = preload("res://scenes/system/client_network_manager.tscn")
+	var game_manager_scene: PackedScene = preload("res://scenes/system/game_manager.tscn")
+	var main_menu_scene: PackedScene = preload("res://scenes/ui/main_menu.tscn")
+	item_database = preload("res://scripts/gameplay/ItemDatabase.gd").new()
+	map_manager = preload("res://scripts/system/MapManager.gd").new()
+	server_list_manager = preload("res://scripts/system/serverlist_manager.gd").new()
 
 	network_manager = network_manager_scene.instantiate()
 	game_manager = game_manager_scene.instantiate()
@@ -251,15 +256,22 @@ func _init_client(client_uuid_):
 	item_database.initializer = self
 	
 	# Configurações
-	game_manager.connect_inventory_signals()
 	main_menu._connect_game_manager_signals()
-	if client_uuid_:
-		game_manager.client_uuid = client_uuid_
+	
+	# Se definido argumento de diferenciação para testes em múltiplas intâncias
+	if id_file_:
+		var UUID_string = "user://identity_%s.json" % id_file_
+		var TOKEN_string = "user://server_tokens_%s.json" % id_file_
+		game_manager.UUID_FILE = UUID_string
+		game_manager.TOKEN_FILE = TOKEN_string
 		
 	# Configurar modo de testes
 	if test_mode:
 		game_manager.localhost_auto_connect = true
 		main_menu.start_unlocked_mouse = start_unlocked_mouse
+	game_manager.visual_debug = visual_debug
+		
+	item_database.is_server = false
 	
 	# Aguarda até que os nós tenham sido adicionados à árvore
 	await get_tree().process_frame

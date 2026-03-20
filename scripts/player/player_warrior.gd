@@ -76,6 +76,7 @@ var last_anim_state: Dictionary = {}
 
 # Identificação multiplayer
 var player_id: int = 0
+var player_uuid: String = ""
 var player_name: String = ""
 var is_local_player: bool = false
 var _is_server: bool = false
@@ -241,8 +242,7 @@ func get_nearby_items(
 	radius: float = pickup_radius,
 	_collision_mask: int = pickup_collision_mask,
 	max_results: int = max_pickup_results,
-	sort_by_distance: bool = true
-) -> Array:
+	sort_by_distance: bool = true) -> Array:
 	"""
 	Retorna itens próximos do player usando PhysicsShapeQuery
 	
@@ -412,16 +412,17 @@ func _handle_animations(move_dir):
 		var dist = global_position.distance_to(local_player.global_position)
 		is_distant = dist > disable_physics_distance
 	
-	if is_aiming:
-		animation_tree["parameters/Locomotion/blend_position"] = speed
-	else:
-		animation_tree["parameters/Locomotion/blend_position"] = speed
+	if not _is_server:
+		if is_aiming:
+			animation_tree["parameters/Locomotion/blend_position"] = speed
+		else:
+			animation_tree["parameters/Locomotion/blend_position"] = speed
 	
-	# Bobbing
-	if move_dir.length() > 0.1 or speed > 0.1:
-		animation_tree["parameters/bobbing/add_amount"] = bobbing_intensity * speed
-	else:
-		animation_tree["parameters/bobbing/add_amount"] = 0
+		# Bobbing
+		if move_dir.length() > 0.1 or speed > 0.1:
+			animation_tree["parameters/bobbing/add_amount"] = bobbing_intensity * speed
+		else:
+			animation_tree["parameters/bobbing/add_amount"] = 0
 	
 	# ✅ Transições de pulo (usa remote_is_on_floor para remotos distantes)
 	var floor_state = remote_is_on_floor if is_distant else is_on_floor()
@@ -712,18 +713,16 @@ func _on_hitbox_body_entered(body: Node, hitbox_area: Area3D) -> void:
 	# Só o nó dos players no servidor processam hitboxes
 	if not _is_server:
 		return
-	
+
 	# Não acerta a sí próprio
 	if body.name == str(player_id):
 		return
-	
+
 	# Se for inimigo ou outro player
-	if body.is_in_group("enemy") or body.is_in_group("player") and (is_attacking or is_block_attacking):
-		
+	if body.is_in_group("enemy") or body.is_in_group("remote_player") and (is_attacking or is_block_attacking):
 		# evita bater várias vezes no mesmo alvo durante o mesmo swing
 		if body in hit_targets:
 			return
-		
 		var group: String = ""
 		# apenas inimigos
 		if body.is_in_group("enemy"):
@@ -733,18 +732,16 @@ func _on_hitbox_body_entered(body: Node, hitbox_area: Area3D) -> void:
 			_log_debug("%s foi acertado por %s" % [body.name, hitbox_area.get_parent().name])
 		
 		# apenas outros players
-		if body.is_in_group("player"):
+		if body.is_in_group("remote_player"):
 			hit_targets.append(body)
-			group = "player"
-			_log_debug("%s foi acertado por %s" % [body.name, hitbox_area.get_parent().name])
+			group = "remote_player"
+			_log_debug("%s foi acertado em %s" % [body.name, hitbox_area.get_parent().name])
 		
 		if server_manager and server_manager.has_method("attack_validation"):
-			server_manager.attack_validation(group, player_id, actual_weapon.name, int(body.name))
+			server_manager.attack_validation(group, player_id, actual_weapon.name, body.player_id)
 
-@rpc("authority", "call_remote", "unreliable")
 func take_damage():
-	"""Jogador local ou remoto recebe dano de golpe"""
-	
+	"""Jogador local ou remoto recebe dano de golpe, animção, sons e etc"""
 	# Animação de hit
 	var random_hit = ["parameters/Hit_B/request", "parameters/Hit_A/request"].pick_random()
 	animation_tree.set(random_hit, AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
@@ -982,7 +979,7 @@ func _interpolate_remote_player(delta: float):
 @rpc("authority", "call_remote", "unreliable")
 func _client_receive_state(pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
 	"""Recebe estado de outros jogadores e define alvos para interpolação"""
-
+	
 	if is_local_player:
 		return  # Ignora para si mesmo
 	
@@ -999,7 +996,7 @@ func _client_receive_state(pos: Vector3, rot: Vector3, vel: Vector3, running: bo
 
 @rpc("authority", "call_remote", "unreliable")
 func _client_receive_animation_state(speed: float, attacking: bool, defending: bool,
- jumping: bool, aiming: bool, running: bool, block_attacking: bool, on_floor: bool):
+ jumping: bool, aiming: bool, _running: bool, block_attacking: bool, on_floor: bool):
 	"""Recebe e aplica estado de animação de outros jogadores"""
 	
 	if is_local_player:
@@ -1011,9 +1008,7 @@ func _client_receive_animation_state(speed: float, attacking: bool, defending: b
 	# ATUALIZA ESTADOS
 	is_attacking = attacking
 	is_defending = defending
-	is_jumping = jumping
 	is_aiming = aiming
-	is_running = running
 	is_block_attacking = block_attacking
 	remote_is_on_floor = on_floor  # ✅ Usa estado recebido da rede
 	
@@ -1053,8 +1048,6 @@ func _client_receive_action(action_type: String, item_equipado_nome, anim_name: 
 	match action_type:
 		"attack":
 			# Atualiza is_attacking
-			if not is_attacking:
-				is_attacking = true
 				
 				# Atualiza actual_weapon
 				var weapon_node_path = item_database.get_item(item_equipado_nome)["model_node_link"]
@@ -1068,8 +1061,6 @@ func _client_receive_action(action_type: String, item_equipado_nome, anim_name: 
 		
 		"block_attack":
 			# Atualiza is_block_attacking
-			if not is_block_attacking:
-				is_block_attacking = true
 				
 				# Atualiza actual_weapon
 				var weapon_node_path = item_database.get_item(item_equipado_nome)["model_node_link"]
@@ -1082,12 +1073,9 @@ func _client_receive_action(action_type: String, item_equipado_nome, anim_name: 
 					"parameters/Attack/request")
 		
 		"defend_start":
-			is_defending = true
 			animation_tree.set("parameters/Blocking/blend_amount", 1.0)
 		
 		"defend_stop":
-			is_defending = false
-			is_attacking = false
 			animation_tree.set("parameters/Blocking/blend_amount", 0.0)
 			
 # ===== AÇÕES DO JOGADOR =====
@@ -1253,13 +1241,14 @@ func set_as_local_player():
 	
 	add_to_group("player")
 
-func initialize(p_id: int, p_name: String, spawn_pos: Vector3):
+func initialize(p_name: String, p_color: Color, p_id: int, p_uuid: String, spawn_pos: Vector3):
 	"""Inicializa o player com dados multiplayer"""
-	player_id = p_id
 	player_name = p_name
+	player_id = p_id
+	player_uuid = p_uuid
 	
 	# Nome do nó recebe ID do player
-	name = str(player_id)
+	name = str(p_id)
 	
 	# Posiciona no spawn
 	global_position = spawn_pos
@@ -1267,9 +1256,19 @@ func initialize(p_id: int, p_name: String, spawn_pos: Vector3):
 	
 	# Atualiza label de nome
 	if name_label:
-		name_label.text = player_name
-		setup_name_label()
-	
+		var debug_enabled = server_manager.visual_debug if _is_server else game_manager.visual_debug
+		
+		name_label.text = (
+			"%s\n%s[...]%s\n%s" % [
+				p_name,
+				player_uuid.substr(0, 4),
+				player_uuid.substr(player_uuid.length() - 4, 4),
+				player_id
+			]
+		) if debug_enabled else p_name
+			
+		setup_name_label(p_color)
+		
 	# Configuração de processos
 	if not is_local_player:
 		# Remotos não processam input
@@ -1332,7 +1331,7 @@ func handle_test_drop_item_call() -> void:
 		return
 		
 	if network_manager and network_manager.is_connected:
-		network_manager.handle_test_drop_item_call(player_id)
+		network_manager.request_trainer_drop_item(player_id)
 
 # Ações do player (Respawnar novamente)
 func handle_test_repawn_player_call():
@@ -1340,7 +1339,7 @@ func handle_test_repawn_player_call():
 		return
 	
 	if network_manager and network_manager.is_connected:
-		network_manager.handle_test_repawn_player_call(player_id)
+		network_manager.request_trainer_respawn_player(player_id)
 	
 # Executa quando o player equipa algum item / muda visual do modelo
 func apply_visual_equip_on_player_node(item_mapped_id, unnequip = false, from_inv_men = false):
@@ -1370,7 +1369,7 @@ func action_pick_up_item_call():
 			_log_debug("Nenhum item por perto")
 		return
 	var object = found[0]
-	_log_debug("Player %d pediu para pegar o item %d" % [player_id, object.object_id])
+	_log_debug("Player %s pediu para pegar o item %d" % [player_name, object.object_id])
 	if network_manager and network_manager.is_connected and object:
 		network_manager.request_pick_up_item(player_id, object.object_id)
 		
@@ -1503,24 +1502,14 @@ func _item_model_change_visibility(player_node, node_link: String, unnequip = fa
 	
 # ===== UTILS =====
 
-func setup_name_label():
+func setup_name_label(color: Color):
 	"""Configura label de nome para multiplayer"""
 	if not name_label:
 		return
 	
 	name_label.visible = true
 	
-	# COR BASEADA NO ID (consistente)
-	var colors = [
-		Color(1, 0.2, 0.2),    # Vermelho
-		Color(0.2, 1, 0.2),    # Verde
-		Color(0.2, 0.2, 1),    # Azul
-		Color(1, 1, 0.2),      # Amarelo
-		Color(1, 0.2, 1),      # Magenta
-		Color(0.2, 1, 1)       # Ciano
-	]
-	var color_index = player_id % colors.size()
-	name_label.modulate = colors[color_index]
+	name_label.modulate = color
 	
 	# CONFIGURAÇÃO DE BILLBOARD
 	name_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
@@ -1542,7 +1531,7 @@ func _log_debug(message: String):
 		return
 	
 	var prefix = "[SERVER]" if _is_server else "[CLIENT]"
-	print("%s[PlayerNode][ClientID: %d]: %s" % [prefix, player_id, message])
+	print("%s[PlayerNode][S_ID: %d][Nome: %s]: %s" % [prefix, player_id, player_name, message])
 		
 func verificar_rede():
 	var peer = multiplayer.multiplayer_peer

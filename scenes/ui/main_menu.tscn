@@ -44,7 +44,7 @@ font_size = 24
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_6dd3c"]
 bg_color = Color(0.13, 0.81149995, 1, 1)
 
-[node name="MainMenu" type="Control" unique_id=1416588749 node_paths=PackedStringArray("canvas_layer")]
+[node name="MainMenu" type="Control" unique_id=1416588749]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -52,7 +52,6 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_fe2o3")
-canvas_layer = NodePath("CanvasLayer")
 
 [node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=2047922715]
 follow_viewport_enabled = true
@@ -87,7 +86,6 @@ custom_minimum_size = Vector2(1200, 800)
 layout_mode = 2
 
 [node name="MainMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=272160322]
-visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -189,17 +187,15 @@ max_length = 20
 
 [node name="Label3" type="Label" parent="CanvasLayer/CenterContainer/Control/NameInputMenu/VBoxContainer" unique_id=565056397]
 layout_mode = 2
-text = "• 3 a 20 caracteres\\n• Letras, números, espaços e _"
+text = "3 a 20 caracteres, o nome só pode conter letras, números, espaços e underscores"
 label_settings = SubResource("LabelSettings_m1kxf")
 horizontal_alignment = 1
 
 [node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/NameInputMenu/VBoxContainer" unique_id=443092279]
-visible = false
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.71609545, 0.27946, 0, 1)
 theme_override_font_sizes/font_size = 20
-text = "Deu cagada!"
 horizontal_alignment = 1
 autowrap_mode = 3
 
@@ -245,12 +241,10 @@ text = "Conectando ao servidor..."
 horizontal_alignment = 1
 
 [node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/ConnectingMenu/VBoxContainer" unique_id=1565524780]
-visible = false
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.71609545, 0.27946, 0, 1)
 theme_override_font_sizes/font_size = 20
-text = "Deu cagada!"
 horizontal_alignment = 1
 autowrap_mode = 3
 
@@ -263,7 +257,7 @@ layout_mode = 2
 theme_override_constants/separation = 40
 alignment = 1
 
-[node name="CancelButton" type="Button" parent="CanvasLayer/CenterContainer/Control/ConnectingMenu/VBoxContainer/ButtonsContainer" unique_id=1767557064]
+[node name="ReturnButton" type="Button" parent="CanvasLayer/CenterContainer/Control/ConnectingMenu/VBoxContainer/ButtonsContainer" unique_id=1767557064]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 text = "Voltar"
@@ -323,7 +317,6 @@ disabled = true
 text = "Apagar"
 
 [node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/ServerListMenu/VBoxContainer" unique_id=1220290634]
-visible = false
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.71609545, 0.27946, 0, 1)
@@ -405,12 +398,10 @@ layout_mode = 2
 max_length = 5
 
 [node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/AddServerMenu/VBoxContainer" unique_id=545644132]
-visible = false
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.71609545, 0.27946, 0, 1)
 theme_override_font_sizes/font_size = 20
-text = "Deu cagada!"
 horizontal_alignment = 1
 autowrap_mode = 3
 
@@ -527,12 +518,10 @@ alignment = 1
 secret = true
 
 [node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer" unique_id=1980915856]
-visible = false
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.71609545, 0.27946, 0, 1)
 theme_override_font_sizes/font_size = 20
-text = "Deu cagada!"
 horizontal_alignment = 1
 autowrap_mode = 3
 
@@ -580,15 +569,14 @@ layout_mode = 2
 text = "Desconectar"
 
 [node name="RoomMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=1954665922]
-custom_minimum_size = Vector2(1250, 600)
+visible = false
+custom_minimum_size = Vector2(1200, 600)
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = -38.0
-offset_top = 39.0
-offset_right = 36.0
-offset_bottom = -43.0
+offset_right = 37.0
 grow_horizontal = 2
 grow_vertical = 2
 
@@ -611,21 +599,19 @@ label_settings = SubResource("LabelSettings_uhagc")
 horizontal_alignment = 1
 
 [node name="ScrollContainer" type="ScrollContainer" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer" unique_id=377148629]
-custom_minimum_size = Vector2(800, 450)
+custom_minimum_size = Vector2(800, 480)
 layout_mode = 2
 
 [node name="PlayersList" type="ItemList" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer/ScrollContainer" unique_id=1673682770]
-custom_minimum_size = Vector2(800, 600)
+custom_minimum_size = Vector2(780, 600)
 layout_mode = 2
 allow_search = false
 
 [node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer" unique_id=462777944]
-visible = false
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.71609545, 0.27946, 0, 1)
 theme_override_font_sizes/font_size = 20
-text = "Deu cagada!"
 horizontal_alignment = 1
 autowrap_mode = 3
 
@@ -640,15 +626,87 @@ layout_mode = 2
 text = "Iniciar Partida"
 
 [node name="CloseButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer/ButtonsContainer" unique_id=1171284964]
-visible = false
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 text = "Fechar Sala"
+
+[node name="LockButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer/ButtonsContainer" unique_id=1828208451]
+custom_minimum_size = Vector2(150, 40)
+layout_mode = 2
+text = "Trancar Sala"
 
 [node name="LeaveButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer/ButtonsContainer" unique_id=1735648984]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 text = "Sair da Sala"
+
+[node name="KickPlayer" type="Button" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer/ButtonsContainer" unique_id=1569459578]
+custom_minimum_size = Vector2(150, 40)
+layout_mode = 2
+text = "Expulsar jogador
+"
+
+[node name="RoundReturnMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=1882250171]
+visible = false
+layout_mode = 0
+offset_left = 300.0
+offset_top = 250.0
+offset_right = 900.0
+offset_bottom = 550.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ReferenceRect" type="ReferenceRect" parent="CanvasLayer/CenterContainer/Control/RoundReturnMenu" unique_id=1001448031]
+custom_minimum_size = Vector2(600, 300)
+layout_mode = 2
+border_color = Color(0, 0, 0, 1)
+border_width = 2.0
+editor_only = false
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/RoundReturnMenu" unique_id=1327503922]
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="RoundReturnLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/RoundReturnMenu/VBoxContainer" unique_id=179588088]
+layout_mode = 2
+text = "Você ainda está em uma sala"
+horizontal_alignment = 1
+
+[node name="RoomName" type="Label" parent="CanvasLayer/CenterContainer/Control/RoundReturnMenu/VBoxContainer" unique_id=67493652]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8249483, 0.60931164, 7.70092e-07, 1)
+theme_override_font_sizes/font_size = 20
+text = "Nome da sala"
+horizontal_alignment = 1
+
+[node name="RoundReturnLabel2" type="Label" parent="CanvasLayer/CenterContainer/Control/RoundReturnMenu/VBoxContainer" unique_id=512385289]
+layout_mode = 2
+text = "O que quer fazer?
+"
+horizontal_alignment = 1
+
+[node name="ButtonsContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/RoundReturnMenu/VBoxContainer" unique_id=870354864]
+layout_mode = 2
+theme_override_constants/separation = 40
+alignment = 1
+
+[node name="BackButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoundReturnMenu/VBoxContainer/ButtonsContainer" unique_id=1163074505]
+custom_minimum_size = Vector2(150, 50)
+layout_mode = 2
+text = "Voltar"
+
+[node name="ContinueButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoundReturnMenu/VBoxContainer/ButtonsContainer" unique_id=761280715]
+custom_minimum_size = Vector2(150, 50)
+layout_mode = 2
+text = "Retornar à partida"
+
+[node name="ExitButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoundReturnMenu/VBoxContainer/ButtonsContainer" unique_id=1758799351]
+custom_minimum_size = Vector2(150, 50)
+layout_mode = 2
+theme = SubResource("Theme_1g8jr")
+theme_override_colors/font_color = Color(0.92, 0, 0, 1)
+text = "Abandonar de vez"
 
 [node name="ManualServerJoinMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=720256835]
 visible = false
@@ -703,12 +761,10 @@ max_length = 5
 virtual_keyboard_type = 2
 
 [node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/ManualServerJoinMenu/VBoxContainer" unique_id=777535074]
-visible = false
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.71609545, 0.27946, 0, 1)
 theme_override_font_sizes/font_size = 20
-text = "Deu cagada!"
 horizontal_alignment = 1
 autowrap_mode = 3
 
@@ -774,12 +830,10 @@ placeholder_text = "Deixe vazio se não tiver senha"
 secret = true
 
 [node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/ManualRoomJoinMenu/VBoxContainer" unique_id=1721544639]
-visible = false
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.71609545, 0.27946, 0, 1)
 theme_override_font_sizes/font_size = 20
-text = "Deu cagada!"
 horizontal_alignment = 1
 autowrap_mode = 3
 
@@ -897,12 +951,10 @@ alignment = 1
 secret = true
 
 [node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/CreateRoomMenu/VBoxContainer" unique_id=1697487319]
-visible = false
-custom_minimum_size = Vector2(400, 0)
+custom_minimum_size = Vector2(500, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.71609545, 0.27946, 0, 1)
 theme_override_font_sizes/font_size = 20
-text = "Deu cagada!"
 horizontal_alignment = 1
 autowrap_mode = 3
 
@@ -1307,7 +1359,7 @@ text = "Sair da Partida"
 [node name="DisconnectFromServer" type="Button" parent="CanvasLayer/CenterContainer/Control/GameplayMenu/ButtonsContainer" unique_id=1933868508]
 custom_minimum_size = Vector2(200, 50)
 layout_mode = 2
-text = "Desconectar do Servidor"
+text = "Abandonar Partida"
 
 [node name="ExitConfirmMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=1452853231]
 visible = false
@@ -1339,8 +1391,7 @@ visible = false
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.71609545, 0.27946, 0, 1)
-theme_override_font_sizes/font_size = 20
-text = "Você pode voltar, mas perderá o status de anfitrião"
+theme_override_font_sizes/font_size = 14
 horizontal_alignment = 1
 autowrap_mode = 3
 

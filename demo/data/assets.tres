@@ -1,9 +1,9 @@
 [gd_resource type="Terrain3DAssets" format=3 uid="uid://dal3jhw6241qg"]
 
-[ext_resource type="Texture2D" uid="uid://dgqlew81ij1d" path="res://demo/assets/textures/rock051_alb_ht.dds" id="2_y3ibi"]
-[ext_resource type="Texture2D" uid="uid://bfi7tpowju3ve" path="res://demo/assets/textures/ground037_alb_ht.dds" id="3_g8f2m"]
-[ext_resource type="Texture2D" uid="uid://bc48b812fu6ag" path="res://demo/assets/textures/rock051_nrm_rgh.dds" id="3_wncaf"]
-[ext_resource type="Texture2D" uid="uid://5vhy5ce1gqvr" path="res://demo/assets/textures/ground37_nrm_rgh.dds" id="4_aw5y1"]
+[ext_resource type="Texture2D" path="res://demo/assets/textures/rock051_alb_ht.dds" id="2_y3ibi"]
+[ext_resource type="Texture2D" path="res://demo/assets/textures/ground037_alb_ht.dds" id="3_g8f2m"]
+[ext_resource type="Texture2D" path="res://demo/assets/textures/rock051_nrm_rgh.dds" id="3_wncaf"]
+[ext_resource type="Texture2D" path="res://demo/assets/textures/ground37_nrm_rgh.dds" id="4_aw5y1"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_rh15k"]
 transparency = 4
