@@ -6,7 +6,7 @@ extends Node
 ##  clientes recebem localhost_auto_connect = true)
 @export var test_mode: bool = true
 ## [TESTES] Define a quantidade de instâcias de clientes conectadas para executar fast_round
-@export var simulador_players_qtd: int = 1
+@export var simulador_players_qtd: int = 2
 ## Ativa/desativa o debug visual na gameplay
 @export var visual_debug: bool = true
 ## [TESTES] Dropa itens perto dos players e ativa o trainer de cada player
@@ -20,7 +20,7 @@ var activate_only_selected: bool = true
 # Disponíveis: "Server", "NetworkManager", "TestManager", "GameManager", "RoomRegistry"
 # "RoundRegistry", "ClientRegistry", "Player_node", "ObjectManager", "MapManager", "MainMenu"
 # "ItemDatabase", "InventoryMenu", "DroppedItem"
-var selected: Array = ["Player_node"]
+var selected: Array = ["Server", "NetworkManager", "TestManager", "GameManager"]
 
 # Referências
 ## Manager de rede, gerencia comunicação entre servidor e clientes
@@ -72,15 +72,15 @@ func _ready():
 		
 func _init_server(is_headless):
 	# Instancia managers e registros
-	var network_manager_scene: PackedScene = load("res://scenes/system/server_network_manager.tscn")
-	var server_manager_scene: PackedScene = load("res://scenes/system/server_manager.tscn")
-	client_registry = load("res://scripts/only_server/registrars/ClientRegistry.gd").new()
-	room_registry = load("res://scripts/only_server/registrars/RoomRegistry.gd").new()
-	round_registry = load("res://scripts/only_server/registrars/RoundRegistry.gd").new()
-	map_manager = load("res://scripts/gameplay/MapManager.gd").new()
-	item_database = load("res://scripts/gameplay/ItemDatabase.gd").new()
-	object_manager = load("res://scripts/only_server/ObjectManager.gd").new()
-	test_manager = load("res://scripts/only_server/TestManager.gd").new()
+	var network_manager_scene: PackedScene = preload("res://scenes/system/server_network_manager.tscn")
+	var server_manager_scene: PackedScene = preload("res://scenes/system/server_manager.tscn")
+	client_registry = preload("res://scripts/only_server/registrars/ClientRegistry.gd").new()
+	room_registry = preload("res://scripts/only_server/registrars/RoomRegistry.gd").new()
+	round_registry = preload("res://scripts/only_server/registrars/RoundRegistry.gd").new()
+	map_manager = preload("res://scripts/system/MapManager.gd").new()
+	item_database = preload("res://scripts/gameplay/ItemDatabase.gd").new()
+	object_manager = preload("res://scripts/only_server/ObjectManager.gd").new()
+	test_manager = preload("res://scripts/only_server/TestManager.gd").new()
 	
 	network_manager = network_manager_scene.instantiate()
 	server_manager = server_manager_scene.instantiate()
@@ -203,12 +203,12 @@ func _init_server(is_headless):
 
 func _init_client(id_file_):
 	# Instancia managers e registros
-	var network_manager_scene: PackedScene = load("res://scenes/system/client_network_manager.tscn")
-	var game_manager_scene: PackedScene = load("res://scenes/system/game_manager.tscn")
-	var main_menu_scene: PackedScene = load("res://scenes/ui/main_menu.tscn")
-	item_database = load("res://scripts/gameplay/ItemDatabase.gd").new()
-	map_manager = load("res://scripts/gameplay/MapManager.gd").new()
-	server_list_manager = load("res://scripts/system/serverlist_manager.gd").new()
+	var network_manager_scene: PackedScene = preload("res://scenes/system/client_network_manager.tscn")
+	var game_manager_scene: PackedScene = preload("res://scenes/system/game_manager.tscn")
+	var main_menu_scene: PackedScene = preload("res://scenes/ui/main_menu.tscn")
+	item_database = preload("res://scripts/gameplay/ItemDatabase.gd").new()
+	map_manager = preload("res://scripts/system/MapManager.gd").new()
+	server_list_manager = preload("res://scripts/system/serverlist_manager.gd").new()
 
 	network_manager = network_manager_scene.instantiate()
 	game_manager = game_manager_scene.instantiate()

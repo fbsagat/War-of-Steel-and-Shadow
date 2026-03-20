@@ -168,11 +168,11 @@ func _server_start_round(_round_settings: Dictionary):
 	pass
 
 @rpc("any_peer", "call_remote", "reliable")
-func _server_start_match(_match_settings: Dictionary):
+func _mark_player_disconnected(_chosen: bool):
 	pass
 
 @rpc("authority", "call_remote", "reliable")
-func _client_round_started(_match_data: Dictionary):
+func _client_round_started(_server_id: String, _match_data: Dictionary):
 	pass
 
 @rpc("authority", "call_remote", "reliable")

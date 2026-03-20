@@ -601,6 +601,7 @@ func show_main_menu():
 	transparent.visible = false
 	color_rect.visible = true
 	current_menu_visible = main_menu
+	self.get_node("CanvasLayer").show()
 
 func hide_main_menu():
 	if start_unlocked_mouse:

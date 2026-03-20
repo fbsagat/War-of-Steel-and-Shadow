@@ -996,7 +996,7 @@ func _client_receive_state(pos: Vector3, rot: Vector3, vel: Vector3, running: bo
 
 @rpc("authority", "call_remote", "unreliable")
 func _client_receive_animation_state(speed: float, attacking: bool, defending: bool,
- jumping: bool, aiming: bool, running: bool, block_attacking: bool, on_floor: bool):
+ jumping: bool, aiming: bool, _running: bool, block_attacking: bool, on_floor: bool):
 	"""Recebe e aplica estado de animação de outros jogadores"""
 	
 	if is_local_player:

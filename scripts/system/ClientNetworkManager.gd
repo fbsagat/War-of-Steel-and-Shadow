@@ -198,18 +198,27 @@ func _client_kicked_from_room():
 
 # ===== RODADAS — HELPERS LOCAIS =====
 
-func request_start_round(round_settings: Dictionary = {}):
+func _server_request_start_round(round_settings: Dictionary = {}):
+	"""Host de uma sala requisita ao servidor para iniciar uma partida"""
 	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
 	_log_debug("📤 Iniciando rodada")
 	rpc_id(1, "_server_start_round", round_settings)
 
+func _mark_player_disconnected(chosen: bool):
+	"""Helper local: envia aviso para o servidor quando está desconectado ou não do round atual"""
+	if not is_connected_:
+		_log_debug("❌ Erro: Não conectado ao servidor")
+		return
+	_log_debug("Enviando aviso para o servidor que está %s do round atual" % "DESCONECTADO" if chosen else "RECONECTADO")
+	rpc_id(1, "_mark_player_disconnected", chosen)
+
 # ===== RODADAS — RECEBIMENTOS DO SERVIDOR =====
 
-func _client_round_started(match_data: Dictionary):
+func _client_round_started(_server_id: String, match_data: Dictionary):
 	_log_debug("Rodada iniciada")
-	game_manager._client_round_started(match_data)
+	game_manager._client_round_started(_server_id, match_data)
 
 func _client_round_return(match_data: Dictionary):
 	_log_debug("retornando à rodada")
@@ -356,8 +365,10 @@ func _client_swap_equipped_item(new_item_name: String, dragged_item: Dictionary,
 
 func send_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
 	"""Helper local: envia estado do jogador ao servidor"""
+	
 	if not is_connected_:
 		return
+		
 	rpc_id(1, "_server_player_state", p_id, pos, rot, vel, running, jumping)
 
 func _client_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):

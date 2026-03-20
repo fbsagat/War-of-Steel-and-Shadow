@@ -107,23 +107,23 @@ func initialize():
 	# Inicializa verificador de teste automático se fast_round true
 	if fast_round:
 		_setup_test_mode_verification()
-		
-	# Timer de debug opcional
-	if debug_timer:
-		_setup_debug_timer()
 	
-	# Se remove_room_round estiver ativado
+	# Timer automático no servidor para fazer limpeza periódica de rounds vazios
 	_setup_cleanup_empty_rounds_timer()
-	
-	# Cria nó organizacional para os Rounds
-	all_rounds_node = Node.new()
-	get_tree().root.add_child(all_rounds_node)
-	all_rounds_node.name = "All_Rounds"
 	
 	# Cria uma SubViewportContainer chamada ActiveRoundDisplay para exibir as câmeras(uma por vez)
 	# das rodadas em curso, se is_headless estiver desativado
 	if not is_headless:
 		_setup_viewport_display()
+	
+	# Timer de debug periódico (opcional)
+	if debug_timer:
+		_setup_debug_timer()
+	
+	# Cria nó organizacional para os Rounds
+	all_rounds_node = Node.new()
+	get_tree().root.add_child(all_rounds_node)
+	all_rounds_node.name = "All_Rounds"
 	
 	# Gera id único do servidor
 	_generate_server_identity()
@@ -196,6 +196,8 @@ func _setup_debug_timer():
 	add_child(debug_timer_)
 	
 func _setup_cleanup_empty_rounds_timer():
+	"""Essa função cria e configura um timer automático no servidor para fazer limpeza periódica 
+	de rounds vazios."""
 	var cleanup_timer_ = Timer.new()
 	cleanup_timer_.wait_time = CLEANUP_INTERVAL
 	cleanup_timer_.autostart = true
@@ -221,22 +223,25 @@ func _input(event: InputEvent) -> void:
 		return
 		
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_TAB:
-		_log_debug("Movendo câmera do servidor para a próxima partida")
-		var round_nodes := all_rounds_node.get_children()
-		if round_nodes.is_empty():
-			return
-		# avança circularmente
-		current_cam_round_index = (current_cam_round_index + 1) % round_nodes.size()
-		var next_round := round_nodes[current_cam_round_index]
-		_switch_camera_to_round(next_round)
+		_find_a_next_round_to_camera()
 	
 	if event.is_action_pressed("ui_cancel"):
 		_toggle_mouse_mode()
-		
+
+func _find_a_next_round_to_camera():
+	"""Encontra um round ativo corretamente para mudar a câmera para este round"""
+	_log_debug("Movendo câmera do servidor para a próxima partida")
+	var round_nodes := all_rounds_node.get_children()
+	if round_nodes.is_empty():
+		return
+	# avança circularmente
+	current_cam_round_index = (current_cam_round_index + 1) % round_nodes.size()
+	var next_round := round_nodes[current_cam_round_index]
+	_switch_camera_to_round(next_round)
+
 func _switch_camera_to_round(round_node: Node) -> void:
-	"""
-	Ativa a câmera de um round E atualiza o display
-	"""
+	"""Ativa a câmera de um round específico e atualiza o display"""
+	
 	if not round_node or not round_node is SubViewport:
 		push_warning("round_node inválido")
 		return
@@ -289,8 +294,6 @@ func _start_server():
 	_log_debug("Trainer de testes: %s, Fast Round: %s" % [test_trainer, fast_round])
 	_log_debug("Min. de jogadores/sala: %s, Max. de jogadores/sala: %s" % [min_players_to_start, max_players_per_room])
 	_log_debug("Tempo de espera de reconexão(peer): %sms" % reconnect_timout)
-	_log_debug("▶️ Servidor inicializado com sucesso!")
-	_log_debug("================================================================")
 	
 	# Cria peer de rede
 	var peer = ENetMultiplayerPeer.new()
@@ -298,6 +301,7 @@ func _start_server():
 	
 	if error != OK:
 		push_error("ERRO ao criar servidor: " + str(error))
+		_log_debug("================================================================")
 		return
 	
 	multiplayer.multiplayer_peer = peer
@@ -305,6 +309,9 @@ func _start_server():
 	# Conecta sinais de rede
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
+	
+	_log_debug("▶️ Servidor inicializado com sucesso!")
+	_log_debug("================================================================")
 
 # ===== SISTEMA DE IDENTIFIAÇÃO =====
 
@@ -325,7 +332,7 @@ func process_client_hello(payload: Dictionary, peer_id: int) -> Dictionary:
 	  "server_id": String
 	}
 	"""
-	_log_debug("process_client_hello: %s, peer_id: %s" % [payload, peer_id])
+	_log_debug("Processando client hello: %s, peer_id: %s" % [payload, peer_id])
 	
 	var uuid_base : String = payload.get("uuid_base", "")
 	var client_token : String = payload.get("token", "")
@@ -378,9 +385,8 @@ func _on_peer_connected(peer_id: int):
 	network_manager.rpc_id(peer_id, "_client_update_info", configs)
 
 func _on_peer_disconnected(peer_id: int):
-	"""
-	Callback quando um cliente desconecta
-	"""
+	"""Callback quando um cliente desconecta"""
+	
 	# Define cliente como desconectado
 	client_registry.set_disconnected_peer(peer_id)
 	var player_uuid = client_registry.get_uuid_by_peer_id(peer_id)
@@ -539,9 +545,7 @@ func _handle_request_return_or_exit(peer_id: int, chosen: bool):
 	if not player_uuid:
 		return
 	
-	#var player_dict = client_registry.get_player(player_uuid)
 	var player_room_id = client_registry.get_player_room(player_uuid)
-	#var player_room_dict = room_registry.get_room(player_room_id)
 	
 	# Validar sala onde cliente está
 	if not player_room_id:
@@ -561,8 +565,7 @@ func _execute_player_return_to_round(peer_id: int, player_uuid: String):
 	# Verifica de novo se a partida/round está em andamente, se sim, entra, se não, volta pra sala apenas
 	var round_id = client_registry.get_player_round(player_uuid)
 	var round_ = round_registry.get_round(round_id)
-	#var room_id = round_["room_id"]
-	#var room = room_registry.get_room(room_id)
+	
 	if round_registry.is_round_active(round_id):
 		_log_debug("enviando comando para o cliente carregar a partida dele")
 		
@@ -686,6 +689,27 @@ func _player_exit_from_round(player_room_id: int, peer_id: int, player_uuid: Str
 	
 	# 3. Limpa estado de validação
 	_cleanup_player_state(player_uuid)
+
+func _mark_player_disconnected(peer_id: int, _chosen: bool):
+	"""Recebe aviso do cliente de que está desconectado ou reconectado em um round
+	- Não envia rpcs de sincronia e round em geral para ele durante desconexão/economia de rede"""
+	
+	var player_uuid = client_registry.get_uuid_by_peer_id(peer_id)
+	
+	if not player_uuid:
+		return
+		
+	var _round = round_registry.get_round_by_player_uuid(player_uuid)
+	
+	if not _round:
+		return
+	
+	if _chosen:
+		round_registry._mark_player_disconnected(_round["round_id"], player_uuid)
+		_log_debug("⚠ uuid=%s marcado como desconectado na rodada %d" % [player_uuid, _round["round_id"]])
+	else:
+		round_registry._unmark_player_disconnected(_round["round_id"], player_uuid)
+		_log_debug("✓ uuid=%s removido de disconnected_players na rodada %d" % [player_uuid, _round["round_id"]])
 
 func _handle_create_room(peer_id: int, room_name: String, password: String):
 	"""Cria uma nova sala e adiciona o criador como host"""
@@ -1066,7 +1090,7 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 		room["players"],
 		round_settings
 	)
-
+	
 	# Criar cena de organização do round
 	var round_node = SubViewport.new()
 	round_node.own_world_3d = true
@@ -1109,7 +1133,7 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 	var players_count: int = round_registry.get_total_players(round_data["round_id"])
 	final_settings["round_players_count"] = players_count
 	final_settings["spawn_points"] = map_manager._create_spawn_points(room["players"])
-
+	
 	# Prepara pacote de dados para enviar aos clientes
 	var match_data = {
 		"round_id": round_data["round_id"],
@@ -1122,7 +1146,7 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 	# Envia comando de início para todos os clientes da sala
 	for room_player in room["players"]:
 		var player_sesion_id = client_registry.get_peer_id_by_uuid(room_player["id"])
-		network_manager.rpc_id(player_sesion_id, "_client_round_started", match_data)
+		network_manager.rpc_id(player_sesion_id, "_client_round_started",server_id , match_data)
 	
 	# Instancia mapa e players no servidor também
 	await _server_instantiate_round(match_data, round_node, players_node)
@@ -1278,6 +1302,7 @@ func _on_round_ending(round_id: int, reason: String):
 	
 	# Remove o nó deste round da lista de rounds do servidor
 	var round_ = round_registry.get_round(round_id)
+	all_rounds_node.remove_child(round_["round_node"])
 	round_["round_node"].queue_free()
 	
 	# Finaliza completamente a rodada
@@ -1288,6 +1313,10 @@ func _on_round_ending(round_id: int, reason: String):
 	if round_registry.get_active_rounds_count() <= 0 and (not is_headless or not current_active_viewport):
 		current_active_viewport = null
 		viewport_display.visible = false
+	else:
+		# Se houver e não for headless, move câmera pra outro round automaticamente
+		if not is_headless:
+			_find_a_next_round_to_camera()
 
 func _on_all_players_disconnected(round_id: int):
 	"""
@@ -1352,7 +1381,7 @@ func _complete_round_end(round_id: int):
 	
 	# Atualiza lista de salas (sala volta a ficar disponível)
 	_send_rooms_list_to_all()
-
+	
 func _cleanup_round_objects(round_id: int):
 	"""
 	Limpa todos os objetos da rodada

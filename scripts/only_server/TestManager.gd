@@ -113,6 +113,9 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 		#var player_uuid = client_registry.get_uuid_by_peer_id(peer_id)
 		var player_name = "TestPlayer%d" % [i + 1]
 		var success = client_registry.register_player_name(_uuid_base, player_name)
+		
+		# Atualiza o cliente
+		network_manager.rpc_id(peer_id, "_client_name_accepted", player_name)
 
 		if not success:
 			_log_debug("❌ Falha ao registrar jogador %d" % _uuid_base)
@@ -235,7 +238,7 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 	
 	# Envia comando de início para todos os clientes
 	for room_player in match_data["players"]:
-		network_manager.rpc_id(room_player["session_id"], "_client_round_started", match_data)
+		network_manager.rpc_id(room_player["session_id"], "_client_round_started", server_manager.server_id, match_data)
 
 	# Instancia rodada no servidor
 	await _server_instantiate_round(match_data, players_node, round_node)

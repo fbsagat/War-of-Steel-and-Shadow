@@ -51,7 +51,7 @@ var inventory_menu: bool = false # True se o menu de inventário estiver visíve
 var gameplay_menu: bool = false # True se o menu de gameplay  estiver visível
 var local_peer_id: int = 0
 var player_name: String = ""
-var configs: Dictionary = {}
+var configs: Dictionary = {} # Configurações do servidor
 var current_room: Dictionary = {}
 var current_round: Dictionary = {}
 var connection_start_time: float = 0.0
@@ -225,6 +225,191 @@ func _toggle_gameplay_menu(hide: bool = false) -> void:
 
 # ===== FUNÇÕES DE CONEXÃO COM O SERVIDOR =====
 
+func connect_to_server():
+	"""Conecta ao servidor dedicado"""
+	
+	if is_connected_to_server:
+		_log_debug("Já conectado ao servidor")
+		return
+	
+	if is_connecting:
+		_log_debug("Já está tentando conectar")
+		return
+	
+	_log_debug("Tentando conectar ao servidor: %s:%d" % [server_address, server_port])
+	
+	if main_menu_node:
+		main_menu_node.show_loading_menu("Conectando ao servidor...")
+	
+	peer = ENetMultiplayerPeer.new()
+	var error = peer.create_client(server_address, server_port)
+	
+	if error != OK:
+		_log_debug("Erro ao criar cliente: " + str(error))
+		_handle_connection_error("Falha ao criar conexão com o servidor")
+		return
+	
+	multiplayer.multiplayer_peer = peer
+	is_connecting = true
+	connection_start_time = Time.get_ticks_msec() / 1000.0
+	
+	_log_debug("Cliente criado, aguardando conexão...")
+
+func _on_connected_to_server():
+	"""Esse sinal é emitido quando o cliente consegue se conectar com sucesso ao servidor."""
+	"""Callback quando conecta com sucesso ao servidor"""
+
+	if not is_connecting:
+		return
+
+	if verificar_rede():
+		# garante que o peer foi realmente configurado
+		if multiplayer.has_multiplayer_peer():
+			cached_unique_id = multiplayer.get_unique_id()
+	
+	is_connecting = false
+	is_connected_to_server = true
+	local_peer_id = multiplayer.get_unique_id()
+	
+	_log_debug(" Cliente conectado ao servidor com sucesso! Peer ID: %d" % local_peer_id)
+	
+	connected_to_server.emit()
+
+func _on_connection_failed():
+	"""Dispara quando a tentativa de conexão falha."""
+	_log_debug("Falha ao conectar ao servidor")
+
+func _on_reconnect_timeout() -> void:
+	if not is_connecting:
+		return
+
+	_log_debug("Tempo esgotado aguardando conexão.")
+
+	# ❗ IMPORTANTE: limpar antes de tentar de novo
+	multiplayer.multiplayer_peer = null
+	peer = null
+	_try_reconnect()
+
+func _schedule_next_retry() -> void:
+	if reconnect_attempts >= MAX_RECONNECT_ATTEMPTS:
+		_log_debug("Não foi possível reconectar.")
+		is_connecting = false
+		_on_reconnect_gave_up()
+		return
+
+	# Limpa o peer atual antes de tentar de novo
+	multiplayer.multiplayer_peer = null
+	peer = null
+
+	reconnect_timer.start(RECONNECT_DELAY)
+
+func _on_server_disconnected():
+	"""Dispara quando o cliente já estava conectado, mas perde a conexão com o servidor.
+	Aqui o jogo deve mostrar o menu de reconexão, se não conseguir no tempo e tentativas determinadas,
+	desconecta totalmente e reseta, se conseguir, esconde a tela de reconexão e volta à partida normalmente"""
+	
+	_log_debug("Conexão perdida com o servidor, tentando reconectar para voltar à partida")
+	
+	is_connected_to_server = false
+	network_manager.is_connected_ = false
+	
+	# Inicia processo de reconexão
+	# Mostra menu de reconexão
+	if main_menu_node:
+		main_menu_node.show_main_menu()
+		main_menu_node.show_connecting_menu()
+		main_menu_node.show_error_connecting("Conexão perdida. Tentando reconectar...")
+	
+	start_reconnect(server_address, server_port)
+
+func start_reconnect(address: String, port: int) -> void:
+	server_address = address
+	server_port = port
+	reconnect_attempts = 0
+	is_connecting = true
+	_try_reconnect()
+
+func _try_reconnect() -> void:
+	if reconnect_attempts >= MAX_RECONNECT_ATTEMPTS:
+		_log_debug("Desistiu de reconectar após %d tentativas." % MAX_RECONNECT_ATTEMPTS)
+		is_connecting = false
+		_on_reconnect_gave_up()
+		return
+
+	reconnect_attempts += 1
+	main_menu_node.show_error_connecting(
+		"Conexão perdida. Tentando reconectar... \ntentativa %s/%s" % [reconnect_attempts, MAX_RECONNECT_ATTEMPTS])
+	_log_debug("Tentando reconectar... tentativa %d/%d" % [reconnect_attempts, MAX_RECONNECT_ATTEMPTS])
+	
+	# Cria um peer novo para cada tentativa
+	peer = ENetMultiplayerPeer.new()
+	var result := peer.create_client(server_address, server_port)
+
+	if result != OK:
+		_log_debug("Erro ao criar cliente ENet. Código: %s" % str(result))
+		_schedule_next_retry()
+		return
+
+	multiplayer.multiplayer_peer = peer
+
+	# Se o servidor estiver offline, o resultado real virá por signal
+	# Este timer serve como fallback caso a rede demore demais
+	reconnect_timer.start(RECONNECT_DELAY)
+
+func _on_reconnect_gave_up() -> void:
+	
+	_disconnect_from_server()
+	if main_menu_node:
+		main_menu_node.show_main_menu()
+
+	_log_debug("Conexão perdida permanentemente.")
+
+func _disconnect_from_server(notify_server: bool = false):
+	"""Dispara quando o cliente quer desconectar do servidor intencionalmente
+	Aqui o jogo deve retornar para a tela inicial, desconectado do servidor, tudo resetado e sem 
+	possibilidade de o cliente retornar ao round em que estava
+	notify = avisa o servidor.
+	"""
+	
+	_log_debug("Cliente desconectado intencionalmente do servidor, resetando estado do cliente e voltando ao menu principal")
+	
+	if notify_server:
+		_log_debug("Avisando servidor")
+		# Fazer a função
+	
+	# Iniciando reset completo
+	# Fecha conexão com o servidor
+	if multiplayer.multiplayer_peer:
+		multiplayer.multiplayer_peer.close()
+		multiplayer.multiplayer_peer = null
+		
+	# Reset completo do estado
+	peer = null
+	inventory_menu = false
+	gameplay_menu = false
+	is_connected_to_server = false
+	is_in_round = false
+	is_connecting = false
+	local_peer_id = 0
+	player_name = ""
+	configs.clear()
+	current_room.clear()
+	current_round.clear()
+	local_player_node = null
+	spawned_objects.clear()
+	local_inventory.clear()
+	
+	# Limpa o nó da partida(round) totalmente
+	if round_node:
+		round_node.queue_free()
+		
+	# Volta para tela inicial
+	if main_menu_node:
+		main_menu_node.show_main_menu()
+	
+	# Emite sinal
+	disconnected_from_server.emit()
+
 func join_server_by_ip(received_ip: String, received_port: String) -> bool:
 	# Validar IP/hostname
 	if received_ip and received_ip.strip_edges() != "":
@@ -391,193 +576,14 @@ func handle_server_response(response: Dictionary) -> void:
 		_log_debug("Conexão rejeitada: %s" % response.get("reason",""))
 		_disconnect_from_server()
 
-# ===== CALLBACKS DE CONEXÃO =====
-
-func connect_to_server():
-	"""Conecta ao servidor dedicado"""
-	
-	if is_connected_to_server:
-		_log_debug("Já conectado ao servidor")
-		return
-	
-	if is_connecting:
-		_log_debug("Já está tentando conectar")
-		return
-	
-	_log_debug("Tentando conectar ao servidor: %s:%d" % [server_address, server_port])
-	
-	if main_menu_node:
-		main_menu_node.show_loading_menu("Conectando ao servidor...")
-	
-	peer = ENetMultiplayerPeer.new()
-	var error = peer.create_client(server_address, server_port)
-	
-	if error != OK:
-		_log_debug("Erro ao criar cliente: " + str(error))
-		_handle_connection_error("Falha ao criar conexão com o servidor")
-		return
-	
-	multiplayer.multiplayer_peer = peer
-	is_connecting = true
-	connection_start_time = Time.get_ticks_msec() / 1000.0
-	
-	_log_debug("Cliente criado, aguardando conexão...")
-
-func _on_connected_to_server():
-	"""Esse sinal é emitido quando o cliente consegue se conectar com sucesso ao servidor."""
-	"""Callback quando conecta com sucesso ao servidor"""
-	# Só leia get_unique_id() quando o peer estiver ativo
-
-	if not is_connecting:
-		return
-
-	if verificar_rede():
-		# garante que o peer foi realmente configurado
-		if multiplayer.has_multiplayer_peer():
-			cached_unique_id = multiplayer.get_unique_id()
-	
-	is_connecting = false
-	is_connected_to_server = true
-	local_peer_id = multiplayer.get_unique_id()
-	
-	_log_debug(" Cliente conectado ao servidor com sucesso! Peer ID: %d" % local_peer_id)
-	
-	connected_to_server.emit()
-
-func _on_connection_failed():
-	"""Dispara quando a tentativa de conexão falha."""
-	_log_debug("Falha ao conectar ao servidor")
-
-func _on_reconnect_timeout() -> void:
-	if not is_connecting:
-		return
-
-	_log_debug("Tempo esgotado aguardando conexão.")
-
-	# ❗ IMPORTANTE: limpar antes de tentar de novo
-	multiplayer.multiplayer_peer = null
-	peer = null
-	_try_reconnect()
-
-func _schedule_next_retry() -> void:
-	if reconnect_attempts >= MAX_RECONNECT_ATTEMPTS:
-		_log_debug("Não foi possível reconectar.")
-		is_connecting = false
-		_on_reconnect_gave_up()
-		return
-
-	# Limpa o peer atual antes de tentar de novo
-	multiplayer.multiplayer_peer = null
-	peer = null
-
-	reconnect_timer.start(RECONNECT_DELAY)
-
-func _on_server_disconnected():
-	"""Dispara quando o cliente já estava conectado, mas perde a conexão com o servidor.
-	Aqui o jogo deve mostrar o menu de reconexão, se não conseguir no tempo e tentativas determinadas,
-	desconecta totalmente e reseta, se conseguir, esconde a tela de reconexão e volta à partida normalmente"""
-	_log_debug("Conexão perdida com o servidor, tentando reconectar para voltar à partida")
-	
-	# Inicia processo de reconexão
-	# Mostra menu de reconexão
-	if main_menu_node:
-		main_menu_node.show_connecting_menu()
-		main_menu_node.show_error_connecting("Conexão perdida. Tentando reconectar...")
-	
-	start_reconnect(server_address, server_port)
-
-func start_reconnect(address: String, port: int) -> void:
-	server_address = address
-	server_port = port
-	reconnect_attempts = 0
-	is_connecting = true
-	_try_reconnect()
-
-func _try_reconnect() -> void:
-	if reconnect_attempts >= MAX_RECONNECT_ATTEMPTS:
-		_log_debug("Desistiu de reconectar após %d tentativas." % MAX_RECONNECT_ATTEMPTS)
-		is_connecting = false
-		_on_reconnect_gave_up()
-		return
-
-	reconnect_attempts += 1
-	main_menu_node.show_error_connecting(
-		"Conexão perdida. Tentando reconectar... \ntentativa %s/%s" % [reconnect_attempts, MAX_RECONNECT_ATTEMPTS])
-	_log_debug("Tentando reconectar... tentativa %d/%d" % [reconnect_attempts, MAX_RECONNECT_ATTEMPTS])
-	
-	# Cria um peer novo para cada tentativa
-	peer = ENetMultiplayerPeer.new()
-	var result := peer.create_client(server_address, server_port)
-
-	if result != OK:
-		_log_debug("Erro ao criar cliente ENet. Código: %s" % str(result))
-		_schedule_next_retry()
-		return
-
-	multiplayer.multiplayer_peer = peer
-
-	# Se o servidor estiver offline, o resultado real virá por signal
-	# Este timer serve como fallback caso a rede demore demais
-	reconnect_timer.start(RECONNECT_DELAY)
-
-func _on_reconnect_gave_up() -> void:
-	
-	_disconnect_from_server()
-	if main_menu_node:
-		main_menu_node.show_main_menu()
-
-	_log_debug("Conexão perdida permanentemente.")
-
-func _disconnect_from_server(notify_server: bool = false):
-	"""Dispara quando o cliente quer desconectar do servidor intencionalmente
-	Aqui o jogo deve retornar para a tela inicial, desconectado do servidor, tudo resetado e sem 
-	possibilidade de o cliente retornar ao round em que estava
-	notify = avisa o servidor.
-	"""
-	
-	_log_debug("Cliente desconectado intencionalmente do servidor, resetando estado do cliente e voltando ao menu principal")
-	
-	if notify_server:
-		_log_debug("Avisando servidor")
-		# Fazer a função
-	
-	# Iniciando reset completo
-	# Fecha conexão com o servidor
-	if multiplayer.multiplayer_peer:
-		multiplayer.multiplayer_peer.close()
-		multiplayer.multiplayer_peer = null
-		
-	# Reset completo do estado
-	peer = null
-	inventory_menu = false
-	gameplay_menu = false
-	is_connected_to_server = false
-	is_in_round = false
-	is_connecting = false
-	local_peer_id = 0
-	player_name = ""
-	configs.clear()
-	current_room.clear()
-	current_round.clear()
-	local_player_node = null
-	spawned_objects.clear()
-	local_inventory.clear()
-	
-	# Limpa o nó da partida(round) totalmente
-	if round_node:
-		round_node.queue_free()
-		
-	# Volta para tela inicial
-	if main_menu_node:
-		main_menu_node.show_main_menu()
-	
-	# Emite sinal
-	disconnected_from_server.emit()
-
 # ===== EXECUÇÃO DE BOTÕES DE CONEXÃO =====
 
 func _on_gameplay_menu_exit_game_pressed():
 	_cleanup_local_round()
+	
+	# Sinalizar pra o servidor que está desconectado da rodada
+	_mark_player_disconnected()
+
 	
 	# Volta para o menu da sala
 	if main_menu_node:
@@ -600,6 +606,7 @@ func _on_gameplay_menu_give_up_game_pressed():
 # ===== ATUALIZAÇÃO DE CONFIGURAÇÕES =====
 
 func update_client_info(info: Dictionary):
+	"""Atualiza configurações do servidor para o cliente"""
 	_log_debug("Atualizando configurações do servidor: %s" % info)
 	
 	for key in info.keys():
@@ -617,6 +624,16 @@ func update_client_info(info: Dictionary):
 
 			# Agora enviamos o hello com uuid + token
 			network_manager.send_hello_to_server(uuid_base, token)
+	
+	# Ao atualizar, se estiver em uma partida e for o mesmo servidor, esconde o menu e continua
+	# Se não for o mesmo servidor, sem registro de cliente e partida nele, então: conexão nova.
+	if is_in_round:
+		var loaded_round = get_tree().root.get_node_or_null("Round")
+		if loaded_round.server_id == configs["server_id"]:
+			main_menu_node.hide_main_menu()
+		else:
+			_cleanup_local_round()
+			_log_debug("Não é o mesmo servidor / id incompatível")
 
 # ===== CRIAÇÃO DE REDE LOCAL =====
 
@@ -963,12 +980,12 @@ func start_round(round_settings: Dictionary = {}):
 		return
 	
 	_log_debug("Solicitando início da rodada...")
-	network_manager.request_start_round(round_settings)
+	network_manager._server_request_start_round(round_settings)
 	
-func _client_round_started(match_data: Dictionary):
+func _client_round_started(server_id: String, match_data: Dictionary):
 	"""Callback quando a rodada inicia"""
 	_log_debug("Rodada iniciada pelo servidor!")
-	_start_round_locally(match_data)
+	_start_round_locally(server_id, match_data)
 
 func _client_round_return(match_data: Dictionary):
 	"""Callback quando o jogador retorna à rodada"""
@@ -1003,7 +1020,7 @@ func _client_round_ended(end_data: Dictionary):
 	# Limpa objetos locais
 	_cleanup_local_round()
 
-func _start_round_locally(match_data: Dictionary):
+func _start_round_locally(server_id: String, match_data: Dictionary):
 	"""Inicia a rodada localmente no cliente"""
 	_log_debug("========================================")
 	_log_debug("INICIANDO RODADA")
@@ -1021,13 +1038,12 @@ func _start_round_locally(match_data: Dictionary):
 	
 	is_in_round = true
 	
-	# Esconde o menu
-	if main_menu_node:
-		main_menu_node.hide_main_menu()
-	
 	# Criar cena de organização do round
-	round_node = Node.new()
+	round_node = preload("res://scripts/utils/round_node.gd").new()
 	round_node.name = "Round"
+	round_node.round_id = match_data["round_id"]
+	round_node.room_id = match_data["room_id"]
+	round_node.server_id = server_id
 	
 	# Adiciona à raiz
 	get_tree().root.add_child(round_node)
@@ -1050,6 +1066,10 @@ func _start_round_locally(match_data: Dictionary):
 		var is_local = player_data["id"] == uuid_base
 		_spawn_player(player_data, is_local, match_data)
 	
+	# Esconde o menu
+	if main_menu_node:
+		main_menu_node.hide_main_menu()
+		
 	round_started.emit()
 	
 	# Filtrar uns itens e deixar numa variável(current_round) para uso durante a partida
@@ -1076,10 +1096,6 @@ func _return_round_locally(match_data: Dictionary):
 	_log_debug("========================================")
 	
 	is_in_round = true
-	
-	# Esconde o menu
-	if main_menu_node:
-		main_menu_node.hide_main_menu()
 	
 	# Criar cena de organização do round
 	round_node = Node.new()
@@ -1143,12 +1159,22 @@ func _return_round_locally(match_data: Dictionary):
 		var owner_ = item["owner_uuid"]
 		_spawn_on_client(object_id, round_id, name_, position, rotation, velocity, owner_)
 	
+	# Esconde o menu
+	if main_menu_node:
+		main_menu_node.hide_main_menu()
+	
+	# Captura o mouse
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	
 	round_started.emit()
 	
 	# Filtrar uns itens e deixar numa variável(current_round) para uso durante a partida
 	# Modifique em filtrar_dict_invertido a lista de itens que devem retornar do dicionário match_data
 	var filtered_round_data = filtrar_dict_invertido(match_data)
 	current_round = filtered_round_data
+	
+	# Sinalizar pra o servidor que está reconectado na rodada
+	_unmark_player_disconnected()
 	
 	_log_debug("Rodada recarregada no cliente")
 
@@ -1292,7 +1318,7 @@ func _client_update_character_peer_id(_uuid_base: String, _new_peer_id: int):
 				child.name_label.text = "%s\n%s[...]%s\n%s" % [player_name, start, end, _new_peer_id]
 			
 			child.set_multiplayer_authority(_new_peer_id)
-
+# Execut
 func _cleanup_local_round():
 	"""Limpa todos os objetos da rodada no cliente"""
 	_log_debug("Limpando objetos da rodada...")
@@ -1318,38 +1344,13 @@ func _cleanup_local_round():
 
 	_log_debug("✓ Limpeza completa")
 
-# ===== TRATAMENTO DE ERROS =====
+func _mark_player_disconnected():
+	"""Sinaliza para o servidor como desconectado durante a rodada."""
+	network_manager._mark_player_disconnected(true)
 
-func _handle_connection_error(message: String):
-	"""Trata erro de conexão"""
-	if main_menu_node:
-		main_menu_node.show_connecting_menu()
-		main_menu_node.show_error_connecting(message)
-	
-	connection_failed.emit(message)
-
-func _server_to_client_error(error_message: String):
-	"""Callback quando recebe erro do servidor"""
-	_log_debug("Erro recebido do servidor: " + error_message)
-	_show_error(error_message)
-	error_occurred.emit(error_message)
-
-func _show_error(message: String, color= "Red"):
-	"""Mostra erro na UI apropriada"""
-	var current = main_menu_node.current_menu_visible
-	_log_debug("ERRO (Em: %s): %s" % [current.name, message])
-	if main_menu_node:
-		if main_menu_node.connecting_menu and main_menu_node.connecting_menu.visible:
-			main_menu_node._show_error_(message, main_menu_node.connecting_error_label, color)
-		elif main_menu_node.room_menu and main_menu_node.room_menu.visible:
-			main_menu_node._show_error_(message, main_menu_node.room_error_label, color)
-		elif main_menu_node.room_list_menu and main_menu_node.room_list_menu.visible:
-			main_menu_node.show_room_list_menu(true, false)
-			main_menu_node._show_error_(message, main_menu_node.match_list_error_label, color)
-		elif main_menu_node.manual_room_join_menu and main_menu_node.manual_room_join_menu.visible:
-			main_menu_node._show_error_(message, main_menu_node.manual_room_join_error_label, color)
-		elif main_menu_node.create_room_menu and main_menu_node.create_room_menu.visible:
-			main_menu_node._show_error_(message, main_menu_node.create_room_error_label, color)
+func _unmark_player_disconnected():
+	"""Sinaliza para o servidor como reconectado durante a rodada."""
+	network_manager._mark_player_disconnected(false)
 
 # ===== SISTEMA DE INVENTÁRIO POR RODADA =====
 	
@@ -1581,6 +1582,9 @@ func _spawn_on_client(object_id: int, round_id: int, item_name: String, position
 	Spawna objeto no cliente (chamado via RPC)
 	"""
 	
+	if not is_in_round:
+		return
+	
 	if multiplayer.is_server():
 		return  # Servidor já spawnou na função principal
 	
@@ -1625,9 +1629,9 @@ func _spawn_on_client(object_id: int, round_id: int, item_name: String, position
 		if obj_scene:
 			obj_scene.add_child(item_node, true)
 		else:
-			push_error("Objects node not found in Round!")
+			_log_debug("Objects node not found in Round!")
 	else:
-		push_error("Round node not found!")
+		_log_debug("Round node not found!")
 	
 	await get_tree().process_frame
 	
@@ -1701,6 +1705,39 @@ func _despawn_on_client(object_id: int, round_id: int):
 	network_manager.unregister_syncable_object(object_id)
 	
 	_log_debug("✓ Objeto despawnado no cliente: ID=%d" % object_id)
+
+# ===== TRATAMENTO DE ERROS =====
+
+func _handle_connection_error(message: String):
+	"""Trata erro de conexão"""
+	if main_menu_node:
+		main_menu_node.show_connecting_menu()
+		main_menu_node.show_error_connecting(message)
+	
+	connection_failed.emit(message)
+
+func _server_to_client_error(error_message: String):
+	"""Callback quando recebe erro do servidor"""
+	_log_debug("Erro recebido do servidor: " + error_message)
+	_show_error(error_message)
+	error_occurred.emit(error_message)
+
+func _show_error(message: String, color= "Red"):
+	"""Mostra erro na UI apropriada"""
+	var current = main_menu_node.current_menu_visible
+	_log_debug("ERRO (Em: %s): %s" % [current.name, message])
+	if main_menu_node:
+		if main_menu_node.connecting_menu and main_menu_node.connecting_menu.visible:
+			main_menu_node._show_error_(message, main_menu_node.connecting_error_label, color)
+		elif main_menu_node.room_menu and main_menu_node.room_menu.visible:
+			main_menu_node._show_error_(message, main_menu_node.room_error_label, color)
+		elif main_menu_node.room_list_menu and main_menu_node.room_list_menu.visible:
+			main_menu_node.show_room_list_menu(true, false)
+			main_menu_node._show_error_(message, main_menu_node.match_list_error_label, color)
+		elif main_menu_node.manual_room_join_menu and main_menu_node.manual_room_join_menu.visible:
+			main_menu_node._show_error_(message, main_menu_node.manual_room_join_error_label, color)
+		elif main_menu_node.create_room_menu and main_menu_node.create_room_menu.visible:
+			main_menu_node._show_error_(message, main_menu_node.create_room_error_label, color)
 
 # ===== UTILITÁRIOS =====
 
