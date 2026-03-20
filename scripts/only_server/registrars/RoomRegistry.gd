@@ -118,6 +118,8 @@ func create_room(room_name: String, password: String, host_uuid: String, min_pla
 		"rounds_history": [],
 		"total_rounds_played": 0,
 		"total_playtime": 0.0,
+		"available_colors": _get_color_pool(),
+		"last_hue": 0.0,
 		"settings": {"locked": false}
 	}
 
@@ -290,6 +292,7 @@ func add_player_to_room(room_id: int, uuid_base: String) -> bool:
 		"name": player_name,
 		"is_host": is_host,
 		"is_offline": false,
+		"character": _create_default_character(room_id, uuid_base)
 	})
 
 	if client_registry:
@@ -299,6 +302,42 @@ func add_player_to_room(room_id: int, uuid_base: String) -> bool:
 	player_joined_room.emit(room_id, uuid_base)
 
 	return true
+
+func _create_default_character(room_id: int, uuid_base: String) -> Dictionary:
+	"""Armazena configurações de personagens de cada cliente na sala"""
+	_log_debug("Criando configurações de personagem para player %s na sala: %d" % [uuid_base, room_id])
+	var character_data: Dictionary
+	character_data["color"] = _assign_color_to_player(room_id)
+	# Adicionar outros dados aqui
+
+	return character_data
+
+func _assign_color_to_player(room_id_: int) -> Color:
+	
+	var room = rooms[room_id_]
+
+	# Se ainda tem cores fixas
+	if not room["available_colors"].is_empty():
+		var index = randi() % room["available_colors"].size()
+		var color = room["available_colors"][index]
+		room["available_colors"].remove_at(index)
+		return color
+
+	# Fallback infinito (golden ratio)
+	room["last_hue"] = fmod(room["last_hue"] + 0.61803398875, 1.0)
+	return Color.from_hsv(room["last_hue"], 0.7, 0.9)
+
+func _return_color_to_pool(room_id_: int, color: Color) -> void:
+	if not rooms.has(room_id_):
+		return
+
+	var room = rooms[room_id_]
+
+	# Evita duplicar cor no pool
+	if color in room["available_colors"]:
+		return
+
+	room["available_colors"].append(color)
 
 func add_player_to_kicked(room_id: int, uuid_base: String) -> bool:
 	"""Adiciona jogador à lista de expulsos."""
@@ -369,11 +408,12 @@ func remove_player_from_room(room_id: int, uuid_base: String) -> String:
 	var player_name = room["players"][player_index]["name"]
 	var was_host = room["players"][player_index]["is_host"]
 
+	_return_color_to_pool(room_id, room["players"][player_index]["character"]["color"])
 	room["players"].remove_at(player_index)
 
 	if client_registry:
 		client_registry.leave_room(uuid_base)
-
+	
 	_log_debug("✓ Player '%s' (uuid=%s) saiu da sala '%s'" % [player_name, uuid_base, room["name"]])
 	player_left_room.emit(room_id, uuid_base)
 
@@ -415,6 +455,33 @@ func get_player_count_in_room(room_id: int) -> int:
 	if not rooms.has(room_id):
 		return 0
 	return rooms[room_id]["players"].size()
+
+func _get_color_pool() -> Array:
+	return [
+		Color(1, 0.2, 0.2),
+		Color(0.2, 1, 0.2),
+		Color(0.2, 0.2, 1),
+		Color(1, 1, 0.2),
+		Color(1, 0.2, 1),
+		Color(0.2, 1, 1),
+
+		Color(1, 0.5, 0.2),
+		Color(0.6, 0.2, 1),
+		Color(0.2, 0.6, 1),
+		Color(0.6, 1, 0.2),
+
+		Color(1, 0.2, 0.6),
+		Color(0.2, 1, 0.6),
+		Color(0.6, 0.6, 0.6),
+		Color(1, 0.8, 0.2),
+		Color(0.8, 0.4, 0.1),
+
+		Color(0.4, 0.2, 0.1),
+		Color(0.2, 0.4, 0.8),
+		Color(0.8, 0.2, 0.4),
+		Color(0.4, 0.8, 0.2),
+		Color(0.9, 0.9, 0.9)
+	]
 
 # ===== ESTADO DA SALA =====
 

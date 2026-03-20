@@ -1241,7 +1241,7 @@ func set_as_local_player():
 	
 	add_to_group("player")
 
-func initialize(p_name: String, p_id: int, p_uuid: String, spawn_pos: Vector3):
+func initialize(p_name: String, p_color: Color, p_id: int, p_uuid: String, spawn_pos: Vector3):
 	"""Inicializa o player com dados multiplayer"""
 	player_name = p_name
 	player_id = p_id
@@ -1267,7 +1267,7 @@ func initialize(p_name: String, p_id: int, p_uuid: String, spawn_pos: Vector3):
 			]
 		) if debug_enabled else p_name
 			
-		setup_name_label()
+		setup_name_label(p_color)
 		
 	# Configuração de processos
 	if not is_local_player:
@@ -1502,24 +1502,14 @@ func _item_model_change_visibility(player_node, node_link: String, unnequip = fa
 	
 # ===== UTILS =====
 
-func setup_name_label():
+func setup_name_label(color: Color):
 	"""Configura label de nome para multiplayer"""
 	if not name_label:
 		return
 	
 	name_label.visible = true
 	
-	# COR BASEADA NO ID (consistente)
-	var colors = [
-		Color(1, 0.2, 0.2),    # Vermelho
-		Color(0.2, 1, 0.2),    # Verde
-		Color(0.2, 0.2, 1),    # Azul
-		Color(1, 1, 0.2),      # Amarelo
-		Color(1, 0.2, 1),      # Magenta
-		Color(0.2, 1, 1)       # Ciano
-	]
-	var color_index = player_id % colors.size()
-	name_label.modulate = colors[color_index]
+	name_label.modulate = color
 	
 	# CONFIGURAÇÃO DE BILLBOARD
 	name_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
