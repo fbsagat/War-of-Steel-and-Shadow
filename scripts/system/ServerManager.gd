@@ -545,9 +545,7 @@ func _handle_request_return_or_exit(peer_id: int, chosen: bool):
 	if not player_uuid:
 		return
 	
-	#var player_dict = client_registry.get_player(player_uuid)
 	var player_room_id = client_registry.get_player_room(player_uuid)
-	#var player_room_dict = room_registry.get_room(player_room_id)
 	
 	# Validar sala onde cliente está
 	if not player_room_id:
@@ -567,8 +565,7 @@ func _execute_player_return_to_round(peer_id: int, player_uuid: String):
 	# Verifica de novo se a partida/round está em andamente, se sim, entra, se não, volta pra sala apenas
 	var round_id = client_registry.get_player_round(player_uuid)
 	var round_ = round_registry.get_round(round_id)
-	#var room_id = round_["room_id"]
-	#var room = room_registry.get_room(room_id)
+	
 	if round_registry.is_round_active(round_id):
 		_log_debug("enviando comando para o cliente carregar a partida dele")
 		
@@ -698,7 +695,14 @@ func _mark_player_disconnected(peer_id: int, _chosen: bool):
 	- Não envia rpcs de sincronia e round em geral para ele durante desconexão/economia de rede"""
 	
 	var player_uuid = client_registry.get_uuid_by_peer_id(peer_id)
+	
+	if not player_uuid:
+		return
+		
 	var _round = round_registry.get_round_by_player_uuid(player_uuid)
+	
+	if not _round:
+		return
 	
 	if _chosen:
 		round_registry._mark_player_disconnected(_round["round_id"], player_uuid)
@@ -1086,7 +1090,7 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 		room["players"],
 		round_settings
 	)
-
+	
 	# Criar cena de organização do round
 	var round_node = SubViewport.new()
 	round_node.own_world_3d = true
