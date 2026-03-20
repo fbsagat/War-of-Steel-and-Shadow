@@ -137,14 +137,13 @@ func _server_start_round(round_settings: Dictionary):
 		return
 	var peer_id = multiplayer.get_remote_sender_id()
 	server_manager._handle_start_round(peer_id, round_settings)
-
-func _server_start_match(match_settings: Dictionary):
+	
+func _mark_player_disconnected(_chosen: bool):
 	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
 		return
 	var peer_id = multiplayer.get_remote_sender_id()
-	server_manager._handle_start_round(peer_id, match_settings)
-
-
+	server_manager._mark_player_disconnected(peer_id, _chosen)
+	
 # ===== ITENS — RECEBIMENTOS DO CLIENTE =====
 
 func _server_pick_up_item(player_id, object_id):

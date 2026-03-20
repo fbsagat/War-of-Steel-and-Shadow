@@ -223,20 +223,24 @@ func _input(event: InputEvent) -> void:
 		return
 		
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_TAB:
-		_log_debug("Movendo câmera do servidor para a próxima partida")
-		var round_nodes := all_rounds_node.get_children()
-		if round_nodes.is_empty():
-			return
-		# avança circularmente
-		current_cam_round_index = (current_cam_round_index + 1) % round_nodes.size()
-		var next_round := round_nodes[current_cam_round_index]
-		_switch_camera_to_round(next_round)
+		_find_a_next_round_to_camera()
 	
 	if event.is_action_pressed("ui_cancel"):
 		_toggle_mouse_mode()
-		
+
+func _find_a_next_round_to_camera():
+	"""Encontra um round ativo corretamente para mudar a câmera para este round"""
+	_log_debug("Movendo câmera do servidor para a próxima partida")
+	var round_nodes := all_rounds_node.get_children()
+	if round_nodes.is_empty():
+		return
+	# avança circularmente
+	current_cam_round_index = (current_cam_round_index + 1) % round_nodes.size()
+	var next_round := round_nodes[current_cam_round_index]
+	_switch_camera_to_round(next_round)
+
 func _switch_camera_to_round(round_node: Node) -> void:
-	"""Ativa a câmera de um round E atualiza o display"""
+	"""Ativa a câmera de um round específico e atualiza o display"""
 	
 	if not round_node or not round_node is SubViewport:
 		push_warning("round_node inválido")
@@ -688,6 +692,20 @@ func _player_exit_from_round(player_room_id: int, peer_id: int, player_uuid: Str
 	
 	# 3. Limpa estado de validação
 	_cleanup_player_state(player_uuid)
+
+func _mark_player_disconnected(peer_id: int, _chosen: bool):
+	"""Recebe aviso do cliente de que está desconectado ou reconectado em um round
+	- Não envia rpcs de sincronia e round em geral para ele durante desconexão/economia de rede"""
+	
+	var player_uuid = client_registry.get_uuid_by_peer_id(peer_id)
+	var _round = round_registry.get_round_by_player_uuid(player_uuid)
+	
+	if _chosen:
+		round_registry._mark_player_disconnected(_round["round_id"], player_uuid)
+		_log_debug("⚠ uuid=%s marcado como desconectado na rodada %d" % [player_uuid, _round["round_id"]])
+	else:
+		round_registry._unmark_player_disconnected(_round["round_id"], player_uuid)
+		_log_debug("✓ uuid=%s removido de disconnected_players na rodada %d" % [player_uuid, _round["round_id"]])
 
 func _handle_create_room(peer_id: int, room_name: String, password: String):
 	"""Cria uma nova sala e adiciona o criador como host"""
@@ -1280,6 +1298,7 @@ func _on_round_ending(round_id: int, reason: String):
 	
 	# Remove o nó deste round da lista de rounds do servidor
 	var round_ = round_registry.get_round(round_id)
+	all_rounds_node.remove_child(round_["round_node"])
 	round_["round_node"].queue_free()
 	
 	# Finaliza completamente a rodada
@@ -1290,6 +1309,10 @@ func _on_round_ending(round_id: int, reason: String):
 	if round_registry.get_active_rounds_count() <= 0 and (not is_headless or not current_active_viewport):
 		current_active_viewport = null
 		viewport_display.visible = false
+	else:
+		# Se houver e não for headless, move câmera pra outro round automaticamente
+		if not is_headless:
+			_find_a_next_round_to_camera()
 
 func _on_all_players_disconnected(round_id: int):
 	"""
@@ -1354,7 +1377,7 @@ func _complete_round_end(round_id: int):
 	
 	# Atualiza lista de salas (sala volta a ficar disponível)
 	_send_rooms_list_to_all()
-
+	
 func _cleanup_round_objects(round_id: int):
 	"""
 	Limpa todos os objetos da rodada

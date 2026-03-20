@@ -225,174 +225,6 @@ func _toggle_gameplay_menu(hide: bool = false) -> void:
 
 # ===== FUNÇÕES DE CONEXÃO COM O SERVIDOR =====
 
-func join_server_by_ip(received_ip: String, received_port: String) -> bool:
-	# Validar IP/hostname
-	if received_ip and received_ip.strip_edges() != "":
-		var trimmed_ip: String = received_ip.strip_edges()
-		
-		if not _is_valid_address(trimmed_ip):
-			_log_debug("Endereço inválido: " + trimmed_ip)
-			return false
-		
-		server_address = trimmed_ip
-	
-	# Validar porta
-	if received_port and received_port.strip_edges() != "":
-		var trimmed_port: String = received_port.strip_edges()
-		
-		if not trimmed_port.is_valid_int():
-			_log_debug("Porta inválida: não é um número")
-			return false
-		
-		var port_number: int = int(trimmed_port)
-		
-		if port_number < 1 or port_number > 65535:
-			_log_debug("Porta inválida: deve estar entre 1 e 65535")
-			return false
-		
-		server_port = port_number
-	
-	_log_debug("Conectando manualmente no servidor: " + server_address + ":" + str(server_port))
-	connect_to_server()
-	return true
-
-func _is_valid_address(address: String) -> bool:
-	# Validar localhost
-	if address.to_lower() in ["localhost", "::1"]:
-		return true
-	
-	# Validar IPv4
-	if _is_valid_ipv4(address):
-		return true
-	
-	# Validar hostname (formato básico)
-	if _is_valid_hostname(address):
-		return true
-	
-	return false
-
-func _is_valid_ipv4(ip: String) -> bool:
-	var parts: PackedStringArray = ip.split(".")
-	
-	if parts.size() != 4:
-		return false
-	
-	for part in parts:
-		if not part.is_valid_int():
-			return false
-		
-		var num: int = int(part)
-		if num < 0 or num > 255:
-			return false
-	
-	return true
-	
-func _is_valid_hostname(hostname: String) -> bool:
-	# Hostname não pode estar vazio ou ser muito longo
-	if hostname.length() == 0 or hostname.length() > 253:
-		return false
-	
-	# Não pode começar ou terminar com hífen ou ponto
-	if hostname.begins_with("-") or hostname.ends_with("-") or hostname.begins_with(".") or hostname.ends_with("."):
-		return false
-	
-	# Validar cada label (parte separada por ponto)
-	var labels: PackedStringArray = hostname.split(".")
-	
-	for label in labels:
-		if label.length() == 0 or label.length() > 63:
-			return false
-		
-		# Verificar se contém apenas caracteres válidos (a-z, A-Z, 0-9, hífen)
-		for i in range(label.length()):
-			var c: String = label[i]
-			var is_valid: bool = (c >= 'a' and c <= 'z') or (c >= 'A' and c <= 'Z') or (c >= '0' and c <= '9') or c == '-'
-			
-			if not is_valid:
-				return false
-		
-		# Label não pode começar ou terminar com hífen
-		if label.begins_with("-") or label.ends_with("-"):
-			return false
-	
-	return true
-
-# ===== SISTEMA DE IDENTIFIAÇÃO =====
-
-func _load_or_create_uuid() -> String:
-	"""
-	Gera identidade persistente do cliente.
-	Nunca muda após criação.
-	"""
-	if FileAccess.file_exists(UUID_FILE):
-		var data = JSON.parse_string(FileAccess.get_file_as_string(UUID_FILE))
-		return data["uuid_base"]
-
-	var crypto = Crypto.new()
-	var new_uuid = crypto.generate_random_bytes(16).hex_encode()
-
-	var file = FileAccess.open(UUID_FILE, FileAccess.WRITE)
-	file.store_string(JSON.stringify({"uuid_base": new_uuid}))
-	file.close()
-
-	return new_uuid
-
-func _load_tokens() -> Dictionary:
-	if FileAccess.file_exists(TOKEN_FILE):
-		return JSON.parse_string(FileAccess.get_file_as_string(TOKEN_FILE))
-	return {}
-
-func _save_tokens() -> void:
-	"""
-	Salva apenas os tokens mais recentes.
-	Mantém no máximo MAX_SAVED_TOKENS entradas.
-	Funciona com Dictionary simples:
-	{
-		"server_id": "token"
-	}
-	"""
-	
-	# Se exceder limite, remove os mais antigos
-	while server_tokens.size() > MAX_SAVED_TOKENS:
-		# Pega a primeira chave inserida (mais antiga)
-		var oldest_key = server_tokens.keys()[0]
-		server_tokens.erase(oldest_key)
-	
-	var file = FileAccess.open(TOKEN_FILE, FileAccess.WRITE)
-	file.store_string(JSON.stringify(server_tokens))
-	file.close()
-
-func handle_server_response(response: Dictionary) -> void:
-	"""
-	Processa resposta do servidor.
-	Salva novo token se necessário.
-	"""
-
-	if response["status"] == "new_token":
-		var sid = response["server_id"]
-		server_tokens[sid] = response["token"]
-		_save_tokens()
-			
-		if main_menu_node:
-			main_menu_node.show_name_input_menu(true)
-
-	elif response["status"] == "ok":
-		_log_debug("Autenticado com sucesso")
-		player_name = response["player_name"]
-		
-		if main_menu_node:
-			if player_name == "":
-				main_menu_node.show_name_input_menu(true)
-			else:
-				main_menu_node.update_name_e_connected(configs["server_name"], response["player_name"])
-				main_menu_node.show_main_menu()
-
-	elif response["status"] == "reject":
-		_log_debug("Conexão rejeitada: %s" % response.get("reason",""))
-		_disconnect_from_server()
-
-# ===== CALLBACKS DE CONEXÃO =====
-
 func connect_to_server():
 	"""Conecta ao servidor dedicado"""
 	
@@ -578,10 +410,180 @@ func _disconnect_from_server(notify_server: bool = false):
 	# Emite sinal
 	disconnected_from_server.emit()
 
+func join_server_by_ip(received_ip: String, received_port: String) -> bool:
+	# Validar IP/hostname
+	if received_ip and received_ip.strip_edges() != "":
+		var trimmed_ip: String = received_ip.strip_edges()
+		
+		if not _is_valid_address(trimmed_ip):
+			_log_debug("Endereço inválido: " + trimmed_ip)
+			return false
+		
+		server_address = trimmed_ip
+	
+	# Validar porta
+	if received_port and received_port.strip_edges() != "":
+		var trimmed_port: String = received_port.strip_edges()
+		
+		if not trimmed_port.is_valid_int():
+			_log_debug("Porta inválida: não é um número")
+			return false
+		
+		var port_number: int = int(trimmed_port)
+		
+		if port_number < 1 or port_number > 65535:
+			_log_debug("Porta inválida: deve estar entre 1 e 65535")
+			return false
+		
+		server_port = port_number
+	
+	_log_debug("Conectando manualmente no servidor: " + server_address + ":" + str(server_port))
+	connect_to_server()
+	return true
+
+func _is_valid_address(address: String) -> bool:
+	# Validar localhost
+	if address.to_lower() in ["localhost", "::1"]:
+		return true
+	
+	# Validar IPv4
+	if _is_valid_ipv4(address):
+		return true
+	
+	# Validar hostname (formato básico)
+	if _is_valid_hostname(address):
+		return true
+	
+	return false
+
+func _is_valid_ipv4(ip: String) -> bool:
+	var parts: PackedStringArray = ip.split(".")
+	
+	if parts.size() != 4:
+		return false
+	
+	for part in parts:
+		if not part.is_valid_int():
+			return false
+		
+		var num: int = int(part)
+		if num < 0 or num > 255:
+			return false
+	
+	return true
+	
+func _is_valid_hostname(hostname: String) -> bool:
+	# Hostname não pode estar vazio ou ser muito longo
+	if hostname.length() == 0 or hostname.length() > 253:
+		return false
+	
+	# Não pode começar ou terminar com hífen ou ponto
+	if hostname.begins_with("-") or hostname.ends_with("-") or hostname.begins_with(".") or hostname.ends_with("."):
+		return false
+	
+	# Validar cada label (parte separada por ponto)
+	var labels: PackedStringArray = hostname.split(".")
+	
+	for label in labels:
+		if label.length() == 0 or label.length() > 63:
+			return false
+		
+		# Verificar se contém apenas caracteres válidos (a-z, A-Z, 0-9, hífen)
+		for i in range(label.length()):
+			var c: String = label[i]
+			var is_valid: bool = (c >= 'a' and c <= 'z') or (c >= 'A' and c <= 'Z') or (c >= '0' and c <= '9') or c == '-'
+			
+			if not is_valid:
+				return false
+		
+		# Label não pode começar ou terminar com hífen
+		if label.begins_with("-") or label.ends_with("-"):
+			return false
+	
+	return true
+
+# ===== SISTEMA DE IDENTIFIAÇÃO =====
+
+func _load_or_create_uuid() -> String:
+	"""
+	Gera identidade persistente do cliente.
+	Nunca muda após criação.
+	"""
+	if FileAccess.file_exists(UUID_FILE):
+		var data = JSON.parse_string(FileAccess.get_file_as_string(UUID_FILE))
+		return data["uuid_base"]
+
+	var crypto = Crypto.new()
+	var new_uuid = crypto.generate_random_bytes(16).hex_encode()
+
+	var file = FileAccess.open(UUID_FILE, FileAccess.WRITE)
+	file.store_string(JSON.stringify({"uuid_base": new_uuid}))
+	file.close()
+
+	return new_uuid
+
+func _load_tokens() -> Dictionary:
+	if FileAccess.file_exists(TOKEN_FILE):
+		return JSON.parse_string(FileAccess.get_file_as_string(TOKEN_FILE))
+	return {}
+
+func _save_tokens() -> void:
+	"""
+	Salva apenas os tokens mais recentes.
+	Mantém no máximo MAX_SAVED_TOKENS entradas.
+	Funciona com Dictionary simples:
+	{
+		"server_id": "token"
+	}
+	"""
+	
+	# Se exceder limite, remove os mais antigos
+	while server_tokens.size() > MAX_SAVED_TOKENS:
+		# Pega a primeira chave inserida (mais antiga)
+		var oldest_key = server_tokens.keys()[0]
+		server_tokens.erase(oldest_key)
+	
+	var file = FileAccess.open(TOKEN_FILE, FileAccess.WRITE)
+	file.store_string(JSON.stringify(server_tokens))
+	file.close()
+
+func handle_server_response(response: Dictionary) -> void:
+	"""
+	Processa resposta do servidor.
+	Salva novo token se necessário.
+	"""
+
+	if response["status"] == "new_token":
+		var sid = response["server_id"]
+		server_tokens[sid] = response["token"]
+		_save_tokens()
+			
+		if main_menu_node:
+			main_menu_node.show_name_input_menu(true)
+
+	elif response["status"] == "ok":
+		_log_debug("Autenticado com sucesso")
+		player_name = response["player_name"]
+		
+		if main_menu_node:
+			if player_name == "":
+				main_menu_node.show_name_input_menu(true)
+			else:
+				main_menu_node.update_name_e_connected(configs["server_name"], response["player_name"])
+				main_menu_node.show_main_menu()
+
+	elif response["status"] == "reject":
+		_log_debug("Conexão rejeitada: %s" % response.get("reason",""))
+		_disconnect_from_server()
+
 # ===== EXECUÇÃO DE BOTÕES DE CONEXÃO =====
 
 func _on_gameplay_menu_exit_game_pressed():
 	_cleanup_local_round()
+	
+	# Sinalizar pra o servidor que está desconectado da rodada
+	_mark_player_disconnected()
+
 	
 	# Volta para o menu da sala
 	if main_menu_node:
@@ -978,7 +980,7 @@ func start_round(round_settings: Dictionary = {}):
 		return
 	
 	_log_debug("Solicitando início da rodada...")
-	network_manager.request_start_round(round_settings)
+	network_manager._server_request_start_round(round_settings)
 	
 func _client_round_started(server_id: String, match_data: Dictionary):
 	"""Callback quando a rodada inicia"""
@@ -1161,12 +1163,18 @@ func _return_round_locally(match_data: Dictionary):
 	if main_menu_node:
 		main_menu_node.hide_main_menu()
 	
+	# Captura o mouse
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	
 	round_started.emit()
 	
 	# Filtrar uns itens e deixar numa variável(current_round) para uso durante a partida
 	# Modifique em filtrar_dict_invertido a lista de itens que devem retornar do dicionário match_data
 	var filtered_round_data = filtrar_dict_invertido(match_data)
 	current_round = filtered_round_data
+	
+	# Sinalizar pra o servidor que está reconectado na rodada
+	_unmark_player_disconnected()
 	
 	_log_debug("Rodada recarregada no cliente")
 
@@ -1310,7 +1318,7 @@ func _client_update_character_peer_id(_uuid_base: String, _new_peer_id: int):
 				child.name_label.text = "%s\n%s[...]%s\n%s" % [player_name, start, end, _new_peer_id]
 			
 			child.set_multiplayer_authority(_new_peer_id)
-
+# Execut
 func _cleanup_local_round():
 	"""Limpa todos os objetos da rodada no cliente"""
 	_log_debug("Limpando objetos da rodada...")
@@ -1336,38 +1344,13 @@ func _cleanup_local_round():
 
 	_log_debug("✓ Limpeza completa")
 
-# ===== TRATAMENTO DE ERROS =====
+func _mark_player_disconnected():
+	"""Sinaliza para o servidor como desconectado durante a rodada."""
+	network_manager._mark_player_disconnected(true)
 
-func _handle_connection_error(message: String):
-	"""Trata erro de conexão"""
-	if main_menu_node:
-		main_menu_node.show_connecting_menu()
-		main_menu_node.show_error_connecting(message)
-	
-	connection_failed.emit(message)
-
-func _server_to_client_error(error_message: String):
-	"""Callback quando recebe erro do servidor"""
-	_log_debug("Erro recebido do servidor: " + error_message)
-	_show_error(error_message)
-	error_occurred.emit(error_message)
-
-func _show_error(message: String, color= "Red"):
-	"""Mostra erro na UI apropriada"""
-	var current = main_menu_node.current_menu_visible
-	_log_debug("ERRO (Em: %s): %s" % [current.name, message])
-	if main_menu_node:
-		if main_menu_node.connecting_menu and main_menu_node.connecting_menu.visible:
-			main_menu_node._show_error_(message, main_menu_node.connecting_error_label, color)
-		elif main_menu_node.room_menu and main_menu_node.room_menu.visible:
-			main_menu_node._show_error_(message, main_menu_node.room_error_label, color)
-		elif main_menu_node.room_list_menu and main_menu_node.room_list_menu.visible:
-			main_menu_node.show_room_list_menu(true, false)
-			main_menu_node._show_error_(message, main_menu_node.match_list_error_label, color)
-		elif main_menu_node.manual_room_join_menu and main_menu_node.manual_room_join_menu.visible:
-			main_menu_node._show_error_(message, main_menu_node.manual_room_join_error_label, color)
-		elif main_menu_node.create_room_menu and main_menu_node.create_room_menu.visible:
-			main_menu_node._show_error_(message, main_menu_node.create_room_error_label, color)
+func _unmark_player_disconnected():
+	"""Sinaliza para o servidor como reconectado durante a rodada."""
+	network_manager._mark_player_disconnected(false)
 
 # ===== SISTEMA DE INVENTÁRIO POR RODADA =====
 	
@@ -1599,6 +1582,9 @@ func _spawn_on_client(object_id: int, round_id: int, item_name: String, position
 	Spawna objeto no cliente (chamado via RPC)
 	"""
 	
+	if not is_in_round:
+		return
+	
 	if multiplayer.is_server():
 		return  # Servidor já spawnou na função principal
 	
@@ -1643,9 +1629,9 @@ func _spawn_on_client(object_id: int, round_id: int, item_name: String, position
 		if obj_scene:
 			obj_scene.add_child(item_node, true)
 		else:
-			push_error("Objects node not found in Round!")
+			_log_debug("Objects node not found in Round!")
 	else:
-		push_error("Round node not found!")
+		_log_debug("Round node not found!")
 	
 	await get_tree().process_frame
 	
@@ -1719,6 +1705,39 @@ func _despawn_on_client(object_id: int, round_id: int):
 	network_manager.unregister_syncable_object(object_id)
 	
 	_log_debug("✓ Objeto despawnado no cliente: ID=%d" % object_id)
+
+# ===== TRATAMENTO DE ERROS =====
+
+func _handle_connection_error(message: String):
+	"""Trata erro de conexão"""
+	if main_menu_node:
+		main_menu_node.show_connecting_menu()
+		main_menu_node.show_error_connecting(message)
+	
+	connection_failed.emit(message)
+
+func _server_to_client_error(error_message: String):
+	"""Callback quando recebe erro do servidor"""
+	_log_debug("Erro recebido do servidor: " + error_message)
+	_show_error(error_message)
+	error_occurred.emit(error_message)
+
+func _show_error(message: String, color= "Red"):
+	"""Mostra erro na UI apropriada"""
+	var current = main_menu_node.current_menu_visible
+	_log_debug("ERRO (Em: %s): %s" % [current.name, message])
+	if main_menu_node:
+		if main_menu_node.connecting_menu and main_menu_node.connecting_menu.visible:
+			main_menu_node._show_error_(message, main_menu_node.connecting_error_label, color)
+		elif main_menu_node.room_menu and main_menu_node.room_menu.visible:
+			main_menu_node._show_error_(message, main_menu_node.room_error_label, color)
+		elif main_menu_node.room_list_menu and main_menu_node.room_list_menu.visible:
+			main_menu_node.show_room_list_menu(true, false)
+			main_menu_node._show_error_(message, main_menu_node.match_list_error_label, color)
+		elif main_menu_node.manual_room_join_menu and main_menu_node.manual_room_join_menu.visible:
+			main_menu_node._show_error_(message, main_menu_node.manual_room_join_error_label, color)
+		elif main_menu_node.create_room_menu and main_menu_node.create_room_menu.visible:
+			main_menu_node._show_error_(message, main_menu_node.create_room_error_label, color)
 
 # ===== UTILITÁRIOS =====
 

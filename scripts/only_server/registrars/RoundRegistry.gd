@@ -289,16 +289,6 @@ func _cleanup_round(round_id: int):
 	if rounds.is_empty() and disconnect_check_timer:
 		disconnect_check_timer.stop()
 
-func cleanup_inactive_rounds():
-	var current_time = Time.get_ticks_msec() / 1000.0
-	var inactive_threshold = 30.0
-
-	for round_id in rounds.keys():
-		var last_activity = rounds[round_id].last_activity
-		if current_time - last_activity > inactive_threshold:
-			_log_debug("Round %d inativo por >%.1fs. Limpando..." % [round_id, inactive_threshold])
-			end_round(round_id)
-
 func mark_empty_round(round_id):
 	"""Marca sala como vazia"""
 	
