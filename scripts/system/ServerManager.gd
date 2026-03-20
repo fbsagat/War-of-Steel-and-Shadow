@@ -107,23 +107,23 @@ func initialize():
 	# Inicializa verificador de teste automático se fast_round true
 	if fast_round:
 		_setup_test_mode_verification()
-		
-	# Timer de debug opcional
-	if debug_timer:
-		_setup_debug_timer()
 	
-	# Se remove_room_round estiver ativado
+	# Timer automático no servidor para fazer limpeza periódica de rounds vazios
 	_setup_cleanup_empty_rounds_timer()
-	
-	# Cria nó organizacional para os Rounds
-	all_rounds_node = Node.new()
-	get_tree().root.add_child(all_rounds_node)
-	all_rounds_node.name = "All_Rounds"
 	
 	# Cria uma SubViewportContainer chamada ActiveRoundDisplay para exibir as câmeras(uma por vez)
 	# das rodadas em curso, se is_headless estiver desativado
 	if not is_headless:
 		_setup_viewport_display()
+	
+	# Timer de debug periódico (opcional)
+	if debug_timer:
+		_setup_debug_timer()
+	
+	# Cria nó organizacional para os Rounds
+	all_rounds_node = Node.new()
+	get_tree().root.add_child(all_rounds_node)
+	all_rounds_node.name = "All_Rounds"
 	
 	# Gera id único do servidor
 	_generate_server_identity()
@@ -196,6 +196,8 @@ func _setup_debug_timer():
 	add_child(debug_timer_)
 	
 func _setup_cleanup_empty_rounds_timer():
+	"""Essa função cria e configura um timer automático no servidor para fazer limpeza periódica 
+	de rounds vazios."""
 	var cleanup_timer_ = Timer.new()
 	cleanup_timer_.wait_time = CLEANUP_INTERVAL
 	cleanup_timer_.autostart = true
@@ -234,9 +236,8 @@ func _input(event: InputEvent) -> void:
 		_toggle_mouse_mode()
 		
 func _switch_camera_to_round(round_node: Node) -> void:
-	"""
-	Ativa a câmera de um round E atualiza o display
-	"""
+	"""Ativa a câmera de um round E atualiza o display"""
+	
 	if not round_node or not round_node is SubViewport:
 		push_warning("round_node inválido")
 		return
@@ -289,8 +290,6 @@ func _start_server():
 	_log_debug("Trainer de testes: %s, Fast Round: %s" % [test_trainer, fast_round])
 	_log_debug("Min. de jogadores/sala: %s, Max. de jogadores/sala: %s" % [min_players_to_start, max_players_per_room])
 	_log_debug("Tempo de espera de reconexão(peer): %sms" % reconnect_timout)
-	_log_debug("▶️ Servidor inicializado com sucesso!")
-	_log_debug("================================================================")
 	
 	# Cria peer de rede
 	var peer = ENetMultiplayerPeer.new()
@@ -298,6 +297,7 @@ func _start_server():
 	
 	if error != OK:
 		push_error("ERRO ao criar servidor: " + str(error))
+		_log_debug("================================================================")
 		return
 	
 	multiplayer.multiplayer_peer = peer
@@ -305,6 +305,9 @@ func _start_server():
 	# Conecta sinais de rede
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
+	
+	_log_debug("▶️ Servidor inicializado com sucesso!")
+	_log_debug("================================================================")
 
 # ===== SISTEMA DE IDENTIFIAÇÃO =====
 
@@ -325,7 +328,7 @@ func process_client_hello(payload: Dictionary, peer_id: int) -> Dictionary:
 	  "server_id": String
 	}
 	"""
-	_log_debug("process_client_hello: %s, peer_id: %s" % [payload, peer_id])
+	_log_debug("Processando client hello: %s, peer_id: %s" % [payload, peer_id])
 	
 	var uuid_base : String = payload.get("uuid_base", "")
 	var client_token : String = payload.get("token", "")
@@ -378,9 +381,8 @@ func _on_peer_connected(peer_id: int):
 	network_manager.rpc_id(peer_id, "_client_update_info", configs)
 
 func _on_peer_disconnected(peer_id: int):
-	"""
-	Callback quando um cliente desconecta
-	"""
+	"""Callback quando um cliente desconecta"""
+	
 	# Define cliente como desconectado
 	client_registry.set_disconnected_peer(peer_id)
 	var player_uuid = client_registry.get_uuid_by_peer_id(peer_id)
@@ -1109,7 +1111,7 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 	var players_count: int = round_registry.get_total_players(round_data["round_id"])
 	final_settings["round_players_count"] = players_count
 	final_settings["spawn_points"] = map_manager._create_spawn_points(room["players"])
-
+	
 	# Prepara pacote de dados para enviar aos clientes
 	var match_data = {
 		"round_id": round_data["round_id"],
@@ -1122,7 +1124,7 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 	# Envia comando de início para todos os clientes da sala
 	for room_player in room["players"]:
 		var player_sesion_id = client_registry.get_peer_id_by_uuid(room_player["id"])
-		network_manager.rpc_id(player_sesion_id, "_client_round_started", match_data)
+		network_manager.rpc_id(player_sesion_id, "_client_round_started",server_id , match_data)
 	
 	# Instancia mapa e players no servidor também
 	await _server_instantiate_round(match_data, round_node, players_node)

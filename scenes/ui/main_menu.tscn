@@ -86,7 +86,6 @@ custom_minimum_size = Vector2(1200, 800)
 layout_mode = 2
 
 [node name="MainMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=272160322]
-visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0

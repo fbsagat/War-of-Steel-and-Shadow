@@ -207,9 +207,9 @@ func request_start_round(round_settings: Dictionary = {}):
 
 # ===== RODADAS — RECEBIMENTOS DO SERVIDOR =====
 
-func _client_round_started(match_data: Dictionary):
+func _client_round_started(server_id: String, match_data: Dictionary):
 	_log_debug("Rodada iniciada")
-	game_manager._client_round_started(match_data)
+	game_manager._client_round_started(server_id, match_data)
 
 func _client_round_return(match_data: Dictionary):
 	_log_debug("retornando à rodada")
@@ -356,8 +356,10 @@ func _client_swap_equipped_item(new_item_name: String, dragged_item: Dictionary,
 
 func send_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
 	"""Helper local: envia estado do jogador ao servidor"""
+	
 	if not is_connected_:
 		return
+		
 	rpc_id(1, "_server_player_state", p_id, pos, rot, vel, running, jumping)
 
 func _client_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):

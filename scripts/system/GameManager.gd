@@ -51,7 +51,7 @@ var inventory_menu: bool = false # True se o menu de inventário estiver visíve
 var gameplay_menu: bool = false # True se o menu de gameplay  estiver visível
 var local_peer_id: int = 0
 var player_name: String = ""
-var configs: Dictionary = {}
+var configs: Dictionary = {} # Configurações do servidor
 var current_room: Dictionary = {}
 var current_round: Dictionary = {}
 var connection_start_time: float = 0.0
@@ -426,7 +426,6 @@ func connect_to_server():
 func _on_connected_to_server():
 	"""Esse sinal é emitido quando o cliente consegue se conectar com sucesso ao servidor."""
 	"""Callback quando conecta com sucesso ao servidor"""
-	# Só leia get_unique_id() quando o peer estiver ativo
 
 	if not is_connecting:
 		return
@@ -476,11 +475,16 @@ func _on_server_disconnected():
 	"""Dispara quando o cliente já estava conectado, mas perde a conexão com o servidor.
 	Aqui o jogo deve mostrar o menu de reconexão, se não conseguir no tempo e tentativas determinadas,
 	desconecta totalmente e reseta, se conseguir, esconde a tela de reconexão e volta à partida normalmente"""
+	
 	_log_debug("Conexão perdida com o servidor, tentando reconectar para voltar à partida")
+	
+	is_connected_to_server = false
+	network_manager.is_connected_ = false
 	
 	# Inicia processo de reconexão
 	# Mostra menu de reconexão
 	if main_menu_node:
+		main_menu_node.show_main_menu()
 		main_menu_node.show_connecting_menu()
 		main_menu_node.show_error_connecting("Conexão perdida. Tentando reconectar...")
 	
@@ -600,6 +604,7 @@ func _on_gameplay_menu_give_up_game_pressed():
 # ===== ATUALIZAÇÃO DE CONFIGURAÇÕES =====
 
 func update_client_info(info: Dictionary):
+	"""Atualiza configurações do servidor para o cliente"""
 	_log_debug("Atualizando configurações do servidor: %s" % info)
 	
 	for key in info.keys():
@@ -617,6 +622,16 @@ func update_client_info(info: Dictionary):
 
 			# Agora enviamos o hello com uuid + token
 			network_manager.send_hello_to_server(uuid_base, token)
+	
+	# Ao atualizar, se estiver em uma partida e for o mesmo servidor, esconde o menu e continua
+	# Se não for o mesmo servidor, sem registro de cliente e partida nele, então: conexão nova.
+	if is_in_round:
+		var loaded_round = get_tree().root.get_node_or_null("Round")
+		if loaded_round.server_id == configs["server_id"]:
+			main_menu_node.hide_main_menu()
+		else:
+			_cleanup_local_round()
+			_log_debug("Não é o mesmo servidor / id incompatível")
 
 # ===== CRIAÇÃO DE REDE LOCAL =====
 
@@ -965,10 +980,10 @@ func start_round(round_settings: Dictionary = {}):
 	_log_debug("Solicitando início da rodada...")
 	network_manager.request_start_round(round_settings)
 	
-func _client_round_started(match_data: Dictionary):
+func _client_round_started(server_id: String, match_data: Dictionary):
 	"""Callback quando a rodada inicia"""
 	_log_debug("Rodada iniciada pelo servidor!")
-	_start_round_locally(match_data)
+	_start_round_locally(server_id, match_data)
 
 func _client_round_return(match_data: Dictionary):
 	"""Callback quando o jogador retorna à rodada"""
@@ -1003,7 +1018,7 @@ func _client_round_ended(end_data: Dictionary):
 	# Limpa objetos locais
 	_cleanup_local_round()
 
-func _start_round_locally(match_data: Dictionary):
+func _start_round_locally(server_id: String, match_data: Dictionary):
 	"""Inicia a rodada localmente no cliente"""
 	_log_debug("========================================")
 	_log_debug("INICIANDO RODADA")
@@ -1021,13 +1036,12 @@ func _start_round_locally(match_data: Dictionary):
 	
 	is_in_round = true
 	
-	# Esconde o menu
-	if main_menu_node:
-		main_menu_node.hide_main_menu()
-	
 	# Criar cena de organização do round
-	round_node = Node.new()
+	round_node = preload("res://scripts/utils/round_node.gd").new()
 	round_node.name = "Round"
+	round_node.round_id = match_data["round_id"]
+	round_node.room_id = match_data["room_id"]
+	round_node.server_id = server_id
 	
 	# Adiciona à raiz
 	get_tree().root.add_child(round_node)
@@ -1050,6 +1064,10 @@ func _start_round_locally(match_data: Dictionary):
 		var is_local = player_data["id"] == uuid_base
 		_spawn_player(player_data, is_local, match_data)
 	
+	# Esconde o menu
+	if main_menu_node:
+		main_menu_node.hide_main_menu()
+		
 	round_started.emit()
 	
 	# Filtrar uns itens e deixar numa variável(current_round) para uso durante a partida
@@ -1076,10 +1094,6 @@ func _return_round_locally(match_data: Dictionary):
 	_log_debug("========================================")
 	
 	is_in_round = true
-	
-	# Esconde o menu
-	if main_menu_node:
-		main_menu_node.hide_main_menu()
 	
 	# Criar cena de organização do round
 	round_node = Node.new()
@@ -1142,6 +1156,10 @@ func _return_round_locally(match_data: Dictionary):
 		var velocity = item["drop_velocity"]
 		var owner_ = item["owner_uuid"]
 		_spawn_on_client(object_id, round_id, name_, position, rotation, velocity, owner_)
+	
+	# Esconde o menu
+	if main_menu_node:
+		main_menu_node.hide_main_menu()
 	
 	round_started.emit()
 	
