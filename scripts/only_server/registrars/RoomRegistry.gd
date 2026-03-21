@@ -756,6 +756,27 @@ func get_next_room_id() -> int:
 			max_id = room_id
 	return max_id + 1
 
+func _validate_room_name(room_name: String) -> String:
+	"""
+	Valida nome da sala
+	Retorna string vazia se válido, mensagem de erro caso contrário
+	"""
+	var trimmed = room_name.strip_edges()
+	
+	if trimmed.is_empty():
+		return "O nome da sala não pode estar vazio"
+	
+	if trimmed.length() < 5:
+		return "O nome da sala deve ter pelo menos 3 caracteres"
+	
+	if trimmed.length() > 30:
+		return "O nome da sala deve ter no máximo 30 caracteres"
+	
+	if room_name_exists(trimmed):
+		return "Já existe uma sala com o nome escolhido"
+	
+	return ""
+
 func debug_print_all_rooms():
 	print("\n========== ROOM REGISTRY ==========")
 	print("Total de salas: %d" % rooms.size())

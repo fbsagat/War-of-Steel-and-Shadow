@@ -977,6 +977,32 @@ func _compute_token(uuid_base: String) -> String:
 	var message = (server_manager.server_id + ":" + uuid_base).to_utf8_buffer()
 	var hmac = crypto.hmac_digest(HashingContext.HASH_SHA256, server_manager.server_secret, message)
 	return hmac.hex_encode()
+	
+func _validate_player_name(player_name: String) -> String:
+	"""
+	Valida nome do jogador
+	Retorna string vazia se válido, mensagem de erro caso contrário
+	"""
+	var trimmed_name = player_name.strip_edges()
+	
+	if trimmed_name.is_empty():
+		return "O nome não pode estar vazio"
+	
+	if trimmed_name.length() < 5:
+		return "O nome deve ter pelo menos 5 caracteres"
+	
+	if trimmed_name.length() > 20:
+		return "O nome deve ter no máximo 20 caracteres"
+	
+	var regex = RegEx.new()
+	regex.compile("^[a-zA-Z0-9_ ]+$")
+	if not regex.search(trimmed_name):
+		return "O nome contém caracteres inválidos"
+	
+	if is_name_taken(trimmed_name):
+		return "Este nome já está sendo usado"
+	
+	return ""
 
 # ===== DEBUG =====
 

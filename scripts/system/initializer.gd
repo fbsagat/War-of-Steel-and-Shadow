@@ -63,7 +63,7 @@ func _ready():
 		_init_server(is_headless)
 	else:
 		# Injetar uuid do argumento client_uuid, substituindo a verificação
-		# padrão na psta do usuário (apenas para desenvolvimento)
+		# padrão na pasta do usuário (apenas para desenvolvimento)
 		var id_file_ = null
 		for arg in args:
 			if arg.begins_with("--client_id="):
