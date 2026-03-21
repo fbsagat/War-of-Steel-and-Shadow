@@ -111,10 +111,6 @@ func spawn_item(objects_node, round_id: int, item_name: String, position: Vector
 	@return: object_id único ou -1 se falhar
 	"""
 	
-	if not multiplayer.is_server():
-		push_error("ObjectManager: spawn_item() só pode ser chamado no servidor!")
-		return -1
-	
 	if not _initialized:
 		push_error("ObjectManager: Não inicializado")
 		return -1
@@ -167,9 +163,6 @@ func _send_spawn_to_clients(round_id: int, object_id: int, item_name: String, po
 	Chama RPC individual para cada peer conectado
 	"""
 	
-	if not multiplayer.is_server():
-		return
-	
 	# Obtém players ativos da rodada
 	var active_players = round_registry.get_all_spawned_players(round_id)
 	
@@ -220,9 +213,6 @@ func spawn_item_in_front_of_player(objects_node, round_id: int, player_uuid: Str
 	@return: object_id ou -1 se falhar
 	"""
 	
-	if not multiplayer.is_server():
-		return -1
-	
 	# Valida estado do player
 	if not server_manager.player_states.has(player_uuid):
 		push_error("ObjectManager: Player %d não tem estado no servidor" % player_uuid)
@@ -249,9 +239,6 @@ func spawn_item_over_of_player(objects_node, round_id: int, player_uuid: String,
 	@return: object_id ou -1 se falhar
 	"""
 	
-	if not multiplayer.is_server():
-		return -1
-	
 	# Valida estado do player
 	if not server_manager.player_states.has(player_uuid):
 		push_error("ObjectManager: Player %d não tem estado no servidor" % player_uuid)
@@ -271,9 +258,6 @@ func spawn_item_over_of_player(objects_node, round_id: int, player_uuid: String,
 
 func spawn_item_at_random_position(objects_node, round_id: int, item_name: String, area_center: Vector3, area_radius: float, owner_uuid: String = "") -> int:
 	"""Spawna item em posição aleatória dentro de uma área circular"""
-	
-	if not multiplayer.is_server():
-		return -1
 	
 	# Calcula posição aleatória
 	var angle = randf() * TAU
@@ -296,10 +280,6 @@ func despawn_object(round_id: int, object_id: int) -> bool:
 	
 	@return: true se sucesso
 	"""
-	
-	if not multiplayer.is_server():
-		push_error("ObjectManager: despawn_object() só pode ser chamado no servidor!")
-		return false
 	
 	# Valida existência
 	if not spawned_objects.has(round_id) or not spawned_objects[round_id].has(object_id):
@@ -333,9 +313,6 @@ func _send_despawn_to_clients(round_id: int, object_id: int):
 	"""
 	✅ NOVA FUNÇÃO: Envia despawn para clientes ativos na rodada
 	"""
-	
-	if not multiplayer.is_server():
-		return
 	
 	var active_players = round_registry.get_all_spawned_players(round_id)
 	
@@ -376,9 +353,6 @@ func despawn_object_by_node(round_id: int, node: Node) -> bool:
 func clear_round_objects(round_id: int):
 	"""Remove todos os objetos de uma rodada (spawnados E guardados)"""
 	
-	if not multiplayer.is_server():
-		return
-	
 	var total_count = 0
 	
 	# Limpa objetos spawnados
@@ -413,10 +387,7 @@ func store_object(round_id: int, object_id: int, owner_uuid: String, custom_data
 	@param custom_data: Dados customizados do item (durabilidade, encantamentos, etc)
 	@return: true se sucesso
 	"""
-	
-	if not multiplayer.is_server():
-		push_error("ObjectManager: store_object() só pode ser chamado no servidor!")
-		return false
+
 	
 	# Valida que objeto está spawnado
 	if not spawned_objects.has(round_id) or not spawned_objects[round_id].has(object_id):
@@ -475,10 +446,6 @@ func retrieve_stored_object(objects_node, round_id: int, object_id: int, positio
 	@return: true se sucesso
 	"""
 	
-	if not multiplayer.is_server():
-		push_error("ObjectManager: retrieve_stored_object() só pode ser chamado no servidor!")
-		return false
-	
 	# Valida que objeto está guardado
 	if not stored_objects.has(round_id) or not stored_objects[round_id].has(object_id):
 		push_error("ObjectManager: Objeto %d não está guardado na rodada %d" % [object_id, round_id])
@@ -536,10 +503,6 @@ func transfer_stored_object(round_id: int, object_id: int, new_owner_uuid: Strin
 	@return: true se sucesso
 	"""
 	
-	if not multiplayer.is_server():
-		push_error("ObjectManager: transfer_stored_object() só pode ser chamado no servidor!")
-		return false
-	
 	# Valida que objeto está guardado
 	if not stored_objects.has(round_id) or not stored_objects[round_id].has(object_id):
 		push_error("ObjectManager: Objeto %d não está guardado na rodada %d" % [object_id, round_id])
@@ -571,10 +534,6 @@ func destroy_stored_object(round_id: int, object_id: int) -> bool:
 	
 	@return: true se sucesso
 	"""
-	
-	if not multiplayer.is_server():
-		push_error("ObjectManager: destroy_stored_object() só pode ser chamado no servidor!")
-		return false
 	
 	# Valida existência
 	if not stored_objects.has(round_id) or not stored_objects[round_id].has(object_id):
@@ -931,7 +890,6 @@ func get_stats() -> Dictionary:
 		"active_rounds": spawned_objects.size(),
 		"rounds_with_stored": stored_objects.size(),
 		"next_object_id": next_object_id,
-		"is_server": multiplayer.is_server()
 	}
 
 func print_round_objects(round_id: int):

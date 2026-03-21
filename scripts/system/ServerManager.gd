@@ -1254,6 +1254,9 @@ func _on_round_ending(round_id: int, reason: String):
 	# Aguarda tempo de transição (para mostrar resultados)
 	await get_tree().create_timer(round_transition_time).timeout
 	
+	# Limpa os objetos do round
+	object_manager.clear_round_objects(round_id)
+	
 	# Remove o nó deste round da lista de rounds do servidor
 	var round_ = round_registry.get_round(round_id)
 	all_rounds_node.remove_child(round_["round_node"])
@@ -1886,10 +1889,11 @@ func _server_trainer_drop_item(player_id):
 		return
 	
 	#var player = client_registry.get_player(player_id)
-	var obj_id = client_registry.get_inventory_items(round_["round_id"], player_uuid)[0]["object_id"]
-	var item_id = int(client_registry.get_inventory_items(round_["round_id"], player_uuid)[0]["item_id"])
 	#var item_name = item_database.get_item_by_id(item_id)["name"]
 	#var players_node = round_["round_node"].get_node_or_null("Players")
+	var obj_id = client_registry.get_inventory_items(round_["round_id"], player_uuid)[0]["object_id"]
+	var item_id = int(client_registry.get_inventory_items(round_["round_id"], player_uuid)[0]["item_id"])
+
 	var objects_node = round_["round_node"].get_node_or_null("Objects")
 	
 	# Remover o item do registro do player

@@ -126,6 +126,7 @@ func _init_server(is_headless):
 	network_manager.room_registry = room_registry
 	network_manager.round_registry = round_registry
 	network_manager.object_manager = object_manager
+	network_manager.item_database = item_database
 	network_manager.initializer = self
 	
 	# ClientRegistry precisa de:
