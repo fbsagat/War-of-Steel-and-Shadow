@@ -176,7 +176,7 @@ func _client_round_started(_server_id: String, _match_data: Dictionary):
 	pass
 
 @rpc("authority", "call_remote", "reliable")
-func _client_round_return(_match_data: Dictionary):
+func _client_round_return(_server_id: String, _match_data: Dictionary):
 	pass
 
 @rpc("authority", "call_remote", "reliable")

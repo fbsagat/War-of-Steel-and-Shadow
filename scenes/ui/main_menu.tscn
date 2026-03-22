@@ -187,7 +187,7 @@ max_length = 20
 
 [node name="Label3" type="Label" parent="CanvasLayer/CenterContainer/Control/NameInputMenu/VBoxContainer" unique_id=565056397]
 layout_mode = 2
-text = "3 a 20 caracteres, o nome só pode conter letras, números, espaços e underscores"
+text = "5 a 20 caracteres, o nome só pode conter letras, números, espaços e underscores"
 label_settings = SubResource("LabelSettings_m1kxf")
 horizontal_alignment = 1
 

@@ -24,7 +24,7 @@ const camera_controller : String = "res://scenes/gameplay/camera_controller.tscn
 
 @export_category("Reconection Settings")
 @export var reconnect_attempts :int = 0
-const MAX_RECONNECT_ATTEMPTS : int = 5
+const MAX_RECONNECT_ATTEMPTS : int = 10
 const RECONNECT_DELAY := 2.0 # segundos
 var reconnect_timer: Timer
 
@@ -270,6 +270,10 @@ func _on_connected_to_server():
 	is_connecting = false
 	is_connected_to_server = true
 	local_peer_id = multiplayer.get_unique_id()
+	
+	# Se estiver em uma partida, esconder menu de reconexão
+	if main_menu_node and round_node:
+		main_menu_node.hide_main_menu()
 	
 	_log_debug(" Cliente conectado ao servidor com sucesso! Peer ID: %d" % local_peer_id)
 	
@@ -629,6 +633,11 @@ func update_client_info(info: Dictionary):
 	# Se não for o mesmo servidor, sem registro de cliente e partida nele, então: conexão nova.
 	if is_in_round:
 		var loaded_round = get_tree().root.get_node_or_null("Round")
+		
+		if not loaded_round:
+			_log_debug("❌ Nó do round não encontrado")
+			return
+			
 		if loaded_round.server_id == configs["server_id"]:
 			main_menu_node.hide_main_menu()
 		else:
@@ -987,10 +996,10 @@ func _client_round_started(server_id: String, match_data: Dictionary):
 	_log_debug("Rodada iniciada pelo servidor!")
 	_start_round_locally(server_id, match_data)
 
-func _client_round_return(match_data: Dictionary):
+func _client_round_return(server_id: String, match_data: Dictionary):
 	"""Callback quando o jogador retorna à rodada"""
 	_log_debug("retornando à rodada")
-	_return_round_locally(match_data)
+	_return_round_locally(server_id, match_data)
 
 func _client_round_ended(end_data: Dictionary):
 	"""Callback quando a rodada termina"""
@@ -1079,7 +1088,7 @@ func _start_round_locally(server_id: String, match_data: Dictionary):
 	
 	_log_debug("Rodada carregada no cliente")
 
-func _return_round_locally(match_data: Dictionary):
+func _return_round_locally(server_id: String, match_data: Dictionary):
 	"""Retorna à rodada localmente no cliente"""
 	_log_debug("========================================")
 	_log_debug("RETORNANDO À RODADA")
@@ -1098,8 +1107,11 @@ func _return_round_locally(match_data: Dictionary):
 	is_in_round = true
 	
 	# Criar cena de organização do round
-	round_node = Node.new()
+	round_node = preload("res://scripts/utils/round_node.gd").new()
 	round_node.name = "Round"
+	round_node.round_id = match_data["round_id"]
+	round_node.room_id = match_data["room_id"]
+	round_node.server_id = server_id
 	
 	# Adiciona à raiz
 	get_tree().root.add_child(round_node)

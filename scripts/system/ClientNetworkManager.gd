@@ -220,9 +220,9 @@ func _client_round_started(_server_id: String, match_data: Dictionary):
 	_log_debug("Rodada iniciada")
 	game_manager._client_round_started(_server_id, match_data)
 
-func _client_round_return(match_data: Dictionary):
+func _client_round_return(server_id: String, match_data: Dictionary):
 	_log_debug("retornando à rodada")
-	game_manager._client_round_return(match_data)
+	game_manager._client_round_return(server_id, match_data)
 
 func _client_round_ended(end_data: Dictionary):
 	_log_debug("🏁 Rodada finalizada")

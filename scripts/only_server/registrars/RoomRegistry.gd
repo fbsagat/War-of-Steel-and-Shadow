@@ -767,7 +767,7 @@ func _validate_room_name(room_name: String) -> String:
 		return "O nome da sala não pode estar vazio"
 	
 	if trimmed.length() < 5:
-		return "O nome da sala deve ter pelo menos 3 caracteres"
+		return "O nome da sala deve ter pelo menos 5 caracteres"
 	
 	if trimmed.length() > 30:
 		return "O nome da sala deve ter no máximo 30 caracteres"

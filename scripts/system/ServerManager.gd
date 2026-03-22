@@ -603,7 +603,7 @@ func _execute_player_return_to_round(peer_id: int, player_uuid: String):
 		round_registry._unmark_player_disconnected(round_["round_id"], player_uuid)
 		
 		# Envia comando de retorno para o cliente
-		network_manager.rpc_id(peer_id, "_client_round_return", match_data)
+		network_manager.rpc_id(peer_id, "_client_round_return", server_id, match_data)
 
 func _player_exit_from_round(player_room_id: int, peer_id: int, player_uuid: String):
 	"""Esta função deve ser executada quando o cliente sinaliza que quer abandonar o round em que está, 
