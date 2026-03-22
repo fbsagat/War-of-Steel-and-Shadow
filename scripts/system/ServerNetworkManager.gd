@@ -179,7 +179,8 @@ func _server_trainer_drop_item(player_id):
 func _server_trainer_respawn_player(player_id):
 	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
 		return
-	server_manager._server_trainer_repawn_player(player_id)
+	var player_uuid = client_registry.get_uuid_by_peer_id(player_id)
+	server_manager._server_trainer_repawn_player(player_id, player_uuid)
 
 func _server_drop_item(player_id, obj_id):
 	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):

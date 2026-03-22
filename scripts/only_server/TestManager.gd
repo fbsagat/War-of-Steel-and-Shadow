@@ -323,7 +323,8 @@ func _server_instantiate_round(match_data: Dictionary, players_node, round_node)
 		push_warning("terrain_3d não encontrado para configurar câmera")
 	
 	# Se não headless, joga este primeiro round para a camera do servidor
-	if not server_manager.is_headless and match_data["round_id"] <= 1:
+	var rounds_count = round_registry.get_active_rounds_count()
+	if not server_manager.is_headless and rounds_count == 1:
 		server_manager._switch_camera_to_round(round_node)
 	
 	_log_debug("  ✓ Rodada instanciada no servidor")
