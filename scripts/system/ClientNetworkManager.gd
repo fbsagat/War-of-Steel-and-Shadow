@@ -48,6 +48,13 @@ func _get_log_prefix() -> String:
 	var client_id: String = "[ClientID: %d]" % cached_unique_id if cached_unique_id > 0 else ""
 	return "[CLIENT][NetworkManager]%s" % client_id
 
+# ===== HEARTBEAT =====
+
+func _send_ping():
+	rpc_id(1, "_client_send_ping")
+
+func _client_receive_pong():
+	game_manager._client_receive_pong()
 
 # ===== AUTENTICAÇÃO =====
 

@@ -27,6 +27,11 @@ const camera_controller : String = "res://scenes/gameplay/camera_controller.tscn
 const MAX_RECONNECT_ATTEMPTS : int = 1000
 const RECONNECT_DELAY := 2.0 # segundos
 var reconnect_timer: Timer
+# Heartbeat (detecção)
+var last_pong_time := 0
+var ping_interval := 1.0
+var timeout_limit := 3000 # ms
+var ping_start_time := 0
 
 @export_category("Player Identifier")
 var UUID_FILE := "user://identity.json"
@@ -60,11 +65,13 @@ var cached_unique_id: int = 0
 ## {round_id: {object_id: {node: Node, item_name: String, owner_uuid: int}}}
 var spawned_objects: Dictionary = {}
 var local_inventory: Dictionary = {} # Inventário(de itens e equipamentos) local do player.
+var debug_menu_visible: bool = false
 var peer: ENetMultiplayerPeer
 
 # ===== REFERÊNCIAS INTERNAS =====
 
 var main_menu_node: Control = null
+var debug_overlay_node: CanvasLayer = null
 var inventory_node : Control = null
 var local_player_node: Node = null
 var round_node: Node = null
@@ -98,6 +105,9 @@ signal items_swapped(item_id_1: String, item_id_2: String)
 func _ready():
 	pass
 
+func _process(_delta):
+	pass
+	
 func initialize():
 	if main_menu_node:
 		main_menu_node.show_main_menu()
@@ -133,6 +143,34 @@ func connect_muiltiplayer_signals():
 	multiplayer.connection_failed.connect(_on_connection_failed)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
 
+# ===== HEARTBEAT =====
+
+func start_heartbeat():
+	_log_debug("Inicializando heartbeat")
+	while true:
+		_client_send_ping()
+		await get_tree().create_timer(ping_interval).timeout
+
+func _client_send_ping():
+	if not is_connected_to_server:
+		return
+	
+	ping_start_time = Time.get_ticks_msec()
+	network_manager._send_ping()
+
+func _client_receive_pong():
+	last_pong_time = Time.get_ticks_msec()
+
+	var now = Time.get_ticks_msec()
+	var latency = now - ping_start_time
+	var _delta = now - last_pong_time
+	
+	# Se visual_debug on, recebe debug_overlay_node
+	# Atualiza a tela de visualização de debug de rede
+	if debug_overlay_node:
+		debug_overlay_node.update_ping(latency)
+		debug_overlay_node.update_pong_time(now)
+
 # ===== FUNÇÕES DE MENU e INPUT =====
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -146,6 +184,13 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_inventory"):
 		_handle_inventory()
 		return
+
+func _input(event: InputEvent) -> void:
+	# Se visual_debug on, recebe debug_overlay_node
+	# Esconde/mostra debug_overlay quando aperta F1
+	if event.is_action_pressed("ui_debug") and debug_overlay_node:
+		debug_menu_visible = not debug_menu_visible
+		debug_overlay_node.visible = debug_menu_visible
 
 # Validação
 func _can_process_menu_input() -> bool:
@@ -266,6 +311,14 @@ func _on_connected_to_server():
 	is_connecting = false
 	is_connected_to_server = true
 	local_peer_id = multiplayer.get_unique_id()
+
+	start_heartbeat()
+	
+	# Se visual_debug on, recebe debug_overlay_node
+	# Mostra debug_overlay quando se conecta em um servidor
+	if debug_overlay_node:
+		debug_overlay_node.visible = true
+		debug_menu_visible = true
 	
 	_log_debug(" Cliente conectado ao servidor com sucesso! Peer ID: %d" % local_peer_id)
 	
@@ -402,6 +455,13 @@ func _disconnect_from_server(notify_server: bool = false):
 	# Volta para tela inicial
 	if main_menu_node:
 		main_menu_node.show_main_menu()
+	
+	# Se visual_debug on, recebe debug_overlay_node
+	# Esconde debug_overlay quando desconexão é intencional
+	if debug_overlay_node:
+		debug_overlay_node.on_disconnected()
+		debug_overlay_node.visible = false
+		debug_menu_visible = false
 	
 	# Emite sinal
 	disconnected_from_server.emit()
@@ -559,6 +619,9 @@ func handle_server_response(response: Dictionary) -> void:
 
 	elif response["status"] == "ok":
 		_log_debug("Autenticado com sucesso")
+		
+		
+		
 		player_name = response["player_name"]
 		
 		if is_in_round:

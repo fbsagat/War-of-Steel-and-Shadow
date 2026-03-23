@@ -49,6 +49,8 @@ var round_registry: RoundRegistry = null
 ## Managers auxiliares para os clienes
 ## Menu de inicialização
 var main_menu: Control = null
+## Debug Overlay
+var debug_overlay: CanvasLayer = null
 
 func _ready():
 	"""Inicializa servidor ou cliente baseando-se no argumento de inicialização.
@@ -207,6 +209,7 @@ func _init_client(id_file_):
 	var network_manager_scene: PackedScene = preload("res://scenes/system/client_network_manager.tscn")
 	var game_manager_scene: PackedScene = preload("res://scenes/system/game_manager.tscn")
 	var main_menu_scene: PackedScene = preload("res://scenes/ui/main_menu.tscn")
+	var debug_overlay_scene: PackedScene = preload("res://scenes/ui/debug_overlay.tscn")
 	item_database = preload("res://scripts/gameplay/ItemDatabase.gd").new()
 	map_manager = preload("res://scripts/system/MapManager.gd").new()
 	server_list_manager = preload("res://scripts/system/serverlist_manager.gd").new()
@@ -214,12 +217,14 @@ func _init_client(id_file_):
 	network_manager = network_manager_scene.instantiate()
 	game_manager = game_manager_scene.instantiate()
 	main_menu = main_menu_scene.instantiate()
+	debug_overlay = debug_overlay_scene.instantiate()
 
 	# Nomeia para facilitar visualização
 	network_manager.name = "NetworkManager"
 	game_manager.name = "GameManager"
 	item_database.name = "ItemDatabase"
 	main_menu.name = "MainMenu"
+	debug_overlay.name = "DebugOverlay"
 	map_manager.name = "MapManager"
 	server_list_manager.name = "ServerListManager"
 	
@@ -228,6 +233,7 @@ func _init_client(id_file_):
 	get_tree().root.add_child.call_deferred(game_manager)
 	get_tree().root.add_child.call_deferred(item_database)
 	get_tree().root.add_child.call_deferred(main_menu)
+	get_tree().root.add_child.call_deferred(debug_overlay)
 	get_tree().root.add_child.call_deferred(map_manager)
 	get_tree().root.add_child.call_deferred(server_list_manager)
 	
@@ -271,6 +277,10 @@ func _init_client(id_file_):
 		game_manager.localhost_auto_connect = true
 		main_menu.start_unlocked_mouse = start_unlocked_mouse
 	game_manager.visual_debug = visual_debug
+	if visual_debug:
+		game_manager.debug_overlay_node = debug_overlay
+		game_manager.debug_menu_visible = true
+		
 		
 	item_database.is_server = false
 	

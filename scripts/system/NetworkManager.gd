@@ -47,6 +47,16 @@ func _get_log_prefix() -> String:
 # ===== DECLARAÇÕES RPC (implementações nas classes filhas) ====================
 # ==============================================================================
 
+# ===== HEARTBEAT =====
+
+@rpc("any_peer", "call_remote", "unreliable")
+func _client_send_ping():
+	pass
+
+@rpc("authority", "call_remote", "unreliable")
+func _client_receive_pong():
+	pass
+
 # ===== AUTENTICAÇÃO =====
 
 @rpc("any_peer", "call_remote", "unreliable")

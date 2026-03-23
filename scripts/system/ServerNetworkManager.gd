@@ -58,6 +58,11 @@ func is_rpc_allowed(peer_id: int) -> bool:
 	_player_rpc_timestamps[peer_id] = current_time
 	return true
 
+# ===== HEARTBEAT =====
+
+func _client_send_ping():
+	var sender = multiplayer.get_remote_sender_id()
+	rpc_id(sender, "_client_receive_pong")
 
 # ===== AUTENTICAÇÃO =====
 
