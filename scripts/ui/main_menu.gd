@@ -596,14 +596,17 @@ func show_exit_confirm_menu(exit_server: bool):
 	current_menu_visible = exit_confirm_menu
 
 func show_main_menu():
+	_log_debug("Mostrando main menu")
 	hide_all_menus()
 	main_menu.visible = true
 	transparent.visible = false
 	color_rect.visible = true
 	current_menu_visible = main_menu
 	self.get_node("CanvasLayer").show()
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 func hide_main_menu():
+	_log_debug("Escondendo main menu")
 	if start_unlocked_mouse:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	else:
@@ -612,7 +615,8 @@ func hide_main_menu():
 	self.hide()
 	self.get_node("CanvasLayer").hide()
 
-func show_gameplay_menu(_hide: bool = false):
+func show_gameplay_menu():
+	_log_debug("Mostrando gameplay menu")
 	hide_all_menus()
 	main_menu.visible = false
 	color_rect.visible = false
@@ -620,12 +624,16 @@ func show_gameplay_menu(_hide: bool = false):
 	canvas_layer.show()
 	gameplay_menu.visible = true
 	current_menu_visible = gameplay_menu
-	if _hide:
-		transparent.visible = false
-		color_rect.visible = true
-		canvas_layer.hide()
-		gameplay_menu.visible = false
-		current_menu_visible = null
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+
+func hide_gameplay_menu():
+	_log_debug("Escondendo gameplay menu")
+	transparent.visible = false
+	color_rect.visible = true
+	canvas_layer.hide()
+	gameplay_menu.visible = false
+	current_menu_visible = null
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 func show_name_input_menu(welcome: bool):
 	hide_all_menus()

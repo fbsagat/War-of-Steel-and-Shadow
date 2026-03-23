@@ -159,6 +159,7 @@ func show_inventory():
 	if inventory_root:
 		inventory_root.mouse_filter = Control.MOUSE_FILTER_STOP
 		_set_mouse_filter_recursive(inventory_root, Control.MOUSE_FILTER_STOP)
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 		inventory_root.show()
 		background_canvas.show()
 		item_slots_grid_on.hide()  # Esconde quickbar quando inventário aberto
@@ -166,8 +167,8 @@ func show_inventory():
 		# ✅ GARANTIR QUE A ÁREA DE DROP ESTÁ VISÍVEL E ATIVA
 		if drop_area:
 			drop_area.show()
-			drop_area.mouse_filter = Control.MOUSE_FILTER_STOP
 			_log_debug("✅ Área de drop ativada")
+		drop_area.mouse_filter = Control.MOUSE_FILTER_STOP
 
 func hide_inventory():
 	"""Fecha o inventário (bloqueia interação)"""
@@ -183,6 +184,7 @@ func hide_inventory():
 		if drop_area:
 			drop_area.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			_log_debug("🔒 Área de drop desativada")
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 func _set_mouse_filter_recursive(node: Node, filter: int):
 	"""Aplica mouse_filter recursivamente a todos os controles"""

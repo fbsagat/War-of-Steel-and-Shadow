@@ -226,6 +226,10 @@ func _input(event: InputEvent) -> void:
 	
 	if event.is_action_pressed("ui_cancel"):
 		_toggle_mouse_mode()
+	
+	# Teste
+	#if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_BACKSPACE:
+		#_log_debug("Backspace!!!")
 
 func _find_a_next_round_to_camera():
 	"""Encontra um round ativo corretamente para mudar a câmera para este round"""

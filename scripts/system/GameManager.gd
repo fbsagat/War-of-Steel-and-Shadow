@@ -7,7 +7,7 @@ class_name GameManager
 # ===== CONFIGURAÇÕES =====
 
 @export_category("Connection Settings")
-const DEFAULT_SERVER_ADDRESS: String = "127.0.0.1"
+const DEFAULT_SERVER_ADDRESS: String = "172.23.2.183" #local host: "127.0.0.1"
 const DEFAULT_SERVER_PORT: int = 7777
 @export var server_address: String = DEFAULT_SERVER_ADDRESS
 @export var server_port: int = DEFAULT_SERVER_PORT
@@ -24,7 +24,7 @@ const camera_controller : String = "res://scenes/gameplay/camera_controller.tscn
 
 @export_category("Reconection Settings")
 @export var reconnect_attempts :int = 0
-const MAX_RECONNECT_ATTEMPTS : int = 10
+const MAX_RECONNECT_ATTEMPTS : int = 1000
 const RECONNECT_DELAY := 2.0 # segundos
 var reconnect_timer: Timer
 
@@ -192,13 +192,11 @@ func _toggle_inventory_menu(hide: bool = false) -> void:
 		# Esconder inventário
 		local_player_node.stop_movment = false
 		inventory_node.hide_inventory()
-		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 		_log_debug("Escondendo menu de inventário e capturando ponteiro do mouse")
 	else:
 		# Mostrar inventário
 		local_player_node.stop_movment = true
 		inventory_node.show_inventory()
-		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 		_log_debug("Mostrando menu de inventário e exibindo ponteiro do mouse")
 
 # Gameplay menu
@@ -213,14 +211,12 @@ func _toggle_gameplay_menu(hide: bool = false) -> void:
 	if hide:
 		# Esconder gameplay menu
 		local_player_node.stop_movment = false
-		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
-		main_menu_node.show_gameplay_menu(true)
+		main_menu_node.hide_gameplay_menu()
 		_log_debug("Escondendo menu de gameplay e capturando ponteiro do mouse")
 	else:
 		# Mostrar gameplay menu
 		local_player_node.stop_movment = true
-		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-		main_menu_node.show_gameplay_menu(false)
+		main_menu_node.show_gameplay_menu()
 		_log_debug("Mostrando menu de gameplay e exibindo ponteiro do mouse")
 
 # ===== FUNÇÕES DE CONEXÃO COM O SERVIDOR =====
@@ -270,10 +266,6 @@ func _on_connected_to_server():
 	is_connecting = false
 	is_connected_to_server = true
 	local_peer_id = multiplayer.get_unique_id()
-	
-	# Se estiver em uma partida, esconder menu de reconexão
-	if main_menu_node and round_node:
-		main_menu_node.hide_main_menu()
 	
 	_log_debug(" Cliente conectado ao servidor com sucesso! Peer ID: %d" % local_peer_id)
 	
@@ -569,12 +561,16 @@ func handle_server_response(response: Dictionary) -> void:
 		_log_debug("Autenticado com sucesso")
 		player_name = response["player_name"]
 		
-		if main_menu_node:
-			if player_name == "":
-				main_menu_node.show_name_input_menu(true)
-			else:
-				main_menu_node.update_name_e_connected(configs["server_name"], response["player_name"])
-				main_menu_node.show_main_menu()
+		if is_in_round:
+			if main_menu_node:
+				main_menu_node.hide_main_menu()
+		else:
+			if main_menu_node:
+				if player_name == "":
+					main_menu_node.show_name_input_menu(true)
+				else:
+					main_menu_node.update_name_e_connected(configs["server_name"], response["player_name"])
+					main_menu_node.show_main_menu()
 
 	elif response["status"] == "reject":
 		_log_debug("Conexão rejeitada: %s" % response.get("reason",""))
@@ -1174,9 +1170,6 @@ func _return_round_locally(server_id: String, match_data: Dictionary):
 	# Esconde o menu
 	if main_menu_node:
 		main_menu_node.hide_main_menu()
-	
-	# Captura o mouse
-	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	
 	round_started.emit()
 	
