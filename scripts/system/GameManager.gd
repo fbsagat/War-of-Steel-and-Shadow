@@ -7,7 +7,7 @@ class_name GameManager
 # ===== CONFIGURAÇÕES =====
 
 @export_category("Connection Settings")
-const DEFAULT_SERVER_ADDRESS: String = "127.0.0.1"
+const DEFAULT_SERVER_ADDRESS: String = "172.23.2.183" #"127.0.0.1"
 const DEFAULT_SERVER_PORT: int = 7777
 @export var server_address: String = DEFAULT_SERVER_ADDRESS
 @export var server_port: int = DEFAULT_SERVER_PORT

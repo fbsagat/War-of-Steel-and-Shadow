@@ -515,6 +515,22 @@ func _set_disconnected_peer(peer_id: int, room_id: int):
 			player["is_offline"] = true
 			_log_debug("⚠ uuid=%s marcado como desconectado na sala %s" % [uuid_base, rooms[room_id]["id"]])
 
+func _set_connected_peer(peer_id: int, room_id: int):
+	"""Executada pelo client registry. Marca jogador como conectado a partir do peer_id da sessão."""
+	var uuid_base = client_registry.get_uuid_by_peer_id(peer_id)
+	
+	if uuid_base.is_empty():
+		_log_debug("⚠ Tentou desconectar peer inexistente: %d" % peer_id)
+		return
+		
+	if not rooms.has(room_id):
+		return
+		
+	for player in rooms[room_id].get("players", []):
+		if player["id"] == uuid_base:
+			player["is_offline"] = false
+			_log_debug("⚠ uuid=%s marcado como conectado na sala %s" % [uuid_base, rooms[room_id]["id"]])
+
 # ===== HISTÓRICO DE RODADAS =====
 
 func add_round_to_history(room_id: int, round_data: Dictionary) -> bool:

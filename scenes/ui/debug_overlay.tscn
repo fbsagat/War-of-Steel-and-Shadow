@@ -2,6 +2,9 @@
 
 [ext_resource type="Script" uid="uid://bvdieu0yc0rcg" path="res://scripts/ui/debug_overlay.gd" id="1_tasbd"]
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tasbd"]
+bg_color = Color(0, 0, 0, 0.24705882)
+
 [node name="DebugOverlay" type="CanvasLayer" unique_id=1481165526]
 layer = 100
 follow_viewport_scale = 686.184
@@ -9,25 +12,27 @@ script = ExtResource("1_tasbd")
 
 [node name="Panel" type="Panel" parent="." unique_id=1615780359]
 anchors_preset = -1
-anchor_bottom = 0.041666668
+anchor_left = -0.009375
+anchor_right = -0.03359375
+anchor_bottom = 0.036111113
 offset_left = 7.0
 offset_top = 6.0
 offset_right = 209.0
 offset_bottom = 154.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_tasbd")
 metadata/_edit_use_anchors_ = true
 
 [node name="Label" type="Label" parent="Panel" unique_id=303991724]
 layout_mode = 1
 anchors_preset = -1
-anchor_left = 0.5
-anchor_top = 0.48600003
-anchor_right = 0.5
-anchor_bottom = 0.48600003
+anchor_left = 0.60818714
+anchor_top = 0.41912645
+anchor_right = 1.7134503
+anchor_bottom = 0.48599994
 offset_left = -85.0
 offset_top = -66.928
 offset_right = 93.0
 offset_bottom = 67.072
 theme_override_font_sizes/font_size = 14
-horizontal_alignment = 1
 vertical_alignment = 1
 metadata/_edit_use_anchors_ = true

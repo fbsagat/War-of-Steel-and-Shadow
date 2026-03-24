@@ -618,6 +618,9 @@ func _execute_player_return_to_round(peer_id: int, player_uuid: String):
 			}
 		match_data["round_objects"] = all_objects
 		
+		# Define o player como conectado de novo na sala
+		room_registry._set_connected_peer(peer_id, round_["room_id"])
+		
 		# Define o player como conectado de novo no round
 		round_registry._unmark_player_disconnected(round_["round_id"], player_uuid)
 		
