@@ -7,6 +7,7 @@ class_name MapManager
 # ===== CONFIGURAÇÕES =====
 
 @export var debug_mode: bool = true
+@export var test_threaded: bool = false
 @export var is_server: bool = false
 
 @export_category("Spawn Settings")
@@ -41,50 +42,204 @@ var used_spawn_indices: Array = []
 ## Configurações do mapa atual
 var map_settings: Dictionary = {}
 
+## Controle de estado de carregamento
+var is_loading: bool = false
+
 # ===== SINAIS =====
 
 signal map_loaded(map_node: Node)
 signal spawn_points_ready(count: int)
+signal map_load_progress(progress: float) # Novo sinal para feedback de loading
 
+func _ready() -> void:
+	if test_threaded:
+		test_threaded_loading()
+
+func test_threaded_loading():
+	var path = "res://scenes/gameplay/terrain_3d.tscn"  # Colocar algum mapa aqui
+	
+	print("Testando carregamento em thread: %s" % path)
+	print("Arquivo existe: %s" % FileAccess.file_exists(path))
+	
+	var err = ResourceLoader.load_threaded_request(path)
+	print("Erro ao iniciar request: %s" % error_string(err))
+	
+	var frames = 0
+	while frames < 100:
+		var progress = []
+		var status = ResourceLoader.load_threaded_get_status(path, progress)
+		print("Frame %d - Status: %d, Progresso: %s" % [frames, status, progress])
+		
+		if status == ResourceLoader.THREAD_LOAD_LOADED:
+			print("✓ Carregamento concluído!")
+			var resource = ResourceLoader.load_threaded_get(path)
+			print("Recurso: %s" % resource)
+			break
+		
+		await get_tree().process_frame
+		frames += 1
+		
 # ===== CARREGAMENTO DE MAPA =====
 
-## Carrega um mapa a partir do caminho da cena
-func load_map(map_scene_path: String, round_node):
-	"""Carrega um mapa a partir do caminho da cena. 
-	_handle_start_round no ServerManager é quem envia informações(settings) para cá"""
-	_log_debug("Carregando mapa: %s" % map_scene_path)
-	
-	# Carrega a cena do mapa
-	var map_scene = load(map_scene_path)
-	if map_scene == null:
-		push_error("Falha ao carregar mapa: %s" % map_scene_path)
+## Carrega um mapa a partir do caminho da cena de forma assíncrona
+func load_map(map_scene_path: String, round_node: Node, actual_camera: Camera3D) -> bool:
+	"""Carrega um mapa a partir do caminho da cena usando ResourceLoader assíncrono."""
+	if is_loading:
+		push_warning("MapManager já está carregando um mapa. Ignorando solicitação.")
 		return false
+	
+	is_loading = true
+	_log_debug("Carregando mapa (Async): %s" % map_scene_path)
+	
+	# Descarrega o mapa anterior se existir
+	if current_map:
+		_log_debug("Descarregando mapa anterior...")
+		current_map.queue_free()
+		current_map = null
+		await get_tree().process_frame
+	
+	# Verifica se o arquivo existe
+	if not FileAccess.file_exists(map_scene_path):
+		push_error("Arquivo do mapa não existe: %s" % map_scene_path)
+		is_loading = false
+		return false
+	
+	_log_debug("Arquivo existe, iniciando carregamento em thread...")
+	
+	# Inicia o carregamento em thread
+	var err = ResourceLoader.load_threaded_request(map_scene_path)
+	if err != OK:
+		push_error("Falha ao iniciar carregamento em thread: %s (Erro: %s)" % [map_scene_path, error_string(err)])
+		is_loading = false
+		return false
+	
+	_log_debug("Carregamento em thread iniciado, aguardando conclusão...")
+	
+	# Aguarda o carregamento terminar com timeout de segurança
+	var timeout_frames: int = 600
+	var frames_waited: int = 0
+	
+	while frames_waited < timeout_frames:
+		var progress = []
+		var status = ResourceLoader.load_threaded_get_status(map_scene_path, progress)
+		
+		if frames_waited % 60 == 0:
+			if not progress.is_empty():
+				_log_debug("Progresso do carregamento: %.0f%%" % (progress[0] * 100))
+		
+		if not progress.is_empty():
+			map_load_progress.emit(progress[0])
+		
+		if status == ResourceLoader.THREAD_LOAD_LOADED:
+			_log_debug("Carregamento concluído com sucesso!")
+			break
+		elif status == ResourceLoader.THREAD_LOAD_FAILED:
+			push_error("Falha ao carregar mapa em thread: %s" % map_scene_path)
+			is_loading = false
+			return false
+		elif status == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+			push_error("Recurso inválido: %s" % map_scene_path)
+			is_loading = false
+			return false
+		
+		await get_tree().process_frame
+		frames_waited += 1
+	
+	if frames_waited >= timeout_frames:
+		push_error("Timeout ao carregar mapa: %s" % [map_scene_path])
+		is_loading = false
+		return false
+	
+	# Recupera o recurso carregado
+	_log_debug("Obtendo recurso carregado...")
+	var map_resource: PackedScene = ResourceLoader.load_threaded_get(map_scene_path)
+	if map_resource == null:
+		push_error("Falha ao obter recurso do mapa após carregamento.")
+		is_loading = false
+		return false
+	
+	_log_debug("Recurso obtido, instanciando mapa...")
 	
 	# Instancia o mapa
-	current_map = map_scene.instantiate()
+	current_map = map_resource.instantiate()
 	if current_map == null:
 		push_error("Falha ao instanciar mapa")
+		is_loading = false
 		return false
+	
+	# Verifica se o nó tem script e se o script tem _ready
+	var has_ready = false
+	if current_map.get_script() and current_map.has_method("_ready"):
+		has_ready = true
+		_log_debug("Mapa tem método _ready, aguardando...")
+	else:
+		_log_debug("Mapa NÃO tem método _ready, pulando await ready...")
 		
 	# Adiciona o mapa à cena
 	round_node.add_child(current_map)
-	# Desativa o physics_process (câmera precisa ser atribuida)
-	current_map.set_physics_process(false)
+	_log_debug("Mapa adicionado à cena (tipo: %s)" % current_map.get_class())
 	
+	# Aguarda o ready APENAS se o nó tiver o método _ready
+	if has_ready:
+		var ready_timeout = 120  # ~2 segundos
+		var ready_waited = 0
+		while not current_map.is_node_ready() and ready_waited < ready_timeout:
+			await get_tree().process_frame
+			ready_waited += 1
+		
+		if ready_waited >= ready_timeout:
+			push_warning("Timeout aguarding ready do mapa, continuando mesmo assim...")
+		else:
+			_log_debug("Mapa está pronto (_ready chamado)!")
+	else:
+		# Aguarda alguns frames para garantir que o nó foi adicionado à árvore
+		await get_tree().process_frame
+		await get_tree().process_frame
+		_log_debug("Nós filhos devem estar disponíveis agora")
+	
+	_log_debug("Verificando nós filhos do mapa...")
+	for child in current_map.get_children():
+		_log_debug("  - Filho: %s (%s)" % [child.name, child.get_class()])
+	
+	# Desativa o physics_process inicialmente
+	current_map.set_physics_process(false)
+	# Configura o Terrain3D para usar actual_camera
+	current_map.set_camera(actual_camera)
+	# Ativa o physics_process após atribuir a câmera
+	current_map.set_physics_process(true)
+	
+	is_loading = false
+	_log_debug("✓ Mapa carregado e instanciado com sucesso!")
+	
+	return true
+
 func apply_map_configs(settings: Dictionary = {}):
+	# Garante que o mapa está carregado e pronto
+	if not current_map:
+		push_error("Tentativa de aplicar configs sem mapa carregado.")
+		return false
+
+	# Aguarda novamente por segurança se chamado externamente sem await no load_map
+	if not current_map.is_node_ready():
+		await current_map.ready
+	
 	# Aplicar configurações do Terrain3D
 	# Ainda não aplica nada para Terrain3D
-	# Gerar um terreno novo com as configurações compartilhadas
 	
 	# Aplicar configurações do Sky3D
-	apply_sky_configs(current_map.get_node("Sky3D"), settings.get("sky_rand_configs"))
+	var sky_node = current_map.get_node_or_null("Sky3D")
+	apply_sky_configs(sky_node, settings.get("sky_rand_configs"))
 	
-	# Aguarda um frame para garantir que tudo foi adicionado à árvore
+	# Aguarda um frame para garantir que alterações de renderização foram processadas
 	await get_tree().process_frame
 	
 	# Encontra os pontos de spawn
 	if settings.has("spawn_points"):
 		spawn_points = settings["spawn_points"]
+	else:
+		# Se não vierem nas settings, gera baseado nos jogadores (lógica externa deve chamar _create_spawn_points)
+		pass
+		
 	spawn_points_ready.emit(spawn_points.size())
 	
 	# Aplica configurações ao mapa (se o mapa tiver método configure)
@@ -92,6 +247,9 @@ func apply_map_configs(settings: Dictionary = {}):
 		current_map.configure(settings)
 	
 	_log_debug(" Mapa carregado com sucesso: %d spawn points encontrados" % spawn_points.size())
+	
+	# Armazena settings atuais
+	map_settings = settings.duplicate()
 	
 	map_loaded.emit(current_map)
 	return true
@@ -105,6 +263,10 @@ func _create_spawn_points(players: Array) -> Dictionary:
 	
 	Retorna Array de Dictionaries: [{position: Vector3, rotation: Vector3}]
 	"""
+	if not current_map:
+		push_error("Não é possível criar spawns sem mapa carregado.")
+		return {}
+
 	var match_players_count = players.size()
 	spawn_points.clear()
 	
@@ -165,6 +327,7 @@ func _create_spawn_points(players: Array) -> Dictionary:
 		var peer_id: int = players[i]["session_id"]
 
 		spawn_points[peer_id] = spawn
+		
 	_log_debug("✓ Spawn points criados: %d jogadores em círculo (raio: %.1f)" % [spawn_points.size(), spawn_radius])
 	return spawn_points
 
@@ -230,7 +393,7 @@ func reset_spawn_tracking():
 
 ## Verifica se há um mapa carregado
 func is_map_loaded() -> bool:
-	return current_map != null
+	return current_map != null and is_instance_valid(current_map)
 
 ## Retorna referência ao mapa atual
 func get_current_map() -> Node:
@@ -265,7 +428,9 @@ func find_map_nodes_in_group(group_name: String) -> Array:
 ## @param config: Dicionário de configurações (gerado por gerar_configuracoes_randomicas)
 func apply_sky_configs(sky_node: Node, config: Dictionary) -> void:
 	if sky_node == null or config.is_empty():
-		push_error("❌ Sky3D nulo ou configurações vazias!")
+		# Não é necessariamente um erro, alguns mapas podem não ter Sky3D
+		if sky_node == null:
+			_log_debug("Sky3D não encontrado no mapa, pulando configuração de céu.")
 		return
 	
 	var time_node = sky_node.get_node_or_null("TimeOfDay")
@@ -314,14 +479,14 @@ func apply_sky_configs(sky_node: Node, config: Dictionary) -> void:
 		env_node.environment.ambient_light_sky_contribution = 1.0
 		env_node.environment.ambient_light_color = ambient.get("sky_color", Color.WHITE)
 	
-	_log_debug("✓ Configurações aplicadas!")
+	_log_debug("✓ Configurações de céu aplicadas!")
 
 func _log_debug(message: String):
 	if not debug_mode:
 		return
 		
 	# Configurações do initializer
-	if initializer.activate_only_selected and not "MapManager" in initializer.selected:
+	if initializer and initializer.activate_only_selected and not "MapManager" in initializer.selected:
 		return
 	
 	var server: String = "[SERVER]" if is_server else "[CLIENT]"

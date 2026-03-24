@@ -218,12 +218,35 @@ func create_test_round(nome_sala: String = "Sala de Teste", configuracoes_round:
 		return
 	
 	_log_debug("  ✓ Rodada criada: ID %d" % round_data["round_id"])
+		
+	await get_tree().process_frame
 	
+	# Cria câmera livre se não estiver em modo headless(sem renderização)
+	if not server_manager.is_headless:
+		_log_debug("Criando câmera livre: Não está em modo headless")
+		actual_camera = preload(server_manager.server_camera).instantiate()
+		actual_camera.name = "FreeCamera"
+		round_node.add_child(actual_camera)
+		actual_camera.global_position = Vector3(0, 3, 5)  # X=0, Y=10 (altura), Z=15 (distância)
+		actual_camera.current = true
+	else:
+		_log_debug("Criando câmera dummy: Está em modo headless")
+		actual_camera = Camera3D.new()
+		actual_camera.name = "DummyCamera"
+		round_node.add_child(actual_camera)
+		actual_camera.global_position = Vector3(0, 100, 0)
+		actual_camera.current = false
+		
 	await get_tree().process_frame
 	
 	# Carrega o mapa
-	await map_manager.load_map(server_manager.map_scene, round_node)
+	var success = await map_manager.load_map(server_manager.map_scene, round_node, actual_camera)
 	
+	if not success:
+		push_error("Falha crítica ao carregar o mapa!")
+	else:
+		_log_debug("Mapa carregado com sucesso")
+		
 	# Gera spawn points
 	var players_qtd = round_registry.get_total_players(round_data["round_id"])
 	var spawn_points = map_manager._create_spawn_points(room_data["players"])
@@ -317,37 +340,9 @@ func _server_instantiate_round(match_data: Dictionary, players_node, round_node)
 	
 	await get_tree().process_frame
 	
-	# Cria câmera livre se não estiver em modo headless(sem renderização)
-	if not server_manager.is_headless:
-		_log_debug("Criando câmera livre: Não está em modo headless")
-		actual_camera = preload(server_manager.server_camera).instantiate()
-		actual_camera.name = "FreeCamera"
-		round_node.add_child(actual_camera)
-		actual_camera.global_position = Vector3(0, 3, 5)  # X=0, Y=10 (altura), Z=15 (distância)
-		actual_camera.current = true
-		await get_tree().process_frame
-	else:
-		_log_debug("Criando câmera dummy: Está em modo headless")
-		actual_camera = Camera3D.new()
-		actual_camera.name = "DummyCamera"
-		round_node.add_child(actual_camera)
-		actual_camera.global_position = Vector3(0, 100, 0)
-		actual_camera.current = false
-		await get_tree().process_frame
-	
-	await get_tree().process_frame
-	
 	# Se for o primeiro round, esta é a câmera atual
 	if match_data["round_id"] != 1 and not server_manager.is_headless:
 		actual_camera.current = false
-	
-	# Configura o Terrain3D para usar actual_camera
-	if terrain_3d:
-		terrain_3d.set_camera(actual_camera)
-		# Ativa o physics_process após atribuir a câmera
-		terrain_3d.set_physics_process(true)
-	else:
-		push_warning("terrain_3d não encontrado para configurar câmera")
 		
 	await get_tree().process_frame
 	

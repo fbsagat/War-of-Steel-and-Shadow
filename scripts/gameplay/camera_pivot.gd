@@ -77,9 +77,6 @@ var _mouse_delta: Vector2 = Vector2.ZERO
 
 func _ready():
 	add_to_group("camera_controller")
-	if target == null:
-		push_error("[CameraController] Alvo (target) não definido no Inspector!")
-		return
 
 	spring_arm = get_node_or_null("SpringArm3D") as SpringArm3D
 	if spring_arm:

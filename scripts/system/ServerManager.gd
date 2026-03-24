@@ -94,6 +94,7 @@ var initializer = null
 ## Rastreamento de estados dos jogadores para validação anti-cheat
 ## Formato: {peer_uuid: {pos: Vector3, vel: Vector3, rot: Vector3, timestamp: int}}
 var player_states: Dictionary = {}
+var actual_camera: Camera3D = null
 
 # ===== INICIALIZAÇÃO DO MANAGER =====
 
@@ -1134,9 +1135,31 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 	var map_scene_ = final_settings.get("map_scene", map_scene)
 		
 	await get_tree().process_frame
+		
+	# Cria câmera livre se não estiver em modo headless
+	if not is_headless:
+		actual_camera = preload(server_camera).instantiate()
+		actual_camera.name = "FreeCamera"
+		round_node.add_child(actual_camera)
+		actual_camera.global_position = Vector3(0, 3, 5)  # X=0, Y=10 (altura), Z=15 (distância)
+		actual_camera.current = true
+	else:
+		# Se estiver em modo headless criar uma câmera dummy
+		actual_camera = Camera3D.new()
+		actual_camera.name = "DummyCamera"
+		round_node.add_child(actual_camera)
+		actual_camera.global_position = Vector3(0, 100, 0)
+		actual_camera.current = false
+	
+	await get_tree().process_frame
 	
 	# Carrega o mapa
-	await map_manager.load_map(map_scene, round_node)
+	var success = await map_manager.load_map(map_scene, round_node, actual_camera)
+	
+	if not success:
+		push_error("Falha crítica ao carregar o mapa!")
+	else:
+		_log_debug("Mapa carregado com sucesso")
 		
 	await get_tree().process_frame
 	
@@ -1229,26 +1252,6 @@ func _server_instantiate_round(match_data: Dictionary, round_node, players_node)
 	for player_data in match_data["players"]:
 		var spawn_data = match_data["settings"]["spawn_points"][player_data["session_id"]]
 		_spawn_player_on_server(player_data, spawn_data, players_node)
-		
-	await get_tree().process_frame
-	
-	# Cria câmera livre se não estiver em modo headless
-	var actual_camera: Camera3D = null
-	if not is_headless:
-		actual_camera = preload(server_camera).instantiate()
-		actual_camera.name = "FreeCamera"
-		round_node.add_child(actual_camera)
-		actual_camera.global_position = Vector3(0, 3, 5)  # X=0, Y=10 (altura), Z=15 (distância)
-		actual_camera.current = true
-		await get_tree().process_frame
-	else:
-		# Se estiver em modo headless criar uma câmera dummy
-		actual_camera = Camera3D.new()
-		actual_camera.name = "DummyCamera"
-		round_node.add_child(actual_camera)
-		actual_camera.global_position = Vector3(0, 100, 0)
-		actual_camera.current = false
-		await get_tree().process_frame
 		
 	await get_tree().process_frame
 	

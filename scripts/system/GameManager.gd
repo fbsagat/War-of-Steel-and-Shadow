@@ -17,6 +17,8 @@ const DEFAULT_SERVER_PORT: int = 7777
 const map_scene : String = "res://scenes/system/terrain_3d.tscn"
 const player_scene : String = "res://scenes/gameplay/player_warrior.tscn"
 const camera_controller : String = "res://scenes/gameplay/camera_controller.tscn"
+var camera_scene: PackedScene
+var camera_instance: Node3D
 
 @export_category("Debug")
 @export var debug_mode: bool = true
@@ -31,7 +33,7 @@ var reconnect_timer: Timer
 # Heartbeat (detecção)
 var last_pong_time := 0
 var ping_interval := 1.0
-var timeout_limit := 6000 # ms
+var timeout_limit := 3000 # ms
 var ping_start_time := 0
 var has_received_pong := false
 var has_timed_out := false
@@ -1155,8 +1157,16 @@ func _start_round_locally(server_id: String, match_data: Dictionary):
 		
 	await get_tree().process_frame
 	
+	# Carrega a cena da câmera
+	camera_scene = preload(camera_controller)
+	camera_instance = camera_scene.instantiate()
+	# Adiciona câmera à cena
+	players_node.add_child(camera_instance)
+	
+	await get_tree().process_frame
+	
 	# Carrega o mapa
-	await map_manager.load_map(match_data["map_scene"], round_node)
+	await map_manager.load_map(match_data["map_scene"], round_node, camera_instance.camera)
 	await map_manager.apply_map_configs(match_data["settings"])
 
 	# Spawna todos os jogadores
@@ -1222,8 +1232,14 @@ func _return_round_locally(server_id: String, match_data: Dictionary):
 		
 	await get_tree().process_frame
 	
+	# Carrega a cena da câmera
+	camera_scene = preload(camera_controller)
+	camera_instance = camera_scene.instantiate()
+	# Adiciona câmera à cena
+	players_node.add_child(camera_instance)
+	
 	# Carrega o mapa
-	await map_manager.load_map(match_data["map_scene"], round_node)
+	await map_manager.load_map(match_data["map_scene"], round_node, camera_instance.camera)
 	await map_manager.apply_map_configs(match_data["settings"])
 	
 	await get_tree().process_frame
@@ -1339,8 +1355,6 @@ func _spawn_player(player_data: Dictionary, is_local: bool, _match_data: Diction
 	# Configuração ESPECÍFICA por tipo de jogador
 	if is_local:
 		# Só instanciar e atribuir câmera para jogador LOCAL
-		var camera_scene = preload(camera_controller)
-		var camera_instance = camera_scene.instantiate()
 		camera_instance.name = camera_name
 		camera_instance.target = player_instance
 		
@@ -1363,9 +1377,6 @@ func _spawn_player(player_data: Dictionary, is_local: bool, _match_data: Diction
 		
 		# Atribui referência DIRETA (só para local) camera_instance
 		player_instance.camera_controller = camera_instance
-		
-		# Adiciona câmera à cena
-		players_node.add_child(camera_instance)
 		
 		# Ativa controle
 		player_instance.set_as_local_player()
