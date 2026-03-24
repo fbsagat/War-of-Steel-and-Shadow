@@ -8,6 +8,8 @@ follow_viewport_scale = 686.184
 script = ExtResource("1_tasbd")
 
 [node name="Panel" type="Panel" parent="." unique_id=1615780359]
+anchors_preset = -1
+anchor_bottom = 0.041666668
 offset_left = 7.0
 offset_top = 6.0
 offset_right = 209.0

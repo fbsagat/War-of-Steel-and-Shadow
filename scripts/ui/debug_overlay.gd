@@ -1,5 +1,9 @@
 extends CanvasLayer
 
+# ===== REGISTROS (Injetados pelo initializer.gd) =====
+
+var game_manager: GameManager = null
+
 @onready var label: Label = $Panel/Label
 
 const PING_HISTORY_SIZE := 10
@@ -43,13 +47,14 @@ func _process(_delta: float) -> void:
 	elif ping > LAG_THRESHOLD_MS:
 		status = "🟡 LAG"
 
-	label.text = "Status: %s\nPing: %d ms\nPing médio: %d ms\nSem resposta: %.2f s\n UUID: %s\n Peer id: %d" % [
+	label.text = "Status: %s\nPing: %d ms\nPing médio: %d ms\nSem resposta: %.2f s\n UUID: %s\n Peer id: %d\nIs Loading: %s" % [
 		status,
 		ping,
 		ping_avg,
 		time_since_last / 1000.0,
 		_zip_uuid(),
 		peer_id,
+		game_manager.is_loading
 	]
 
 func update_ping(value: int) -> void:

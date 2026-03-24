@@ -34,6 +34,7 @@ var reconnect_timer: Timer
 var last_pong_time := 0
 var ping_interval := 1.0
 var timeout_limit := 3000 # ms
+var post_loading_tolerance := 3000
 var ping_start_time := 0
 var has_received_pong := false
 var has_timed_out := false
@@ -114,23 +115,6 @@ func _ready():
 func _process(_delta):
 	_ping_pong(_delta)
 
-func _ping_pong(_delta):
-	# Se estiver carregando algo, não detecta perda de conexão (falsa detecção)
-	if is_loading:
-		return
-	
-	# Não começa a detectar enquanto não estiver recebido o primeiro pong
-	if not has_received_pong:
-		return
-	
-	# Se já estiver detectado a primeira vez, ignora as outras (_process está no loop)
-	if has_timed_out:
-		return
-		
-	if Time.get_ticks_msec() - last_pong_time > timeout_limit and has_received_pong and not is_loading:
-		has_timed_out = true
-		_on_server_disconnected()
-	
 func initialize():
 	if main_menu_node:
 		main_menu_node.show_main_menu()
@@ -201,6 +185,29 @@ func _client_receive_pong():
 	if debug_overlay_node:
 		debug_overlay_node.update_ping(latency)
 		debug_overlay_node.update_pong_time(now)
+
+func _ping_pong(_delta):
+	# Se estiver carregando algo, não detecta perda de conexão (falsa detecção)
+	
+	if is_loading:
+		return
+	
+	# Não começa a detectar enquanto não estiver recebido o primeiro pong
+	if not has_received_pong:
+		return
+	
+	# Se já estiver detectado a primeira vez, ignora as outras (_process está no loop)
+	if has_timed_out:
+		return
+	
+	if Time.get_ticks_msec() - last_pong_time > timeout_limit:
+		has_timed_out = true
+		_on_server_disconnected()
+
+func finish_loading():
+	is_loading = false
+	last_pong_time = Time.get_ticks_msec() + post_loading_tolerance
+	has_timed_out = false
 
 # ===== FUNÇÕES DE MENU e INPUT =====
 
@@ -391,6 +398,11 @@ func _on_server_disconnected():
 	
 	_log_debug("Conexão perdida com o servidor, tentando reconectar para voltar à partida")
 	
+	# Fecha conexão com o servidor
+	if multiplayer.multiplayer_peer:
+		multiplayer.multiplayer_peer.close()
+		multiplayer.multiplayer_peer = null
+	
 	is_connected_to_server = false
 	network_manager.is_connected_ = false
 	has_received_pong = false
@@ -433,6 +445,8 @@ func _try_reconnect() -> void:
 		return
 	
 	multiplayer.multiplayer_peer = peer
+	local_peer_id = peer.get_unique_id()
+	_log_debug("Conseguiu reconectar, novo peer id: %s" % peer.get_unique_id())
 
 	# Se o servidor estiver offline, o resultado real virá por signal
 	# Este timer serve como fallback caso a rede demore demais
@@ -840,6 +854,7 @@ func _client_receive_round_return_request(_room_name: String):
 
 func _request_return_to_round():
 	"""Cliente envia resposta dizendo que quer voltar à partida em que estava"""
+	is_loading = true
 	network_manager._server_request_return_or_exit(true)
 	
 func _request_exit_from_round():
@@ -1084,6 +1099,7 @@ func start_round(round_settings: Dictionary = {}):
 		return
 	
 	_log_debug("Solicitando início da rodada...")
+	is_loading = true
 	network_manager._server_request_start_round(round_settings)
 	
 func _client_round_started(server_id: String, match_data: Dictionary):
@@ -1125,7 +1141,6 @@ func _client_round_ended(end_data: Dictionary):
 	_cleanup_local_round()
 
 func _start_round_locally(server_id: String, match_data: Dictionary):
-	is_loading = true
 	"""Inicia a rodada localmente no cliente"""
 	_log_debug("========================================")
 	_log_debug("INICIANDO RODADA")
@@ -1198,12 +1213,11 @@ func _start_round_locally(server_id: String, match_data: Dictionary):
 	var filtered_round_data = filtrar_dict_invertido(match_data)
 	current_round = filtered_round_data
 	
-	is_loading = false
+	finish_loading()
 	await get_tree().process_frame
 	_log_debug("Rodada carregada no cliente")
 
 func _return_round_locally(server_id: String, match_data: Dictionary):
-	is_loading = true
 	"""Retorna à rodada localmente no cliente"""
 	_log_debug("========================================")
 	_log_debug("RETORNANDO À RODADA")
@@ -1320,7 +1334,7 @@ func _return_round_locally(server_id: String, match_data: Dictionary):
 	# Sinalizar pra o servidor que está reconectado na rodada
 	_unmark_player_disconnected()
 	
-	is_loading = false
+	finish_loading()
 	await get_tree().process_frame
 	_log_debug("Rodada recarregada no cliente")
 

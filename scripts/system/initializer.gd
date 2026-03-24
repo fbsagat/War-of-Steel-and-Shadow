@@ -4,7 +4,7 @@ extends Node
 ## [TESTES] Usa o TestManager para iniciar uma partida logo na execução (localhost)
 ## (configura server e clients / server cria round e inicia partida com primeiros clientes /
 ##  clientes recebem localhost_auto_connect = true)
-@export var test_mode: bool = true
+@export var test_mode: bool = false
 ## [TESTES] Define a quantidade de instâcias de clientes conectadas para executar fast_round
 @export var simulador_players_qtd: int = 2
 ## Ativa/desativa o debug visual na gameplay
@@ -20,7 +20,7 @@ var activate_only_selected: bool = true
 # Disponíveis: "Server", "NetworkManager", "TestManager", "GameManager", "RoomRegistry"
 # "RoundRegistry", "ClientRegistry", "Player_node", "ObjectManager", "MapManager", "MainMenu"
 # "ItemDatabase", "InventoryMenu", "DroppedItem"
-var selected: Array = ["Server", "NetworkManager", "TestManager", "GameManager"]
+var selected: Array = ["Server", "ClientRegistry", "NetworkManager", "TestManager", "GameManager"]
 
 # Referências
 ## Manager de rede, gerencia comunicação entre servidor e clientes
@@ -275,11 +275,13 @@ func _init_client(id_file_):
 	# Configurar modo de testes
 	if test_mode:
 		game_manager.localhost_auto_connect = true
+		game_manager.is_loading = true
 		main_menu.start_unlocked_mouse = start_unlocked_mouse
 	game_manager.visual_debug = visual_debug
 	if visual_debug:
 		game_manager.debug_overlay_node = debug_overlay
 		game_manager.debug_menu_visible = true
+		debug_overlay.game_manager = game_manager
 		
 		
 	item_database.is_server = false
