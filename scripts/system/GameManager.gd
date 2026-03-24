@@ -7,7 +7,7 @@ class_name GameManager
 # ===== CONFIGURAÇÕES =====
 
 @export_category("Connection Settings")
-const DEFAULT_SERVER_ADDRESS: String = "172.23.2.183" #local host: "127.0.0.1"
+const DEFAULT_SERVER_ADDRESS: String = "127.0.0.1"
 const DEFAULT_SERVER_PORT: int = 7777
 @export var server_address: String = DEFAULT_SERVER_ADDRESS
 @export var server_port: int = DEFAULT_SERVER_PORT
@@ -27,11 +27,14 @@ const camera_controller : String = "res://scenes/gameplay/camera_controller.tscn
 const MAX_RECONNECT_ATTEMPTS : int = 1000
 const RECONNECT_DELAY := 2.0 # segundos
 var reconnect_timer: Timer
+
 # Heartbeat (detecção)
 var last_pong_time := 0
 var ping_interval := 1.0
 var timeout_limit := 3000 # ms
 var ping_start_time := 0
+var has_received_pong := false
+var has_timed_out := false
 
 @export_category("Player Identifier")
 var UUID_FILE := "user://identity.json"
@@ -106,7 +109,15 @@ func _ready():
 	pass
 
 func _process(_delta):
-	pass
+	if not has_received_pong:
+		return
+	
+	if has_timed_out:
+		return
+	
+	if Time.get_ticks_msec() - last_pong_time > timeout_limit and has_received_pong:
+		has_timed_out = true
+		_on_server_disconnected()
 	
 func initialize():
 	if main_menu_node:
@@ -119,6 +130,11 @@ func initialize():
 	
 	# Identificação de cliente
 	uuid_base = _load_or_create_uuid()
+	
+	# Preenche uuid do debug overlay
+	if debug_overlay_node:
+		debug_overlay_node.client_uuid = uuid_base
+		
 	server_tokens = _load_tokens()
 	
 	connect_inventory_signals()
@@ -147,6 +163,8 @@ func connect_muiltiplayer_signals():
 
 func start_heartbeat():
 	_log_debug("Inicializando heartbeat")
+	last_pong_time = 0
+	ping_start_time = 0
 	while true:
 		_client_send_ping()
 		await get_tree().create_timer(ping_interval).timeout
@@ -159,6 +177,7 @@ func _client_send_ping():
 	network_manager._send_ping()
 
 func _client_receive_pong():
+	has_received_pong = true
 	last_pong_time = Time.get_ticks_msec()
 
 	var now = Time.get_ticks_msec()
@@ -319,6 +338,7 @@ func _on_connected_to_server():
 	if debug_overlay_node:
 		debug_overlay_node.visible = true
 		debug_menu_visible = true
+		debug_overlay_node.peer_id = local_peer_id
 	
 	_log_debug(" Cliente conectado ao servidor com sucesso! Peer ID: %d" % local_peer_id)
 	
@@ -361,6 +381,7 @@ func _on_server_disconnected():
 	
 	is_connected_to_server = false
 	network_manager.is_connected_ = false
+	has_received_pong = false
 	
 	# Inicia processo de reconexão
 	# Mostra menu de reconexão
@@ -398,7 +419,7 @@ func _try_reconnect() -> void:
 		_log_debug("Erro ao criar cliente ENet. Código: %s" % str(result))
 		_schedule_next_retry()
 		return
-
+	
 	multiplayer.multiplayer_peer = peer
 
 	# Se o servidor estiver offline, o resultado real virá por signal
@@ -439,6 +460,7 @@ func _disconnect_from_server(notify_server: bool = false):
 	is_connected_to_server = false
 	is_in_round = false
 	is_connecting = false
+	has_received_pong = false
 	local_peer_id = 0
 	player_name = ""
 	configs.clear()
@@ -620,11 +642,13 @@ func handle_server_response(response: Dictionary) -> void:
 	elif response["status"] == "ok":
 		_log_debug("Autenticado com sucesso")
 		
-		
-		
+		has_timed_out = false
 		player_name = response["player_name"]
 		
 		if is_in_round:
+			# Atualiza o node para o novo session id
+			_client_update_character_peer_id(uuid_base, local_peer_id)
+			
 			if main_menu_node:
 				main_menu_node.hide_main_menu()
 		else:
@@ -1381,13 +1405,17 @@ func _client_update_character_peer_id(_uuid_base: String, _new_peer_id: int):
 			child.name = str(_new_peer_id)
 			child.player_id = _new_peer_id
 			
+			# Atualiza no debug overlay também
+			if debug_overlay_node:
+				debug_overlay_node.peer_id = _new_peer_id
+			
 			if visual_debug:
 				var start = _uuid_base.substr(0, 4)
 				var end = _uuid_base.substr(_uuid_base.length() - 4, 4)
 				child.name_label.text = "%s\n%s[...]%s\n%s" % [player_name, start, end, _new_peer_id]
 			
 			child.set_multiplayer_authority(_new_peer_id)
-# Execut
+
 func _cleanup_local_round():
 	"""Limpa todos os objetos da rodada no cliente"""
 	_log_debug("Limpando objetos da rodada...")

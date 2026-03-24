@@ -8,17 +8,24 @@ follow_viewport_scale = 686.184
 script = ExtResource("1_tasbd")
 
 [node name="Panel" type="Panel" parent="." unique_id=1615780359]
-offset_left = -7.0
-offset_top = 8.0
-offset_right = 207.0
-offset_bottom = 130.0
+offset_left = 7.0
+offset_top = 6.0
+offset_right = 209.0
+offset_bottom = 154.0
+metadata/_edit_use_anchors_ = true
 
 [node name="Label" type="Label" parent="Panel" unique_id=303991724]
-layout_mode = 0
-offset_left = 16.0
-offset_top = -18.0
-offset_right = 194.0
-offset_bottom = 139.0
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.5
+anchor_top = 0.48600003
+anchor_right = 0.5
+anchor_bottom = 0.48600003
+offset_left = -85.0
+offset_top = -66.928
+offset_right = 93.0
+offset_bottom = 67.072
 theme_override_font_sizes/font_size = 14
 horizontal_alignment = 1
 vertical_alignment = 1
+metadata/_edit_use_anchors_ = true

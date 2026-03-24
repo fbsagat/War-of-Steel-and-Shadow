@@ -385,7 +385,7 @@ func _on_peer_connected(peer_id: int):
 	}
 	
 	# Atualiza max_players_per_room e min_players_to_start para clientes
-	# atualiza nome do seridor e envia id do servidor
+	# atualiza nome do servidor e envia id do servidor
 	network_manager.rpc_id(peer_id, "_client_update_info", configs)
 
 func _on_peer_disconnected(peer_id: int):
@@ -1438,8 +1438,8 @@ func _apply_player_state_on_server(p_id: int, pos: Vector3, rot: Vector3, vel: V
 		"timestamp": Time.get_ticks_msec()
 	}
 	
-	# Anticheat
-	_validate_player_movement(player_uuid, pos, vel, rot)
+	# Validação de movimento
+	#_validate_player_movement(player_uuid, pos, vel, rot)
 
 func _apply_animation_state_on_server(p_id: int, speed: float, attacking: bool, defending: bool,
 									jumping: bool, aiming: bool, running: bool, block_attacking: bool, on_floor: bool):

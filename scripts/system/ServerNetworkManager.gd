@@ -25,6 +25,9 @@ const RPC_RATE_LIMIT_SEC = 0.25
 var _player_rpc_timestamps = {}
 var _player_rpc_queues = {}
 
+var last_ping_from_client := {} # peer_id -> timestamp
+var timeout_limit := 3000 # ms
+
 # ===== INICIALIZAÇÃO =====
 
 func initialize():
@@ -35,9 +38,32 @@ func initialize():
 
 func _process(delta: float):
 	_server_update_sync_timers(delta)
+	#_client_timout_detection(delta)
 
-func _get_log_prefix() -> String:
-	return "[SERVER][NetworkManager]"
+# ===== CLIENT TIMOUT DETECTOR =====
+
+#func remove_client(peer_id: int):
+	#if last_ping_from_client.has(peer_id):
+		#last_ping_from_client.erase(peer_id)
+#
+#func _client_timout_detection(_delta):
+	#var now = Time.get_ticks_msec()
+	#
+	#for peer_id in last_ping_from_client.keys():
+		#var last_time = last_ping_from_client[peer_id]
+		#
+		#if now - last_time > timeout_limit:
+			#print("Cliente com timeout:", peer_id)
+			#_on_client_timeout(peer_id)
+
+# ===== HEARTBEAT =====
+
+func _client_send_ping():
+	var sender = multiplayer.get_remote_sender_id()
+	last_ping_from_client[sender] = Time.get_ticks_msec()
+	rpc_id(sender, "_client_receive_pong")
+
+# ===== CONECÇÃO =====
 
 func _on_peer_disconnected(peer_id: int):
 	if _player_rpc_timestamps.has(peer_id):
@@ -58,12 +84,6 @@ func is_rpc_allowed(peer_id: int) -> bool:
 	_player_rpc_timestamps[peer_id] = current_time
 	return true
 
-# ===== HEARTBEAT =====
-
-func _client_send_ping():
-	var sender = multiplayer.get_remote_sender_id()
-	rpc_id(sender, "_client_receive_pong")
-
 # ===== AUTENTICAÇÃO =====
 
 func _server_receive_hello(payload: Dictionary):
@@ -74,7 +94,6 @@ func _server_receive_hello(payload: Dictionary):
 	# RENOMEADO DESTINO: "client_receive_auth_result" → "_client_receive_auth_result"
 	rpc_id(peer_id, "_client_receive_auth_result", response)
 
-
 # ===== REGISTRO DE JOGADOR =====
 
 func _server_register_player_name(player_name: String):
@@ -82,7 +101,6 @@ func _server_register_player_name(player_name: String):
 		return
 	var peer_id = multiplayer.get_remote_sender_id()
 	server_manager._handle_register_player_name(peer_id, player_name)
-
 
 # ===== SALAS =====
 
@@ -192,7 +210,6 @@ func _server_drop_item(player_id, obj_id):
 		return
 	server_manager._server_validate_drop_item(player_id, obj_id)
 
-
 # ===== SINCRONIZAÇÃO DE ESTADO DE JOGADORES =====
 
 func _server_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
@@ -290,10 +307,14 @@ func unregister_syncable_object(object_id: int) -> void:
 		sync_timers.erase(object_id)
 	_log_debug("🗑️ Objeto removido do sync: %d" % object_id)
 
-
 # ===== AÇÕES (ATAQUES, DEFESA) =====
 
 func _server_player_action(p_id: int, action_type: String, item_equipado_nome, anim_name: String):
 
 	if server_manager.has_method("_server_player_action"):
 		server_manager._server_player_action(p_id, action_type, item_equipado_nome, anim_name)
+
+# ===== UTILITÁRIOS =====
+
+func _get_log_prefix() -> String:
+	return "[SERVER][NetworkManager]"
