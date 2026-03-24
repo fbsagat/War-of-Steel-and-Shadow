@@ -155,8 +155,8 @@ func create_test_round(nome_sala: String = "Sala de Teste", configuracoes_round:
 	
 	# Adiciona outros jogadores à sala (host já foi adicionado)
 	for i in range(1, players.size()):
-		var success = room_registry.add_player_to_room(room_id, players[i]["uuid_base"])
-		if not success:
+		var _success = room_registry.add_player_to_room(room_id, players[i]["uuid_base"])
+		if not _success:
 			_log_debug("  ⚠ Falha ao adicionar jogador %s à sala" % players[i]["name"])
 	
 	# Valida requisitos para iniciar (teste de função)
@@ -358,81 +358,135 @@ func _server_instantiate_round(match_data: Dictionary, players_node, round_node)
 func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, round_id: int, players_node):
 	"""
 	Spawna um jogador no servidor (versão autoritativa)
+	Com carregamento assíncrono e timeouts de segurança
 	"""
 	
-	# Validações iniciais
+	# ===== VALIDAÇÕES INICIAIS =====
 	if not player_data.has("id") or not player_data.has("name"):
 		push_error("TestManager: player_data inválido: faltam 'id' ou 'name'")
 		return
 	
 	var p_uuid = player_data["id"]
+	var player_name = player_data["name"]
 	
-	# Carrega e instancia a cena do player
+	_log_debug("🔄 Iniciando spawn do player: %s (UUID: %s)" % [player_name, p_uuid])
+	
+	# ===== CARREGAMENTO DA CENA =====
+	# Opção 1: preload() - Mais rápido, recurso já em memória (RECOMENDADO para players)
 	var player_scene = preload(server_manager.player_scene)
 	if not player_scene:
-		push_error("TestManager: Falha ao carregar player_warrior.tscn")
+		push_error("TestManager: Falha ao carregar player_scene: %s" % server_manager.player_scene)
 		return
 	
+	# Opção 2: ResourceLoader assíncrono - Use se quiser carregamento em thread
+	# var player_scene = await _load_player_scene_async(server_manager.player_scene)
+	# if not player_scene:
+	# 	return
+	
+	_log_debug("📦 Cena do player carregada, instanciando...")
+	
+	# ===== INSTANCIAÇÃO =====
 	var player_instance = player_scene.instantiate()
 	if not player_instance:
 		push_error("TestManager: Falha ao instanciar player_scene")
 		return
 	
-	# Adiciona aos grupos
+	# Configurações básicas antes de adicionar à árvore
 	player_instance.add_to_group("remote_player")
 	player_instance.add_to_group("player")
-	
-	# IMPORTANTE: No servidor, nenhum player é "local"
 	player_instance.is_local_player = false
 	player_instance._is_server = true
-		
-	await get_tree().process_frame
 	
-	# Adiciona player à cena
-	players_node.add_child(player_instance)
-	
-	# Injeta dependências
+	# Injeta dependências ANTES de adicionar à árvore
 	player_instance.item_database = item_database
 	player_instance.network_manager = network_manager
 	player_instance.server_manager = server_manager
 	player_instance.initializer = initializer
-		
-	await get_tree().process_frame
 	
-	# Inicializa jogador (configura identificação básica)
-	var color: Color = Color(0.0, 0.0, 0.0, 1.0)
-	var final_color: Color = player_data["character"]["color"] if player_data["character"]["color"] else color
-	player_instance.initialize(player_data["name"], final_color, player_data["session_id"],
-	 player_data["id"], spawn_data["position"])
-	player_instance.rotation = spawn_data["rotation"]
-		
-	await get_tree().process_frame
+	_log_debug("🌳 Adicionando player à cena...")
 	
-	# Preenche terreno e central_spawn
-	player_instance.terrain_ = map_manager.current_map
-	player_instance.central_spawn = player_instance.terrain_.get_node_or_null("central_spawn")
+	# ===== ADIÇÃO À ÁRVORE DE CENA =====
+	players_node.add_child(player_instance)
 	
-	# AGUARDA PROCESSAMENTO COMPLETO
-	if not player_instance.is_node_ready():
-		await player_instance.ready
-		
-	await get_tree().process_frame
+	# Aguarda o player estar na árvore
+	var tree_timeout = 60  # ~1 segundo
+	var tree_waited = 0
+	while not player_instance.is_inside_tree() and tree_waited < tree_timeout:
+		await get_tree().process_frame
+		tree_waited += 1
 	
-	# VALIDA QUE ESTÁ NA ÁRVORE
 	if not player_instance.is_inside_tree():
-		push_error("TestManager CRÍTICO: Player %d não foi adicionado à árvore!" % p_uuid)
+		push_error("TestManager CRÍTICO: Player %s não foi adicionado à árvore após %d frames!" % [p_uuid, tree_timeout])
 		player_instance.queue_free()
 		return
 	
-	# REGISTRA NO ClientRegistry
-	client_registry.register_player_node(p_uuid, player_instance)
+	_log_debug("✓ Player adicionado à árvore de cena")
 	
-	# Registra no RoundRegistry
-	round_registry.register_spawned_player(round_id, p_uuid, player_instance)
+	# ===== AGUARDA READY COM TIMEOUT =====
+	if player_instance.has_method("_ready"):
+		_log_debug("⏳ Aguardando _ready() do player...")
 		
+		var ready_timeout = 120  # ~2 segundos
+		var ready_waited = 0
+		
+		while not player_instance.is_node_ready() and ready_waited < ready_timeout:
+			await get_tree().process_frame
+			ready_waited += 1
+		
+		if ready_waited >= ready_timeout:
+			push_warning("⚠️ Timeout aguardando _ready() do player %s, continuando mesmo assim..." % p_uuid)
+		else:
+			_log_debug("✓ Player está ready!")
+	else:
+		_log_debug("ℹ️ Player não tem _ready(), pulando espera")
+		# Aguarda alguns frames para garantir que nós filhos foram criados
+		await get_tree().process_frame
+		await get_tree().process_frame
+	
+	# ===== INICIALIZAÇÃO DO JOGADOR =====
+	_log_debug("🔧 Inicializando player %s..." % player_name)
+	
+	var color: Color = Color(0.0, 0.0, 0.0, 1.0)
+	var final_color: Color = player_data["character"]["color"] if player_data["character"]["color"] else color
+	
+	player_instance.initialize(
+		player_data["name"], 
+		final_color, 
+		player_data["session_id"],
+		player_data["id"], 
+		spawn_data["position"]
+	)
+	player_instance.rotation = spawn_data["rotation"]
+	
+	# Aguarda processamento da inicialização
 	await get_tree().process_frame
 	
-	# Inicializa estado de validação no ServerManager
+	# ===== CONFIGURAÇÕES DO MAPA =====
+	_log_debug("🗺️ Configurando referências do mapa...")
+	
+	player_instance.terrain_ = map_manager.current_map
+	if player_instance.terrain_:
+		player_instance.central_spawn = player_instance.terrain_.get_node_or_null("central_spawn")
+		_log_debug("  - Terrain: %s" % ("✓" if player_instance.terrain_ else "✗"))
+		_log_debug("  - Central Spawn: %s" % ("✓" if player_instance.central_spawn else "✗"))
+	else:
+		push_warning("⚠️ MapManager não tem mapa carregado!")
+	
+	# ===== VALIDAÇÃO FINAL =====
+	if not player_instance.is_inside_tree():
+		push_error("TestManager CRÍTICO: Player %s removido da árvore após inicialização!" % p_uuid)
+		player_instance.queue_free()
+		return
+	
+	# ===== REGISTROS =====
+	_log_debug("📝 Registrando player nos registries...")
+	
+	client_registry.register_player_node(p_uuid, player_instance)
+	round_registry.register_spawned_player(round_id, p_uuid, player_instance)
+	
+	await get_tree().process_frame
+	
+	# ===== ESTADO NO SERVER MANAGER =====
 	server_manager.player_states[p_uuid] = {
 		"pos": spawn_data["position"],
 		"vel": Vector3.ZERO,
@@ -440,9 +494,9 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 		"timestamp": Time.get_ticks_msec()
 	}
 	
-	_log_debug("✓ Player spawnado no servidor: %s (ID: %s) em %s" % [
-		player_data["name"], 
-		player_data["id"],
+	_log_debug("✅ Player spawnado com sucesso: %s (ID: %s) em %s" % [
+		player_name, 
+		p_uuid,
 		spawn_data["position"]
 	])
 

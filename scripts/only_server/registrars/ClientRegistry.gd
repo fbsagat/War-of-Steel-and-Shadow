@@ -163,6 +163,7 @@ func update_peer_id(uuid_base: String, new_peer_id: int):
 			if players[player_uuid]["connected"] == true and player_uuid != uuid_base:
 				var peer_id = get_peer_id_by_uuid(player_uuid)
 				network_manager.rpc_id(peer_id, "_client_update_character_peer_id", uuid_base, new_peer_id)
+				_log_debug("Enviando comando para cliente %s para atualizar session id de remoto de uuid: %s para este novo: %d" % [player_uuid, uuid_base, new_peer_id])
 	
 	# Atualizar também no round do servidor
 	var node = get_player_node(uuid_base)

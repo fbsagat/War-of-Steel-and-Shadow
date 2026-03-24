@@ -16,7 +16,7 @@ extends Node
 
 # Instruções para debug
 ## Executa _log_debug apenas nos itens selecionados
-var activate_only_selected: bool = false
+var activate_only_selected: bool = true
 # Disponíveis: "Server", "NetworkManager", "TestManager", "GameManager", "RoomRegistry"
 # "RoundRegistry", "ClientRegistry", "Player_node", "ObjectManager", "MapManager", "MainMenu"
 # "ItemDatabase", "InventoryMenu", "DroppedItem"

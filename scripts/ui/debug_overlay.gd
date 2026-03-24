@@ -60,11 +60,11 @@ func update_ping(value: int) -> void:
 	if ping_history.size() > PING_HISTORY_SIZE:
 		ping_history.pop_front()
 
-	var sum := 0
+	var _sum := 0
 	for p in ping_history:
-		sum += p
+		_sum += p
 
-	ping_avg = sum / ping_history.size()
+	#ping_avg = sum / ping_history.size()
 
 func update_pong_time(time: int) -> void:
 	last_pong_time = time

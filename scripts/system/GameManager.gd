@@ -56,6 +56,7 @@ var initializer = null
 
 var is_connected_to_server: bool = false
 var is_in_round: bool = false
+var is_loading: bool = false
 var is_connecting: bool = false
 var inventory_menu: bool = false # True se o menu de inventário estiver visível
 var gameplay_menu: bool = false # True se o menu de gameplay  estiver visível
@@ -111,13 +112,22 @@ func _ready():
 	pass
 
 func _process(_delta):
+	_ping_pong(_delta)
+
+func _ping_pong(_delta):
+	# Se estiver carregando algo, não detecta perda de conexão (falsa detecção)
+	if is_loading:
+		return
+	
+	# Não começa a detectar enquanto não estiver recebido o primeiro pong
 	if not has_received_pong:
 		return
 	
+	# Se já estiver detectado a primeira vez, ignora as outras (_process está no loop)
 	if has_timed_out:
 		return
-	
-	if Time.get_ticks_msec() - last_pong_time > timeout_limit and has_received_pong:
+		
+	if Time.get_ticks_msec() - last_pong_time > timeout_limit and has_received_pong and not is_loading:
 		has_timed_out = true
 		_on_server_disconnected()
 	
@@ -1115,6 +1125,7 @@ func _client_round_ended(end_data: Dictionary):
 	_cleanup_local_round()
 
 func _start_round_locally(server_id: String, match_data: Dictionary):
+	is_loading = true
 	"""Inicia a rodada localmente no cliente"""
 	_log_debug("========================================")
 	_log_debug("INICIANDO RODADA")
@@ -1187,9 +1198,12 @@ func _start_round_locally(server_id: String, match_data: Dictionary):
 	var filtered_round_data = filtrar_dict_invertido(match_data)
 	current_round = filtered_round_data
 	
+	is_loading = false
+	await get_tree().process_frame
 	_log_debug("Rodada carregada no cliente")
 
 func _return_round_locally(server_id: String, match_data: Dictionary):
+	is_loading = true
 	"""Retorna à rodada localmente no cliente"""
 	_log_debug("========================================")
 	_log_debug("RETORNANDO À RODADA")
@@ -1306,99 +1320,256 @@ func _return_round_locally(server_id: String, match_data: Dictionary):
 	# Sinalizar pra o servidor que está reconectado na rodada
 	_unmark_player_disconnected()
 	
+	is_loading = false
+	await get_tree().process_frame
 	_log_debug("Rodada recarregada no cliente")
 
 func _spawn_player(player_data: Dictionary, is_local: bool, _match_data: Dictionary):
-	"""Spawna players para cada cliente, cada cliente recebe X execuções,
-	 a do seu jogador local e a do(s) jogador(es) remoto(s), sendo o seu = local
-	player_data: { "id": "c3fabada6625ae19d44ed7df0eced246", "session_id": 504040370, 
-	"name": "TestPlayer1 - 504040370", "is_host": false, "is_offline": false }"""
+	"""
+	Spawna players para cada cliente.
+	Cada cliente recebe X execuções: a do seu jogador local e a do(s) jogador(es) remoto(s).
+	is_local = true → jogador local | is_local = false → jogador remoto
+	"""
 	
-	# Verifica duplicação
+	# ===== VALIDAÇÕES INICIAIS =====
+	if not player_data.has("id") or not player_data.has("name") or not player_data.has("session_id"):
+		push_error("GameManager: player_data inválido: faltam campos obrigatórios")
+		return
+	
+	if not _match_data.has("settings") or not _match_data["settings"].has("spawn_points"):
+		push_error("GameManager: _match_data sem spawn_points válidos")
+		return
+	
 	var player_name_ = str(player_data["id"])
 	var camera_name = player_name_ + "_Camera"
+	var session_id = player_data["session_id"]
+	var player_uuid = player_data["id"]
+	var player_display_name = player_data["name"]
 	
+	_log_debug("🔄 [SPAWN CLIENT] Iniciando spawn: %s (Session: %s, Local: %s)" % [
+		player_display_name, session_id, "SIM" if is_local else "NÃO"
+	])
+	
+	# ===== VERIFICA DUPLICAÇÃO =====
 	if players_node.has_node(player_name_):
-		_log_debug("⚠ Player já existe: %s" % player_name_)
+		_log_debug("⚠️ [SPAWN CLIENT] Player já existe: %s" % player_name_)
 		return
-		
-	if players_node.has_node(camera_name):
-		_log_debug("⚠ Câmera já existe: %s" % camera_name)
-		return
-
-	# Instancia player
-	var player_scene_ = preload(player_scene)
-	var player_instance = player_scene_.instantiate()
-		
-	await get_tree().process_frame
 	
-	# Injeta dependências
+	if players_node.has_node(camera_name):
+		_log_debug("⚠️ [SPAWN CLIENT] Câmera já existe: %s" % camera_name)
+		return
+	
+	# ===== VALIDA NÓS NECESSÁRIOS =====
+	if not players_node:
+		push_error("GameManager: players_node é null!")
+		return
+	
+	if is_local and not camera_instance:
+		push_error("GameManager: camera_instance é null para jogador local!")
+		return
+	
+	# ===== CARREGAMENTO DA CENA =====
+	_log_debug("📦 [SPAWN CLIENT] Carregando cena do player: %s" % player_scene)
+	
+	var player_scene_ = preload(player_scene)
+	if not player_scene_:
+		push_error("GameManager: Falha ao carregar player_scene: %s" % player_scene)
+		return
+	
+	# ===== INSTANCIAÇÃO =====
+	var player_instance = player_scene_.instantiate()
+	if not player_instance:
+		push_error("GameManager: Falha ao instanciar player_scene")
+		return
+	
+	_log_debug("✓ [SPAWN CLIENT] Cena instanciada com sucesso")
+	
+	# ===== INJEÇÃO DE DEPENDÊNCIAS (PRÉ-ÁRVORE) =====
+	_log_debug("💉 [SPAWN CLIENT] Injetando dependências...")
+	
 	player_instance.item_database = item_database
 	player_instance.network_manager = network_manager
 	player_instance.initializer = initializer
 	player_instance.game_manager = self
 	
-	# Adiciona player à cena PRIMEIRO
-	players_node.add_child(player_instance)
-		
-	await get_tree().process_frame
+	# ===== ADIÇÃO À ÁRVORE DE CENA =====
+	_log_debug("🌳 [SPAWN CLIENT] Adicionando player à cena...")
 	
-	# Inicializa jogador (configura identificação básica)
-	var player_pos = _match_data["settings"]["spawn_points"][player_data["session_id"]]
+	players_node.add_child(player_instance)
+	
+	# Aguarda o player estar na árvore com timeout
+	var tree_timeout = 60  # ~1 segundo
+	var tree_waited = 0
+	
+	while not player_instance.is_inside_tree() and tree_waited < tree_timeout:
+		await get_tree().process_frame
+		tree_waited += 1
+	
+	if not player_instance.is_inside_tree():
+		push_error("GameManager CRÍTICO: Player %s não foi adicionado à árvore após %d frames!" % [player_uuid, tree_timeout])
+		player_instance.queue_free()
+		return
+	
+	_log_debug("✓ [SPAWN CLIENT] Player adicionado à árvore de cena")
+	
+	# ===== AGUARDA READY COM TIMEOUT =====
+	if player_instance.has_method("_ready"):
+		_log_debug("⏳ [SPAWN CLIENT] Aguardando _ready() do player...")
+		
+		var ready_timeout = 120  # ~2 segundos
+		var ready_waited = 0
+		
+		while not player_instance.is_node_ready() and ready_waited < ready_timeout:
+			await get_tree().process_frame
+			ready_waited += 1
+		
+		if ready_waited >= ready_timeout:
+			push_warning("⚠️ [SPAWN CLIENT] Timeout aguardando _ready() do player %s, continuando..." % player_uuid)
+		else:
+			_log_debug("✓ [SPAWN CLIENT] Player está ready!")
+	else:
+		_log_debug("ℹ️ [SPAWN CLIENT] Player não tem _ready(), pulando espera")
+		await get_tree().process_frame
+		await get_tree().process_frame
+	
+	# ===== INICIALIZAÇÃO DO JOGADOR =====
+	_log_debug("🔧 [SPAWN CLIENT] Inicializando dados do player...")
+	
+	var player_pos = _match_data["settings"]["spawn_points"][session_id]
+	if not player_pos:
+		push_error("GameManager: Spawn point não encontrado para session_id: %s" % session_id)
+		player_pos = {"position": Vector3.ZERO, "rotation": Vector3.ZERO}
+	
 	var color: Color = Color(0.0, 0.0, 0.0, 1.0)
 	var final_color = player_data["character"]["color"] if player_data["character"]["color"] else color
-	player_instance.initialize(player_data["name"], final_color, player_data["session_id"], player_data["id"], player_pos["position"])
+	
+	player_instance.initialize(
+		player_data["name"], 
+		final_color, 
+		session_id, 
+		player_uuid, 
+		player_pos["position"]
+	)
 	player_instance.rotation = player_pos["rotation"]
 	
+	# Aguarda processamento da inicialização
 	await get_tree().process_frame
 	
-	# Configuração ESPECÍFICA por tipo de jogador
+	# ===== CONFIGURAÇÃO ESPECÍFICA POR TIPO DE JOGADOR =====
 	if is_local:
-		# Só instanciar e atribuir câmera para jogador LOCAL
+		await _setup_local_player(player_instance, camera_name, player_pos)
+	else:
+		_setup_remote_player(player_instance, player_name_, player_pos)
+	
+	_log_debug("✅ [SPAWN CLIENT] Player spawnado com sucesso: %s (Local: %s)" % [
+		player_display_name, "SIM" if is_local else "NÃO"
+	])
+
+# ===== FUNÇÕES AUXILIARES DE SETUP =====
+
+func _setup_local_player(player_instance: Node, camera_name: String, player_pos: Dictionary) -> void:
+	"""Configurações específicas para jogador LOCAL"""
+	_log_debug("🎮 [LOCAL] Configurando jogador local...")
+	
+	# Configura câmera
+	if camera_instance:
 		camera_instance.name = camera_name
 		camera_instance.target = player_instance
-		
-		# Inicializa o inventário do player local (no game manager)
-		init_player_inventory()
-		
-		# Carrega o menu de inventário
-		var inventory_scene: PackedScene = load("res://scenes/ui/inventory_menu.tscn")
-		var inventory_node_: Node = inventory_scene.instantiate()
-		round_node.add_child(inventory_node_)
-		inventory_node = inventory_node_
-		inventory_node.game_manager = self
-		inventory_node.initializer = initializer
-		
-		# Atribui referência DIRETA (só para local) inventory_node
-		player_instance.inventory_node = inventory_node
-		inventory_node.setup_inventory_signals()
-		player_instance.connect_inventory_signals()
-		inventory_node.player_node = player_instance
-		
-		# Atribui referência DIRETA (só para local) camera_instance
-		player_instance.camera_controller = camera_instance
-		
-		# Ativa controle
-		player_instance.set_as_local_player()
-		camera_instance.set_as_active()
-		local_player_node = player_instance
-		
-		player_instance.add_to_group("player")
-		player_instance.add_to_group("myself_player")
-		
-		# Preenche terreno e central_spawn do player local (comentado pois não está sendo usado)
-		#player_instance.terrain_ = map_manager.current_map
-		#player_instance.central_spawn = player_instance.terrain_.get_node_or_null("central_spawn")
-		
-		_log_debug("🧍🏼Jogador local spawnado: %s na posição: %s" % [player_name_, player_pos["position"]])
+		_log_debug("  - Câmera configurada: %s" % camera_name)
 	else:
-		# Jogador remoto: NÃO tem câmera atribuída
-		player_instance.camera_controller = null
+		push_error("[LOCAL] camera_instance é null!")
+	
+	# Inicializa inventário do player local
+	init_player_inventory()
+	_log_debug("  - Inventário inicializado")
+	
+	# ===== CARREGAMENTO ASSÍNCRONO DO INVENTÁRIO =====
+	_log_debug("📦 [LOCAL] Carregando cena do inventário...")
+	
+	var inventory_scene: PackedScene = load("res://scenes/ui/inventory_menu.tscn")
+	if not inventory_scene:
+		push_error("[LOCAL] Falha ao carregar inventory_menu.tscn")
+		return
+	
+	var inventory_node_: Node = inventory_scene.instantiate()
+	if not inventory_node_:
+		push_error("[LOCAL] Falha ao instanciar inventory_menu.tscn")
+		return
+	
+	# Adiciona à cena
+	round_node.add_child(inventory_node_)
+	
+	# Aguarda estar na árvore
+	var tree_timeout = 60
+	var tree_waited = 0
+	while not inventory_node_.is_inside_tree() and tree_waited < tree_timeout:
+		await get_tree().process_frame
+		tree_waited += 1
+	
+	if not inventory_node_.is_inside_tree():
+		push_error("[LOCAL] Inventory node não foi adicionado à árvore!")
+		inventory_node_.queue_free()
+		return
+	
+	inventory_node = inventory_node_
+	inventory_node.game_manager = self
+	inventory_node.initializer = initializer
+	
+	# Aguarda ready do inventário
+	if inventory_node.has_method("_ready"):
+		var ready_timeout = 60
+		var ready_waited = 0
+		while not inventory_node.is_node_ready() and ready_waited < ready_timeout:
+			await get_tree().process_frame
+			ready_waited += 1
 		
-		player_instance.add_to_group("player")
-		player_instance.add_to_group("remote_player")
-		
-		_log_debug("🧍🏼Jogador remoto spawnado: %s na posição: %s" % [player_name_, player_pos["position"]])
+		if ready_waited >= ready_timeout:
+			push_warning("[LOCAL] Timeout aguardando _ready() do inventário")
+	
+	# Configura sinais e referências
+	inventory_node.player_node = player_instance
+	player_instance.inventory_node = inventory_node
+	inventory_node.setup_inventory_signals()
+	player_instance.connect_inventory_signals()
+	
+	_log_debug("  - Inventário configurado e sinais conectados")
+	
+	# Atribui câmera ao player
+	if camera_instance:
+		player_instance.camera_controller = camera_instance
+		camera_instance.set_as_active()
+		_log_debug("  - Câmera ativa")
+	else:
+		push_error("[LOCAL] camera_instance é null após setup!")
+	
+	# Ativa controle local
+	player_instance.set_as_local_player()
+	local_player_node = player_instance
+	
+	# Adiciona aos grupos
+	player_instance.add_to_group("player")
+	player_instance.add_to_group("myself_player")
+	
+	_log_debug("✓ [LOCAL] Jogador local configurado: %s em %s" % [
+		player_instance.player_name if player_instance.has_node("player_name") else "Unknown",
+		player_pos["position"]
+	])
+
+func _setup_remote_player(player_instance: Node, player_name_: String, player_pos: Dictionary) -> void:
+	"""Configurações específicas para jogador REMOTO"""
+	_log_debug("🌐 [REMOTO] Configurando jogador remoto...")
+	
+	# Jogador remoto: NÃO tem câmera atribuída
+	player_instance.camera_controller = null
+	
+	# Adiciona aos grupos
+	player_instance.add_to_group("player")
+	player_instance.add_to_group("remote_player")
+	
+	_log_debug("✓ [REMOTO] Jogador remoto configurado: %s em %s" % [
+		player_name_,
+		player_pos["position"]
+	])
 
 func _client_return_to_room(room_data: Dictionary):
 	"""Callback quando deve retornar à sala"""
@@ -1433,9 +1604,10 @@ func _client_remove_player(peer_id : int):
 
 func _client_update_character_peer_id(_uuid_base: String, _new_peer_id: int):
 	"""Atualiza o id de sessão do cliente reconectado no round para manutenção de sincronia, 
-	isso acontece nos clientes que inda estão no round"""
+	isso acontece nos clientes que ainda estão no round"""
 	_log_debug("👤 Atualizando session id de remoto: %s para %d" % [_uuid_base, _new_peer_id])
 	
+	# Se não ter um round carregado ignora, vai receber atualizado quando carregar com _client_round_return
 	if not players_node:
 		return
 		
@@ -1454,6 +1626,7 @@ func _client_update_character_peer_id(_uuid_base: String, _new_peer_id: int):
 				child.name_label.text = "%s\n%s[...]%s\n%s" % [player_name, start, end, _new_peer_id]
 			
 			child.set_multiplayer_authority(_new_peer_id)
+			_log_debug("👤 Session id de remoto atualizado com sucesso para %s" % _new_peer_id)
 
 func _cleanup_local_round():
 	"""Limpa todos os objetos da rodada no cliente"""
