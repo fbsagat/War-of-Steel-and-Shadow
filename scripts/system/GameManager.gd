@@ -7,10 +7,11 @@ class_name GameManager
 # ===== CONFIGURAÇÕES =====
 
 @export_category("Connection Settings")
-const DEFAULT_SERVER_ADDRESS: String = "172.23.2.183" #"127.0.0.1"
+const DEFAULT_SERVER_ADDRESS: String = "172.23.2.183"  # Localhost: "127.0.0.1"
 const DEFAULT_SERVER_PORT: int = 7777
 @export var server_address: String = DEFAULT_SERVER_ADDRESS
 @export var server_port: int = DEFAULT_SERVER_PORT
+## (initializer sobrepõe) Conecta automaticamente no localhost na inicialização
 @export var localhost_auto_connect: bool = false
 
 @export_category("Default Node References")
@@ -22,6 +23,7 @@ var camera_instance: Node3D
 
 @export_category("Debug")
 @export var debug_mode: bool = true
+## Ativa menu de debug visual quando true (initializer sobrepõe)
 @export var visual_debug: bool = false
 
 @export_category("Reconection Settings")
@@ -57,7 +59,7 @@ var initializer = null
 
 var is_connected_to_server: bool = false
 var is_in_round: bool = false
-var is_loading: bool = false
+var is_loading: bool = false # True quando está durante carregamento de um round (initializer sobrepõe)
 var is_connecting: bool = false
 var inventory_menu: bool = false # True se o menu de inventário estiver visível
 var gameplay_menu: bool = false # True se o menu de gameplay  estiver visível
@@ -72,7 +74,7 @@ var cached_unique_id: int = 0
 ## {round_id: {object_id: {node: Node, item_name: String, owner_uuid: int}}}
 var spawned_objects: Dictionary = {}
 var local_inventory: Dictionary = {} # Inventário(de itens e equipamentos) local do player.
-var debug_menu_visible: bool = false
+var debug_menu_visible: bool = false # Mostra menu de debug visual quando true (initializer sobrepõe)
 var peer: ENetMultiplayerPeer
 
 # ===== REFERÊNCIAS INTERNAS =====
@@ -208,6 +210,8 @@ func finish_loading():
 	is_loading = false
 	last_pong_time = Time.get_ticks_msec() + post_loading_tolerance
 	has_timed_out = false
+	
+	network_manager._server_player_ready()
 
 # ===== FUNÇÕES DE MENU e INPUT =====
 
@@ -1360,17 +1364,17 @@ func _spawn_player(player_data: Dictionary, is_local: bool, _match_data: Diction
 	var player_uuid = player_data["id"]
 	var player_display_name = player_data["name"]
 	
-	_log_debug("🔄 [SPAWN CLIENT] Iniciando spawn: %s (Session: %s, Local: %s)" % [
+	_log_debug("🔄 [Spawn] Iniciando spawn: %s (Session: %s, Local: %s)" % [
 		player_display_name, session_id, "SIM" if is_local else "NÃO"
 	])
 	
 	# ===== VERIFICA DUPLICAÇÃO =====
 	if players_node.has_node(player_name_):
-		_log_debug("⚠️ [SPAWN CLIENT] Player já existe: %s" % player_name_)
+		_log_debug("⚠️ [Spawn] Player já existe: %s" % player_name_)
 		return
 	
 	if players_node.has_node(camera_name):
-		_log_debug("⚠️ [SPAWN CLIENT] Câmera já existe: %s" % camera_name)
+		_log_debug("⚠️ [Spawn] Câmera já existe: %s" % camera_name)
 		return
 	
 	# ===== VALIDA NÓS NECESSÁRIOS =====
@@ -1383,7 +1387,7 @@ func _spawn_player(player_data: Dictionary, is_local: bool, _match_data: Diction
 		return
 	
 	# ===== CARREGAMENTO DA CENA =====
-	_log_debug("📦 [SPAWN CLIENT] Carregando cena do player: %s" % player_scene)
+	_log_debug("📦 [Spawn] Carregando cena do player: %s" % player_scene)
 	
 	var player_scene_ = preload(player_scene)
 	if not player_scene_:
@@ -1396,10 +1400,10 @@ func _spawn_player(player_data: Dictionary, is_local: bool, _match_data: Diction
 		push_error("GameManager: Falha ao instanciar player_scene")
 		return
 	
-	_log_debug("✓ [SPAWN CLIENT] Cena instanciada com sucesso")
+	_log_debug("✓ [Spawn] Cena instanciada com sucesso")
 	
 	# ===== INJEÇÃO DE DEPENDÊNCIAS (PRÉ-ÁRVORE) =====
-	_log_debug("💉 [SPAWN CLIENT] Injetando dependências...")
+	_log_debug("💉 [Spawn] Injetando dependências...")
 	
 	player_instance.item_database = item_database
 	player_instance.network_manager = network_manager
@@ -1407,7 +1411,7 @@ func _spawn_player(player_data: Dictionary, is_local: bool, _match_data: Diction
 	player_instance.game_manager = self
 	
 	# ===== ADIÇÃO À ÁRVORE DE CENA =====
-	_log_debug("🌳 [SPAWN CLIENT] Adicionando player à cena...")
+	_log_debug("🌳 [Spawn] Adicionando player à cena...")
 	
 	players_node.add_child(player_instance)
 	
@@ -1424,11 +1428,11 @@ func _spawn_player(player_data: Dictionary, is_local: bool, _match_data: Diction
 		player_instance.queue_free()
 		return
 	
-	_log_debug("✓ [SPAWN CLIENT] Player adicionado à árvore de cena")
+	_log_debug("✓ [Spawn] Player adicionado à árvore de cena")
 	
 	# ===== AGUARDA READY COM TIMEOUT =====
 	if player_instance.has_method("_ready"):
-		_log_debug("⏳ [SPAWN CLIENT] Aguardando _ready() do player...")
+		_log_debug("⏳ [Spawn] Aguardando _ready() do player...")
 		
 		var ready_timeout = 120  # ~2 segundos
 		var ready_waited = 0
@@ -1438,16 +1442,16 @@ func _spawn_player(player_data: Dictionary, is_local: bool, _match_data: Diction
 			ready_waited += 1
 		
 		if ready_waited >= ready_timeout:
-			push_warning("⚠️ [SPAWN CLIENT] Timeout aguardando _ready() do player %s, continuando..." % player_uuid)
+			push_warning("⚠️ [Spawn] Timeout aguardando _ready() do player %s, continuando..." % player_uuid)
 		else:
-			_log_debug("✓ [SPAWN CLIENT] Player está ready!")
+			_log_debug("✓ [Spawn] Player está ready!")
 	else:
-		_log_debug("ℹ️ [SPAWN CLIENT] Player não tem _ready(), pulando espera")
+		_log_debug("ℹ️ [Spawn] Player não tem _ready(), pulando espera")
 		await get_tree().process_frame
 		await get_tree().process_frame
 	
 	# ===== INICIALIZAÇÃO DO JOGADOR =====
-	_log_debug("🔧 [SPAWN CLIENT] Inicializando dados do player...")
+	_log_debug("🔧 [Spawn] Inicializando dados do player...")
 	
 	var player_pos = _match_data["settings"]["spawn_points"][session_id]
 	if not player_pos:
@@ -1475,7 +1479,7 @@ func _spawn_player(player_data: Dictionary, is_local: bool, _match_data: Diction
 	else:
 		_setup_remote_player(player_instance, player_name_, player_pos)
 	
-	_log_debug("✅ [SPAWN CLIENT] Player spawnado com sucesso: %s (Local: %s)" % [
+	_log_debug("✅ [Spawn] Player spawnado com sucesso: %s (Local: %s)" % [
 		player_display_name, "SIM" if is_local else "NÃO"
 	])
 

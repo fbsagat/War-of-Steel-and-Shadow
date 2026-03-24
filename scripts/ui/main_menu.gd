@@ -107,6 +107,7 @@ signal gameplay_menu_give_up_game_pressed()
 
 # Menu de retorna à sala/partida
 @onready var round_return_room_label: Label
+@onready var round_return_continue_button: Button
 
 # Menu de opções
 @onready var volume_slider: HSlider
@@ -144,6 +145,9 @@ signal gameplay_menu_give_up_game_pressed()
 var current_label: Label
 
 @export var debug_mode : bool = true
+## Ativa/desativa proteção dos botões (desativar para testes de multiplos RPCs) (initializer sobrepõe)
+@export var disable_protection: bool = true
+## Iniciar com o mouse destrancado (Apenas no modo de testes) (initializer sobrepõe)
 @export var start_unlocked_mouse: bool = false
 
 # Configurações atuais
@@ -380,6 +384,7 @@ func _setup_element_references():
 	
 	# Menu de retorna à partida
 	round_return_room_label = round_return_menu.find_child("RoomName", true, false)
+	round_return_continue_button = round_return_menu.find_child("ContinueButton", true, false)
 
 func _connect_button_signals():
 	# Menu principal
@@ -704,6 +709,7 @@ func show_room_list_menu(_error_visible: bool = false, match_password_visible: b
 func show_round_return_menu(room_name: String):
 	hide_all_menus()
 	round_return_menu.visible = true
+	round_return_continue_button.disabled = false
 	current_menu_visible = round_return_menu
 	round_return_room_label.text = room_name
 	
@@ -768,6 +774,7 @@ func show_room_menu(room_data: Dictionary):
 	hide_all_menus()
 	room_menu.visible = true
 	current_menu_visible = room_menu
+	room_start_button.disabled = false
 	_update_room_display(room_data)
 
 func show_loading_menu(message: String = "Carregando..."):
@@ -892,6 +899,8 @@ func _on_round_return_menu_continue_pressed():
 	"""Cliente sinalizou que quer retornar à partida em que estava (personagem aguardando reconexão)"""
 	if current_menu_visible == round_return_menu:
 		game_manager._request_return_to_round()
+		if disable_protection:
+			round_return_continue_button.disabled = true
 	
 func _on_round_return_menu_exit_pressed():
 	"""Cliente sinalizou que não quer mais retornar à partida em que estava (personagem sai da 
@@ -1474,7 +1483,9 @@ func _apply_audio_settings():
 
 func _on_room_start_pressed():
 	game_manager.start_round()
-
+	if disable_protection:
+		room_start_button.disabled = true
+	
 func _on_room_close_pressed():
 	game_manager.close_room()
 

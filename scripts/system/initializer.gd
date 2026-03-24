@@ -4,7 +4,7 @@ extends Node
 ## [TESTES] Usa o TestManager para iniciar uma partida logo na execução (localhost)
 ## (configura server e clients / server cria round e inicia partida com primeiros clientes /
 ##  clientes recebem localhost_auto_connect = true)
-@export var test_mode: bool = true
+@export var test_mode: bool = false
 ## [TESTES] Define a quantidade de instâcias de clientes conectadas para executar fast_round
 @export var simulador_players_qtd: int = 2
 ## Ativa/desativa o debug visual na gameplay
@@ -13,10 +13,12 @@ extends Node
 @export var trainer: bool = true
 ## Iniciar com o mouse destrancado (Cliente / apenas no modo de testes)
 @export var start_unlocked_mouse: bool = true
+## Ativa/desativa proteção dos botões dos menus (desativar para testes de multiplos RPCs)
+@export var disable_protection: bool = false
 
 # Instruções para debug
 ## Executa _log_debug apenas nos itens selecionados
-var activate_only_selected: bool = true
+var activate_only_selected: bool = false
 # Disponíveis: "Server", "NetworkManager", "TestManager", "GameManager", "RoomRegistry"
 # "RoundRegistry", "ClientRegistry", "Player_node", "ObjectManager", "MapManager", "MainMenu"
 # "ItemDatabase", "InventoryMenu", "DroppedItem"
@@ -277,12 +279,13 @@ func _init_client(id_file_):
 		game_manager.localhost_auto_connect = true
 		game_manager.is_loading = true
 		main_menu.start_unlocked_mouse = start_unlocked_mouse
-	game_manager.visual_debug = visual_debug
 	if visual_debug:
 		game_manager.debug_overlay_node = debug_overlay
 		game_manager.debug_menu_visible = true
 		debug_overlay.game_manager = game_manager
 		
+	game_manager.visual_debug = visual_debug
+	main_menu.disable_protection = disable_protection
 		
 	item_database.is_server = false
 	

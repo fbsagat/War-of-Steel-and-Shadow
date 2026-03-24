@@ -20,10 +20,9 @@ var server_is_headless: bool
 ## { object_id: float }  — contagem regressiva até próximo envio
 var sync_timers: Dictionary = {}
 
-const RPC_RATE_LIMIT_SEC = 0.25
+var _blocked_until := {}
 
 var _player_rpc_timestamps = {}
-var _player_rpc_queues = {}
 
 var last_ping_from_client := {} # peer_id -> timestamp
 var timeout_limit := 3000 # ms
@@ -32,28 +31,27 @@ var timeout_limit := 3000 # ms
 
 func initialize():
 	_player_rpc_timestamps.clear()
-	_player_rpc_queues.clear()
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
 	_log_debug("▶️ NetworkManager inicializado com sucesso!")
 
 func _process(delta: float):
 	_server_update_sync_timers(delta)
-	#_client_timout_detection(delta)
+	#_client_timout_detection(delta) PAREI AQUI
 
 # ===== CLIENT TIMOUT DETECTOR =====
 
-#func remove_client(peer_id: int):
-	#if last_ping_from_client.has(peer_id):
-		#last_ping_from_client.erase(peer_id)
-#
-#func _client_timout_detection(_delta):
-	#var now = Time.get_ticks_msec()
-	#
-	#for peer_id in last_ping_from_client.keys():
-		#var last_time = last_ping_from_client[peer_id]
-		#
-		#if now - last_time > timeout_limit:
-			#print("Cliente com timeout:", peer_id)
+func remove_client(peer_id: int):
+	if last_ping_from_client.has(peer_id):
+		last_ping_from_client.erase(peer_id)
+
+func _client_timout_detection(_delta):
+	var now = Time.get_ticks_msec()
+	
+	for peer_id in last_ping_from_client.keys():
+		var last_time = last_ping_from_client[peer_id]
+		
+		if now - last_time > timeout_limit:
+			print("Cliente com timeout:", peer_id)
 			#_on_client_timeout(peer_id)
 
 # ===== HEARTBEAT =====
@@ -68,20 +66,28 @@ func _client_send_ping():
 func _on_peer_disconnected(peer_id: int):
 	if _player_rpc_timestamps.has(peer_id):
 		_player_rpc_timestamps.erase(peer_id)
-	if _player_rpc_queues.has(peer_id):
-		_player_rpc_queues.erase(peer_id)
+	if not _player_rpc_timestamps.has(peer_id):
+		_player_rpc_timestamps[peer_id] = []
 
 func is_rpc_allowed(peer_id: int) -> bool:
-	var current_time = Time.get_ticks_usec() / 1000000.0
-	if not _player_rpc_timestamps.has(peer_id):
-		_player_rpc_timestamps[peer_id] = current_time
-		_player_rpc_queues[peer_id] = []
-		return true
-	var last_rpc_time = _player_rpc_timestamps[peer_id]
-	if current_time - last_rpc_time < RPC_RATE_LIMIT_SEC:
-		_log_debug("RPC rate limited para peer %d: %.3fs desde última" % [peer_id, current_time - last_rpc_time])
+	var now := Time.get_ticks_msec()
+	
+	if _blocked_until.has(peer_id) and now < _blocked_until[peer_id]:
 		return false
-	_player_rpc_timestamps[peer_id] = current_time
+	
+	if not _player_rpc_timestamps.has(peer_id):
+		_player_rpc_timestamps[peer_id] = []
+	
+	var timestamps = _player_rpc_timestamps[peer_id]
+	
+	timestamps = timestamps.filter(func(t): return now - t < 1000)
+	_player_rpc_timestamps[peer_id] = timestamps
+	
+	if timestamps.size() >= 5:
+		_blocked_until[peer_id] = now + 2000 # bloqueia 2s
+		return false
+	
+	timestamps.append(now)
 	return true
 
 # ===== AUTENTICAÇÃO =====
@@ -109,7 +115,24 @@ func _server_request_rooms_list():
 	server_manager._handle_request_rooms_list(peer_id)
 
 func _server_request_return_or_exit(_chosen: bool):
+	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
+		return
+		
 	var peer_id = multiplayer.get_remote_sender_id()
+	var player_uuid = client_registry.get_uuid_by_peer_id(peer_id)
+
+	# Sistema para impedir execução múltipla
+	# Só aceita se estava in game ou no lobby
+	var state = client_registry.get_player_state(player_uuid)
+	if state not in [client_registry.ClientState.IN_GAME, client_registry.ClientState.LOBBY]:
+		return
+	
+	# Se está voltando, define RETURNING, se false, quer abandonar: DISCONNECTED
+	if _chosen:
+		client_registry.set_player_state(player_uuid, client_registry.ClientState.RETURNING)
+	else:
+		client_registry.set_player_state(player_uuid, client_registry.ClientState.LOBBY)
+	
 	server_manager._handle_request_return_or_exit(peer_id, _chosen)
 
 func _server_create_room(room_name: String, password: String):
@@ -152,13 +175,37 @@ func _server_close_room():
 	var peer_id = multiplayer.get_remote_sender_id()
 	server_manager._handle_close_room(peer_id)
 
+func _server_player_ready():
+	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
+		return
+		
+	var peer_id = multiplayer.get_remote_sender_id()
+	var player_uuid = client_registry.get_uuid_by_peer_id(peer_id)
+	
+	# Só aceita se estava carregando
+	var state = client_registry.get_player_state(player_uuid)
+	if state != client_registry.ClientState.LOADING:
+		return
+	
+	client_registry.set_player_state(player_uuid, client_registry.ClientState.IN_GAME)
 
 # ===== RODADAS =====
 
 func _server_start_round(round_settings: Dictionary):
 	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
 		return
+		
 	var peer_id = multiplayer.get_remote_sender_id()
+	var player_uuid = client_registry.get_uuid_by_peer_id(peer_id)
+	
+	# Sistema para impedir execução múltipla
+	# Só aceita se estava no lobby
+	var state = client_registry.get_player_state(player_uuid)
+	var state_list = [client_registry.ClientState.LOBBY]
+	if state not in state_list:
+		_log_debug("Estado de jogador %s não está entre: %s" % [state, state_list])
+		return
+	
 	server_manager._handle_start_round(peer_id, round_settings)
 	
 func _mark_player_disconnected(_chosen: bool):

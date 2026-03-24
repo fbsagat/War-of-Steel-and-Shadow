@@ -47,6 +47,16 @@ var _initialized: bool = false
 ## Próxima posição de entrada no servidor
 var entry_position: int = 0
 
+## Estados do cliente
+enum ClientState {
+	CONNECTING,     # Index: 0
+	LOBBY,          # Index: 1
+	LOADING,        # Index: 2
+	IN_GAME,        # Index: 3
+	RETURNING,      # Index: 4
+	DISCONNECTED    # Index: 5
+}
+
 # ===== SINAIS =====
 
 # --- Sinais de Conexão ---
@@ -75,6 +85,7 @@ signal player_left_round(uuid_base: String, round_id: int)
 ##   "room_id": int,          # -1 se não estiver em sala
 ##   "round_id": int,         # -1 se não estiver em rodada
 ##   "node_path": String
+##   "ClientState": {CONNECTING, LOBBY, IN_GAME, RETURNING, DISCONNECTED}
 ## }
 
 ## InventoryData:
@@ -136,7 +147,8 @@ func add_peer(peer_id: int, uuid_base: String):
 		"disconnected_at": Time.get_unix_time_from_system(),
 		"room_id": -1,
 		"round_id": -1,
-		"node_path": ""
+		"node_path": "",
+		"ClientState": ClientState.LOBBY
 	}
 
 	_log_debug("✓ Peer adicionado: uuid=%s peer_id=%d" % [uuid_base, peer_id])
@@ -200,7 +212,9 @@ func set_disconnected_peer(peer_id: int):
 	if uuid_base.is_empty():
 		_log_debug("⚠ Tentou desconectar peer inexistente: %d" % peer_id)
 		return
-
+	
+	# muda estado do jogador
+	set_player_state(uuid_base, ClientState.DISCONNECTED)
 	players[uuid_base]["connected"] = false
 	players[uuid_base]["disconnected_at"] = Time.get_unix_time_from_system()
 	set_disconnected_peer_from_room_and_round(peer_id)
@@ -261,7 +275,9 @@ func _register_connection(uuid_base: String):
 	if not players.has(uuid_base):
 		_log_debug("❌ Tentou registrar conexão de UUID inexistente: %s" % uuid_base)
 		return
-
+	
+	# muda estado do jogador
+	set_player_state(uuid_base, ClientState.LOBBY)
 	players[uuid_base]["connected"] = true
 	players[uuid_base]["disconnected_at"] = 0.0
 	_log_debug("Peer uuid=%s marcado como conectado" % uuid_base)
@@ -418,6 +434,33 @@ func get_player(uuid_base: String) -> Dictionary:
 	if not players.has(uuid_base):
 		return {}
 	return players[uuid_base].duplicate()
+
+func get_player_state(uuid_base: String) -> int:
+	if not players.has(uuid_base):
+		return -1
+	
+	return players[uuid_base].get("ClientState", -1)
+
+func set_player_state(uuid_base: String, new_state: int) -> bool:
+	"""Modifica o estado do jogador
+	Ex (exeterno/fora de client_registry): set_player_state(peer_id, client_registry.ClientState.RETURNING)"""
+	
+	# Verificar se existe
+	if not players.has(uuid_base):
+		return false
+	
+	var old_state: int = players[uuid_base]["ClientState"]
+	
+	# Evita mudança redundante
+	if old_state == new_state:
+		return false
+	
+	# Aplica mudança
+	players[uuid_base]["ClientState"] = new_state
+	
+	_log_debug("Player %s: %s → %s" % [uuid_base, str(old_state),str(new_state)])
+	
+	return true
 
 func get_player_by_uuid(uuid_base: String) -> Dictionary:
 	"""Alias de get_player() para compatibilidade explícita."""

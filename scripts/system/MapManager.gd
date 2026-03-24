@@ -91,13 +91,6 @@ func load_map(map_scene_path: String, round_node: Node, actual_camera: Camera3D)
 	is_loading = true
 	_log_debug("Carregando mapa (Async): %s" % map_scene_path)
 	
-	# Descarrega o mapa anterior se existir
-	if current_map:
-		_log_debug("Descarregando mapa anterior...")
-		current_map.queue_free()
-		current_map = null
-		await get_tree().process_frame
-	
 	# Verifica se o arquivo existe
 	if not FileAccess.file_exists(map_scene_path):
 		push_error("Arquivo do mapa não existe: %s" % map_scene_path)

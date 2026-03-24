@@ -171,6 +171,10 @@ func _client_room_updated(_room_data: Dictionary):
 func _client_kicked_from_room():
 	pass
 
+@rpc("any_peer", "call_remote", "reliable")
+func _server_player_ready():
+	pass
+
 # ===== RODADAS =====
 
 @rpc("any_peer", "call_remote", "reliable")

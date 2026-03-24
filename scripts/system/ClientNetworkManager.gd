@@ -89,7 +89,6 @@ func _client_name_rejected(reason: String):
 	_log_debug("❌ Nome rejeitado: " + reason)
 	game_manager._client_name_rejected(reason)
 
-
 # ===== SALAS — HELPERS LOCAIS (enviam RPC ao servidor) =====
 
 func request_rooms_list():
@@ -197,11 +196,13 @@ func _client_room_updated(room_data: Dictionary):
 	_log_debug("📥 Sala atualizada: " + str(room_data.get("name", "?")))
 	game_manager._client_room_updated(room_data)
 
-@rpc("authority", "call_remote", "reliable")
 func _client_kicked_from_room():
 	_log_debug("Foi expulso da sala")
 	game_manager._client_kicked_from_room()
 
+func _server_player_ready():
+	_log_debug("Cliente já carregou o seu round")
+	rpc_id(1, "_server_player_ready")
 
 # ===== RODADAS — HELPERS LOCAIS =====
 
@@ -387,7 +388,6 @@ func _client_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, r
 	
 	var player = game_manager.players_node.get_node_or_null(str(p_id))
 	if not player:
-		_log_debug("Erro! _client_player_state não encontrou nó remoto de %s" % str(p_id))
 		return
 	if player.has_method("_client_receive_state"):
 		player._client_receive_state(pos, rot, vel, running, jumping)

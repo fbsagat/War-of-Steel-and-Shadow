@@ -17,13 +17,14 @@ class_name ServerManager
 
 @export_category("Debug")
 @export var debug_mode: bool = true
+## Ativa/desativa o debug visual na gameplay (initializer sobrepõe)
 @export var visual_debug: bool = false
 @export var debug_timer: bool = false
-## [TESTES] Usa o TestManager para iniciar logo uma partida na execução
+## [TESTES] Usa o TestManager para iniciar logo uma partida na execução (initializer sobrepõe)
 @export var fast_round: bool = false
-## [TESTES] Define a quantidade de instnacias de clientes para executar fast_round
+## [TESTES] Define a quantidade de instnacias de clientes para executar fast_round (initializer sobrepõe)
 @export var simulador_players_qtd: int = 12
-## [TESTES] Dropa itens perto dos players e ativa o trainer de cada player
+## [TESTES] Dropa itens perto dos players e ativa o trainer de cada player (initializer sobrepõe)
 @export var test_trainer: bool = false
 
 @export_category("Server Settings")
@@ -246,7 +247,9 @@ func _find_a_next_round_to_camera():
 
 func _switch_camera_to_round(round_node: Node) -> void:
 	"""Ativa a câmera de um round específico e atualiza o display"""
-
+	
+	_log_debug("Movendo câmera para round %s" % round_node.name)
+	
 	if not round_node or not round_node is SubViewport:
 		push_warning("round_node inválido")
 		return
@@ -378,6 +381,10 @@ func process_client_hello(payload: Dictionary, peer_id: int) -> Dictionary:
 func _on_peer_connected(peer_id: int):
 	"""Callback quando um cliente conecta ao servidor"""
 	_log_debug("✓ Cliente conectado: Peer ID %d" % peer_id)
+	
+	# Define cliente como conectado
+	var uuid = client_registry.get_uuid_by_peer_id(peer_id)
+	client_registry.set_player_state(uuid, client_registry.ClientState.LOBBY)
 	
 	# Envia configurações do servidor para o cliente
 	var configs: Dictionary = {
@@ -1074,6 +1081,9 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 			
 	await get_tree().process_frame
 	
+	# muda estado do jogador
+	client_registry.set_player_state(player_uuid, client_registry.ClientState.LOADING)
+	
 	# LOG DO INÍCIO
 	_log_debug("========================================")
 	_log_debug("HOST INICIANDO RODADA")
@@ -1187,6 +1197,7 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 	# Envia comando de início para todos os clientes da sala
 	for room_player in room["players"]:
 		var player_sesion_id = client_registry.get_peer_id_by_uuid(room_player["id"])
+		client_registry.set_player_state(room_player["id"], client_registry.ClientState.LOADING)
 		network_manager.rpc_id(player_sesion_id, "_client_round_started",server_id , match_data)
 		
 	await get_tree().process_frame
