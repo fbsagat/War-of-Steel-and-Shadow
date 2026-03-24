@@ -9,7 +9,7 @@ const LAG_THRESHOLD_MS := 150
 var ping: int = 0
 var ping_avg: int = 0
 var last_pong_time: int = 0
-var is_connected: bool = false
+var _is_connected: bool = false
 var peer_id = 0
 var client_uuid: String = ""
 
@@ -54,7 +54,7 @@ func _process(_delta: float) -> void:
 
 func update_ping(value: int) -> void:
 	ping = value
-	is_connected = true
+	_is_connected = true
 
 	ping_history.append(value)
 	if ping_history.size() > PING_HISTORY_SIZE:
@@ -68,10 +68,10 @@ func update_ping(value: int) -> void:
 
 func update_pong_time(time: int) -> void:
 	last_pong_time = time
-	is_connected = true
+	_is_connected = true
 
 func on_disconnected() -> void:
-	is_connected = false
+	_is_connected = false
 	ping = 0
 	ping_avg = 0
 	last_pong_time = 0

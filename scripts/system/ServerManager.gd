@@ -156,10 +156,10 @@ func _setup_test_mode_verification():
 		
 func _on_fast_round_verify_timeout():
 	"""Esta função é chamada automaticamente sempre que o Timer atinge o tempo configurado"""
-	if _verificar_teste_automático():
+	if _test_round_check():
 		test_mode_check_timer.stop()
 		
-func _verificar_teste_automático() -> bool:
+func _test_round_check() -> bool:
 	"""Esta função executa a lógica de verificação. Ela retorna:
 	- true  → quando a partida de teste foi iniciada
 	- false → quando ainda não há jogadores suficientes"""
@@ -167,7 +167,7 @@ func _verificar_teste_automático() -> bool:
 	# Executar sistema de teste automático no momento que entra e registra a quantidade de players necessária
 	var players_on_count = client_registry.get_connected_player_count()
 	if players_on_count >= simulador_players_qtd:
-		test_manager.criar_partida_teste()
+		test_manager.create_test_round()
 		return true
 	return false
 	
@@ -263,6 +263,8 @@ func _switch_camera_to_round(round_node: Node) -> void:
 	var new_camera = round_node.get_node_or_null("FreeCamera")
 	if not new_camera:
 		new_camera = round_node.get_node_or_null("DummyCamera")
+		
+	await get_tree().process_frame
 	
 	if new_camera and new_camera is Camera3D:
 		new_camera.current = true
@@ -438,6 +440,8 @@ func _on_peer_disconnected(peer_id: int):
 func _handle_register_player_name(peer_id: int, player_name: String):
 	"""Processa solicitação de registro de nome de jogador"""
 	_log_debug("Tentativa de registro: '%s' (Peer ID: %d)" % [player_name, peer_id])
+		
+	await get_tree().process_frame
 	
 	# Valida nome
 	var validation_result = client_registry._validate_player_name(player_name)
@@ -445,6 +449,8 @@ func _handle_register_player_name(peer_id: int, player_name: String):
 		_log_debug("❌ Nome rejeitado: " + validation_result)
 		network_manager.rpc_id(peer_id, "_client_name_rejected", validation_result)
 		return
+		
+	await get_tree().process_frame
 	
 	# Registra no ClientRegistry
 	var player_uuid = client_registry.get_uuid_by_peer_id(peer_id)
@@ -470,6 +476,8 @@ func _handle_request_rooms_list(peer_id: int):
 	if not client_registry.is_player_registered(player_uuid):
 		_send_error_to_client(peer_id, "Jogador não registrado")
 		return
+		
+	await get_tree().process_frame
 	
 	# Verificar se jogador está em uma partida no momento
 	if client_registry.in_round(player_uuid):
@@ -492,6 +500,8 @@ func _send_rooms_list_to_all():
 	"""
 	_log_debug("Servidor enviando lista de salas para todos os jogadores fora de uma sala")
 	var available_rooms = room_registry.get_rooms_in_lobby_clean_to_menu()
+		
+	await get_tree().process_frame
 	
 	# Busca todos os jogadores que NÃO estão em salas
 	var lobby_players = []
@@ -500,6 +510,8 @@ func _send_rooms_list_to_all():
 		var player_uuid = client_registry.get_uuid_by_peer_id(peer_id)
 		if peer_id != 1 and not client_registry.in_room(player_uuid):  # Ignora servidor (ID 1)
 			lobby_players.append(peer_id)
+		
+	await get_tree().process_frame
 	
 	# Envia lista para cada um
 	for peer_id in lobby_players:
@@ -577,6 +589,7 @@ func _execute_player_return_to_round(peer_id: int, player_uuid: String):
 			match_data["settings"]["spawn_points"][player["session_id"]] = {
 				"position": position,
 				"rotation": rotation}
+			await get_tree().process_frame
 			
 			# Prepara modelos de personagens (próprio e remotos) para atualização visual
 			var player_equip = client_registry.get_equipped_items(round_id, player["id"])
@@ -593,6 +606,7 @@ func _execute_player_return_to_round(peer_id: int, player_uuid: String):
 		# item_name: String, position: Vector3, rotation: Vector3, drop_velocity: Vector3, owner_uuid: String)"""
 		var all_objects: Dictionary
 		for object in round_objects:
+			await get_tree().process_frame
 			all_objects[object["object_id"]] = {
 				"round_id": object["round_id"],
 				"item_name": object["item_name"],
@@ -629,12 +643,16 @@ func _player_exit_from_round(player_room_id: int, peer_id: int, player_uuid: Str
 		if player_node and is_instance_valid(player_node):
 			player_node.queue_free()
 			_log_debug("Nó do player removido da cena")
-		
+			
+		await get_tree().process_frame
+	
 		# Eviar comando para os outros clientes removerem também node da cena
 		for player in p_round["players"]:
 			if player["session_id"] != peer_id and _is_peer_connected(player["session_id"]):
 				network_manager.rpc_id(player["session_id"], "_client_remove_player", peer_id)
-		
+			
+		await get_tree().process_frame
+	
 		# Remove registro de spawn, limpa node path e remove do round
 		round_registry.unregister_spawned_player(round_id, player_uuid)
 		client_registry.clear_player_node_path(player_uuid)
@@ -644,6 +662,8 @@ func _player_exit_from_round(player_room_id: int, peer_id: int, player_uuid: Str
 		if p_round["quitted_players"].size() >= round_registry.get_total_players(round_id):
 			_log_debug("Finalizando round imediatamente, todos os players quitaram")
 			round_registry.end_round(round_id, "all_quitted")
+		
+	await get_tree().process_frame
 	
 	# 2. LIMPA SALA (se estiver em uma)
 	var player_data = client_registry.get_player(player_uuid)
@@ -664,6 +684,8 @@ func _player_exit_from_round(player_room_id: int, peer_id: int, player_uuid: Str
 			else:
 				_log_debug("Sala foi deletada (ficou vazia)")
 				_send_rooms_list_to_all()
+		
+	await get_tree().process_frame
 	
 	# 3. Limpa estado de validação
 	_cleanup_player_state(player_uuid)
@@ -731,6 +753,8 @@ func _handle_create_room(peer_id: int, room_name: String, password: String):
 		return
 	
 	_log_debug("✓ Sala criada: %s (ID: %d, Host: %s)" % [room_name, room_data["id"], player["name"]])
+		
+	await get_tree().process_frame
 	
 	# Atualiza lista de salas para todos (útil para quem está na lista de salas)
 	_send_rooms_list_to_all()
@@ -740,11 +764,11 @@ func _handle_create_room(peer_id: int, room_name: String, password: String):
 
 func _handle_join_room(peer_id: int, room_id: int, password: String) -> bool:
 	"""Wrapper: entra por ID"""
-	return _handle_join_room_common(peer_id, room_id, password, false)
+	return await _handle_join_room_common(peer_id, room_id, password, false)
 
 func _handle_join_room_by_name(peer_id: int, room_name: String, password: String) -> bool:
 	"""Wrapper: entra por nome"""
-	return _handle_join_room_common(peer_id, room_name, password, true)
+	return await _handle_join_room_common(peer_id, room_name, password, true)
 
 func _handle_join_room_common(peer_id: int, room_identifier: Variant, password: String, by_name: bool) -> bool:
 	var player_uuid = client_registry.get_uuid_by_peer_id(peer_id)
@@ -766,7 +790,9 @@ func _handle_join_room_common(peer_id: int, room_identifier: Variant, password: 
 	if not current_room.is_empty():
 		_send_error_to_client(peer_id, "Você já está em uma sala. Saia primeiro.")
 		return false
-		
+			
+	await get_tree().process_frame
+	
 	# Busca sala
 	var room: Dictionary = {}
 	if by_name:
@@ -816,6 +842,8 @@ func _handle_join_room_common(peer_id: int, room_identifier: Variant, password: 
 		return false
 	
 	_log_debug("Jogador %s (ID: %d) entrando na sala ID: %d" % [player["name"], peer_id, int(room_identifier)])
+		
+	await get_tree().process_frame
 	
 	# Adiciona jogador
 	var success: bool = room_registry.add_player_to_room(room_id, player_uuid)
@@ -832,6 +860,8 @@ func _handle_join_room_common(peer_id: int, room_identifier: Variant, password: 
 	# Envia dados da sala para o novato
 	var room_data: Dictionary = room_registry.get_room(room_id)
 	network_manager.rpc_id(peer_id, "_client_joined_room", room_data)
+		
+	await get_tree().process_frame
 	
 	# Atualiza sala para todos
 	_notify_room_update(room_id)
@@ -863,6 +893,8 @@ func _handle_update_room_settings(peer_id, _changed_settings: Dictionary):
 	# Aplica apenas o que mudou
 	for key in _changed_settings.keys():
 		room_registry.update_room_setting(room_id, key, _changed_settings[key])
+		
+	await get_tree().process_frame
 	
 	# Replica para todos os clientes
 	for peer in room["players"]:
@@ -889,6 +921,8 @@ func _handle_leave_room(peer_id: int):
 	var room_id = room["id"]
 	
 	_log_debug("Jogador %s saiu da sala: %s" % [player["name"], room["name"]])
+		
+	await get_tree().process_frame
 	
 	# Remove da sala (pode deletá-la se ficar vazia)
 	room_registry.remove_player_from_room(room_id, player_uuid)
@@ -925,6 +959,8 @@ func _handle_kick_player_from_room(peer_id: int, _selected_player_uuid: String):
 	# Verificar se o host está expulsando ele mesmo kkkk
 	if player_uuid == _selected_player_uuid:
 		return
+		
+	await get_tree().process_frame
 	
 	# Remover player da sala
 	var kicked_player = client_registry.get_player(_selected_player_uuid)
@@ -961,6 +997,8 @@ func _handle_close_room(peer_id: int):
 	_log_debug("Host %s fechou a sala: %s" % [player["name"], room["name"]])
 	
 	var room_id = room["id"]
+		
+	await get_tree().process_frame
 	
 	# Notifica todos os players antes de deletar
 	for room_player in room["players"]:
@@ -1015,6 +1053,8 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 	if player.is_empty() or not player.has("name"):
 		_send_error_to_client(peer_id, "Jogador não registrado")
 		return
+		
+	await get_tree().process_frame
 	
 	# Valida sala
 	var room = room_registry.get_player_room(player_uuid)
@@ -1027,7 +1067,9 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 	if not response[0]:
 		_send_error_to_client(peer_id, response[1])
 		return
-		
+			
+	await get_tree().process_frame
+	
 	# LOG DO INÍCIO
 	_log_debug("========================================")
 	_log_debug("HOST INICIANDO RODADA")
@@ -1039,6 +1081,8 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 		_log_debug("  - %s (ID: %s)%s" % [room_player["name"], room_player["id"], is_host_mark])
 	
 	_log_debug("========================================")
+		
+	await get_tree().process_frame
 	
 	# Cria rodada no RoundRegistry
 	# IMPORTANTE: Isso já chama client_registry.join_round() para cada player
@@ -1048,6 +1092,8 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 		room["players"],
 		round_settings
 	)
+		
+	await get_tree().process_frame
 	
 	# Criar cena de organização do round
 	var round_node = SubViewport.new()
@@ -1055,6 +1101,8 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 	round_node.name = "Round_%d_%d" % [room["id"], round_data["round_id"]]
 	
 	round_data["round_node"] = round_node
+		
+	await get_tree().process_frame
 	
 	# Configurações para renderização fora de container
 	round_node.size = Vector2i(1920, 1080)  # ou resolução da janela
@@ -1063,6 +1111,8 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 	all_rounds_node.add_child(round_node)
 	
 	round_registry.set_round_node(round_data["round_id"], round_node)
+		
+	await get_tree().process_frame
 	
 	# Cria nós organizacionais
 	var players_node = Node.new()
@@ -1076,18 +1126,26 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 	if round_data.is_empty():
 		_send_error_to_client(peer_id, "Erro ao criar rodada")
 		return
+		
+	await get_tree().process_frame
 	
 	# Extrai configurações da rodada
 	var final_settings = round_data.get("settings", {})
 	var map_scene_ = final_settings.get("map_scene", map_scene)
+		
+	await get_tree().process_frame
 	
 	# Carrega o mapa
 	await map_manager.load_map(map_scene, round_node)
+		
+	await get_tree().process_frame
 	
 	# Gera spawn points para todos os jogadores
 	var players_count: int = round_registry.get_total_players(round_data["round_id"])
 	final_settings["round_players_count"] = players_count
 	final_settings["spawn_points"] = map_manager._create_spawn_points(room["players"])
+		
+	await get_tree().process_frame
 	
 	# Prepara pacote de dados para enviar aos clientes
 	var match_data = {
@@ -1097,17 +1155,46 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 		"settings": final_settings,
 		"players": room["players"],
 	}
+		
+	await get_tree().process_frame
 	
 	# Envia comando de início para todos os clientes da sala
 	for room_player in room["players"]:
 		var player_sesion_id = client_registry.get_peer_id_by_uuid(room_player["id"])
 		network_manager.rpc_id(player_sesion_id, "_client_round_started",server_id , match_data)
+		
+	await get_tree().process_frame
 	
 	# Instancia mapa e players no servidor também
 	await _server_instantiate_round(match_data, round_node, players_node)
+			
+	await get_tree().process_frame
 	
+	# Atualiza estado da sala
+	room_registry.set_room_in_game(room["id"], true)
+		
+	await get_tree().process_frame
+	
+	# INICIA a rodada (ativa timers e verificações)
+	round_registry.start_round(round_data["round_id"])
+		
+	await get_tree().process_frame
+	
+	# Atualiza lista de salas (remove esta sala da lista de disponíveis)
+	_send_rooms_list_to_all()
+		
+	await get_tree().process_frame
+	
+	# Se não headless, joga este primeiro round para a camera do servidor
+	var rounds_count = round_registry.get_active_rounds_count()
+	if not is_headless and rounds_count == 1:
+		await get_tree().process_frame
+		_switch_camera_to_round(round_node)
+			
+	await get_tree().process_frame
+	
+	# Spawna alguns objetos
 	if test_trainer:
-		# Spawna alguns objetos
 		object_manager.spawn_item(objects_node, round_data["round_id"], "torch", Vector3(0, 2, 0), Vector3(0, 0, 0))
 		object_manager.spawn_item(objects_node, round_data["round_id"], "torch", Vector3(1, 4, 1), Vector3(0, 0, 0))
 		object_manager.spawn_item(objects_node, round_data["round_id"], "torch", Vector3(2, 4, 4), Vector3(0, 0, 0))
@@ -1115,20 +1202,6 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 		object_manager.spawn_item(objects_node, round_data["round_id"], "cape_1", Vector3(2, 4, 4), Vector3(0, 0, 0))
 		object_manager.spawn_item(objects_node, round_data["round_id"], "sword_2", Vector3(2, 30, 1), Vector3(0, 0, 0))
 		object_manager.spawn_item(objects_node, round_data["round_id"], "shield_3", Vector3(0, 500, 0), Vector3(0, 0, 0))
-		
-	# Atualiza estado da sala
-	room_registry.set_room_in_game(room["id"], true)
-	
-	# INICIA a rodada (ativa timers e verificações)
-	round_registry.start_round(round_data["round_id"])
-	
-	# Atualiza lista de salas (remove esta sala da lista de disponíveis)
-	_send_rooms_list_to_all()
-	
-	# Se não headless, joga este primeiro round para a camera do servidor
-	var rounds_count = round_registry.get_active_rounds_count()
-	if not is_headless and rounds_count == 1:
-		_switch_camera_to_round(round_node)
 
 # ===== INSTANCIAÇÃO NO SERVIDOR =====
 
@@ -1143,15 +1216,21 @@ func _server_instantiate_round(match_data: Dictionary, round_node, players_node)
 	# Aplica configurações de mapa
 	await map_manager.apply_map_configs(match_data["settings"])
 	var terrain_3d = round_node.get_node_or_null("Terrain3D")
+		
+	await get_tree().process_frame
 	
 	# Salva referência no RoundRegistry
 	if round_registry.rounds.has(match_data["round_id"]):
 		round_registry.rounds[match_data["round_id"]]["map_manager"] = map_manager
+		
+	await get_tree().process_frame
 	
 	# Spawna todos os jogadores
 	for player_data in match_data["players"]:
 		var spawn_data = match_data["settings"]["spawn_points"][player_data["session_id"]]
 		_spawn_player_on_server(player_data, spawn_data, players_node)
+		
+	await get_tree().process_frame
 	
 	# Cria câmera livre se não estiver em modo headless
 	var actual_camera: Camera3D = null
@@ -1170,10 +1249,14 @@ func _server_instantiate_round(match_data: Dictionary, round_node, players_node)
 		actual_camera.global_position = Vector3(0, 100, 0)
 		actual_camera.current = false
 		await get_tree().process_frame
+		
+	await get_tree().process_frame
 	
 	# Se for o primeiro round, esta é a câmera atual
 	if match_data["round_id"] != 1 and not is_headless:
 		actual_camera.current = false
+		
+	await get_tree().process_frame
 	
 	# Configura o Terrain3D para usar actual_camera
 	if terrain_3d:
@@ -1191,46 +1274,66 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, pl
 	var player_scene_ : PackedScene = preload(player_scene)
 	var player_instance = player_scene_.instantiate()
 	var p_uuid = player_data["id"]
+		
+	await get_tree().process_frame
 	
 	# Adiciona aos grupos
 	player_instance.add_to_group("remote_player")
 	player_instance.add_to_group("player")
+		
+	await get_tree().process_frame
 	
 	# CONFIGURAÇÃO CRÍTICA: Nome = ID do peer
 	player_instance.name = str(player_data["session_id"])
 	player_instance.player_id = player_data["session_id"]
 	player_instance.player_name = player_data["name"]
 	player_instance._is_server = true
+		
+	await get_tree().process_frame
 	
 	# IMPORTANTE: No servidor, nenhum player é "local"
 	player_instance.is_local_player = false
 	player_instance._is_server = true
+		
+	await get_tree().process_frame
 	
 	# Adiciona à cena
 	players_node.add_child(player_instance)
+		
+	await get_tree().process_frame
 	
 	# Injeta dependências
 	player_instance.item_database = item_database
 	player_instance.network_manager = network_manager
 	player_instance.server_manager = self
 	player_instance.initializer = initializer
+		
+	await get_tree().process_frame
 	
 	# Inicializa jogador (configura identificação básica)
 	var color: Color = Color(0.0, 0.0, 0.0, 1.0)
 	var final_color = player_data["character"]["color"] if player_data["character"]["color"] else color
 	player_instance.initialize(player_data["name"], final_color, player_data["session_id"], player_data["id"], spawn_data["position"])
 	player_instance.rotation = spawn_data["rotation"]
+		
+	await get_tree().process_frame
 	
 	# Preenche terreno e central_spawn
 	player_instance.terrain_ = map_manager.current_map
 	player_instance.central_spawn = player_instance.terrain_.get_node_or_null("central_spawn")
+		
+	await get_tree().process_frame
 	
 	# Registra node no ClientRegistry
 	client_registry.register_player_node(player_data["id"], player_instance)
+		
+	await get_tree().process_frame
 	
 	# Registra no RoundRegistry
 	var p_round = round_registry.get_round_by_player_uuid(player_data["id"])
 	round_registry.register_spawned_player(p_round["round_id"], player_data["id"], player_instance)
+		
+	await get_tree().process_frame
 	
 	# INICIALIZA ESTADO PARA VALIDAÇÃO ANTI-CHEAT
 	player_states[p_uuid] = {
@@ -1260,11 +1363,15 @@ func _on_round_ending(round_id: int, reason: String):
 	
 	# Limpa os objetos do round
 	object_manager.clear_round_objects(round_id)
+		
+	await get_tree().process_frame
 	
 	# Remove o nó deste round da lista de rounds do servidor
 	var round_ = round_registry.get_round(round_id)
 	all_rounds_node.remove_child(round_["round_node"])
 	round_["round_node"].queue_free()
+		
+	await get_tree().process_frame
 	
 	# Finaliza completamente a rodada
 	_complete_round_end(round_id)
@@ -1318,6 +1425,8 @@ func _complete_round_end(round_id: int):
 	
 	# Atualiza estado da sala
 	room_registry.set_room_in_game(room_id, false)
+		
+	await get_tree().process_frame
 	
 	# Notifica clientes para voltar à sala
 	var room = room_registry.get_room(room_id)
@@ -1326,6 +1435,8 @@ func _complete_round_end(round_id: int):
 			var player_session_id = client_registry.get_peer_id_by_uuid(player["id"])
 			if _is_peer_connected(player_session_id):
 				network_manager.rpc_id(player_session_id, "_client_return_to_room", room)
+		
+	await get_tree().process_frame
 	
 	# Atualiza lista de salas (sala volta a ficar disponível)
 	_send_rooms_list_to_all()
@@ -1511,6 +1622,8 @@ func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 	if client_registry.is_inventory_full(round_["round_id"], player_uuid):
 		_log_debug("Impossível pegar item, inventário cheio!")
 		return
+		
+	await get_tree().process_frame
 	
 	client_registry.add_item_to_inventory(round_["round_id"], player_uuid, str(item["id"]), object_id)
 	
@@ -1522,6 +1635,8 @@ func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 	if item_node and is_instance_valid(item_node) and item_node.is_inside_tree():
 		item_node.queue_free()
 		_log_debug("_server_validate_pick_up_item: Node removido da cena")
+		
+	await get_tree().process_frame
 	
 	# Define objeto armazenado / sai do spawned objects
 	object_manager.store_object(round_["round_id"], object_id, player_uuid)
@@ -1530,6 +1645,8 @@ func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 	for peer_id in round_players:
 		var player_session_id = client_registry.get_peer_id_by_uuid(peer_id)
 		network_manager._client_apply_pick_up.rpc_id(player_session_id, requesting_player_id)
+		
+	await get_tree().process_frame
 	
 	# Executa animação no nó do servidor tbm
 	if player_node and player_node.has_method("action_pick_up_item"):
@@ -1542,6 +1659,8 @@ func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 	# Se auto equip false, não equipar automaticamente
 	if not item_database.get_item(item["name"]).is_auto_equip_function():
 		return
+		
+	await get_tree().process_frame
 	
 	# Equipa o item no registro do player
 	client_registry.equip_item(round_["round_id"], player_uuid, item["name"], object_id)
@@ -1553,6 +1672,8 @@ func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 	for peer in filtered_:
 		if _is_peer_connected(peer["session_id"]):
 			network_manager.rpc_id(peer["session_id"], "_client_apply_equip", requesting_player_id, item["id"])
+		
+	await get_tree().process_frame
 	
 	# Aplica visual tbm na cena do servidor
 	if player_node and player_node.has_method("apply_visual_equip_on_player_node"):
@@ -1583,6 +1704,8 @@ func _server_validate_equip_item(requesting_player_id: int, object_id: int, _tar
 	if not client_registry.is_slot_empty(round_["round_id"], player_uuid, _target_slot_type):
 		push_warning("[ITEM]O Slot já está ocupado por outro item, pedido de equipamento cancelado pelo servidor")
 		return
+		
+	await get_tree().process_frame
 	
 	# Equipa o item no registro do player
 	client_registry.equip_item(round_["round_id"], player_uuid, item["name"], object_id)
@@ -1590,6 +1713,8 @@ func _server_validate_equip_item(requesting_player_id: int, object_id: int, _tar
 	_log_debug("✓ Item equipado: %s em %s (Player %s, Rodada %d)" % [item["name"], item["type"], player_uuid, round_["round_id"]])
 	
 	# Envia para todos os clientes do round (para atualizar visual)
+		
+	await get_tree().process_frame
 	
 	# Para cada player neste round
 	var filtered_ = round_registry.get_round_players_spawned_filter(round_["round_id"])
@@ -1597,6 +1722,8 @@ func _server_validate_equip_item(requesting_player_id: int, object_id: int, _tar
 		var session_id = client_registry.get_peer_id_by_uuid(peer["id"])
 		if _is_peer_connected(session_id):
 			network_manager.rpc_id(session_id, "_client_apply_equip", requesting_player_id, item_id, false, true)
+		
+	await get_tree().process_frame
 	
 	# Aplica visual tbm na cena do servidor
 	var player_node = players_node.get_node_or_null(str(requesting_player_id))
@@ -1621,6 +1748,8 @@ func _server_validate_unequip_item(requesting_player_id: int, slot_type: String)
 	var item_slot = item.get_slot()
 	
 	_log_debug("[ITEM]📦 Player %s pediu para desequipar item %d no slot %s, no round %d" % [player["name"], item["id"], item["type"], round_["round_id"]])
+		
+	await get_tree().process_frame
 	
 	# Verificação se o player está conectado
 	if not _is_peer_connected(requesting_player_id):
@@ -1633,12 +1762,16 @@ func _server_validate_unequip_item(requesting_player_id: int, slot_type: String)
 	client_registry.unequip_item(round_["round_id"], player_uuid, item_slot)
 	
 	_log_debug("✓ Item desequipado: %s de %s (Player %s, Rodada %d)" % [item["name"], item["type"], player_uuid, round_["round_id"]])
+		
+	await get_tree().process_frame
 	
 	var filtered_ = round_registry.get_round_players_spawned_filter(round_["round_id"])
 	for peer in filtered_:
 		var player_session_id = client_registry.get_peer_id_by_uuid(peer["id"])
 		if _is_peer_connected(player_session_id):
 			network_manager.rpc_id(player_session_id, "_client_apply_equip", requesting_player_id, int(item_id), true, true)
+		
+	await get_tree().process_frame
 	
 	# Aplica na cena do servidor (atualizar visual)
 	var player_node = players_node.get_node_or_null(str(requesting_player_id))
@@ -1662,11 +1795,15 @@ func _server_validate_swap_items(dragged_item_id: String, target_item_id: String
 	#var player = client_registry.get_player(player_uuid)
 	var round_id: int = client_registry.get_player_round(player_uuid)
 	var round_data = round_registry.get_round(round_id)
+		
+	await get_tree().process_frame
 	
 	# Verifica se o player tem pelo menos um destes itens equipado
 	var dragged_equipped := client_registry.is_item_equipped(round_id, player_uuid, int(dragged_item_id))
 	var target_equipped := client_registry.is_item_equipped(round_id, player_uuid, int(target_item_id))
-
+	
+	await get_tree().process_frame
+	
 	# XOR: um true e o outro false
 	if dragged_equipped == target_equipped:
 		return
@@ -1677,6 +1814,8 @@ func _server_validate_swap_items(dragged_item_id: String, target_item_id: String
 	# XOR: um true e o outro false
 	if dragged_in_inventory == target_in_inventory:
 		return
+		
+	await get_tree().process_frame
 	
 	# PASSO 1: IDENTIFICAR QUAL ITEM VEM DO INVENTÁRIO (será equipado)
 	
@@ -1694,7 +1833,9 @@ func _server_validate_swap_items(dragged_item_id: String, target_item_id: String
 		# Item arrastado está no inventário → então o ALVO está equipado
 		inventory_item_id = dragged_item_id
 		equipped_item_id = target_item_id
-
+	
+	await get_tree().process_frame
+	
 	# PASSO 2: OBTER DADOS DO ITEM QUE VEM DO INVENTÁRIO
 	
 	var item_name: String = object_manager.get_stored_object_item_name(round_id, int(inventory_item_id))
@@ -1708,6 +1849,8 @@ func _server_validate_swap_items(dragged_item_id: String, target_item_id: String
 		"item_id": item_data["id"],
 		"object_id": inventory_item_id
 	}
+		
+	await get_tree().process_frame
 	
 	# PASSO 3: EXECUTAR TROCA (usando EXATAMENTE sua lógica original)
 	
@@ -1720,11 +1863,15 @@ func _server_validate_swap_items(dragged_item_id: String, target_item_id: String
 		int(equipped_item_id),    # ID do item equipado (será substituído)
 		item_data["type"]         # Tipo do slot (ex: "hand-left", "head") - MANTENHA "type"
 	)
-
+	
+	await get_tree().process_frame
+	
 	# PASSO 4: ATUALIZAR VISUAL (mantendo sua lógica original)
 	var players_node = round_data["round_node"].get_node_or_null("Players")
 	if not players_node:
 		return
+		
+	await get_tree().process_frame
 	
 	# Servidor:
 	# Mudança de visual sincronizada para os remotes e clientes
@@ -1734,7 +1881,9 @@ func _server_validate_swap_items(dragged_item_id: String, target_item_id: String
 	# Ações diversas relacionadas a swap de itens sincronizadas para os remotes e clientes
 	if player_node and player_node.has_method("execute_item_swap"):
 		player_node.execute_item_swap()
-		
+			
+	await get_tree().process_frame
+	
 	# Clientes:
 	# _client_apply_equip executa ambas: apply_visual_equip_on_player_node e execute_item_swap
 	for peer in round_data["players"]:
@@ -1761,6 +1910,8 @@ func _server_trainer_spawn_item(requesting_player_id: int, item_id: int):
 	# Verifica se o id do item é válido
 	if not item_database.get_item_by_id(item_id):
 		return
+		
+	await get_tree().process_frame
 	
 	var objects_node = round_["round_node"].get_node_or_null("Objects")
 	var item_name = item_database.get_item_by_id(item_id)
@@ -1797,6 +1948,8 @@ func _server_validate_drop_item(requesting_player_id: int, obj_id: int):
 	var item_ = item_database.get_item(object_item_name).to_dictionary()
 	var item_slot = item_database.get_slot(object_item_name)
 	var item_id = 0
+		
+	await get_tree().process_frame
 	
 	# Se o item estiver equipado
 	if is_item_equipped:
@@ -1822,6 +1975,8 @@ func _server_validate_drop_item(requesting_player_id: int, obj_id: int):
 				network_manager.rpc_id(session_id, "_client_apply_equip", requesting_player_id, int(item_id), true)
 	
 	_log_debug("[ITEM]📦 Servidor vai validar pedido de drop de item ObjId: %d tipo %s do player ID %s" % [obj_id, item_["name"], requesting_player_id])
+		
+	await get_tree().process_frame
 	
 	# Validação 4:
 	if not item_database.get_item_by_id(item_id) and item_id != 0:
@@ -1836,6 +1991,8 @@ func _server_validate_drop_item(requesting_player_id: int, obj_id: int):
 		return
 		
 	_log_debug("[ITEM]📦 Pedido válido! Executando drop de item ObjId: %d tipo %s do player ID %s" % [obj_id, item_["name"], requesting_player_id])
+		
+	await get_tree().process_frame
 	
 	# Executar drop (o item deve estar no inventário do player / já verificado acima) \/
 	# Pegar o item_id do objeto referido
@@ -1844,6 +2001,8 @@ func _server_validate_drop_item(requesting_player_id: int, obj_id: int):
 		if item["object_id"] == obj_id:
 			item_id = item["item_id"]
 			break
+		
+	await get_tree().process_frame
 			
 	var item_data = item_database.get_item_by_id(int(item_id))
 	var objects_node = round_["round_node"].get_node_or_null("Objects")
@@ -1867,7 +2026,9 @@ func _server_validate_drop_item(requesting_player_id: int, obj_id: int):
 			var session_id = client_registry.get_peer_id_by_uuid(peer_id)
 			if _is_peer_connected(session_id):
 				network_manager._client_apply_drop.rpc_id(session_id, requesting_player_id, item_data["name"])
-		
+			
+		await get_tree().process_frame
+	
 		# Aplica no nó do servidor
 		var player_node = client_registry.get_player_node(player_uuid)
 		if player_node and player_node.has_method("execute_item_drop"):
@@ -1899,6 +2060,8 @@ func _server_trainer_drop_item(player_id):
 	var item_id = int(client_registry.get_inventory_items(round_["round_id"], player_uuid)[0]["item_id"])
 
 	var objects_node = round_["round_node"].get_node_or_null("Objects")
+		
+	await get_tree().process_frame
 	
 	# Remover o item do registro do player
 	client_registry.remove_item_from_inventory(round_["round_id"], player_uuid, obj_id)
@@ -1932,11 +2095,15 @@ func _server_trainer_repawn_player(player_id, player_uuid):
 	var players_node = round_data["round_node"].get_node_or_null("Players")
 	if not players_node:
 		return
+		
+	await get_tree().process_frame
 	
 	# Aplica na cena de player do servidor
 	var player_node = players_node.get_node_or_null(str(player_id))
 	if player_node and player_node.has_method("_respawn_player"):
 		player_node._respawn_player(map_manager.spawn_center)
+		
+	await get_tree().process_frame
 	
 	# Aplica nas cenas do players remotos
 	var filtered_ = round_registry.get_round_players_spawned_filter(round_["round_id"])
@@ -1959,9 +2126,12 @@ func attack_validation(group: String, player_id: int, actual_weapon: String, vic
 		var victim_uuid = client_registry.get_uuid_by_peer_id(victim_session_id)
 		
 		for peer_uuid in round_players:
+			await get_tree().process_frame
 			var session_id = client_registry.get_peer_id_by_uuid(peer_uuid)
 			network_manager._client_receive_attack.rpc_id(session_id, victim_session_id)
-		
+			
+		await get_tree().process_frame
+	
 		# Aplica no nó do servidor
 		var player_node = client_registry.get_player_node(victim_uuid)
 		if player_node and player_node.has_method("take_damage"):
@@ -2013,6 +2183,8 @@ func _server_player_action(p_id: int, action_type: String, item_equipado_nome, a
 			# Dica: Outra forma de chamar rpc(quando está inacessível p o server mas existe no pc remoto):
 			# if has_method("_client_player_action"):
 				# rpc_id(peer_id, "_client_player_action", p_id, action_type, anim_name)
+		
+	await get_tree().process_frame
 	
 	# Para defend_stop o servidor aplica sem verificações
 	# Aplica no nó do servidor

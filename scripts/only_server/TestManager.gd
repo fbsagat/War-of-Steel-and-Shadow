@@ -53,7 +53,7 @@ func initialize():
 func sort_num(min_val: int, max_val: int) -> int:
 	return randi_range(min_val, max_val)
 	
-func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_round: Dictionary = {}):
+func create_test_round(nome_sala: String = "Sala de Teste", configuracoes_round: Dictionary = {}):
 	"""
 	Cria uma partida de teste usando os peers conectados reais
 	
@@ -100,6 +100,8 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 	_log_debug("Jogadores: %d" % num_players)
 	_log_debug("========================================")
 	
+	await get_tree().process_frame
+	
 	# Registra jogadores no ClientRegistry
 	var players: Array = []
 	for i in range(num_players):
@@ -131,7 +133,9 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 	if players.is_empty():
 		_log_debug("❌ Nenhum jogador válido para criar partida")
 		return
-
+	
+	await get_tree().process_frame
+	
 	# Cria sala no RoomRegistry
 	var room_data = room_registry.create_room(
 		nome_sala,
@@ -147,6 +151,8 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 
 	_log_debug(" ✓ Sala criada: '%s' (ID: %d)" % [nome_sala, room_id])
 	
+	await get_tree().process_frame
+	
 	# Adiciona outros jogadores à sala (host já foi adicionado)
 	for i in range(1, players.size()):
 		var success = room_registry.add_player_to_room(room_id, players[i]["uuid_base"])
@@ -158,6 +164,8 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 	if not response[0]:
 		_log_debug(response[1])
 		return
+	
+	await get_tree().process_frame
 	
 	# Cria rodada no RoundRegistry
 	_log_debug("  ✓ Iniciando rodada de teste...")
@@ -176,6 +184,8 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 		configuracoes_round
 	)
 	
+	await get_tree().process_frame
+	
 	# Criar cena de organização do round
 	var round_node = SubViewport.new()
 	round_node.own_world_3d = true
@@ -190,6 +200,8 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 	server_manager.all_rounds_node.add_child(round_node)
 	
 	round_registry.set_round_node(round_data["round_id"], round_node)
+	
+	await get_tree().process_frame
 	
 	# Cria nós organizacionais
 	var players_node = Node.new()
@@ -206,6 +218,8 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 		return
 	
 	_log_debug("  ✓ Rodada criada: ID %d" % round_data["round_id"])
+	
+	await get_tree().process_frame
 	
 	# Carrega o mapa
 	await map_manager.load_map(server_manager.map_scene, round_node)
@@ -231,6 +245,8 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 	
 	_log_debug("  ✓ Enviando dados para clientes...")
 	
+	await get_tree().process_frame
+	
 	# Envia comando de início para todos os clientes
 	for room_player in match_data["players"]:
 		network_manager.rpc_id(room_player["session_id"], "_client_round_started", server_manager.server_id, match_data)
@@ -240,6 +256,8 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 	
 	# Inicia rodada (ativa timers)
 	round_registry.start_round(round_data["round_id"])
+	
+	await get_tree().process_frame
 	
 	if server_manager.test_trainer:
 		# Spawna alguns objetos
@@ -256,7 +274,9 @@ func criar_partida_teste(nome_sala: String = "Sala de Teste", configuracoes_roun
 		object_manager.spawn_item(objects_node, round_data["round_id"], "potion_glass_poison", Vector3(-7.998, 0.937, -10.437), Vector3(0, 0, 0), Vector3(0, 0, 0))
 		object_manager.spawn_item(objects_node, round_data["round_id"], "potion_glass_stamina", Vector3(-2.561, 0.937, 9.187), Vector3(0, 0, 0), Vector3(0, 0, 0))
 		object_manager.spawn_item(objects_node, round_data["round_id"], "potion_glass_heal", Vector3(-42.622, 41.035, 0.898), Vector3(0, 0, 0), Vector3(0, 0, 0))
-		
+	
+	await get_tree().process_frame
+	
 	# Atualiza lista de salas para os players no menu
 	server_manager._send_rooms_list_to_all()
 	
@@ -283,6 +303,8 @@ func _server_instantiate_round(match_data: Dictionary, players_node, round_node)
 	var pressure_plate: Node3D = terrain_3d.get_node_or_null("Pressure_plate")
 	pressure_plate.request_spawn.connect(on_spawn_requested)
 	
+	await get_tree().process_frame
+	
 	# Salva referência no RoundRegistry
 	if round_registry.rounds.has(match_data["round_id"]):
 		round_registry.rounds[match_data["round_id"]]["map_manager"] = server_manager.map_manager
@@ -290,7 +312,10 @@ func _server_instantiate_round(match_data: Dictionary, players_node, round_node)
 	# Spawna todos os jogadores
 	for player_data in match_data["players"]:
 		var spawn_data = match_data["settings"]["spawn_points"][player_data["session_id"]]
+		await get_tree().process_frame
 		_spawn_player_on_server(player_data, spawn_data, match_data["round_id"], players_node)
+	
+	await get_tree().process_frame
 	
 	# Cria câmera livre se não estiver em modo headless(sem renderização)
 	if not server_manager.is_headless:
@@ -310,6 +335,8 @@ func _server_instantiate_round(match_data: Dictionary, players_node, round_node)
 		actual_camera.current = false
 		await get_tree().process_frame
 	
+	await get_tree().process_frame
+	
 	# Se for o primeiro round, esta é a câmera atual
 	if match_data["round_id"] != 1 and not server_manager.is_headless:
 		actual_camera.current = false
@@ -321,6 +348,8 @@ func _server_instantiate_round(match_data: Dictionary, players_node, round_node)
 		terrain_3d.set_physics_process(true)
 	else:
 		push_warning("terrain_3d não encontrado para configurar câmera")
+		
+	await get_tree().process_frame
 	
 	# Se não headless, joga este primeiro round para a camera do servidor
 	var rounds_count = round_registry.get_active_rounds_count()
@@ -361,6 +390,8 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 	# IMPORTANTE: No servidor, nenhum player é "local"
 	player_instance.is_local_player = false
 	player_instance._is_server = true
+		
+	await get_tree().process_frame
 	
 	# Adiciona player à cena
 	players_node.add_child(player_instance)
@@ -370,6 +401,8 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 	player_instance.network_manager = network_manager
 	player_instance.server_manager = server_manager
 	player_instance.initializer = initializer
+		
+	await get_tree().process_frame
 	
 	# Inicializa jogador (configura identificação básica)
 	var color: Color = Color(0.0, 0.0, 0.0, 1.0)
@@ -377,6 +410,8 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 	player_instance.initialize(player_data["name"], final_color, player_data["session_id"],
 	 player_data["id"], spawn_data["position"])
 	player_instance.rotation = spawn_data["rotation"]
+		
+	await get_tree().process_frame
 	
 	# Preenche terreno e central_spawn
 	player_instance.terrain_ = map_manager.current_map
@@ -385,6 +420,7 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 	# AGUARDA PROCESSAMENTO COMPLETO
 	if not player_instance.is_node_ready():
 		await player_instance.ready
+		
 	await get_tree().process_frame
 	
 	# VALIDA QUE ESTÁ NA ÁRVORE
@@ -398,6 +434,8 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 	
 	# Registra no RoundRegistry
 	round_registry.register_spawned_player(round_id, p_uuid, player_instance)
+		
+	await get_tree().process_frame
 	
 	# Inicializa estado de validação no ServerManager
 	server_manager.player_states[p_uuid] = {

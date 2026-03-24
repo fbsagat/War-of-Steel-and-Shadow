@@ -31,7 +31,7 @@ var reconnect_timer: Timer
 # Heartbeat (detecção)
 var last_pong_time := 0
 var ping_interval := 1.0
-var timeout_limit := 3000 # ms
+var timeout_limit := 6000 # ms
 var ping_start_time := 0
 var has_received_pong := false
 var has_timed_out := false
@@ -1129,6 +1129,8 @@ func _start_round_locally(server_id: String, match_data: Dictionary):
 	_log_debug("========================================")
 	
 	is_in_round = true
+		
+	await get_tree().process_frame
 	
 	# Criar cena de organização do round
 	round_node = preload("res://scripts/utils/round_node.gd").new()
@@ -1136,6 +1138,8 @@ func _start_round_locally(server_id: String, match_data: Dictionary):
 	round_node.round_id = match_data["round_id"]
 	round_node.room_id = match_data["room_id"]
 	round_node.server_id = server_id
+		
+	await get_tree().process_frame
 	
 	# Adiciona à raiz
 	get_tree().root.add_child(round_node)
@@ -1148,6 +1152,8 @@ func _start_round_locally(server_id: String, match_data: Dictionary):
 	objects_node = Node.new()
 	objects_node.name = "Objects"
 	round_node.add_child(objects_node)
+		
+	await get_tree().process_frame
 	
 	# Carrega o mapa
 	await map_manager.load_map(match_data["map_scene"], round_node)
@@ -1157,6 +1163,8 @@ func _start_round_locally(server_id: String, match_data: Dictionary):
 	for player_data in match_data["players"]:
 		var is_local = player_data["id"] == uuid_base
 		_spawn_player(player_data, is_local, match_data)
+		
+	await get_tree().process_frame
 	
 	# Esconde o menu
 	if main_menu_node:
@@ -1188,6 +1196,8 @@ func _return_round_locally(server_id: String, match_data: Dictionary):
 	_log_debug("========================================")
 	
 	is_in_round = true
+		
+	await get_tree().process_frame
 	
 	# Criar cena de organização do round
 	round_node = preload("res://scripts/utils/round_node.gd").new()
@@ -1198,6 +1208,8 @@ func _return_round_locally(server_id: String, match_data: Dictionary):
 	
 	# Adiciona à raiz
 	get_tree().root.add_child(round_node)
+		
+	await get_tree().process_frame
 	
 	# Cria nós organizacionais
 	players_node = Node.new()
@@ -1207,11 +1219,15 @@ func _return_round_locally(server_id: String, match_data: Dictionary):
 	objects_node = Node.new()
 	objects_node.name = "Objects"
 	round_node.add_child(objects_node)
+		
+	await get_tree().process_frame
 	
 	# Carrega o mapa
 	await map_manager.load_map(match_data["map_scene"], round_node)
 	await map_manager.apply_map_configs(match_data["settings"])
-
+	
+	await get_tree().process_frame
+	
 	# Spawna todos os jogadores
 	for player_data in match_data["players"]:
 		# \/ Se for igual, retorna true
@@ -1221,6 +1237,8 @@ func _return_round_locally(server_id: String, match_data: Dictionary):
 	# Atualiza visual de equipamentos para cada personagem, incluindo local
 	# (local deve usar funções do game manager add_item_to_inventory e equip_item antes de 
 	# apply_visual_equip_on_player_node no nó do personagem)
+		
+	await get_tree().process_frame
 	
 	for player_uuid in match_data["equipped_items"]:
 		var slots = match_data["equipped_items"][player_uuid]
@@ -1242,6 +1260,8 @@ func _return_round_locally(server_id: String, match_data: Dictionary):
 	# Atualiza visual de itens no inventário do player local
 	for item in match_data["player_items"]:
 		add_item_to_inventory(item["item_id"], item["object_id"])
+		
+	await get_tree().process_frame
 	
 	# Spawna objetos com localização(e outros atributos) atual na partida
 	for object_id in match_data["round_objects"]:
@@ -1253,6 +1273,8 @@ func _return_round_locally(server_id: String, match_data: Dictionary):
 		var velocity = item["drop_velocity"]
 		var owner_ = item["owner_uuid"]
 		_spawn_on_client(object_id, round_id, name_, position, rotation, velocity, owner_)
+		
+	await get_tree().process_frame
 	
 	# Esconde o menu
 	if main_menu_node:
@@ -1291,6 +1313,8 @@ func _spawn_player(player_data: Dictionary, is_local: bool, _match_data: Diction
 	# Instancia player
 	var player_scene_ = preload(player_scene)
 	var player_instance = player_scene_.instantiate()
+		
+	await get_tree().process_frame
 	
 	# Injeta dependências
 	player_instance.item_database = item_database
@@ -1300,6 +1324,8 @@ func _spawn_player(player_data: Dictionary, is_local: bool, _match_data: Diction
 	
 	# Adiciona player à cena PRIMEIRO
 	players_node.add_child(player_instance)
+		
+	await get_tree().process_frame
 	
 	# Inicializa jogador (configura identificação básica)
 	var player_pos = _match_data["settings"]["spawn_points"][player_data["session_id"]]
@@ -1307,7 +1333,9 @@ func _spawn_player(player_data: Dictionary, is_local: bool, _match_data: Diction
 	var final_color = player_data["character"]["color"] if player_data["character"]["color"] else color
 	player_instance.initialize(player_data["name"], final_color, player_data["session_id"], player_data["id"], player_pos["position"])
 	player_instance.rotation = player_pos["rotation"]
-
+	
+	await get_tree().process_frame
+	
 	# Configuração ESPECÍFICA por tipo de jogador
 	if is_local:
 		# Só instanciar e atribuir câmera para jogador LOCAL
