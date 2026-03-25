@@ -36,30 +36,47 @@ func initialize():
 
 func _process(delta: float):
 	_server_update_sync_timers(delta)
-	#_client_timout_detection(delta) PAREI AQUI
+	_client_timout_detection(delta)
 
 # ===== CLIENT TIMOUT DETECTOR =====
 
-func remove_client(peer_id: int):
-	if last_ping_from_client.has(peer_id):
-		last_ping_from_client.erase(peer_id)
+# isso remove da lista de timout quando o cliente se reconecta, mas e se ele sumir pra sempre? 
+# fazer um sistema de lipeza periódica
+
+func remove_client_from_timeout_detection(peer_uuid: String):
+	if last_ping_from_client.has(peer_uuid):
+		last_ping_from_client.erase(peer_uuid)
 
 func _client_timout_detection(_delta):
 	var now = Time.get_ticks_msec()
 	
-	for peer_id in last_ping_from_client.keys():
-		var last_time = last_ping_from_client[peer_id]
+	for peer_uuid in last_ping_from_client.keys():
+		var last_time = last_ping_from_client[peer_uuid]
 		
 		if now - last_time > timeout_limit:
-			print("Cliente com timeout:", peer_id)
-			#_on_client_timeout(peer_id)
+			_on_client_timeout(peer_uuid)
+
+func _on_client_timeout(peer_uuid: String):
+	
+	# Sistema para impedir execução múltipla
+	# Só passa se não for DISCONNECTED
+	var state = client_registry.get_player_state(peer_uuid)
+	var state_list = [client_registry.ClientState.DISCONNECTED]
+	if state in state_list:
+		return
+	
+	_log_debug("Timout de cliente %s, definindo como desconectado" % peer_uuid)
+	var peer_id = client_registry.get_peer_id_by_uuid(peer_uuid)
+	server_manager._on_peer_disconnected(peer_id)
 
 # ===== HEARTBEAT =====
 
 func _client_send_ping():
 	var sender = multiplayer.get_remote_sender_id()
-	last_ping_from_client[sender] = Time.get_ticks_msec()
-	rpc_id(sender, "_client_receive_pong")
+	var player_uuid = client_registry.get_uuid_by_peer_id(sender)
+	if player_uuid != "":
+		last_ping_from_client[player_uuid] = Time.get_ticks_msec()
+		rpc_id(sender, "_client_receive_pong")
 
 # ===== CONECÇÃO =====
 
@@ -124,7 +141,9 @@ func _server_request_return_or_exit(_chosen: bool):
 	# Sistema para impedir execução múltipla
 	# Só aceita se estava in game ou no lobby
 	var state = client_registry.get_player_state(player_uuid)
-	if state not in [client_registry.ClientState.IN_GAME, client_registry.ClientState.LOBBY]:
+	var state_list = [client_registry.ClientState.IN_GAME, client_registry.ClientState.LOBBY]
+	if state not in state_list:
+		_log_debug("Estado de jogador %s não está entre: %s. Estado atual:  %s" % [player_uuid, state, state_list])
 		return
 	
 	# Se está voltando, define RETURNING, se false, quer abandonar: DISCONNECTED
@@ -184,7 +203,9 @@ func _server_player_ready():
 	
 	# Só aceita se estava carregando
 	var state = client_registry.get_player_state(player_uuid)
-	if state != client_registry.ClientState.LOADING:
+	var state_list = [client_registry.ClientState.LOADING]
+	if state not in state_list:
+		_log_debug("Estado de jogador %s não está entre: %s" % [state, state_list])
 		return
 	
 	client_registry.set_player_state(player_uuid, client_registry.ClientState.IN_GAME)

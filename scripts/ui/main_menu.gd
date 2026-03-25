@@ -77,6 +77,7 @@ signal gameplay_menu_give_up_game_pressed()
 @onready var player_name_input: LineEdit
 @onready var name_input_error_label: Label
 @onready var name_input_return_button: Button
+@onready var name_input_confirm_button: Button
 
 # Menu de entrada manual de sala
 @onready var manual_room_name_input: LineEdit
@@ -92,6 +93,7 @@ signal gameplay_menu_give_up_game_pressed()
 @onready var room_name_input: LineEdit
 @onready var room_password_input: LineEdit
 @onready var create_room_error_label: Label
+@onready var create_room_confirm_button: Button
 
 # Menu de sala (lobby)
 @onready var server_name_label: Label
@@ -108,6 +110,7 @@ signal gameplay_menu_give_up_game_pressed()
 # Menu de retorna à sala/partida
 @onready var round_return_room_label: Label
 @onready var round_return_continue_button: Button
+@onready var round_return_menu_exit_button: Button
 
 # Menu de opções
 @onready var volume_slider: HSlider
@@ -300,6 +303,7 @@ func _setup_element_references():
 	if player_name_input:
 		player_name_input.text_submitted.connect(_on_name_confirm_pressed)
 	name_input_return_button = name_input_menu.find_child("ReturnButton", true, false)
+	name_input_confirm_button = name_input_menu.find_child("ConfirmButton", true, false)
 	name_input_error_label = name_input_menu.find_child("ErrorLabel", true, false)
 	
 	# Lista de servidores
@@ -355,6 +359,7 @@ func _setup_element_references():
 	if room_password_input:
 		room_password_input.text_submitted.connect(_on_create_match_confirm_pressed)
 	create_room_error_label = create_room_menu.find_child("ErrorLabel", true, false)
+	create_room_confirm_button = create_room_menu.find_child("ConfirmButton", true, false)
 	
 	# Menu de sala (lobby)
 	room_name_label = room_menu.find_child("RoomNameLabel", true, false)
@@ -385,6 +390,7 @@ func _setup_element_references():
 	# Menu de retorna à partida
 	round_return_room_label = round_return_menu.find_child("RoomName", true, false)
 	round_return_continue_button = round_return_menu.find_child("ContinueButton", true, false)
+	round_return_menu_exit_button = round_return_menu.find_child("ExitButton", true, false)
 
 func _connect_button_signals():
 	# Menu principal
@@ -642,7 +648,7 @@ func hide_gameplay_menu():
 
 func show_name_input_menu(welcome: bool):
 	hide_all_menus()
-	
+	name_input_confirm_button.disabled = false
 	if welcome:
 		welcome_label.visible = true
 		function_label.text = "Escolha seu nome"
@@ -708,6 +714,7 @@ func show_room_list_menu(_error_visible: bool = false, match_password_visible: b
 	
 func show_round_return_menu(room_name: String):
 	hide_all_menus()
+	round_return_menu_exit_button.disabled = false
 	round_return_menu.visible = true
 	round_return_continue_button.disabled = false
 	current_menu_visible = round_return_menu
@@ -715,6 +722,7 @@ func show_round_return_menu(room_name: String):
 	
 func show_manual_room_join_menu(show_error: bool = false):
 	hide_all_menus()
+	manual_join_button.disabled = false
 	manual_room_join_menu.visible = true
 	current_menu_visible = manual_room_join_menu
 	
@@ -747,6 +755,7 @@ func show_create_local_match_menu():
 
 func show_create_match_menu():
 	hide_all_menus()
+	create_room_confirm_button.disabled = false
 	create_room_menu.visible = true
 	current_menu_visible = create_room_menu
 	
@@ -772,6 +781,7 @@ func show_options_menu():
 
 func show_room_menu(room_data: Dictionary):
 	hide_all_menus()
+	room_close_button.disabled = false
 	room_menu.visible = true
 	current_menu_visible = room_menu
 	room_start_button.disabled = false
@@ -864,6 +874,8 @@ func _on_name_confirm_pressed(text: String = ""):
 	game_manager.set_player_name(p_name)
 
 func _on_name_input_return_pressed():
+	if disable_protection:
+		name_input_confirm_button.disabled = true
 	show_room_list_menu()
 
 # ===== CALLBACKS DO MENU PRINCIPAL =====
@@ -905,6 +917,8 @@ func _on_round_return_menu_continue_pressed():
 func _on_round_return_menu_exit_pressed():
 	"""Cliente sinalizou que não quer mais retornar à partida em que estava (personagem sai da 
 	partida pra sempre"""
+	if disable_protection:
+		round_return_menu_exit_button.disabled = true
 	if current_menu_visible == round_return_menu:
 		game_manager._request_exit_from_round()
 
@@ -981,6 +995,8 @@ func populate_room_list(matches: Array):
 		match_list.add_item(text)
 		
 func _on_manual_room_join_confirm_pressed(_input: String = ""):
+	if disable_protection:
+		manual_join_button.disabled = true
 	# Valida se não tem nada no campo e se está na tela de estiver no menu de nme input
 	if not manual_room_name_input and current_menu_visible != manual_room_name_input:
 		return
@@ -1151,7 +1167,10 @@ func _on_create_match_confirm_pressed(text: String = ""):
 	if room_name.is_empty():
 		_show_error_("Nome da sala não pode estar vazio", create_room_error_label, "Red")
 		return
-	
+		
+	if disable_protection:
+		create_room_confirm_button.disabled = true
+		
 	game_manager.create_room(room_name, password)
 
 func _on_create_local_match_confirm_pressed():
@@ -1487,6 +1506,8 @@ func _on_room_start_pressed():
 		room_start_button.disabled = true
 	
 func _on_room_close_pressed():
+	if disable_protection:
+		room_close_button.disabled = true
 	game_manager.close_room()
 
 func _on_room_lock_pressed():

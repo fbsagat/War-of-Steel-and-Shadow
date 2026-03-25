@@ -12,27 +12,26 @@ script = ExtResource("1_tasbd")
 
 [node name="Panel" type="Panel" parent="." unique_id=1615780359]
 anchors_preset = -1
-anchor_left = -0.009375
-anchor_right = -0.03359375
-anchor_bottom = 0.036111113
-offset_left = 7.0
-offset_top = 6.0
-offset_right = 209.0
-offset_bottom = 154.0
+anchor_left = 0.0057812505
+anchor_top = 0.009388889
+anchor_right = 0.133125
+anchor_bottom = 0.25277779
+offset_left = -0.40000057
+offset_top = 0.23999977
+offset_right = -0.40000916
 theme_override_styles/panel = SubResource("StyleBoxFlat_tasbd")
 metadata/_edit_use_anchors_ = true
 
 [node name="Label" type="Label" parent="Panel" unique_id=303991724]
 layout_mode = 1
 anchors_preset = -1
-anchor_left = 0.60818714
-anchor_top = 0.41912645
-anchor_right = 1.7134503
-anchor_bottom = 0.48599994
-offset_left = -85.0
-offset_top = -66.928
-offset_right = 93.0
-offset_bottom = 67.072
+anchor_left = 0.049364995
+anchor_top = 0.037
+anchor_right = 2.7120001
+anchor_bottom = 0.96
+offset_left = -0.046494484
+offset_top = -0.055871487
+offset_right = -0.056030273
 theme_override_font_sizes/font_size = 14
 vertical_alignment = 1
 metadata/_edit_use_anchors_ = true

@@ -213,8 +213,9 @@ func set_disconnected_peer(peer_id: int):
 		_log_debug("⚠ Tentou desconectar peer inexistente: %d" % peer_id)
 		return
 	
-	# muda estado do jogador
+	# Muda estado do jogador
 	set_player_state(uuid_base, ClientState.DISCONNECTED)
+	
 	players[uuid_base]["connected"] = false
 	players[uuid_base]["disconnected_at"] = Time.get_unix_time_from_system()
 	set_disconnected_peer_from_room_and_round(peer_id)
@@ -281,7 +282,10 @@ func _register_connection(uuid_base: String):
 	players[uuid_base]["connected"] = true
 	players[uuid_base]["disconnected_at"] = 0.0
 	_log_debug("Peer uuid=%s marcado como conectado" % uuid_base)
-
+	
+	# Remove do timout detection
+	network_manager.remove_client_from_timeout_detection(uuid_base)
+	
 func _is_uuid_connected(uuid_base: String) -> bool:
 	"""Verifica se já existe jogador com este uuid_base conectado"""
 	if players.has(uuid_base):
@@ -458,7 +462,7 @@ func set_player_state(uuid_base: String, new_state: int) -> bool:
 	# Aplica mudança
 	players[uuid_base]["ClientState"] = new_state
 	
-	_log_debug("Player %s: %s → %s" % [uuid_base, str(old_state),str(new_state)])
+	_log_debug("Mundano estado de player %s: %s → %s" % [uuid_base, str(old_state),str(new_state)])
 	
 	return true
 

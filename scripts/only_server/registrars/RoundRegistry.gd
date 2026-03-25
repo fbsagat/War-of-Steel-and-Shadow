@@ -581,6 +581,12 @@ func get_total_players(round_id: int) -> int:
 func get_all_rounds() -> Dictionary:
 	return rounds.duplicate(true)
 
+func get_all_rounds_keys() -> Array:
+	var all_keys = []
+	for key in rounds:
+		all_keys.append(key)
+	return all_keys
+
 func get_active_rounds_count() -> int:
 	return rounds.size()
 

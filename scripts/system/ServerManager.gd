@@ -146,6 +146,7 @@ func _connect_signals():
 	"""Conecta sinais dos registries"""
 	# Sinais de rodada
 	round_registry.round_ending.connect(_on_round_ending)
+	room_registry.host_changed.connect(_on_host_changed)
 	
 func _setup_test_mode_verification():
 	"""Aqui inicializamos o sistema de verificação automática"""
@@ -230,59 +231,120 @@ func _input(event: InputEvent) -> void:
 		_toggle_mouse_mode()
 	
 	# Teste
-	#if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_BACKSPACE:
-		#_log_debug("Backspace!!!")
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_BACKSPACE:
+		_log_debug("Backspace!!! Coloque algo aqui...")
 
-func _find_a_next_round_to_camera():
+func _find_a_next_round_to_camera(round_id: int = -1):
 	"""Encontra um round ativo corretamente para mudar a câmera para este round"""
-	_log_debug("Movendo câmera do servidor para a próxima partida")
-	var round_nodes := all_rounds_node.get_children()
-	if round_nodes.is_empty():
-		return
-	# avança circularmente
-	current_cam_round_index = (current_cam_round_index + 1) % round_nodes.size()
-	var next_round := round_nodes[current_cam_round_index]
-	_log_debug("Câmera para este round: %s" % next_round)
-	_switch_camera_to_round(next_round)
+	# Se receber id, envia para o round deste id, se não receber, envia para o próximo a partir de
+	# current_cam_round_index e o salva como o novo current_cam_round_index
+	
+	if round_id != -1:
+		_log_debug("Movendo câmera do servidor para o round: %s" % round_id)
+		current_cam_round_index = round_id
+	else:
+		_log_debug("Movendo câmera do servidor para o próximo round encontrado")
+		
+		var all_running_rounds_ids = round_registry.get_all_rounds_keys()
+		
+		# Se estiver vazio pega -1 novamente
+		if all_running_rounds_ids.is_empty():
+			current_cam_round_index = -1
+			_log_debug("Não tem round para mandar a câmera")
+			#current_active_viewport = null
+			viewport_display.visible = false
+			return
+			
+		# Garante ordem
+		all_running_rounds_ids.sort()
+		
+		var index = all_running_rounds_ids.find(current_cam_round_index)
+		# Se não encontrar
+		if index == -1:
+			# Pega o próximo maior
+			var next = null
+			
+			for n in all_running_rounds_ids:
+				if n > current_cam_round_index:
+					if next == null or n < next:
+						next = n
+			
+			if next != null:
+				current_cam_round_index = next
+			else:
+				# Se não tem maior, volta pro primeiro
+				current_cam_round_index = all_running_rounds_ids[0]
+				
+		# Se encontrar
+		else:
+			# Fluxo circular normal
+			current_cam_round_index = all_running_rounds_ids[(index + 1) % all_running_rounds_ids.size()]
 
-func _switch_camera_to_round(round_node: Node) -> void:
+	_log_debug("Câmera indo para o round: %s" % current_cam_round_index)
+	_switch_camera_to_round(current_cam_round_index)
+
+func _switch_camera_to_round(round_id: int) -> void:
 	"""Ativa a câmera de um round específico e atualiza o display"""
-	
-	_log_debug("Movendo câmera para round %s" % round_node.name)
-	
-	if not round_node or not round_node is SubViewport:
-		push_warning("round_node inválido")
-		return
-	
-	# Ativa a visualização do viewport
+
+	_log_debug("Movendo câmera para round %s" % round_id)
+	# Ajuste: garante que o display fique visível antes de trocar a textura
 	viewport_display.visible = true
 	
+	# Segurança ao pegar round
+	var round_ = round_registry.get_round(round_id)
+	if not round_:
+		push_warning("Round não encontrado: %s" % current_cam_round_index)
+		return
+	var round_node = round_.get("round_node", null)
+	if not round_node or not is_instance_valid(round_node):
+		push_warning("Round node inválido: %s" % current_cam_round_index)
+		return
+	
+	# Ajuste: a validação correta precisa usar parênteses,
+	# porque `not round_node is SubViewport` pode ficar ambíguo.
+	if round_node == null or not (round_node is SubViewport):
+		push_warning("round_node inválido")
+		return
+
+	# Ajuste: espera o SubViewport entrar na árvore e finalizar o ready
+	# antes de tentar pegar textura ou ativar câmera.
+	if not round_node.is_inside_tree():
+		await round_node.ready
+
 	# Desativa câmera anterior
 	if current_active_camera and is_instance_valid(current_active_camera):
 		current_active_camera.current = false
 		current_active_camera.set_process_input(false)
 		current_active_camera.set_process_unhandled_input(false)
-	
+
 	# Busca nova câmera
 	var new_camera = round_node.get_node_or_null("FreeCamera")
 	if not new_camera:
 		new_camera = round_node.get_node_or_null("DummyCamera")
-		
+
+	# Ajuste: um único await pode não ser suficiente para o SubViewport
+	# gerar a textura. Esperamos alguns frames para estabilizar o render.
 	await get_tree().process_frame
-	
+	await get_tree().process_frame
+
 	if new_camera and new_camera is Camera3D:
 		new_camera.current = true
 		current_active_camera = new_camera
 		current_active_viewport = round_node
-		
-		# ATUALIZA O DISPLAY COM A TEXTURA DESTE VIEWPORT
-		if viewport_display:
-			viewport_display.texture = round_node.get_texture()
-		
+
+		# Ajuste: só atribui a textura se ela realmente existir.
+		# Isso evita o erro "Viewport Texture must be set to use it."
+		var tex : Texture2D = round_node.get_texture()
+		if tex:
+			viewport_display.texture = tex
+		else:
+			push_warning("Viewport ainda não gerou textura para %s" % round_node.name)
+
 		# ATIVA O PROCESSAMENTO DE INPUT DA CÂMERA
 		new_camera.set_process_input(true)
 		new_camera.set_process_unhandled_input(true)
-
+		
+		current_cam_round_index = round_id
 		_log_debug("✓ Câmera ativada: %s em %s" % [new_camera.name, round_node.name])
 	else:
 		push_warning("✗ Câmera não encontrada em %s" % round_node.name)
@@ -383,8 +445,8 @@ func _on_peer_connected(peer_id: int):
 	_log_debug("✓ Cliente conectado: Peer ID %d" % peer_id)
 	
 	# Define cliente como conectado
-	var uuid = client_registry.get_uuid_by_peer_id(peer_id)
-	client_registry.set_player_state(uuid, client_registry.ClientState.LOBBY)
+	var client_uuid = client_registry.get_uuid_by_peer_id(peer_id)
+	client_registry.set_player_state(client_uuid, client_registry.ClientState.LOBBY)
 	
 	# Envia configurações do servidor para o cliente
 	var configs: Dictionary = {
@@ -400,10 +462,17 @@ func _on_peer_connected(peer_id: int):
 
 func _on_peer_disconnected(peer_id: int):
 	"""Callback quando um cliente desconecta"""
-	
-	# Define cliente como desconectado
-	client_registry.set_disconnected_peer(peer_id)
+
 	var player_uuid = client_registry.get_uuid_by_peer_id(peer_id)
+	
+	# Sistema para impedir execução múltipla
+	# Só passa se não for DISCONNECTED
+	var state = client_registry.get_player_state(player_uuid)
+	var state_list = [client_registry.ClientState.DISCONNECTED]
+	if state in state_list:
+		return
+	
+	_log_debug("❌ Desconectando cliente: Peer ID %d" % peer_id)
 	
 	var room = room_registry.get_player_room(player_uuid)
 	# Só apaga se não estiver em jogo
@@ -440,6 +509,9 @@ func _on_peer_disconnected(peer_id: int):
 				else:
 					_log_debug("Sala foi deletada (ficou vazia)")
 					_send_rooms_list_to_all()
+		
+	# Define cliente como desconectado
+	client_registry.set_disconnected_peer(peer_id)
 	
 	_log_debug("❌ Cliente desconectado: Peer ID %d" % peer_id)
 
@@ -700,7 +772,10 @@ func _player_exit_from_round(player_room_id: int, peer_id: int, player_uuid: Str
 	
 	# 3. Limpa estado de validação
 	_cleanup_player_state(player_uuid)
-
+	
+	# 4. Muda estado do jogador
+	client_registry.set_player_state(player_uuid, client_registry.ClientState.LOBBY)
+	
 func _mark_player_disconnected(peer_id: int, _chosen: bool):
 	"""Recebe aviso do cliente de que está desconectado (_chosen = false) ou reconectado 
 	(_chosen = true) em um round.
@@ -1219,14 +1294,6 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 	
 	# Atualiza lista de salas (remove esta sala da lista de disponíveis)
 	_send_rooms_list_to_all()
-		
-	await get_tree().process_frame
-	
-	# Se não headless, joga este primeiro round para a camera do servidor
-	var rounds_count = round_registry.get_active_rounds_count()
-	if not is_headless and rounds_count == 1:
-		await get_tree().process_frame
-		_switch_camera_to_round(round_node)
 			
 	await get_tree().process_frame
 	
@@ -1239,6 +1306,14 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 		object_manager.spawn_item(objects_node, round_data["round_id"], "cape_1", Vector3(2, 4, 4), Vector3(0, 0, 0))
 		object_manager.spawn_item(objects_node, round_data["round_id"], "sword_2", Vector3(2, 30, 1), Vector3(0, 0, 0))
 		object_manager.spawn_item(objects_node, round_data["round_id"], "shield_3", Vector3(0, 500, 0), Vector3(0, 0, 0))
+		
+	await get_tree().process_frame
+	
+	# Se não headless, joga este primeiro round para a camera do servidor
+	var rounds_count = round_registry.get_active_rounds_count()
+	if not is_headless and rounds_count == 1:
+		await get_tree().process_frame
+		_find_a_next_round_to_camera(round_data["round_id"])
 
 # ===== INSTANCIAÇÃO NO SERVIDOR =====
 
@@ -1457,6 +1532,10 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, pl
 
 # ===== CALLBACKS DE RODADA =====
 
+func _on_host_changed(room_id: int, new_host_uuid: String):
+	"""Esta função é executada quando o host de uma sala é alterado"""
+	pass
+
 func _on_round_ending(round_id: int, reason: String):
 	"""
 	Callback quando uma rodada está terminando
@@ -1482,15 +1561,9 @@ func _on_round_ending(round_id: int, reason: String):
 	# Finaliza completamente a rodada
 	_complete_round_end(round_id)
 	
-	# Se não houver mais nenhum round ativo e not is_headless(tem render de servidor), esconde viewport
-	# E esvazia o current_active_viewport
-	if round_registry.get_active_rounds_count() <= 0 and (not is_headless or not current_active_viewport):
-		current_active_viewport = null
-		viewport_display.visible = false
-	else:
-		# Se houver e não for headless, move câmera pra outro round automaticamente
-		if not is_headless:
-			_find_a_next_round_to_camera()
+	# Se a câmera estiver neste round, mover para o próximo
+	if not is_headless and current_cam_round_index == round_["round_id"]:
+		_find_a_next_round_to_camera()
 
 func _complete_round_end(round_id: int):
 	"""

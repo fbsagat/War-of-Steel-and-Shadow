@@ -906,7 +906,6 @@ layout_mode = 2
 text = "Iniciar"
 
 [node name="CreateRoomMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=765356564]
-visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
