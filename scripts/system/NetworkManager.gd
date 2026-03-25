@@ -335,6 +335,10 @@ func _client_player_action(_p_id: int, _action_type: String, _item_equipado_nome
 func _client_receive_attack(_body_name):
 	pass
 
+@rpc("authority", "call_remote", "reliable")
+func _client_receive_message(_text: String, _duration: float, _type: String):
+	pass
+
 # ===== ERROS =====
 
 @rpc("authority", "call_remote", "reliable")

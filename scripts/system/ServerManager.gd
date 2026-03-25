@@ -1534,7 +1534,10 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, pl
 
 func _on_host_changed(room_id: int, new_host_uuid: String):
 	"""Esta função é executada quando o host de uma sala é alterado"""
-	pass
+	var room = room_registry.get_room(room_id)
+	var text = "Agora você é o caralhudo do host dessa sala: %s" % room["name"]
+	var player_ = client_registry.get_player_by_uuid(new_host_uuid)
+	network_manager._client_receive_message.rpc_id(player_["peer_id"], text, 6, "info")
 
 func _on_round_ending(round_id: int, reason: String):
 	"""

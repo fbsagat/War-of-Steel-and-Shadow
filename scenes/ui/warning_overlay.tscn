@@ -1,0 +1,29 @@
+[gd_scene format=3 uid="uid://cbo3vpkueds00"]
+
+[ext_resource type="Script" uid="uid://dyis5lw4fe1rw" path="res://scripts/ui/warning_overlay.gd" id="1_lpbxh"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_lpbxh"]
+bg_color = Color(0, 0, 0, 0.77254903)
+
+[node name="WarningOverlay" type="CanvasLayer" unique_id=1498065603]
+layer = 99
+script = ExtResource("1_lpbxh")
+
+[node name="Panel" type="Panel" parent="." unique_id=1108596932]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -607.0
+offset_top = 7.0
+offset_bottom = 50.0
+grow_horizontal = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_lpbxh")
+
+[node name="Label" type="Label" parent="Panel" unique_id=190315180]
+layout_mode = 0
+offset_left = 17.0
+offset_top = 1.0
+offset_right = 599.0
+offset_bottom = 44.0
+horizontal_alignment = 2
+vertical_alignment = 1

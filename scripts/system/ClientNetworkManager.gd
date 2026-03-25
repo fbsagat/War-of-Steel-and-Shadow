@@ -521,6 +521,11 @@ func _client_receive_attack(victim_session_id):
 	if player and player.has_method("take_damage"):
 		player.take_damage()
 
+func _client_receive_message(text: String, duration: float, type: String):
+	_log_debug("Mensagem recebida do servidor: " + text)
+	if game_manager and game_manager.has_method("_server_to_client_message"):
+		game_manager._server_to_client_message(text, duration, type)
+
 # ===== ERROS =====
 
 func _client_receive_error(error_message: String):

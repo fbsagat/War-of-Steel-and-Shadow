@@ -81,6 +81,7 @@ var peer: ENetMultiplayerPeer
 
 var main_menu_node: Control = null
 var debug_overlay_node: CanvasLayer = null
+var warning_overlay_node: CanvasLayer = null
 var inventory_node : Control = null
 var local_player_node: Node = null
 var round_node: Node = null
@@ -2048,6 +2049,16 @@ func _server_to_client_error(error_message: String):
 	_log_debug("Erro recebido do servidor: " + error_message)
 	_show_error(error_message)
 	error_occurred.emit(error_message)
+
+func _server_to_client_message(text: String, duration: float = 3.0, type: String = "info"):
+	"""Callback quando recebe mensagem do servidor durante um round.
+	tipos: info, success, warning e error """
+	
+	_log_debug("Mensagem recebida do servidor: " + text)
+	if warning_overlay_node:
+		warning_overlay_node.show_message(text, duration, type)
+	else:
+		push_error("Warning_overlay_node não existe no game manager")
 
 func _show_error(message: String, color= "Red"):
 	"""Mostra erro na UI apropriada"""
