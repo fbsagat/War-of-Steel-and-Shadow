@@ -172,22 +172,32 @@ func _client_send_ping():
 	if not is_connected_to_server:
 		return
 	
+	# 1. Marca o tempo EXATO do envio neste cliente
 	ping_start_time = Time.get_ticks_msec()
-	network_manager._send_ping()
+	
+	# 2. Envia esse timestamp para o servidor
+	# Certifique-se de que o servidor receba este argumento 'client_time'
+	network_manager._send_ping(ping_start_time) 
 
-func _client_receive_pong():
+func _client_receive_pong(received_timestamp: int):
+	# O servidor deve devolver o 'ping_start_time' que enviamos
 	has_received_pong = true
 	last_pong_time = Time.get_ticks_msec()
-
-	var now = Time.get_ticks_msec()
-	var latency = now - ping_start_time
-	var _delta = now - last_pong_time
 	
-	# Se visual_debug on, recebe debug_overlay_node
-	# Atualiza a tela de visualização de debug de rede
+	# Cálculo Correto: Tempo Agora - Tempo que saiu daqui
+	var latency = last_pong_time - received_timestamp
+	
+	# Proteção contra drift de relógio ou pacotes muito atrasados
+	if latency < 0:
+		latency = 0
+	
+	# Envia o resultado calculado para o servidor armazenar
+	network_manager._server_report_ping(latency)
+	
+	# Atualiza overlay local
 	if debug_overlay_node:
 		debug_overlay_node.update_ping(latency)
-		debug_overlay_node.update_pong_time(now)
+		debug_overlay_node.update_pong_time(received_timestamp)
 
 func _ping_pong(_delta):
 	# Se estiver carregando algo, não detecta perda de conexão (falsa detecção)

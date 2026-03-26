@@ -385,10 +385,12 @@ func _rebuild_clients(list: VBoxContainer) -> void:
 func _update_clients_realtime() -> void:
 	if client_registry == null or _client_rows.is_empty():
 		return
-	# ┌─────────────────────────────────────────────────────────────────────┐
-	# │  SUBSTITUA ESTE BLOCO COM SUA LÓGICA REAL                          │
-	# └─────────────────────────────────────────────────────────────────────┘
-
+		
+	for client_uuid in _client_rows:
+		var c = client_registry.get_player(client_uuid)
+		if c == null: continue
+		var refs: Dictionary = _client_rows[client_uuid]
+		if refs.has("ping"):  refs["ping"].text  = "%d ms" % network_manager.client_latency_map.get(c["uuid_base"], 0)
 
 # ── ABA: SALAS ────────────────────────────────────────────────────────────────
 

@@ -69,7 +69,7 @@ func update_ping(value: int) -> void:
 	for p in ping_history:
 		_sum += p
 
-	#ping_avg = sum / ping_history.size()
+	ping_avg = _sum / floor(ping_history.size())
 
 func update_pong_time(time: int) -> void:
 	last_pong_time = time

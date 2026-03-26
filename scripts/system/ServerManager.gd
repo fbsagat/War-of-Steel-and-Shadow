@@ -560,6 +560,9 @@ func _handle_request_rooms_list(peer_id: int):
 	"""Envia lista de salas disponíveis (não em jogo) para o cliente que requisitou"""
 	_log_debug("Cliente %d solicitou lista de salas" % peer_id)
 	
+	if not _is_peer_connected(peer_id):
+		return
+		
 	var player_uuid = client_registry.get_uuid_by_peer_id(peer_id)
 	
 	# Valida se player está registrado
@@ -712,6 +715,9 @@ func _execute_player_return_to_round(peer_id: int, player_uuid: String):
 		
 		# Define o player como conectado de novo no round
 		round_registry._unmark_player_disconnected(round_["round_id"], player_uuid)
+		
+		# muda estado do jogador
+		client_registry.set_player_state(player_uuid, client_registry.ClientState.LOADING)
 		
 		# Envia comando de retorno para o cliente
 		network_manager.rpc_id(peer_id, "_client_round_return", server_id, match_data)
@@ -1547,6 +1553,10 @@ func _on_host_changed(room_id: int, new_host_uuid: String):
 	var room = room_registry.get_room(room_id)
 	var text = "Agora você é o caralhudo do host dessa sala: %s" % room["name"]
 	var player_ = client_registry.get_player_by_uuid(new_host_uuid)
+	
+	if not _is_peer_connected(player_["peer_id"]):
+		return
+		
 	network_manager._client_receive_message.rpc_id(player_["peer_id"], text, 6, "info")
 
 func _on_round_ending(round_id: int, reason: String):

@@ -50,11 +50,14 @@ func _get_log_prefix() -> String:
 
 # ===== HEARTBEAT =====
 
-func _send_ping():
-	rpc_id(1, "_client_send_ping")
+func _send_ping(client_time):
+	rpc_id(1, "_client_send_ping", client_time)
 
-func _client_receive_pong():
-	game_manager._client_receive_pong()
+func _server_report_ping(latency):
+	rpc_id(1, "_server_report_ping", latency)
+
+func _client_receive_pong(client_time):
+	game_manager._client_receive_pong(client_time)
 
 # ===== AUTENTICAÇÃO =====
 

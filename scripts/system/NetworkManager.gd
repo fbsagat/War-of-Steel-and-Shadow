@@ -50,11 +50,15 @@ func _get_log_prefix() -> String:
 # ===== HEARTBEAT =====
 
 @rpc("any_peer", "call_remote", "unreliable")
-func _client_send_ping():
+func _client_send_ping(_client_time):
+	pass
+
+@rpc("any_peer", "call_remote", "unreliable")
+func _server_report_ping(_latency):
 	pass
 
 @rpc("authority", "call_remote", "unreliable")
-func _client_receive_pong():
+func _client_receive_pong(_client_time):
 	pass
 
 # ===== AUTENTICAÇÃO =====

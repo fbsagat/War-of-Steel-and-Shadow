@@ -24,7 +24,9 @@ var _blocked_until := {}
 
 var _player_rpc_timestamps = {}
 
-var last_ping_from_client := {} # peer_id -> timestamp
+## Atenção! A informação em client_latency_map é uma informação não confiável q vem do cliente
+var client_latency_map: Dictionary = {}
+var last_ping_from_client : Dictionary = {} # peer_id -> timestamp
 var timeout_limit := 3000 # ms
 
 # ===== INICIALIZAÇÃO =====
@@ -71,12 +73,30 @@ func _on_client_timeout(peer_uuid: String):
 
 # ===== HEARTBEAT =====
 
-func _client_send_ping():
+# No seu script do Servidor
+func _client_send_ping(client_time: float):
 	var sender = multiplayer.get_remote_sender_id()
 	var player_uuid = client_registry.get_uuid_by_peer_id(sender)
 	if player_uuid != "":
-		last_ping_from_client[player_uuid] = Time.get_ticks_msec()
-		rpc_id(sender, "_client_receive_pong")
+		# Opcional: Atualizar último visto para detecção de timeout no servidor
+		var now = Time.get_ticks_msec() 
+		last_ping_from_client[player_uuid] = now 
+		
+		# 1. Recebe o 'client_time' e o devolve imediatamente (ECHO)
+		# NÃO faça 'now - client_time' aqui, pois os relógios são diferentes!
+		
+		# 2. Envia de volta o mesmo timestamp para o cliente específico
+		# Ajuste a chamada RPC conforme sua estrutura (network_manager ou direto)
+	rpc_id(sender, "_client_receive_pong", client_time)
+
+# Recebe o ping calculado pelo cliente
+func _server_report_ping(client_latency: int):
+	var sender = multiplayer.get_remote_sender_id()
+	var player_uuid = client_registry.get_uuid_by_peer_id(sender)
+	
+	if player_uuid != "":
+		# Armazena o ping para usar em lag compensation ou matchmaking
+		client_latency_map[player_uuid] = client_latency
 
 # ===== CONECÇÃO =====
 
