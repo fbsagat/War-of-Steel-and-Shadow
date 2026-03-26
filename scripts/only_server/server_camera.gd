@@ -40,15 +40,6 @@ func _input(event):
 				if debug:
 					print("[Camera] Velocidade: %.1f" % current_speed)
 
-	if event.is_action_pressed("ui_cancel"):
-		_toggle_mouse_mode()
-		
-func _toggle_mouse_mode():
-	mouse_mode = not mouse_mode
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if not mouse_mode else Input.MOUSE_MODE_CAPTURED
-	if debug:
-		print("[Player] Mouse %s." % ("liberado" if not mouse_mode else "capturado"))
-
 func _process(delta):
 	if not current:
 		return

@@ -28,6 +28,7 @@ var room_registry: RoomRegistry = null
 var round_registry: RoundRegistry = null
 var object_manager: ObjectManager = null
 var item_database: ItemDatabase = null
+var debug_overlay = null
 var initializer = null
 
 # ===== VARIÁVEIS INTERNAS =====
@@ -61,6 +62,8 @@ enum ClientState {
 
 # --- Sinais de Conexão ---
 signal peer_added(uuid_base: String)
+signal peer_connected(uuid_base: String)
+signal peer_disconnected(uuid_base: String)
 signal peer_removed(uuid_base: String)
 signal player_name_registered(uuid_base: String, player_name: String)
 signal peer_id_updated(uuid_base: String, new_peer_id: int)
@@ -219,6 +222,7 @@ func set_disconnected_peer(peer_id: int):
 	players[uuid_base]["connected"] = false
 	players[uuid_base]["disconnected_at"] = Time.get_unix_time_from_system()
 	set_disconnected_peer_from_room_and_round(peer_id)
+	peer_disconnected.emit(uuid_base)
 
 func set_disconnected_peer_from_room_and_round(peer_id: int, from_room: bool = true, from_round: bool = true):
 	"""Marca jogador como desconectado de sala e round a partir do peer_id da sessão."""
@@ -285,6 +289,9 @@ func _register_connection(uuid_base: String):
 	
 	# Remove do timout detection
 	network_manager.remove_client_from_timeout_detection(uuid_base)
+	
+	# Sinal
+	peer_connected.emit(uuid_base)
 	
 func _is_uuid_connected(uuid_base: String) -> bool:
 	"""Verifica se já existe jogador com este uuid_base conectado"""

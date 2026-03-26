@@ -24,6 +24,7 @@ var server_manager: ServerManager = null
 var client_registry: ClientRegistry = null
 var round_registry: RoundRegistry = null
 var object_manager: ObjectManager = null
+var debug_overlay = null
 var initializer = null
 
 # ===== VARIÁVEIS INTERNAS =====
@@ -386,8 +387,8 @@ func add_player_to_kicked(room_id: int, uuid_base: String) -> bool:
 	return true
 
 func get_all_kicked_players(room_id: int, entry: bool = false) -> Array:
-	"""Posiçoes de entrada no servidor. Ordenamento.
-	Entry: Retorna entry_position ao invés dos uuids."""
+	"""Retorna UUIDs de todos od jogadores expulsos da partida.
+	Entry: Retorna entry_position ao invés dos UUIDs."""
 	var kicked: Array = []
 	for player in rooms[room_id]["kicked_players"]:
 		var uuid = player["uuid_base"]
@@ -449,7 +450,6 @@ func remove_player_from_room(room_id: int, uuid_base: String) -> String:
 		client_registry.leave_room(uuid_base)
 	
 	_log_debug("✓ Player '%s' (uuid=%s) saiu da sala '%s'" % [player_name, uuid_base, room["name"]])
-	player_left_room.emit(room_id, uuid_base)
 
 	if was_host and not room["players"].is_empty():
 		room["players"][0]["is_host"] = true
@@ -460,6 +460,8 @@ func remove_player_from_room(room_id: int, uuid_base: String) -> String:
 
 	if room["players"].is_empty():
 		remove_room(room_id)
+		
+	player_left_room.emit(room_id, uuid_base)
 	return ""
 
 func get_player_room(uuid_base: String) -> Dictionary:

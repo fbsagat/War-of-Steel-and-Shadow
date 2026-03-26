@@ -13,15 +13,6 @@
 ##      # 1) Passe as referências aos três managers:
 ##      debug_overlay.setup(client_manager, room_manager, match_manager)
 ##
-##      # 2) Conecte os sinais de mudança ESTRUTURAL (adicionar/remover itens).
-##      #    Isso dispara um rebuild da lista (throttled por REBUILD_INTERVAL).
-##      client_manager.client_connected.connect(debug_overlay.notify_structure_changed)
-##      client_manager.client_disconnected.connect(debug_overlay.notify_structure_changed)
-##      room_manager.room_created.connect(debug_overlay.notify_structure_changed)
-##      room_manager.room_removed.connect(debug_overlay.notify_structure_changed)
-##      match_manager.match_started.connect(debug_overlay.notify_structure_changed)
-##      match_manager.match_ended.connect(debug_overlay.notify_structure_changed)
-##
 ##      # 3) Preencha as funções _rebuild_*() e _update_*_realtime()
 ##      #    com os dados dos seus managers (veja os blocos comentados abaixo).
 ##
@@ -157,8 +148,24 @@ var _match_rows: Dictionary = {}
 func _ready() -> void:
 	_build_ui()
 	set_process(false)  # _process só roda quando o painel está aberto
-
-
+	
+func _connect_signals():
+	client_registry.peer_connected.connect(notify_structure_changed)
+	client_registry.peer_disconnected.connect(notify_structure_changed)
+	client_registry.player_joined_room.connect(notify_structure_changed)
+	client_registry.player_left_room.connect(notify_structure_changed)
+	
+	room_registry.room_created.connect(notify_structure_changed)
+	room_registry.room_removed.connect(notify_structure_changed)
+	room_registry.player_joined_room.connect(notify_structure_changed)
+	room_registry.player_left_room.connect(notify_structure_changed)
+	room_registry.host_changed.connect(notify_structure_changed)
+	room_registry.room_state_changed.connect(notify_structure_changed)
+	
+	round_registry.round_started.connect(notify_structure_changed)
+	round_registry.player_connected.connect(notify_structure_changed)
+	round_registry.player_disconnected.connect(notify_structure_changed)
+	
 func _exit_tree() -> void:
 	# Solta referências para não segurar objetos na memória após remoção
 	client_registry = null
@@ -189,7 +196,8 @@ func setup(
 ## Sinaliza que a estrutura de dados mudou e a lista precisa ser reconstruída.
 ## Conecte este método aos sinais dos managers (ex: client_connected, room_created).
 ## O rebuild é throttled — não ocorre mais de uma vez por REBUILD_INTERVAL.
-func notify_structure_changed() -> void:
+func notify_structure_changed(_1 = null, _2 = null, _3 = null, _4 = null, _5 = null, _6 = null,
+ _7 = null, _8 = null, _9 = null, _0 = null, _a = null, _b = null, _c = null) -> void:
 	_needs_rebuild = true
 
 
@@ -404,7 +412,7 @@ func _update_clients_realtime() -> void:
 ##           _room_rows[room_id] = _refs
 func _rebuild_rooms(list: VBoxContainer) -> void:
 	_room_rows.clear()
-	_add_header(list, ["ID", "Nome", "Host", "Jogadores", "Expulsos", "Em jogo", "TT de partidas", "TT playtime", "", ""])
+	_add_header(list, ["ID", "Nome", "Host", "Jogadores", "Expulsos", "Em jogo", "TT de part.", "TT playt.", "", ""])
 
 	if room_registry == null:
 		_add_placeholder(list, "RoomManager não configurado — chame setup() primeiro.")
@@ -670,9 +678,9 @@ func _build_ui() -> void:
 	header_hbox.add_child(_tab_title)
 
 	var hint: Label = Label.new()
-	hint.text = "F1 Clientes | F2 Salas | F3 Partidas  (mesma tecla = fechar)"
+	hint.text = "F1 Clientes | F2 Salas | F3 Partidas  (mesma tecla ou esc = fechar)"
 	hint.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
-	hint.add_theme_font_size_override("font_size", 11)
+	hint.add_theme_font_size_override("font_size", 12)
 	hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	header_hbox.add_child(hint)
 

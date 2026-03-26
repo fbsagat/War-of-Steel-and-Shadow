@@ -78,13 +78,14 @@ var item_database: ItemDatabase = null
 var object_manager: ObjectManager = null
 var test_manager: TestManager = null
 var map_manager: Node = null
+var debug_overlay = null
 
 # ===== REFERÊNCIAS INTERNAS =====
 
 var all_rounds_node: Node = null
 var current_cam_round_index: int = -1
 var current_active_camera: Camera3D = null
-var mouse_mode: bool = true
+var mouse_mode: bool = false
 var current_active_viewport: SubViewport = null
 var viewport_display: TextureRect = null
 var test_mode_check_timer: Timer
@@ -227,8 +228,11 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_TAB:
 		_find_a_next_round_to_camera()
 	
-	if event.is_action_pressed("ui_cancel"):
+	if event.is_action_pressed("ui_cancel") and debug_overlay._active_tab == -1:
 		_toggle_mouse_mode()
+		
+	if event.is_action_pressed("ui_cancel") and debug_overlay._active_tab > -1:
+		debug_overlay._close()
 	
 	# Teste
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_BACKSPACE:

@@ -30,6 +30,7 @@ class_name RoundRegistry
 var client_registry = null
 var room_registry = null
 var object_manager = null
+var debug_overlay = null
 var initializer = null
 
 # ===== VARIÁVEIS INTERNAS =====
@@ -47,6 +48,8 @@ signal round_created(round_data: Dictionary)
 signal round_started(round_id: int)
 signal round_ending(round_id: int, reason: String)
 signal round_ended(round_data: Dictionary)
+signal player_connected(round_id: int, player_uuid: String)
+signal player_disconnected(round_id: int, player_uuid: String)
 #signal all_players_disconnected(round_id: int)
 signal player_spawned_in_round(round_id: int, uuid_base: String, player_node: Node)
 signal player_despawned_from_round(round_id: int, uuid_base: String)
@@ -353,6 +356,7 @@ func _mark_player_disconnected(round_id: int, uuid_base: String):
 		mark_empty_round(round_id)
 	
 	_log_debug("⚠ uuid=%s marcado como desconectado na rodada %d" % [uuid_base, round_id])
+	player_disconnected.emit(round_id, uuid_base)
 
 func _unmark_player_disconnected(round_id: int, uuid_base: String):
 	"""Remove player da lista de desconectados da rodada."""
@@ -374,7 +378,8 @@ func _unmark_player_disconnected(round_id: int, uuid_base: String):
 	# Marca round como não vazio se 'disconnected_players' ter menos quantidade de players que 'players'
 	if round_data["disconnected_players"].size() < round_data["players"].size():
 		unmark_empty_round(round_id)
-		
+	
+	player_connected.emit(round_id, uuid_base)
 	_log_debug("✓ uuid=%s removido de disconnected_players na rodada %d" % [uuid_base, round_id])
 
 func remove_player(round_id: int, player_uuid: String):
