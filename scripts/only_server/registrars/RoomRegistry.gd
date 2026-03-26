@@ -20,10 +20,10 @@ class_name RoomRegistry
 
 # ===== REGISTROS (Injetados pelo initializer.gd) =====
 
-var server_manager = null
-var client_registry = null
-var round_registry = null
-var object_manager = null
+var server_manager: ServerManager = null
+var client_registry: ClientRegistry = null
+var round_registry: RoundRegistry = null
+var object_manager: ObjectManager = null
 var initializer = null
 
 # ===== VARIÁVEIS INTERNAS =====
@@ -159,6 +159,34 @@ func get_room(room_id: int) -> Dictionary:
 	if not rooms.has(room_id):
 		return {}
 	return rooms[room_id].duplicate(true)
+
+func get_all_rooms() -> Array:
+	return rooms.values().duplicate()
+
+func get_all_rooms_ids() -> Array:
+	var ids: Array = []
+	for room in rooms.values():
+		if room.has("id"):
+			ids.append(room["id"])
+	return ids
+
+func get_all_room_players_uuids(room_id: int) -> Array:
+	var p_ids: Array = []
+	for room in rooms.values():
+		if room.has("id"):
+			for player in rooms[room_id]["players"]:
+				p_ids.append(player["id"])
+	return p_ids
+
+func get_all_room_players_positions(room_id: int) -> Array:
+	"""Posiçoes de entrada no servidor. Ordenamento."""
+	var p_entrys: Array = []
+	for room in rooms.values():
+		if room.has("id"):
+			for player in rooms[room_id]["players"]:
+				var entry = client_registry.get_player(player["id"])["entry_position"]
+				p_entrys.append(entry)
+	return p_entrys
 
 func get_room_by_name(room_name: String) -> Dictionary:
 	for room_id in rooms:
@@ -347,10 +375,6 @@ func add_player_to_kicked(room_id: int, uuid_base: String) -> bool:
 
 	var room = rooms[room_id]
 
-	if room["in_game"]:
-		_log_debug("❌ Sala %d está em partida" % room_id)
-		return false
-
 	var player_ = client_registry.get_player_by_uuid(uuid_base)
 
 	room["kicked_players"].append({
@@ -360,6 +384,16 @@ func add_player_to_kicked(room_id: int, uuid_base: String) -> bool:
 
 	_log_debug("✓ Player '%s' (uuid=%s) adicionado como expulso da sala '%s'" % [player_["name"], uuid_base, room["name"]])
 	return true
+
+func get_all_kicked_players(room_id: int, entry: bool = false) -> Array:
+	"""Posiçoes de entrada no servidor. Ordenamento.
+	Entry: Retorna entry_position ao invés dos uuids."""
+	var kicked: Array = []
+	for player in rooms[room_id]["kicked_players"]:
+		var uuid = player["uuid_base"]
+		var client = client_registry.get_player(uuid)
+		kicked.append(client["uuid_base" if not entry else "entry_position"])
+	return kicked
 
 func check_kicked_timeout(room_id: int, uuid_base: String, time_limit: float) -> bool:
 	"""Verifica se o jogador ainda está banido.

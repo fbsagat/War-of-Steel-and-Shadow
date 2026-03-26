@@ -460,6 +460,14 @@ func get_all_players_ids(round_id: int) -> Array:
 
 	return all
 
+func get_all_round_players_positions(round_id: int) -> Array:
+	"""Posiçoes de entrada no servidor. Ordenamento."""
+	var p_entrys: Array = []
+	for player in rounds[round_id]["players"]:
+		var entry = client_registry.get_player(player["id"])["entry_position"]
+		p_entrys.append(entry)
+	return p_entrys
+
 # ===== EVENTOS DA RODADA =====
 
 func add_event(round_id: int, event_type: String, event_data: Dictionary = {}):
@@ -580,6 +588,13 @@ func get_total_players(round_id: int) -> int:
 
 func get_all_rounds() -> Dictionary:
 	return rounds.duplicate(true)
+
+func get_all_rounds_ids() -> Array:
+	var ids: Array = []
+	for round_ in rounds.values():
+		if round_.has("round_id"):
+			ids.append(round_["round_id"])
+	return ids
 
 func get_all_rounds_keys() -> Array:
 	var all_keys = []

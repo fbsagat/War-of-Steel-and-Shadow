@@ -322,8 +322,10 @@ func _server_player_animation_state(p_id: int, speed: float, attacking: bool, de
 	server_manager._apply_animation_state_on_server(p_id, speed, attacking, defending, jumping, aiming, running, block_attacking, on_floor)
 
 	var player_uuid = client_registry.get_uuid_by_peer_id(p_id)
-	var round_id = round_registry.get_round_by_player_uuid(player_uuid)["round_id"]
-	var players_round = round_registry.get_active_players_ids(round_id)
+	var round_ = round_registry.get_round_by_player_uuid(player_uuid)
+	if not round_:
+		return
+	var players_round = round_registry.get_active_players_ids(round_["round_id"])
 	for peer_id in players_round:
 		if peer_id != player_uuid:
 			var session_id = client_registry.get_peer_id_by_uuid(peer_id)

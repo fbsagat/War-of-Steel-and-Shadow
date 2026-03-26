@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://dichfh1h2idqe"]
 
-[ext_resource type="Script" uid="uid://bvdieu0yc0rcg" path="res://scripts/ui/debug_overlay.gd" id="1_tasbd"]
+[ext_resource type="Script" uid="uid://bvdieu0yc0rcg" path="res://scripts/ui/client_debug_overlay.gd" id="1_53of1"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tasbd"]
 bg_color = Color(0, 0, 0, 0.5019608)
@@ -8,7 +8,7 @@ bg_color = Color(0, 0, 0, 0.5019608)
 [node name="DebugOverlay" type="CanvasLayer" unique_id=1481165526]
 layer = 100
 follow_viewport_scale = 686.184
-script = ExtResource("1_tasbd")
+script = ExtResource("1_53of1")
 
 [node name="Panel" type="Panel" parent="." unique_id=1615780359]
 anchors_preset = -1

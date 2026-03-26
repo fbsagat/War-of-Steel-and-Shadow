@@ -481,7 +481,15 @@ func is_player_registered(uuid_base: String) -> bool:
 	return players[uuid_base]["registered"]
 
 func get_all_players() -> Array:
+	print("players.values(): " , players.values())
 	return players.values().duplicate()
+
+func get_all_players_uuid() -> Array:
+	var uuids: Array = []
+	for player in players.values():
+		if player.has("uuid_base"):
+			uuids.append(player["uuid_base"])
+	return uuids
 
 func get_player_count() -> int:
 	return players.size()

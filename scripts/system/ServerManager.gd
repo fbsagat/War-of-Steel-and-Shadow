@@ -349,9 +349,15 @@ func _switch_camera_to_round(round_id: int) -> void:
 	else:
 		push_warning("✗ Câmera não encontrada em %s" % round_node.name)
 
-func _toggle_mouse_mode():
-	mouse_mode = not mouse_mode
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if not mouse_mode else Input.MOUSE_MODE_CAPTURED
+func _toggle_mouse_mode(force_visible: bool = false, force_captured: bool = false):
+	# Prioridade: parâmetros forçados
+	if force_visible:
+		mouse_mode = false
+	elif force_captured:
+		mouse_mode = true
+	else:
+		mouse_mode = not mouse_mode
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED if mouse_mode else Input.MOUSE_MODE_VISIBLE
 
 # ===== INICIALIZAÇÃO DE SERVIDOR =====
 
@@ -2440,32 +2446,23 @@ func _kick_player(peer_id: int, reason: String):
 	Kicka um jogador do servidor (anti-cheat ou outras razões)
 	Remove da rodada, sala e desconecta
 	"""
+	
+	# Remove da rodada se estiver em uma
+	var player_uuid = client_registry.get_uuid_by_peer_id(peer_id)
+	var player = client_registry.get_player(player_uuid)
+	var room_ = room_registry.get_player_room(player_uuid)
+	
+	if not room_ or not player_uuid:
+		return
+	
 	_log_debug("========================================")
 	_log_debug("⚠️ KICKANDO JOGADOR")
 	_log_debug("Peer ID: %d" % peer_id)
 	_log_debug("Razão: %s" % reason)
 	_log_debug("========================================")
 	
-	# Remove da rodada se estiver em uma
-	var p_round = round_registry.get_round_by_player_id(peer_id)
-	var player_uuid = client_registry.get_uuid_by_peer_id(peer_id)
-	
-	if not p_round.is_empty():
-		var round_id = p_round["round_id"]
-		round_registry.unregister_spawned_player(round_id, player_uuid)
-		
-		var player_node = round_registry.get_spawned_player(round_id, player_uuid)
-		if player_node and is_instance_valid(player_node) and player_node.is_inside_tree():
-			player_node.queue_free()
-	
-	# Remove da sala
-	var room = room_registry.get_player_room(player_uuid)
-	if not room.is_empty():
-		room_registry.remove_player_from_room(room["id"], player_uuid)
-		
-		# Notifica se sala ainda existe
-		if room_registry.room_exists(room["id"]):
-			_notify_room_update(room["id"])
+	room_registry.add_player_to_kicked(room_["id"], player_uuid)
+	_player_exit_from_round(player["room_id"], player["peer_id"], player_uuid)
 	
 	# Envia notificação de kick
 	if _is_peer_connected(peer_id):

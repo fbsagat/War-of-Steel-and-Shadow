@@ -4,7 +4,7 @@ extends Node
 ## [TESTES] Usa o TestManager para iniciar uma partida logo na execução (localhost)
 ## (configura server e clients / server cria round e inicia partida com primeiros clientes /
 ##  clientes recebem localhost_auto_connect = true)
-@export var test_mode: bool = false
+@export var test_mode: bool = true
 ## [TESTES] Define a quantidade de instâcias de clientes conectadas para executar fast_round
 @export var simulador_players_qtd: int = 2
 ## Ativa/desativa o debug visual na gameplay
@@ -52,7 +52,7 @@ var round_registry: RoundRegistry = null
 ## Menu de inicialização
 var main_menu: Control = null
 ## Debug Overlay
-var debug_overlay: CanvasLayer = null
+var debug_overlay: Node = null
 ## Warning Overlay
 var warning_overlay: CanvasLayer = null
 
@@ -80,6 +80,7 @@ func _init_server(is_headless):
 	# Instancia managers e registros
 	var network_manager_scene: PackedScene = preload("res://scenes/system/server_network_manager.tscn")
 	var server_manager_scene: PackedScene = preload("res://scenes/system/server_manager.tscn")
+	var server_debug_overlay_scene: PackedScene = preload("res://scenes/ui/server_debug_overlay.tscn")
 	client_registry = preload("res://scripts/only_server/registrars/ClientRegistry.gd").new()
 	room_registry = preload("res://scripts/only_server/registrars/RoomRegistry.gd").new()
 	round_registry = preload("res://scripts/only_server/registrars/RoundRegistry.gd").new()
@@ -88,12 +89,15 @@ func _init_server(is_headless):
 	object_manager = preload("res://scripts/only_server/ObjectManager.gd").new()
 	test_manager = preload("res://scripts/only_server/TestManager.gd").new()
 	
+	
 	network_manager = network_manager_scene.instantiate()
 	server_manager = server_manager_scene.instantiate()
+	debug_overlay = server_debug_overlay_scene.instantiate()
 
 	# Nomeia para facilitar visualização
 	network_manager.name = "NetworkManager"
 	server_manager.name = "ServerManager"
+	debug_overlay.name = "ServerDebugOverlay"
 	client_registry.name = "ClientRegistry"
 	room_registry.name = "RoomRegistry"
 	round_registry.name = "RoundRegistry"
@@ -105,6 +109,7 @@ func _init_server(is_headless):
 	# Adiciona à árvore
 	get_tree().root.add_child.call_deferred(network_manager)
 	get_tree().root.add_child.call_deferred(server_manager)
+	get_tree().root.add_child.call_deferred(debug_overlay)
 	get_tree().root.add_child.call_deferred(client_registry)
 	get_tree().root.add_child.call_deferred(room_registry)
 	get_tree().root.add_child.call_deferred(round_registry)
@@ -195,6 +200,10 @@ func _init_server(is_headless):
 	server_manager.test_trainer = trainer
 	server_manager.visual_debug = visual_debug
 	
+	debug_overlay.server_manager = server_manager
+	debug_overlay.network_manager = network_manager
+	debug_overlay.setup(client_registry, room_registry, round_registry)
+	
 	# Aguarda até que os nós tenham sido adicionados à árvore
 	await get_tree().process_frame
 	
@@ -213,7 +222,7 @@ func _init_client(id_file_):
 	var network_manager_scene: PackedScene = preload("res://scenes/system/client_network_manager.tscn")
 	var game_manager_scene: PackedScene = preload("res://scenes/system/game_manager.tscn")
 	var main_menu_scene: PackedScene = preload("res://scenes/ui/main_menu.tscn")
-	var debug_overlay_scene: PackedScene = preload("res://scenes/ui/debug_overlay.tscn")
+	var debug_overlay_scene: PackedScene = preload("res://scenes/ui/client_debug_overlay.tscn")
 	var warning_overlay_scene: PackedScene = preload("res://scenes/ui/warning_overlay.tscn")
 	
 	item_database = preload("res://scripts/gameplay/ItemDatabase.gd").new()
