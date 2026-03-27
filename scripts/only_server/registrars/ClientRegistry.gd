@@ -95,6 +95,7 @@ signal player_left_round(uuid_base: String, round_id: int)
 ##   "name": String,
 ##   "registered": bool,
 ##   "disconnected_at": float,
+##   "created_at": float,
 ##   "room_id": int,          # -1 se não estiver em sala
 ##   "round_id": int,         # -1 se não estiver em rodada
 ##   "node_path": String
@@ -157,7 +158,8 @@ func add_peer(peer_id: int, uuid_base: String):
 		"name": "",
 		"registered": false,
 		"connected": false,
-		"disconnected_at": Time.get_unix_time_from_system(),
+		"disconnected_at": 0.0,
+		"created_at": Time.get_unix_time_from_system(),
 		"room_id": -1,
 		"round_id": -1,
 		"node_path": "",
@@ -166,6 +168,24 @@ func add_peer(peer_id: int, uuid_base: String):
 
 	_log_debug("✓ Peer adicionado: uuid=%s peer_id=%d" % [uuid_base, peer_id])
 	peer_added.emit(uuid_base)
+
+func connected_since(uuid_base: String) -> float:
+	if not players.has(uuid_base):
+		return 0.0
+	
+	if not players[uuid_base]["connected"]:
+		return 0.0
+	
+	var start_time: float
+	
+	if players[uuid_base]["disconnected_at"] > 0:
+		start_time = players[uuid_base]["disconnected_at"]
+	else:
+		start_time = players[uuid_base]["created_at"]
+	
+	var now: float = Time.get_unix_time_from_system()
+	
+	return now - start_time
 
 func update_peer_id(uuid_base: String, new_peer_id: int):
 	"""Atualiza peer_id quando jogador reconecta com nova sessão.
@@ -221,6 +241,7 @@ func update_peer_id(uuid_base: String, new_peer_id: int):
 	
 func set_disconnected_peer(peer_id: int):
 	"""Marca jogador como desconectado do servidor a partir do peer_id da sessão."""
+	print("[111] set_disconnected_peer !")
 	var uuid_base = get_uuid_by_peer_id(peer_id)
 	if uuid_base.is_empty():
 		_log_debug("⚠ Tentou desconectar peer inexistente: %d" % peer_id)
@@ -294,7 +315,6 @@ func _register_connection(uuid_base: String):
 	# muda estado do jogador
 	set_player_state(uuid_base, ClientState.LOBBY)
 	players[uuid_base]["connected"] = true
-	players[uuid_base]["disconnected_at"] = 0.0
 	_log_debug("Peer uuid=%s marcado como conectado" % uuid_base)
 	
 	# Remove do timout detection

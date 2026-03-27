@@ -289,7 +289,13 @@ func _find_a_next_round_to_camera(round_id: int = -1):
 
 func _switch_camera_to_round(round_id: int) -> void:
 	"""Ativa a câmera de um round específico e atualiza o display"""
+	
+	var tex: Texture2D = viewport_display.get_texture()
 
+	if tex and not tex.get_size().x > 0:
+		_log_debug("Viewport não encontrou textura ou a textura não está pronta")
+		return
+	
 	_log_debug("Movendo câmera para round %s" % round_id)
 	# Ajuste: garante que o display fique visível antes de trocar a textura
 	viewport_display.visible = true
@@ -338,7 +344,7 @@ func _switch_camera_to_round(round_id: int) -> void:
 
 		# Ajuste: só atribui a textura se ela realmente existir.
 		# Isso evita o erro "Viewport Texture must be set to use it."
-		var tex : Texture2D = round_node.get_texture()
+		tex = round_node.get_texture()
 		if tex:
 			viewport_display.texture = tex
 		else:

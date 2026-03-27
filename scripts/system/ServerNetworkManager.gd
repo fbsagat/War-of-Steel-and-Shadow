@@ -67,6 +67,10 @@ func _on_client_timeout(peer_uuid: String):
 	if state in state_list:
 		return
 	
+	# Não passa se for LOADING
+	if state == client_registry.ClientState.LOADING:
+		return
+	
 	_log_debug("Timout de cliente %s, definindo como desconectado" % peer_uuid)
 	var peer_id = client_registry.get_peer_id_by_uuid(peer_uuid)
 	server_manager._on_peer_disconnected(peer_id)

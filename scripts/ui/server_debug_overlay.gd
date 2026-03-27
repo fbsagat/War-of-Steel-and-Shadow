@@ -1,10 +1,10 @@
 ## debug_overlay.gd
 ##
-## Painel de debug overlay para servidor Godot 4.6 (não-headless).
+## Painel de debug overlay
 ## Exibe informações de Clientes, Salas e Partidas em três abas separadas.
 ##
 ## ═══════════════════════════════════════════════════════════════════════
-## COMO USAR NO CÓDIGO DO SERVIDOR
+## COMO USAR
 ## ═══════════════════════════════════════════════════════════════════════
 ##
 ##  @onready var debug_overlay: DebugOverlay = $DebugOverlay
@@ -155,7 +155,7 @@ func _connect_signals():
 	client_registry.player_joined_room.connect(notify_structure_changed)
 	client_registry.player_left_room.connect(notify_structure_changed)
 	client_registry.peer_state_changed.connect(notify_structure_changed)
-	
+	client_registry.peer_id_updated.connect(notify_structure_changed)
 	room_registry.room_created.connect(notify_structure_changed)
 	room_registry.room_removed.connect(notify_structure_changed)
 	room_registry.player_joined_room.connect(notify_structure_changed)
@@ -305,51 +305,14 @@ func _update_realtime() -> void:
 		Tab.MATCHES: _update_matches_realtime()
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# ═══════════════ DADOS DAS ABAS — EDITE AQUI ════════════════════════════════
-# ─────────────────────────────────────────────────────────────────────────────
-#
-#  Cada aba tem duas funções:
-#    _rebuild_*()         → constrói as linhas do zero (acionado por mudança
-#                           estrutural, throttled por REBUILD_INTERVAL)
-#    _update_*_realtime() → atualiza labels de dados dinâmicos toda frame
-#
-#  Use os helpers _col() e _col_btn() para descrever colunas,
-#  e _add_row() para inserir a linha no container.
-#  O retorno de _add_row() é um dict { "chave": Label } que você guarda
-#  em _client_rows / _room_rows / _match_rows para uso no update em tempo real.
-#
-# ─────────────────────────────────────────────────────────────────────────────
-
 # ── ABA: CLIENTES ─────────────────────────────────────────────────────────────
 
 ## Reconstrói a lista de clientes.
 ## Chamado quando a estrutura muda (cliente conectou/desconectou etc.).
-##
-## Exemplo completo (adapte para a API do seu ClientManager):
-##
-##   func _rebuild_clients(list: VBoxContainer) -> void:
-##       _client_rows.clear()
-##       _add_header(list, ["Peer ID", "Nome", "Ping", "Estado", "Sala", "Ações"])
-##       if client_manager == null:
-##           _add_placeholder(list, "ClientManager não configurado.")
-##           return
-##       for peer_id: int in client_manager.get_all_peer_ids():
-##           var c = client_manager.get_client(peer_id)
-##           var refs: Dictionary = _add_row(list, [
-##               _col(str(peer_id),   "id",    80),
-##               _col(c.username,     "name",  150),
-##               _col("...",          "ping",  70),   # atualizado em tempo real
-##               _col(c.state,        "state", 100),
-##               _col(str(c.room_id), "room",  80),
-##               _col_btn("Kick",  func(): client_manager.kick(peer_id)),
-##               _col_btn("Info",  func(): print(client_manager.get_client(peer_id))),
-##           ])
-##           _client_rows[peer_id] = _refs
 func _rebuild_clients(list: VBoxContainer) -> void:
 	_client_rows.clear()
-	var col_names: Array[String] = ["Pos.", "Conect.", "Estado", "Nome", "UUID", "Sala", "Round", "Ping", "", ""]
-	var column_sizes: Array[int] = [60, 60, 80, 100, 120, 50, 50, 80, 75, 75]
+	var col_names: Array[String] = ["Pos.", "On", "Estado", "Nome", "UUID", "Session", "Sala", "Round", "Ping", "Tempo", "", ""]
+	var column_sizes: Array[int] = [  60,    30,      80,    100,    120,      90,       50,     50,      80,      80,   75, 75]
 	_add_header(list, col_names, column_sizes)
 
 	if client_registry == null:
@@ -361,14 +324,16 @@ func _rebuild_clients(list: VBoxContainer) -> void:
 		var state_name = client_registry.get_player_state_name(client_uuid)
 		var short_uuid = client_registry.get_short_uuid(client_uuid)
 		var _refs: Dictionary = _add_row(list, [
-			_col(str(c["entry_position"]),                   "", 60),
-			_col(str("🟢" if c["connected"] else "🔴"),     "", 60),
-			_col(state_name,                                 "state",  80),
-			_col(c["name"],                                  "", 100),
-			_col(short_uuid,                                 "", 120),
-			_col(str(c["room_id"]),                          "", 50),
-			_col(str(c["round_id"]),                         "", 50),
-			_col("...",                                      "ping",  80),
+			_col(str(c["entry_position"]),                   "",       60),
+			_col(str("🟢" if c["connected"] else "🔴"),     "",        30),
+			_col(state_name,                                 "state",   80),
+			_col(c["name"],                                  "",        100),
+			_col(short_uuid,                                 "",        120),
+			_col(str(c["peer_id"]),                          "",        90),
+			_col(str(c["room_id"]),                          "",        50),
+			_col(str(c["round_id"]),                         "",        50),
+			_col("...",                                      "ping",    80),
+			_col("...",                                      "time",    80),
 			
 			_col_btn("Kick",  func(): server_manager._kick_player(c["peer_id"], "O servidor quis"), 75),
 			_col_btn("Print",  func(): print(c), 75)
@@ -380,48 +345,25 @@ func _rebuild_clients(list: VBoxContainer) -> void:
 
 ## Atualiza em tempo real os campos dinâmicos dos clientes (ex: ping).
 ## Chamado toda frame. Apenas escreve em Labels — não cria nós novos.
-##
-## Exemplo:
-##   for peer_id: int in _client_rows:
-##       var c = client_manager.get_client(peer_id)
-##       if c == null: continue
-##       var refs: Dictionary = _client_rows[peer_id]
-##       if refs.has("ping"):  refs["ping"].text  = "%d ms" % c.ping
-##       if refs.has("state"): refs["state"].text = c.state
 func _update_clients_realtime() -> void:
 	if client_registry == null or _client_rows.is_empty():
 		return
 		
 	for client_uuid in _client_rows:
 		var c = client_registry.get_player(client_uuid)
+		var time = client_registry.connected_since(client_uuid)
 		if c == null: continue
 		var refs: Dictionary = _client_rows[client_uuid]
 		if refs.has("ping"):  refs["ping"].text  = "%d ms" % network_manager.client_latency_map.get(c["uuid_base"], 0)
+		if refs.has("time"):  refs["time"].text  = str(_fmt_time(time))
 
 # ── ABA: SALAS ────────────────────────────────────────────────────────────────
 
 ## Reconstrói a lista de salas.
-##
-## Exemplo:
-##   func _rebuild_rooms(list: VBoxContainer) -> void:
-##       _room_rows.clear()
-##       _add_header(list, ["ID", "Nome", "Jogadores", "Cap.", "Estado", "Ações"])
-##       for room_id in room_manager.get_all_room_ids():
-##           var r = room_manager.get_room(room_id)
-##           var refs: Dictionary = _add_row(list, [
-##               _col(str(room_id),          "id",      80),
-##               _col(r.name,                "name",    160),
-##               _col(str(r.player_count),   "players", 80),  # tempo real
-##               _col(str(r.max_players),    "cap",     60),
-##               _col(r.state,               "state",   100),
-##               _col_btn("Fechar", func(): room_manager.close_room(room_id)),
-##               _col_btn("Dump",   func(): print(r)),
-##           ])
-##           _room_rows[room_id] = _refs
 func _rebuild_rooms(list: VBoxContainer) -> void:
 	_room_rows.clear()
 	var col_names: Array[String] = ["ID", "Nome", "Host", "Jogad.", "Kicked", "InGame", "TT de part.", "TT playt.", "", ""]
-	var col_sizes: Array[int] = [60, 100, 100, 100, 100, 75, 75, 75, 75, 75]
+	var col_sizes: Array[int] = [     60,   100,   100,     100,      100,       75,         85,            75,     75, 75]
 	_add_header(list, col_names, col_sizes)
 
 	if room_registry == null:
@@ -434,15 +376,15 @@ func _rebuild_rooms(list: VBoxContainer) -> void:
 		var players_pos = room_registry.get_all_room_players_positions(room_id)
 		var kicked = room_registry.get_all_kicked_players(room_id, true)
 		var _refs: Dictionary = _add_row(list, [
-			_col(str(r["id"]),                                    "", 60),
-			_col(r["name"],                                       "", 100),
-			_col(str(host_["name"]),                              "", 100),
-			_col(str(players_pos),                                "", 100),
-			_col(str(kicked),                                     "", 100),
-			_col(str("🟢" if r["in_game"] else "🔴"),             "", 75),
-			_col(str(r["total_rounds_played"]),                   "", 75),
-			_col(_fmt_time(r["total_playtime"]),                  "", 75),
-			_col_btn("Print Settings",  func(): print(r["settings"]), 75),
+			_col(str(r["id"]),                                    "",    60),
+			_col(r["name"],                                       "",    100),
+			_col(str(host_["name"]),                              "",    100),
+			_col(str(players_pos),                                "",    100),
+			_col(str(kicked),                                     "",    100),
+			_col(str("🟢" if r["in_game"] else "🔴"),             "",    85),
+			_col(str(r["total_rounds_played"]),                   "",    75),
+			_col(_fmt_time(r["total_playtime"]),                  "",    75),
+			_col_btn("Print Settings",  func(): print(r["settings"]),    75),
 			_col_btn("Print",  func(): print(r), 75)
 		])
 		_room_rows[room_id] = _refs
@@ -450,46 +392,21 @@ func _rebuild_rooms(list: VBoxContainer) -> void:
 
 
 ## Atualiza em tempo real os campos dinâmicos das salas.
-##
-## Exemplo:
-##   for room_id in _room_rows:
-##       var r = room_manager.get_room(room_id)
-##       if r == null: continue
-##       var refs: Dictionary = _room_rows[room_id]
-##       if refs.has("players"): refs["players"].text = str(r.player_count)
-##       if refs.has("state"):   refs["state"].text   = r.state
 func _update_rooms_realtime() -> void:
 	if room_registry == null or _room_rows.is_empty():
 		return
 	# ┌─────────────────────────────────────────────────────────────────────┐
-	# │  SUBSTITUA ESTE BLOCO COM SUA LÓGICA REAL                          │
+	# │  LÓGICA AQUI                                                        │
 	# └─────────────────────────────────────────────────────────────────────┘
 
 
 # ── ABA: PARTIDAS ─────────────────────────────────────────────────────────────
 
 ## Reconstrói a lista de partidas.
-##
-## Exemplo:
-##   func _rebuild_matches(list: VBoxContainer) -> void:
-##       _match_rows.clear()
-##       _add_header(list, ["ID", "Sala", "Jogadores", "Tempo", "Estado", "Ações"])
-##       for match_id in match_manager.get_all_match_ids():
-##           var m = match_manager.get_match(match_id)
-##           var refs: Dictionary = _add_row(list, [
-##               _col(str(match_id),       "id",      80),
-##               _col(str(m.room_id),      "room",    80),
-##               _col(str(m.player_count), "players", 80),
-##               _col("00:00",             "time",    80),  # tempo real
-##               _col(m.state,             "state",   100),
-##               _col_btn("Encerrar", func(): match_manager.end_match(match_id)),
-##               _col_btn("Dump",     func(): print(m)),
-##           ])
-##           _match_rows[match_id] = refs
 func _rebuild_matches(list: VBoxContainer) -> void:
 	_match_rows.clear()
 	var col_names: Array[String] = ["ID", "Sala N", "Sala ID", "Jogad.", "T inicio", "", "", ""]
-	var col_sizes: Array[int] = [40, 110, 60, 100, 100, 75, 75, 75]
+	var col_sizes: Array[int] = [    40,     110,       60,      100,         100,    75, 75, 75]
 	_add_header(list, col_names, col_sizes)
 
 	if round_registry == null:
@@ -500,34 +417,30 @@ func _rebuild_matches(list: VBoxContainer) -> void:
 		var m = round_registry.get_round(round_id)
 		var players_pos = round_registry.get_all_round_players_positions(m["round_id"])
 		var _refs: Dictionary = _add_row(list, [
-			_col(str(m["round_id"]),                                "", 40),
-			_col(str(m["room_name"]),                               "", 110),
-			_col(str(m["room_id"]),                                 "", 60),
-			_col(str(players_pos),                                  "", 100),
-			_col(_fmt_time(m["start_time"]),                        "", 100),
-			_col_btn("Print Settings",  func(): print(m["settings"]), 75),
-			_col_btn("Print Spawned",  func(): print(str(m["spawned_players"])), 75),
-			_col_btn("Print",  func(): print(m), 75)
+			_col(str(m["round_id"]),                                    "",           40),
+			_col(str(m["room_name"]),                                   "",           110),
+			_col(str(m["room_id"]),                                     "",           60),
+			_col(str(players_pos),                                      "",           100),
+			_col("...",                                            "since",           100),
+			_col_btn("Print Settings",  func(): print(m["settings"]),                  75),
+			_col_btn("Print Spawned",  func(): print(str(m["spawned_players"])),       75),
+			_col_btn("Print",  func(): print(m),                                        75)
 		   ])
 		_match_rows[round_id] = _refs
 	#_add_placeholder(list, "Implemente _rebuild_matches() com os dados do seu MatchManager.")
 
 
 ## Atualiza em tempo real os campos dinâmicos das partidas (ex: tempo decorrido).
-##
-## Exemplo:
-##   for match_id in _match_rows:
-##       var m = match_manager.get_match(match_id)
-##       if m == null: continue
-##       var refs: Dictionary = _match_rows[match_id]
-##       if refs.has("time"):    refs["time"].text    = _fmt_time(m.elapsed)
-##       if refs.has("players"): refs["players"].text = str(m.player_count)
 func _update_matches_realtime() -> void:
 	if round_registry == null or _match_rows.is_empty():
 		return
-	# ┌─────────────────────────────────────────────────────────────────────┐
-	# │  SUBSTITUA ESTE BLOCO COM SUA LÓGICA REAL                          │
-	# └─────────────────────────────────────────────────────────────────────┘
+
+	for round_id in _match_rows:
+		var round_ = round_registry.get_round(round_id)
+		var time_ago_ = time_ago(round_["start_time"])
+		if round == null: continue
+		var refs: Dictionary = _match_rows[round_id]
+		if refs.has("since"):  refs["since"].text  = time_ago_
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -563,12 +476,14 @@ func _col_btn(label: String, callback: Callable, min_width: int = BTN_MIN_WIDTH)
 func _add_header(parent: VBoxContainer, column_names: Array[String], column_sizes: Array[int]) -> void:
 	var hbox: HBoxContainer = HBoxContainer.new()
 	hbox.add_theme_constant_override("separation", 6)
-	
 	for i in range(column_names.size()):
 		var col_name: String = column_names[i]
 		var lbl: Label = Label.new()
 		lbl.text = col_name
 		var final_col = column_sizes[i] if i >= 0 and i < column_sizes.size() else COL_MIN_WIDTH
+		if i >= 0 and i > column_sizes.size():
+			var msg: String = "ServerDebugOverlay: Tamanho de coluna não especificado, usando o tamanho padrão (COL_MIN_WIDTH)."
+			push_warning(msg)
 		lbl.custom_minimum_size.x = final_col
 		lbl.clip_text = true
 		# Cor amarelada para diferenciar o cabeçalho visualmente
@@ -644,6 +559,51 @@ func _fmt_time(seconds: float) -> String:
 	var s: int = int(seconds) % 60
 	return "%02d:%02d" % [m, s]
 
+func format_unix_time(timestamp: float, options := {}) -> String:
+	var dt = Time.get_datetime_dict_from_unix_time(timestamp)
+	
+	var show_date    = options.get("date", true)
+	var show_time    = options.get("time", true)
+	var show_seconds = options.get("seconds", true)
+	var show_year    = options.get("year", true)
+	var separator    = options.get("separator", " ")
+	var date_sep     = options.get("date_sep", "/")
+	var time_sep     = options.get("time_sep", ":")
+	
+	var parts: Array[String] = []
+	
+	# 📅 Data
+	if show_date:
+		var date_str = "%02d%s%02d" % [dt.day, date_sep, dt.month]
+		
+		if show_year:
+			date_str += "%s%04d" % [date_sep, dt.year]
+		
+		parts.append(date_str)
+	
+	# ⏰ Hora
+	if show_time:
+		var time_str = "%02d%s%02d" % [dt.hour, time_sep, dt.minute]
+		
+		if show_seconds:
+			time_str += "%s%02d" % [time_sep, dt.second]
+		
+		parts.append(time_str)
+	
+	return separator.join(parts)
+
+func time_ago(timestamp: float) -> String:
+	var now = Time.get_unix_time_from_system()
+	var diff = int(now - timestamp)
+	
+	if diff < 60:
+		return "%ds atrás" % diff
+	elif diff < 3600:
+		return "%dm atrás" % (diff / 60)
+	elif diff < 86400:
+		return "%dh atrás" % (diff / 3600)
+	else:
+		return "%dd atrás" % (diff / 86400)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # CONSTRUÇÃO DA UI  (chamado uma única vez em _ready)
