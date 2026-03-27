@@ -55,10 +55,10 @@ const TAB_LABELS: Array[String] = [
 ]
 
 ## Largura mínima padrão de colunas de texto (px)
-const COL_MIN_WIDTH: int = 100
+const COL_MIN_WIDTH: int = 50
 
 ## Largura mínima padrão de colunas de botão (px)
-const BTN_MIN_WIDTH: int = 90
+const BTN_MIN_WIDTH: int = 75
 
 ## Intervalo mínimo entre rebuilds estruturais (segundos).
 ## Evita reconstruir a lista múltiplas vezes quando vários sinais chegam juntos.
@@ -154,6 +154,7 @@ func _connect_signals():
 	client_registry.peer_disconnected.connect(notify_structure_changed)
 	client_registry.player_joined_room.connect(notify_structure_changed)
 	client_registry.player_left_room.connect(notify_structure_changed)
+	client_registry.peer_state_changed.connect(notify_structure_changed)
 	
 	room_registry.room_created.connect(notify_structure_changed)
 	room_registry.room_removed.connect(notify_structure_changed)
@@ -347,7 +348,9 @@ func _update_realtime() -> void:
 ##           _client_rows[peer_id] = _refs
 func _rebuild_clients(list: VBoxContainer) -> void:
 	_client_rows.clear()
-	_add_header(list, ["Pos.", "Conectado", "Nome", "UUID", "Sala", "Round", "Ping", "", ""])
+	var col_names: Array[String] = ["Pos.", "Conect.", "Estado", "Nome", "UUID", "Sala", "Round", "Ping", "", ""]
+	var column_sizes: Array[int] = [60, 60, 80, 100, 120, 50, 50, 80, 75, 75]
+	_add_header(list, col_names, column_sizes)
 
 	if client_registry == null:
 		_add_placeholder(list, "ClientManager não configurado — chame setup() primeiro.")
@@ -355,17 +358,20 @@ func _rebuild_clients(list: VBoxContainer) -> void:
 
 	for client_uuid in client_registry.get_all_players_uuid():
 		var c = client_registry.get_player(client_uuid)
+		var state_name = client_registry.get_player_state_name(client_uuid)
+		var short_uuid = client_registry.get_short_uuid(client_uuid)
 		var _refs: Dictionary = _add_row(list, [
-			_col(str(c["entry_position"]),               "", 60),
-			_col(str("S" if c["connected"] else "N"),    "", 60),
-			_col(c["name"],                              "", 120),
-			_col(c["uuid_base"],                         "", 320),
-			_col(str(c["room_id"]),                      "", 70),
-			_col(str(c["round_id"]),                     "", 70),
-			_col("...",                                  "ping",  70),
+			_col(str(c["entry_position"]),                   "", 60),
+			_col(str("🟢" if c["connected"] else "🔴"),     "", 60),
+			_col(state_name,                                 "state",  80),
+			_col(c["name"],                                  "", 100),
+			_col(short_uuid,                                 "", 120),
+			_col(str(c["room_id"]),                          "", 50),
+			_col(str(c["round_id"]),                         "", 50),
+			_col("...",                                      "ping",  80),
 			
-			_col_btn("Kick",  func(): server_manager._kick_player(c["peer_id"], "O servidor quis")),
-			_col_btn("Print",  func(): print(c))
+			_col_btn("Kick",  func(): server_manager._kick_player(c["peer_id"], "O servidor quis"), 75),
+			_col_btn("Print",  func(): print(c), 75)
 		])
 		_client_rows[client_uuid] = _refs
 	
@@ -414,7 +420,9 @@ func _update_clients_realtime() -> void:
 ##           _room_rows[room_id] = _refs
 func _rebuild_rooms(list: VBoxContainer) -> void:
 	_room_rows.clear()
-	_add_header(list, ["ID", "Nome", "Host", "Jogadores", "Expulsos", "Em jogo", "TT de part.", "TT playt.", "", ""])
+	var col_names: Array[String] = ["ID", "Nome", "Host", "Jogad.", "Kicked", "InGame", "TT de part.", "TT playt.", "", ""]
+	var col_sizes: Array[int] = [60, 100, 100, 100, 100, 75, 75, 75, 75, 75]
+	_add_header(list, col_names, col_sizes)
 
 	if room_registry == null:
 		_add_placeholder(list, "RoomManager não configurado — chame setup() primeiro.")
@@ -426,16 +434,16 @@ func _rebuild_rooms(list: VBoxContainer) -> void:
 		var players_pos = room_registry.get_all_room_players_positions(room_id)
 		var kicked = room_registry.get_all_kicked_players(room_id, true)
 		var _refs: Dictionary = _add_row(list, [
-			_col(str(r["id"]),                                    "", 50),
-			_col(r["name"],                                       "", 115),
-			_col(str(host_["name"]),                              "", 115),
+			_col(str(r["id"]),                                    "", 60),
+			_col(r["name"],                                       "", 100),
+			_col(str(host_["name"]),                              "", 100),
 			_col(str(players_pos),                                "", 100),
-			_col(str(kicked),                                      "", 100),
-			_col("S" if r["in_game"] else "N",                    "", 50),
-			_col(str(r["total_rounds_played"]),                   "", 50),
-			_col(_fmt_time(r["total_playtime"]),                  "", 50),
-			_col_btn("Print Settings",  func(): print(r["settings"])),
-			_col_btn("Print",  func(): print(r))
+			_col(str(kicked),                                     "", 100),
+			_col(str("🟢" if r["in_game"] else "🔴"),             "", 75),
+			_col(str(r["total_rounds_played"]),                   "", 75),
+			_col(_fmt_time(r["total_playtime"]),                  "", 75),
+			_col_btn("Print Settings",  func(): print(r["settings"]), 75),
+			_col_btn("Print",  func(): print(r), 75)
 		])
 		_room_rows[room_id] = _refs
 	#_add_placeholder(list, "Implemente _rebuild_rooms() com os dados do seu RoomManager.")
@@ -480,7 +488,9 @@ func _update_rooms_realtime() -> void:
 ##           _match_rows[match_id] = refs
 func _rebuild_matches(list: VBoxContainer) -> void:
 	_match_rows.clear()
-	_add_header(list, ["ID", "Sala N", "Sala ID", "Jogadores", "T inicio", "", "", ""])
+	var col_names: Array[String] = ["ID", "Sala N", "Sala ID", "Jogad.", "T inicio", "", "", ""]
+	var col_sizes: Array[int] = [40, 110, 60, 100, 100, 75, 75, 75]
+	_add_header(list, col_names, col_sizes)
 
 	if round_registry == null:
 		_add_placeholder(list, "MatchManager não configurado — chame setup() primeiro.")
@@ -490,14 +500,14 @@ func _rebuild_matches(list: VBoxContainer) -> void:
 		var m = round_registry.get_round(round_id)
 		var players_pos = round_registry.get_all_round_players_positions(m["round_id"])
 		var _refs: Dictionary = _add_row(list, [
-			_col(str(m["round_id"]),                                "", 60),
-			_col(str(m["room_name"]),                               "", 120),
+			_col(str(m["round_id"]),                                "", 40),
+			_col(str(m["room_name"]),                               "", 110),
 			_col(str(m["room_id"]),                                 "", 60),
 			_col(str(players_pos),                                  "", 100),
-			_col(_fmt_time(m["start_time"]),                        "", 120),
-			_col_btn("Print Settings",  func(): print(m["settings"])),
-			_col_btn("Print Spawned",  func(): print(str(m["spawned_players"]))),
-			_col_btn("Print",  func(): print(m))
+			_col(_fmt_time(m["start_time"]),                        "", 100),
+			_col_btn("Print Settings",  func(): print(m["settings"]), 75),
+			_col_btn("Print Spawned",  func(): print(str(m["spawned_players"])), 75),
+			_col_btn("Print",  func(): print(m), 75)
 		   ])
 		_match_rows[round_id] = _refs
 	#_add_placeholder(list, "Implemente _rebuild_matches() com os dados do seu MatchManager.")
@@ -550,14 +560,16 @@ func _col_btn(label: String, callback: Callable, min_width: int = BTN_MIN_WIDTH)
 ##
 ## [param parent]        VBoxContainer de destino
 ## [param column_names]  Nomes de cada coluna, na mesma ordem usada em _add_row()
-func _add_header(parent: VBoxContainer, column_names: Array[String]) -> void:
+func _add_header(parent: VBoxContainer, column_names: Array[String], column_sizes: Array[int]) -> void:
 	var hbox: HBoxContainer = HBoxContainer.new()
 	hbox.add_theme_constant_override("separation", 6)
-
-	for col_name: String in column_names:
+	
+	for i in range(column_names.size()):
+		var col_name: String = column_names[i]
 		var lbl: Label = Label.new()
 		lbl.text = col_name
-		lbl.custom_minimum_size.x = COL_MIN_WIDTH
+		var final_col = column_sizes[i] if i >= 0 and i < column_sizes.size() else COL_MIN_WIDTH
+		lbl.custom_minimum_size.x = final_col
 		lbl.clip_text = true
 		# Cor amarelada para diferenciar o cabeçalho visualmente
 		lbl.add_theme_color_override("font_color", Color(0.9, 0.85, 0.4))

@@ -163,7 +163,7 @@ func _server_request_return_or_exit(_chosen: bool):
 	var state = client_registry.get_player_state(player_uuid)
 	var state_list = [client_registry.ClientState.IN_GAME, client_registry.ClientState.LOBBY]
 	if state not in state_list:
-		_log_debug("Estado de jogador %s não está entre: %s. Estado atual:  %s" % [player_uuid, state, state_list])
+		_log_debug("Estado de jogador %s não está entre: %s. Estado atual:  %s" % [player_uuid,state_list, state])
 		return
 	
 	# Se está voltando, define RETURNING, se false, quer abandonar: DISCONNECTED

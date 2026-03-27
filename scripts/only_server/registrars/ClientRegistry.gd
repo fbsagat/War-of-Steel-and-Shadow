@@ -57,6 +57,15 @@ enum ClientState {
 	RETURNING,      # Index: 4
 	DISCONNECTED    # Index: 5
 }
+## Nomes dos estados
+const CLIENT_STATE_NAMES = {
+	ClientState.CONNECTING: "Connecting",
+	ClientState.LOBBY: "Lobby",
+	ClientState.LOADING: "Loading",
+	ClientState.IN_GAME: "In_Game",
+	ClientState.RETURNING: "Returning",
+	ClientState.DISCONNECTED: "Disconnected",
+}
 
 # ===== SINAIS =====
 
@@ -67,6 +76,7 @@ signal peer_disconnected(uuid_base: String)
 signal peer_removed(uuid_base: String)
 signal player_name_registered(uuid_base: String, player_name: String)
 signal peer_id_updated(uuid_base: String, new_peer_id: int)
+signal peer_state_changed()
 
 # --- Sinais de Localização ---
 signal player_joined_room(uuid_base: String, room_id: int)
@@ -452,6 +462,14 @@ func get_player_state(uuid_base: String) -> int:
 	
 	return players[uuid_base].get("ClientState", -1)
 
+func get_player_state_name(uuid_base: String) -> String:
+	if not players.has(uuid_base):
+		return "UNKNOWN"
+	
+	var state: int = players[uuid_base].get("ClientState", -1)
+	
+	return CLIENT_STATE_NAMES.get(state, "UNKNOWN")
+
 func set_player_state(uuid_base: String, new_state: int) -> bool:
 	"""Modifica o estado do jogador
 	Ex (exeterno/fora de client_registry): set_player_state(peer_id, client_registry.ClientState.RETURNING)"""
@@ -469,6 +487,7 @@ func set_player_state(uuid_base: String, new_state: int) -> bool:
 	# Aplica mudança
 	players[uuid_base]["ClientState"] = new_state
 	
+	peer_state_changed.emit()
 	_log_debug("Mundano estado de player %s: %s → %s" % [uuid_base, str(old_state),str(new_state)])
 	
 	return true
@@ -481,6 +500,16 @@ func get_player_name(uuid_base: String) -> String:
 	if not players.has(uuid_base):
 		return ""
 	return players[uuid_base]["name"]
+
+func get_short_uuid(uuid_base: String) -> String:
+	if not players.has(uuid_base):
+		return ""
+	var player_uuid = players[uuid_base]["uuid_base"]
+	var short: String = (
+			"%s[...]%s" % [
+				player_uuid.substr(0, 4),
+				player_uuid.substr(player_uuid.length() - 4, 4)])
+	return short
 
 func is_player_registered(uuid_base: String) -> bool:
 	if not players.has(uuid_base):
