@@ -335,7 +335,7 @@ func _rebuild_clients(list: VBoxContainer) -> void:
 			_col("...",                                      "ping",    80),
 			_col("...",                                      "time",    80),
 			
-			_col_btn("Kick",  func(): server_manager._kick_player(c["peer_id"], "O servidor quis"), 75),
+			_col_btn("Kick",  func(): server_manager._kick_player_from_round(c["peer_id"], "O servidor quis"), 75),
 			_col_btn("Print",  func(): print(c), 75)
 		])
 		_client_rows[client_uuid] = _refs
@@ -437,6 +437,8 @@ func _update_matches_realtime() -> void:
 
 	for round_id in _match_rows:
 		var round_ = round_registry.get_round(round_id)
+		if not round_:
+			return
 		var time_ago_ = time_ago(round_["start_time"])
 		if round == null: continue
 		var refs: Dictionary = _match_rows[round_id]
@@ -560,7 +562,7 @@ func _fmt_time(seconds: float) -> String:
 	return "%02d:%02d" % [m, s]
 
 func format_unix_time(timestamp: float, options := {}) -> String:
-	var dt = Time.get_datetime_dict_from_unix_time(timestamp)
+	var dt = Time.get_datetime_dict_from_unix_time(int(timestamp))
 	
 	var show_date    = options.get("date", true)
 	var show_time    = options.get("time", true)
@@ -599,11 +601,11 @@ func time_ago(timestamp: float) -> String:
 	if diff < 60:
 		return "%ds atrás" % diff
 	elif diff < 3600:
-		return "%dm atrás" % (diff / 60)
+		return "%dm atrás" % (floor(diff) / 60)
 	elif diff < 86400:
-		return "%dh atrás" % (diff / 3600)
+		return "%dh atrás" % (floor(diff) / 3600)
 	else:
-		return "%dd atrás" % (diff / 86400)
+		return "%dd atrás" % (floor(diff) / 86400)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # CONSTRUÇÃO DA UI  (chamado uma única vez em _ready)

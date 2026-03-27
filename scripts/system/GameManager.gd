@@ -376,6 +376,8 @@ func _on_connected_to_server():
 	
 	_log_debug(" Cliente conectado ao servidor com sucesso! Peer ID: %d" % local_peer_id)
 	
+	if is_in_round:
+		network_manager._server_player_ready()
 	connected_to_server.emit()
 
 func _on_connection_failed():
@@ -462,6 +464,9 @@ func _try_reconnect() -> void:
 	multiplayer.multiplayer_peer = peer
 	local_peer_id = peer.get_unique_id()
 	_log_debug("Conseguiu reconectar, novo peer id: %s" % peer.get_unique_id())
+	
+	if is_in_round and round_node:
+		network_manager._server_player_ready()
 
 	# Se o servidor estiver offline, o resultado real virá por signal
 	# Este timer serve como fallback caso a rede demore demais
@@ -1008,8 +1013,12 @@ func _client_kicked_from_room():
 	current_room = {}
 	
 	if main_menu_node:
+		main_menu_node.show_main_menu()
 		main_menu_node.show_room_list_menu(true, false)
 		main_menu_node._show_error_("Você foi expulso da sala %s" % name_room, main_menu_node.match_list_error_label, "Red")
+	
+	# Se estiver em uma partida, sair e limpar tudo
+	_cleanup_local_round()
 
 func leave_room():
 	"""Sai da sala atual"""
@@ -1660,7 +1669,7 @@ func _client_update_character_peer_id(_uuid_base: String, _new_peer_id: int):
 func _cleanup_local_round():
 	"""Limpa todos os objetos da rodada no cliente"""
 	_log_debug("Limpando objetos da rodada...")
-	
+	is_loading = true
 	local_player_node = null
 	is_in_round = false
 	inventory_menu = false
@@ -1668,6 +1677,7 @@ func _cleanup_local_round():
 	
 	# Limpa objetos spawnados
 	for round_id in spawned_objects.keys():
+		await get_tree().process_frame
 		for object_id in spawned_objects[round_id].keys():
 			var obj_data = spawned_objects[round_id][object_id]
 			var item_node = obj_data.get("node")
@@ -1679,7 +1689,8 @@ func _cleanup_local_round():
 	
 	if round_node:
 		round_node.queue_free()
-
+		
+	finish_loading()
 	_log_debug("✓ Limpeza completa")
 
 func _mark_player_disconnected():
@@ -2056,9 +2067,7 @@ func _handle_connection_error(message: String):
 
 func _server_to_client_error(error_message: String):
 	"""Callback quando recebe erro do servidor"""
-	_log_debug("Erro recebido do servidor: " + error_message)
 	_show_error(error_message)
-	error_occurred.emit(error_message)
 
 func _server_to_client_message(text: String, duration: float = 3.0, type: String = "info"):
 	"""Callback quando recebe mensagem do servidor durante um round.
@@ -2086,7 +2095,8 @@ func _show_error(message: String, color= "Red"):
 			main_menu_node._show_error_(message, main_menu_node.manual_room_join_error_label, color)
 		elif main_menu_node.create_room_menu and main_menu_node.create_room_menu.visible:
 			main_menu_node._show_error_(message, main_menu_node.create_room_error_label, color)
-
+	error_occurred.emit(message)
+			
 # ===== UTILITÁRIOS =====
 
 func filtrar_dict_invertido(original: Dictionary) -> Dictionary:

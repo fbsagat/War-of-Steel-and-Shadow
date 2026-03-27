@@ -73,7 +73,7 @@ func _on_client_timeout(peer_uuid: String):
 	
 	_log_debug("Timout de cliente %s, definindo como desconectado" % peer_uuid)
 	var peer_id = client_registry.get_peer_id_by_uuid(peer_uuid)
-	server_manager._on_peer_disconnected(peer_id)
+	multiplayer.multiplayer_peer.disconnect_peer(peer_id)
 
 # ===== HEARTBEAT =====
 
@@ -231,6 +231,8 @@ func _server_player_ready():
 	if state not in state_list:
 		_log_debug("Estado de jogador %s não está entre: %s" % [state, state_list])
 		return
+		
+	await get_tree().process_frame
 	
 	client_registry.set_player_state(player_uuid, client_registry.ClientState.IN_GAME)
 

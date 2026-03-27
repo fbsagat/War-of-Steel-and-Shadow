@@ -185,7 +185,6 @@ var resolutions = [
 ]
 
 var inventory_mode: bool = false # True se está com inventário aberto
-
 var current_menu_visible: CenterContainer = null
 var current_matches = []
 var current_servers = []
@@ -200,6 +199,8 @@ var exit_server_button_pressed: bool = false
 var actual_player_name = ""
 var actual_server_name = ""
 var last_selected_match_id: int
+var ml_error_messages: Array[String] = []
+const ML_MAX_ERRORS := 3
 
 func _ready():
 	# Configura o Control para preencher toda a tela
@@ -509,7 +510,6 @@ func _connect_game_manager_signals():
 	game_manager.room_created.connect(_on_game_manager_room_created)
 	game_manager.joined_room.connect(_on_game_manager_room_joined)
 	game_manager.room_updated.connect(_on_game_manager_room_updated)
-	game_manager.error_occurred.connect(_on_game_manager_error)
 	
 	# Conecta sinais das opções de vídeo
 	if vsync_check:
@@ -711,6 +711,18 @@ func show_room_list_menu(_error_visible: bool = false, match_password_visible: b
 			manual_join_button.disabled = false
 		else:
 			manual_join_button.disabled = true
+
+func match_list_add_error_message(msg: String):
+	if not match_list_error_label:
+		return
+	var index = ml_error_messages.find(msg)
+	if index != -1:
+		ml_error_messages.remove_at(index)
+	else:
+		ml_error_messages.append(msg)
+		if ml_error_messages.size() > ML_MAX_ERRORS:
+			ml_error_messages.pop_front()
+	match_list_error_label.text = "\n".join(ml_error_messages)
 	
 func show_round_return_menu(room_name: String):
 	hide_all_menus()
@@ -1627,8 +1639,11 @@ func _show_error_(message: String, label: Label, color: String = "green"):
 	}
 	var _color_modulate: Color = colors.get(color.to_lower(), colors["green"])
 	if label:
-		label.text = message
-		label.modulate = _color_modulate
+		if label == match_list_error_label:
+			match_list_add_error_message(message)
+		else:
+			label.text = message
+			label.modulate = _color_modulate
 
 	iniciar_timer(4, label)
 	_log_debug("%s: %s" % [label.name, message])
@@ -1647,6 +1662,7 @@ func iniciar_timer(_tempo: float, _label: Label):
 
 func _timeout_quando_terminar():
 	current_label.text = ""
+	ml_error_messages.clear()
 
 # ===== FUNÇÕES DE CONTROLE DE CARREGAMENTO =====
 
@@ -1710,18 +1726,6 @@ func _on_game_manager_match_started():
 	_log_debug("Partida iniciada!")
 	# A troca de cena é feita pelo GameManager
 	# Aqui você pode mostrar uma tela de transição se quiser
-
-func _on_game_manager_error(error_message: String):
-	_log_debug("Erro: " + error_message)
-	# Mostra erro no contexto apropriado
-	if room_menu.visible:
-		_show_error_(error_message, room_error_label, "Red")
-	elif room_list_menu.visible:
-		_show_error_(error_message, match_list_error_label, "Red")
-	elif create_room_menu.visible:
-		_show_error_(error_message, create_room_error_label, "Red")
-	elif manual_room_join_menu.visible:
-		_show_error_(error_message, manual_room_join_error_label, "Red")
 
 # ===== CALLBACKS DE VÍDEO =====
 

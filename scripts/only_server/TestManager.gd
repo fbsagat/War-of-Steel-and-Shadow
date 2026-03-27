@@ -151,6 +151,11 @@ func create_test_round(nome_sala: String = "Sala de Teste", configuracoes_round:
 
 	_log_debug(" ✓ Sala criada: '%s' (ID: %d)" % [nome_sala, room_id])
 	
+	# Atualiza o cliente
+	for i in range(num_players):
+		var peer_id = connected_peers[i]
+		network_manager.rpc_id(peer_id, "_client_joined_room", room_data)
+	
 	await get_tree().process_frame
 	
 	# Adiciona outros jogadores à sala (host já foi adicionado)

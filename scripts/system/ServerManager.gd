@@ -290,50 +290,49 @@ func _find_a_next_round_to_camera(round_id: int = -1):
 func _switch_camera_to_round(round_id: int) -> void:
 	"""Ativa a câmera de um round específico e atualiza o display"""
 	
-	var tex: Texture2D = viewport_display.get_texture()
-
-	if tex and not tex.get_size().x > 0:
-		_log_debug("Viewport não encontrou textura ou a textura não está pronta")
-		return
-	
 	_log_debug("Movendo câmera para round %s" % round_id)
-	# Ajuste: garante que o display fique visível antes de trocar a textura
-	viewport_display.visible = true
+	
+	# 1. Garanta que o display esteja INVISÍVEL enquanto trocamos a textura
+	# Isso impede que o renderer tente desenhar uma textura inválida
+	viewport_display.visible = false
 	
 	# Segurança ao pegar round
 	var round_ = round_registry.get_round(round_id)
 	if not round_:
-		push_warning("Round não encontrado: %s" % current_cam_round_index)
+		push_warning("Round não encontrado: %s" % round_id)
 		return
+		
 	var round_node = round_.get("round_node", null)
-	if not round_node or not is_instance_valid(round_node):
-		push_warning("Round node inválido: %s" % current_cam_round_index)
+	
+	# Validação robusta do nó
+	if not round_node or not is_instance_valid(round_node) or not round_node.is_inside_tree():
+		push_warning("Round node inválido: %s" % round_id)
 		return
 	
-	# Ajuste: a validação correta precisa usar parênteses,
-	# porque `not round_node is SubViewport` pode ficar ambíguo.
-	if round_node == null or not (round_node is SubViewport):
-		push_warning("round_node inválido")
+	if not (round_node is SubViewport):
+		push_warning("round_node não é um SubViewport")
+		return
+	
+	# Verifica tamanho mínimo (Viewport sem tamanho não gera textura)
+	if round_node.size.x <= 0 or round_node.size.y <= 0:
+		_log_debug("Viewport sem tamanho válido")
 		return
 
-	# Ajuste: espera o SubViewport entrar na árvore e finalizar o ready
-	# antes de tentar pegar textura ou ativar câmera.
+	# Garante que o SubViewport está pronto
 	if not round_node.is_inside_tree():
 		await round_node.ready
 
-	# Desativa câmera anterior
+	# --- Troca de Câmera ---
 	if current_active_camera and is_instance_valid(current_active_camera):
 		current_active_camera.current = false
 		current_active_camera.set_process_input(false)
 		current_active_camera.set_process_unhandled_input(false)
 
-	# Busca nova câmera
 	var new_camera = round_node.get_node_or_null("FreeCamera")
 	if not new_camera:
 		new_camera = round_node.get_node_or_null("DummyCamera")
 
-	# Ajuste: um único await pode não ser suficiente para o SubViewport
-	# gerar a textura. Esperamos alguns frames para estabilizar o render.
+	# Aguarda o processamento do frame para garantir que a cena do round carregou
 	await get_tree().process_frame
 	await get_tree().process_frame
 
@@ -341,21 +340,31 @@ func _switch_camera_to_round(round_id: int) -> void:
 		new_camera.current = true
 		current_active_camera = new_camera
 		current_active_viewport = round_node
-
-		# Ajuste: só atribui a textura se ela realmente existir.
-		# Isso evita o erro "Viewport Texture must be set to use it."
-		tex = round_node.get_texture()
-		if tex:
-			viewport_display.texture = tex
-		else:
-			push_warning("Viewport ainda não gerou textura para %s" % round_node.name)
-
-		# ATIVA O PROCESSAMENTO DE INPUT DA CÂMERA
+		
+		# Ativa input da nova câmera
 		new_camera.set_process_input(true)
 		new_camera.set_process_unhandled_input(true)
 		
 		current_cam_round_index = round_id
-		_log_debug("✓ Câmera ativada: %s em %s" % [new_camera.name, round_node.name])
+		
+		# --- Lógica Crítica da Textura ---
+		var tex: Texture2D = round_node.get_texture()
+		
+		if tex:
+			# 2. Usa call_deferred para atribuir a textura no final do frame
+			# Isso dá tempo ao SubViewport de criar o render target interno
+			viewport_display.call_deferred("set_texture", tex)
+			
+			# 3. Aguarda mais um frame para garantir que a textura foi vinculada
+			await get_tree().process_frame
+			
+			# 4. Só mostra o display agora que a textura está segura
+			viewport_display.visible = true
+			
+			_log_debug("✓ Câmera ativada: %s em %s" % [new_camera.name, round_node.name])
+		else:
+			push_warning("Viewport ainda não gerou textura para %s" % round_node.name)
+			# Opcional: Mostrar uma tela de "Aguardando..." ao invés de deixar invisível
 	else:
 		push_warning("✗ Câmera não encontrada em %s" % round_node.name)
 
@@ -460,9 +469,11 @@ func _on_peer_connected(peer_id: int):
 	"""Callback quando um cliente conecta ao servidor"""
 	_log_debug("✓ Cliente conectado: Peer ID %d" % peer_id)
 	
-	# Define cliente como conectado
+	# Define cliente como conectado se não estiver em um round
 	var client_uuid = client_registry.get_uuid_by_peer_id(peer_id)
-	client_registry.set_player_state(client_uuid, client_registry.ClientState.LOBBY)
+	var client = client_registry.get_player_by_uuid(client_uuid)
+	if client and client["round_id"] > 0:
+		client_registry.set_player_state(client_uuid, client_registry.ClientState.LOBBY)
 	
 	# Envia configurações do servidor para o cliente
 	var configs: Dictionary = {
@@ -1133,10 +1144,10 @@ func _notify_room_update(room_id: int):
 		if _is_peer_connected(player_session_id):
 			network_manager.rpc_id(player_session_id, "_client_room_updated", room)
 
-func _notify_kicked_player(kicked_player_id: String):
+func _notify_kicked_player(kicked_player_uuid: String):
 	"""Notifica um player de uma sala que ele foi kickado"""
-	_log_debug("Player %s foi expulso de sua sala, notificando" % kicked_player_id)
-	var player_session_id = client_registry.get_peer_id_by_uuid(kicked_player_id)
+	_log_debug("Player %s foi expulso de sua sala, notificando" % kicked_player_uuid)
+	var player_session_id = client_registry.get_peer_id_by_uuid(kicked_player_uuid)
 	if _is_peer_connected(player_session_id):
 		network_manager.rpc_id(player_session_id, "_client_kicked_from_room")
 
@@ -2461,7 +2472,7 @@ func _cleanup_player_state(peer_uuid: String):
 		player_states.erase(peer_uuid)
 		_log_debug("Estado de validação removido")
 
-func _kick_player(peer_id: int, reason: String):
+func _kick_player_from_round(peer_id: int, reason: String):
 	"""
 	Kicka um jogador do servidor (anti-cheat ou outras razões)
 	Remove da rodada, sala e desconecta
@@ -2481,19 +2492,17 @@ func _kick_player(peer_id: int, reason: String):
 	_log_debug("Razão: %s" % reason)
 	_log_debug("========================================")
 	
+	# Mudar estado do cliente para LOADING
+	client_registry.set_player_state(player_uuid, client_registry.ClientState.LOADING)
+	
+	# Notifica cliente
+	_notify_kicked_player(player_uuid)
+	
+	# Adiciona em expulsos da sala
 	room_registry.add_player_to_kicked(room_["id"], player_uuid)
+	
+	# Executa função de sair
 	_player_exit_from_round(player["room_id"], player["peer_id"], player_uuid)
-	
-	# Envia notificação de kick
-	if _is_peer_connected(peer_id):
-		network_manager.rpc_id(peer_id, "_client_receive_error", "🚫 Você foi desconectado: " + reason)
-	
-	# Desconecta após 1 segundo
-	await get_tree().create_timer(1.0).timeout
-	
-	if multiplayer.has_multiplayer_peer() and _is_peer_connected(peer_id):
-		multiplayer.multiplayer_peer.disconnect_peer(peer_id)
-		_log_debug("✓ Player desconectado")
 
 func _send_error_to_client(peer_id: int, message: String):
 	"""Envia mensagem de erro para um cliente"""

@@ -537,7 +537,6 @@ func is_player_registered(uuid_base: String) -> bool:
 	return players[uuid_base]["registered"]
 
 func get_all_players() -> Array:
-	print("players.values(): " , players.values())
 	return players.values().duplicate()
 
 func get_all_players_uuid() -> Array:

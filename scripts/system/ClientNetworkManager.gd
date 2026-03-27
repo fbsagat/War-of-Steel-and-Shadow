@@ -51,9 +51,15 @@ func _get_log_prefix() -> String:
 # ===== HEARTBEAT =====
 
 func _send_ping(client_time):
+	if not is_connected_:
+		_log_debug("❌ Erro: Não conectado ao servidor")
+		return
 	rpc_id(1, "_client_send_ping", client_time)
 
 func _server_report_ping(latency):
+	if not is_connected_:
+		_log_debug("❌ Erro: Não conectado ao servidor")
+		return
 	rpc_id(1, "_server_report_ping", latency)
 
 func _client_receive_pong(client_time):
@@ -64,6 +70,9 @@ func _client_receive_pong(client_time):
 func send_hello_to_server(_uuid_base: String, _token: String):
 	"""Helper local: envia hello ao servidor"""
 	# RENOMEADO DESTINO: "server_receive_hello" → "_server_receive_hello"
+	if not is_connected_:
+		_log_debug("❌ Erro: Não conectado ao servidor")
+		return
 	rpc_id(1, "_server_receive_hello", {"uuid_base": _uuid_base, "token": _token})
 
 func _client_receive_auth_result(_response: Dictionary):
@@ -132,6 +141,9 @@ func join_room_by_name(room_name: String, password: String = ""):
 
 func request_update_room_settings(changed_settings: Dictionary):
 	# RENOMEADO DESTINO: "server_receive_update_room_settings" → "_server_update_room_settings"
+	if not is_connected_:
+		_log_debug("❌ Erro: Não conectado ao servidor")
+		return
 	rpc_id(1, "_server_update_room_settings", changed_settings)
 
 func leave_room():
@@ -205,6 +217,9 @@ func _client_kicked_from_room():
 
 func _server_player_ready():
 	_log_debug("Cliente já carregou o seu round")
+	if not is_connected_:
+		_log_debug("❌ Erro: Não conectado ao servidor")
+		return
 	rpc_id(1, "_server_player_ready")
 
 # ===== RODADAS — HELPERS LOCAIS =====
@@ -285,29 +300,53 @@ func _client_clear_all_objects():
 
 func request_pick_up_item(player_id: int, object_id: int) -> void:
 	# RENOMEADO DESTINO: "_server_pick_up_player_item" → "_server_pick_up_item"
+	if not is_connected_:
+		_log_debug("❌ Erro: Não conectado ao servidor")
+		return
 	rpc_id(1, "_server_pick_up_item", player_id, object_id)
 
 func request_equip_item(player_id: int, object_id: int, slot_type) -> void:
 	# RENOMEADO DESTINO: "_server_equip_player_item" → "_server_equip_item"
+	if not is_connected_:
+		_log_debug("❌ Erro: Não conectado ao servidor")
+		return
 	rpc_id(1, "_server_equip_item", player_id, object_id, slot_type)
 
 func request_unequip_item(player_id: int, slot_type: String) -> void:
 	# RENOMEADO DESTINO: "_server_unequip_player_item" → "_server_unequip_item"
+	if not is_connected_:
+		_log_debug("❌ Erro: Não conectado ao servidor")
+		return
 	rpc_id(1, "_server_unequip_item", player_id, slot_type)
 
 func request_swap_items(item_id_1, item_id_2):
 	rpc_id(1, "_server_swap_items", item_id_1, item_id_2)
+	if not is_connected_:
+		_log_debug("❌ Erro: Não conectado ao servidor")
+		return
 
 func request_trainer_spawn_item(player_id: int, item_id: int):
+	if not is_connected_:
+		_log_debug("❌ Erro: Não conectado ao servidor")
+		return
 	rpc_id(1, "_server_trainer_spawn_item", player_id, item_id)
 
 func request_trainer_drop_item(player_id: int):
+	if not is_connected_:
+		_log_debug("❌ Erro: Não conectado ao servidor")
+		return
 	rpc_id(1, "_server_trainer_drop_item", player_id)
 
 func request_trainer_respawn_player(player_id: int):
+	if not is_connected_:
+		_log_debug("❌ Erro: Não conectado ao servidor")
+		return
 	rpc_id(1, "_server_trainer_respawn_player", player_id)
 
 func request_drop_item(player_id, obj_id):
+	if not is_connected_:
+		_log_debug("❌ Erro: Não conectado ao servidor")
+		return
 	rpc_id(1, "_server_drop_item", player_id, obj_id)
 
 # ===== ITENS — APLICAÇÃO VISUAL NO CLIENTE (chamados pelo servidor) =====
@@ -378,10 +417,8 @@ func _client_swap_equipped_item(new_item_name: String, dragged_item: Dictionary,
 
 func send_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
 	"""Helper local: envia estado do jogador ao servidor"""
-	
 	if not is_connected_:
 		return
-		
 	rpc_id(1, "_server_player_state", p_id, pos, rot, vel, running, jumping)
 
 func _client_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
