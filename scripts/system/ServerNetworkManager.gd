@@ -24,10 +24,12 @@ var _blocked_until := {}
 
 var _player_rpc_timestamps = {}
 
+var connected_peers: Array[int] = []
+
 ## Atenção! A informação em client_latency_map é uma informação não confiável q vem do cliente
 var client_latency_map: Dictionary = {}
 var last_ping_from_client : Dictionary = {} # peer_id -> timestamp
-var timeout_limit := 3000 # ms
+var timeout_limit := 8000 # ms
 
 # ===== INICIALIZAÇÃO =====
 
@@ -112,6 +114,7 @@ func _on_peer_disconnected(peer_id: int):
 		_player_rpc_timestamps.erase(peer_id)
 	if not _player_rpc_timestamps.has(peer_id):
 		_player_rpc_timestamps[peer_id] = []
+		connected_peers.erase(peer_id)
 
 func is_rpc_allowed(peer_id: int) -> bool:
 	var now := Time.get_ticks_msec()
@@ -397,8 +400,9 @@ func _send_sync_for_object(object_id: int) -> void:
 	var sender_id = multiplayer.get_remote_sender_id()
 	if sender_id <= 0:
 		return
-		
-	_client_sync_object.rpc(object_id, pos, rot)
+	
+	for peer_id in connected_peers:
+		_client_sync_object.rpc_id(peer_id, object_id, pos, rot)
 
 func register_syncable_object(object_id: int, node: Node, config: Dictionary) -> void:
 	if syncable_objects.has(object_id):

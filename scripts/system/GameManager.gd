@@ -7,7 +7,7 @@ class_name GameManager
 # ===== CONFIGURAÇÕES =====
 
 @export_category("Connection Settings")
-const DEFAULT_SERVER_ADDRESS: String = "127.0.0.1"  # Localhost: "127.0.0.1" zeroTier: "172.23.2.183"
+const DEFAULT_SERVER_ADDRESS: String = "172.23.2.183"  # Localhost: "127.0.0.1" zeroTier: "172.23.2.183"
 const DEFAULT_SERVER_PORT: int = 7777
 @export var server_address: String = DEFAULT_SERVER_ADDRESS
 @export var server_port: int = DEFAULT_SERVER_PORT
@@ -35,8 +35,8 @@ var reconnect_timer: Timer
 # Heartbeat (detecção)
 var last_pong_time := 0
 var ping_interval := 1.0
-var timeout_limit := 3000 # ms
-var post_loading_tolerance := 3000
+var timeout_limit := 3500 # ms
+var post_loading_tolerance := 4000
 var ping_start_time := 0
 var has_received_pong := false
 var has_timed_out := false

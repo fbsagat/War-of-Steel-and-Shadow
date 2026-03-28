@@ -313,8 +313,11 @@ func _register_connection(uuid_base: String):
 		return
 	
 	# Muda estado do jogador para LOBBY se não estiver em uma partida
-	if players[uuid_base]["round_id"] != -1:
+	# Se já estiver em uma partida, foi timout, voltar para IN_GAME
+	if players[uuid_base]["round_id"] == -1:
 		set_player_state(uuid_base, ClientState.LOBBY)
+	if players[uuid_base]["round_id"] > 0:
+		set_player_state(uuid_base, ClientState.IN_GAME)
 	
 	players[uuid_base]["connected"] = true
 	_log_debug("Peer uuid=%s marcado como conectado" % uuid_base)
