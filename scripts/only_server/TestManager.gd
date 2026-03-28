@@ -277,7 +277,7 @@ func create_test_round(nome_sala: String = "Sala de Teste", configuracoes_round:
 	
 	# Envia comando de início para todos os clientes
 	for room_player in match_data["players"]:
-		client_registry.set_player_state(room_player["id"], client_registry.ClientState.LOADING)
+		client_registry.set_player_state(room_player["id"], client_registry.ClientState.IN_GAME)
 		network_manager.rpc_id(room_player["session_id"], "_client_round_started", server_manager.server_id, match_data)
 
 	# Instancia rodada no servidor

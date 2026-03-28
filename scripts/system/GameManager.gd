@@ -465,7 +465,7 @@ func _try_reconnect() -> void:
 	local_peer_id = peer.get_unique_id()
 	_log_debug("Conseguiu reconectar, novo peer id: %s" % peer.get_unique_id())
 	
-	if is_in_round and round_node:
+	if is_in_round or round_node:
 		network_manager._server_player_ready()
 
 	# Se o servidor estiver offline, o resultado real virá por signal

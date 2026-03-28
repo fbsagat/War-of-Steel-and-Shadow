@@ -133,6 +133,10 @@ func initialize():
 	
 	# Inicializa servidor
 	_start_server()
+	
+	# Mostrando a tela de clientes do debug overlay
+	if not is_headless and debug_overlay:
+		debug_overlay._toggle_tab(debug_overlay.Tab.CLIENTS)
 
 # ===== SETUPS =====
 
@@ -491,6 +495,10 @@ func process_client_hello(payload: Dictionary, peer_id: int) -> Dictionary:
 
 func _on_peer_connected(peer_id: int):
 	"""Callback quando um cliente conecta ao servidor"""
+	if multiplayer.get_peers().size() > max_clients:
+		_log_debug("🚫 Limite atingido, recusando: %s" % peer_id)
+		multiplayer.multiplayer_peer.disconnect_peer(peer_id)
+	
 	_log_debug("✓ Cliente conectado: Peer ID %d" % peer_id)
 	
 	# Envia configurações do servidor para o cliente
@@ -557,7 +565,6 @@ func _on_peer_disconnected(peer_id: int):
 		
 	# Define cliente como desconectado
 	client_registry.set_disconnected_peer(peer_id)
-	
 	_log_debug("❌ Cliente desconectado: Peer ID %d" % peer_id)
 
 # ===== HANDLERS DE JOGADOR =====

@@ -59,7 +59,6 @@ func _client_timout_detection(_delta):
 			_on_client_timeout(peer_uuid)
 
 func _on_client_timeout(peer_uuid: String):
-	
 	# Sistema para impedir execução múltipla
 	# Só passa se não for DISCONNECTED
 	var state = client_registry.get_player_state(peer_uuid)
@@ -73,8 +72,9 @@ func _on_client_timeout(peer_uuid: String):
 	
 	_log_debug("Timout de cliente %s, definindo como desconectado" % peer_uuid)
 	var peer_id = client_registry.get_peer_id_by_uuid(peer_uuid)
-	multiplayer.multiplayer_peer.disconnect_peer(peer_id)
 	
+	# Desconecta cliente
+	_safe_disconnect(peer_id)
 	# Define cliente como desconectado
 	client_registry.set_disconnected_peer(peer_id)
 
@@ -230,7 +230,7 @@ func _server_player_ready():
 	
 	# Só aceita se estava carregando
 	var state = client_registry.get_player_state(player_uuid)
-	var state_list = [client_registry.ClientState.LOADING, -1]
+	var state_list = [client_registry.ClientState.LOADING, client_registry.ClientState.LOBBY, -1]
 	if state not in state_list:
 		_log_debug("Estado de jogador %s não está entre: %s" % [state, state_list])
 		return
@@ -393,7 +393,11 @@ func _send_sync_for_object(object_id: int) -> void:
 	var config = entry.config
 	var pos = node.global_position
 	var rot = node.global_rotation if config.get("sync_rotation", true) else Vector3.ZERO
-	# RENOMEADO DESTINO: "_on_client_sync_object" → "_client_sync_object"
+	
+	var sender_id = multiplayer.get_remote_sender_id()
+	if sender_id <= 0:
+		return
+		
 	_client_sync_object.rpc(object_id, pos, rot)
 
 func register_syncable_object(object_id: int, node: Node, config: Dictionary) -> void:
@@ -423,5 +427,23 @@ func _server_player_action(p_id: int, action_type: String, item_equipado_nome, a
 
 # ===== UTILITÁRIOS =====
 
+func _safe_disconnect(peer_id: int):
+	if not multiplayer.has_multiplayer_peer():
+		return
+	
+	var peer = multiplayer.multiplayer_peer
+	if peer == null:
+		return
+	
+	# Checa se ainda está ativo
+	if not peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED:
+		return
+	
+	# Checa se o peer ainda existe
+	if peer_id in multiplayer.get_peers():
+		peer.disconnect_peer(peer_id)
+	else:
+		print("⚠️ Peer já desconectado:", peer_id)
+		
 func _get_log_prefix() -> String:
 	return "[SERVER][NetworkManager]"
