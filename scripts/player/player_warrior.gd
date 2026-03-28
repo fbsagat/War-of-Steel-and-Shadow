@@ -86,6 +86,7 @@ var is_attacking: bool = false # True se está Atacando
 var is_defending: bool = false # True se está defendendo
 var is_jumping: bool = false # True se está pulando
 var is_aiming: bool = false # true se estás mirando
+var is_walking: bool = false # True se está andando
 var is_running: bool = false # True se está pulando
 var is_moving: bool = false # True se está pulando ou atacando ou defendendo (para stamina)
 var run_on_jump: bool = false
@@ -196,12 +197,12 @@ func _physics_process(delta: float) -> void:
 	
 	 #Sistema de stamina (atualmente verificando em tudo, remoto/server e clientes)
 	 #Se estiver se movimentando is_moving recebe true, se estiver totalmente parado is_moving = false
-	if is_attacking or is_defending or is_running or is_jumping:
+	if is_attacking or is_defending or is_running or is_jumping or is_walking:
 		is_moving = true
 	else:
 		is_moving = false
 	
-	if is_moving and stamina_level > 0:
+	if is_running and stamina_level > 0:
 		stamina_level -= STAMINA_DEPLETION_RATE * delta
 		stamina_level = clamp(stamina_level, 0, MAX_STAMINA)
 	elif not is_moving:
@@ -553,7 +554,8 @@ func _apply_movement(move_dir: Vector3, delta: float) -> void:
 			velocity.x += move_dir.x * air_speed * delta * multiplier
 			velocity.z += move_dir.z * air_speed * delta * multiplier
 	if is_local_player and not _is_server:
-		is_running = Input.is_action_pressed("run") and is_on_floor()
+		is_running = Input.is_action_pressed("run") and is_on_floor() and move_dir.length() > 0.1
+		is_walking = move_dir.length()
 	
 # Chama a câmera lockada e transiciona p/ movimentação strafe
 func camera_strafe_mode(ativar: bool = true):

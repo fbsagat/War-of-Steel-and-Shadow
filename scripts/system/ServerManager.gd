@@ -512,7 +512,6 @@ func _on_peer_connected(peer_id: int):
 	# Atualiza max_players_per_room e min_players_to_start para clientes
 	# atualiza nome do servidor e envia id do servidor
 	network_manager.rpc_id(peer_id, "_client_update_info", configs)
-	network_manager.connected_peers.append(peer_id)
 
 func _on_peer_disconnected(peer_id: int):
 	"""Callback quando um cliente desconecta"""

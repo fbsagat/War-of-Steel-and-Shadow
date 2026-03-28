@@ -183,7 +183,7 @@ func collect(collector_id: int) -> bool:
 	"""
 	Coleta o item - Autoridade exclusiva do servidor
 	"""
-	print("[111] ------------ collect() de DroppedItem executado!!!! vem apagar esse print agora !!!! id do coletor: ", collector_id)
+	
 	if !is_server_authority() or is_collected:
 		return false
 	
@@ -214,7 +214,7 @@ func _notify_collected(collector_id: int):
 func despawn():
 	if !is_server_authority():
 		return
-	print("[111] ------------- despawn executado!!!! vem apagar esse print agora !!!!")
+
 	# Notifica clientes para despawn
 	network_manager.rpc("_rpc_client_despawn_item", object_id, round_id)
 	

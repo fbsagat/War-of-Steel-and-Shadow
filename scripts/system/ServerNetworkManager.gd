@@ -24,8 +24,6 @@ var _blocked_until := {}
 
 var _player_rpc_timestamps = {}
 
-var connected_peers: Array[int] = []
-
 ## Atenção! A informação em client_latency_map é uma informação não confiável q vem do cliente
 var client_latency_map: Dictionary = {}
 var last_ping_from_client : Dictionary = {} # peer_id -> timestamp
@@ -35,6 +33,7 @@ var timeout_limit := 8000 # ms
 
 func initialize():
 	_player_rpc_timestamps.clear()
+	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
 	_log_debug("▶️ NetworkManager inicializado com sucesso!")
 
@@ -75,7 +74,6 @@ func _on_client_timeout(peer_uuid: String):
 	_log_debug("Timout de cliente %s, definindo como desconectado" % peer_uuid)
 	var peer_id = client_registry.get_peer_id_by_uuid(peer_uuid)
 	
-	# Desconecta cliente
 	_safe_disconnect(peer_id)
 	# Define cliente como desconectado
 	client_registry.set_disconnected_peer(peer_id)
@@ -114,7 +112,6 @@ func _on_peer_disconnected(peer_id: int):
 		_player_rpc_timestamps.erase(peer_id)
 	if not _player_rpc_timestamps.has(peer_id):
 		_player_rpc_timestamps[peer_id] = []
-		connected_peers.erase(peer_id)
 
 func is_rpc_allowed(peer_id: int) -> bool:
 	var now := Time.get_ticks_msec()
@@ -227,8 +224,8 @@ func _server_close_room():
 func _server_player_ready():
 	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
 		return
-		
 	var peer_id = multiplayer.get_remote_sender_id()
+
 	var player_uuid = client_registry.get_uuid_by_peer_id(peer_id)
 	
 	# Sistema para impedir execução múltipla
@@ -367,38 +364,113 @@ func _server_player_animation_state(p_id: int, speed: float, attacking: bool, de
 
 # ===== SINCRONIZAÇÃO DE OBJETOS =====
 
+## Peers em "quarentena" após (re)conexão.
+## O ENet pode ainda não ter inicializado os canais quando peer_connected dispara,
+## então aguardamos um breve delay antes de incluir o peer no ciclo de sync.
+## Estrutura: { peer_id (int) → tempo_restante (float) }
+var _pending_peers: Dictionary = {}
+const _PEER_READY_DELAY := 0.15  # segundos de carência pós-conexão
+
+
+## Chame isso no initialize() junto com peer_disconnected
+## multiplayer.peer_connected.connect(_on_peer_connected)
+func _on_peer_connected(peer_id: int) -> void:
+	# Não adiciona direto ao ciclo de sync — coloca em quarentena primeiro
+	_pending_peers[peer_id] = _PEER_READY_DELAY
+
+
 func _server_update_sync_timers(delta: float) -> void:
-	var to_remove = []
+	# ── 1. Promove peers prontos da quarentena ──────────────────────────────
+	var ready_peers: Array = []
+	for peer_id in _pending_peers.keys():
+		_pending_peers[peer_id] -= delta
+		if _pending_peers[peer_id] <= 0.0:
+			ready_peers.append(peer_id)
+	for peer_id in ready_peers:
+		_pending_peers.erase(peer_id)
+
+	# ── 2. Atualiza timers e dispara sync dos objetos ───────────────────────
+	var to_remove: Array = []
 	for object_id in sync_timers.keys():
+
 		if !syncable_objects.has(object_id):
 			to_remove.append(object_id)
 			continue
+
 		var entry = syncable_objects[object_id]
+
+		# ⚠️ SEM tipo aqui — variável sem tipo não valida na atribuição,
+		# permitindo que is_instance_valid() detecte o freed node corretamente.
 		var node = entry.node
+
 		if !is_instance_valid(node) or !node.is_inside_tree():
 			to_remove.append(object_id)
 			continue
-		var config = entry.config
-		var rate = config.get("sync_rate", 0.03)
+
+		var config: Dictionary = entry.config
+		var rate: float = config.get("sync_rate", 0.03)
 		sync_timers[object_id] += delta
 		if sync_timers[object_id] >= rate:
 			sync_timers[object_id] = 0.0
 			_send_sync_for_object(object_id)
+
 	for oid in to_remove:
 		unregister_syncable_object(oid)
+
 
 func _send_sync_for_object(object_id: int) -> void:
 	var entry = syncable_objects.get(object_id)
 	if !entry:
 		return
+
+	# Mesma razão: sem tipo para não crashar no assign
 	var node = entry.node
+
 	if !is_instance_valid(node) or !node.is_inside_tree():
 		return
-	var config = entry.config
-	var pos = node.global_position
-	var rot = node.global_rotation if config.get("sync_rotation", true) else Vector3.ZERO
-	for peer_id in connected_peers:
+
+	var config: Dictionary = entry.config
+	var pos: Vector3 = node.global_position
+	var rot: Vector3 = node.global_rotation if config.get("sync_rotation", true) else Vector3.ZERO
+
+	# ── Determina quais peers devem receber este objeto ─────────────────────
+	# Se o objeto pertence a um round específico (round_id no config),
+	# entregamos só para os jogadores daquele round — evita vazamento de estado
+	# entre rounds diferentes rodando em paralelo.
+	# Caso contrário, envia para todos os peers conectados.
+	var target_peer_ids: Array = []
+	var round_id: int = config.get("round_id", -1)
+
+	if round_id >= 0 and round_registry:
+		# Obtém UUIDs dos jogadores ativos no round e resolve para peer_id de sessão
+		var player_uuids: Array = round_registry.get_active_players_ids(round_id)
+		for uuid in player_uuids:
+			var pid: int = client_registry.get_peer_id_by_uuid(uuid)
+			if pid > 0:
+				target_peer_ids.append(pid)
+	else:
+		target_peer_ids = multiplayer.get_peers()
+
+	# ── Referência ENet para validar estado do canal antes de cada envio ────
+	# Isso resolve o erro "Unable to send packet on channel 0, max channels: 0"
+	# que ocorre quando tentamos enviar para um peer cujo handshake ENet
+	# ainda não foi concluído (comum em reconexões).
+	var enet_mp := multiplayer.multiplayer_peer as ENetMultiplayerPeer
+
+	for peer_id in target_peer_ids:
+		# Pula peers ainda em quarentena (recém conectados / reconectados)
+		if _pending_peers.has(peer_id):
+			continue
+
+		# Valida o estado do canal ENet antes de enviar
+		# STATE_CONNECTED = handshake completo, canais inicializados
+		if enet_mp:
+			var enet_peer: ENetPacketPeer = enet_mp.get_peer(peer_id)
+			if not enet_peer or enet_peer.get_state() != ENetPacketPeer.STATE_CONNECTED:
+				continue
+
 		_client_sync_object.rpc_id(peer_id, object_id, pos, rot)
+
 
 func register_syncable_object(object_id: int, node: Node, config: Dictionary) -> void:
 	if syncable_objects.has(object_id):
@@ -407,23 +479,15 @@ func register_syncable_object(object_id: int, node: Node, config: Dictionary) ->
 	if !node.is_inside_tree():
 		push_error("Não é possível registrar nó fora da árvore: %d" % object_id)
 		return
-	syncable_objects[object_id] = { "node" = node, "config" = config }
+	syncable_objects[object_id] = { "node": node, "config": config }
 	sync_timers[object_id] = 0.0
 	_log_debug("✅ Objeto registrado para sync: %d" % object_id)
 
+
 func unregister_syncable_object(object_id: int) -> void:
-	if syncable_objects.has(object_id):
-		syncable_objects.erase(object_id)
-	if sync_timers.has(object_id):
-		sync_timers.erase(object_id)
+	syncable_objects.erase(object_id)   # erase é no-op se a chave não existe
+	sync_timers.erase(object_id)
 	_log_debug("🗑️ Objeto removido do sync: %d" % object_id)
-
-# ===== AÇÕES (ATAQUES, DEFESA) =====
-
-func _server_player_action(p_id: int, action_type: String, item_equipado_nome, anim_name: String):
-
-	if server_manager.has_method("_server_player_action"):
-		server_manager._server_player_action(p_id, action_type, item_equipado_nome, anim_name)
 
 # ===== UTILITÁRIOS =====
 
