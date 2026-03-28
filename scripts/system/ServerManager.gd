@@ -104,7 +104,7 @@ func _ready() -> void:
 	pass
 
 func initialize():
-	_start_server()
+	# Conecta sinais
 	_connect_signals()
 	
 	# Inicializa verificador de teste automático se fast_round true
@@ -130,6 +130,9 @@ func initialize():
 	
 	# Gera id único do servidor
 	_generate_server_identity()
+	
+	# Inicializa servidor
+	_start_server()
 
 # ===== SETUPS =====
 
@@ -178,17 +181,15 @@ func _test_round_check() -> bool:
 func _setup_viewport_display():
 	"""Cria um TextureRect que mostra o viewport atual na tela"""
 	viewport_display = TextureRect.new()
-	viewport_display.name = "ViewportDisplay"
 	viewport_display.anchor_right = 1.0
 	viewport_display.anchor_bottom = 1.0
 	viewport_display.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	viewport_display.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
 	viewport_display.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	viewport_display.name = "ViewportDisplay"
 	
 	# Adiciona como child direto da raiz para preencher a tela
 	get_tree().root.add_child(viewport_display)
-	
-	_log_debug("Display do viewport criado")
 
 func _setup_debug_timer():
 	"""Cria timer para imprimir estados periodicamente"""
@@ -196,6 +197,7 @@ func _setup_debug_timer():
 	debug_timer_.wait_time = 5.0
 	debug_timer_.autostart = true
 	debug_timer_.timeout.connect(_print_player_states)
+	debug_timer_.name = "DebugTimer"
 	add_child(debug_timer_)
 	
 func _setup_cleanup_empty_rounds_timer():
@@ -205,6 +207,7 @@ func _setup_cleanup_empty_rounds_timer():
 	cleanup_timer_.wait_time = CLEANUP_INTERVAL
 	cleanup_timer_.autostart = true
 	cleanup_timer_.timeout.connect(_cleanup_empty_rounds)
+	cleanup_timer_.name = "CleanupTimer"
 	add_child(cleanup_timer_)
 
 # ===== FUNÇÕES DE INPUT =====
@@ -385,18 +388,31 @@ func _start_server():
 	var timestamp = Time.get_datetime_string_from_system()
 	_log_debug("================================================================")
 	_log_debug("▶️ INICIANDO SERVIDOR DEDICADO ▶️")
-	_log_debug(timestamp)
+	_log_debug("================================================================")
+	_log_debug("Em: %s" % timestamp)
 	_log_debug("Porta: %d" % server_port)
+	_log_debug("ID: %s" % server_id)
 	_log_debug("Máximo de clientes: %d" % max_clients)
 	_log_debug("Trainer de testes: %s, Fast Round: %s" % [test_trainer, fast_round])
 	_log_debug("Min. de jogadores/sala: %s, Max. de jogadores/sala: %s" % [min_players_to_start, max_players_per_room])
 	_log_debug("Tempo de espera de reconexão(peer): %sms" % reconnect_timout)
+	_log_debug("-----------------------------------------------------------------")
+	var c = get_node_or_null("CleanupTimer")
+	_log_debug("🆗 Limpador periódico de rounds carregado com sucesso" if c else
+	 "❌ Limpador periódico de rounds não foi carregado")
+	var d = get_node_or_null("DebugTimer")
+	_log_debug("🆗 Timer de debug carregado com sucesso" if d else
+	 "ℹ️ Timer de debug desativado")
+	var v = get_tree().root.get_node_or_null("ViewportDisplay")
+	_log_debug("🆗 Viewport Display carregado com sucesso" if v else
+	 "ℹ️ Viewport Display não foi carregado")
 	
 	# Cria peer de rede
 	var peer = ENetMultiplayerPeer.new()
 	var error = peer.create_server(server_port, max_clients)
 	
 	if error != OK:
+		_log_debug("================================================================")
 		push_error("ERRO ao criar servidor: " + str(error))
 		_log_debug("================================================================")
 		return
@@ -406,9 +422,10 @@ func _start_server():
 	# Conecta sinais de rede
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
-	
-	_log_debug("▶️ Servidor inicializado com sucesso!")
 	_log_debug("================================================================")
+	_log_debug("▶️ Servidor inicializado com sucesso! ▶️")
+	_log_debug("================================================================")
+	print("")
 
 # ===== SISTEMA DE IDENTIFIAÇÃO =====
 
@@ -448,6 +465,13 @@ func process_client_hello(payload: Dictionary, peer_id: int) -> Dictionary:
 			var player = client_registry.get_player_by_uuid(uuid_base)
 			client_registry.update_peer_id(uuid_base, peer_id)
 			client_registry._register_connection(uuid_base)
+				
+			# Muda estado do jogador para LOBBY se não estiver em uma partida
+			var client_uuid = client_registry.get_uuid_by_peer_id(peer_id)
+			var client = client_registry.get_player(client_uuid)
+			if client and client["round_id"] == -1:
+				client_registry.set_player_state(client_uuid, client_registry.ClientState.LOBBY)
+			
 			return {"status": "ok", "server_id": server_id, "player_name": player["name"]}
 
 	# 🔄 Token inválido ou inexistente → emitir novo
@@ -468,12 +492,6 @@ func process_client_hello(payload: Dictionary, peer_id: int) -> Dictionary:
 func _on_peer_connected(peer_id: int):
 	"""Callback quando um cliente conecta ao servidor"""
 	_log_debug("✓ Cliente conectado: Peer ID %d" % peer_id)
-	
-	# Define cliente como conectado se não estiver em um round
-	var client_uuid = client_registry.get_uuid_by_peer_id(peer_id)
-	var client = client_registry.get_player_by_uuid(client_uuid)
-	if client and client["round_id"] > 0:
-		client_registry.set_player_state(client_uuid, client_registry.ClientState.LOBBY)
 	
 	# Envia configurações do servidor para o cliente
 	var configs: Dictionary = {
@@ -1278,7 +1296,7 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 	var success = await map_manager.load_map(map_scene, round_node, actual_camera)
 	
 	if not success:
-		push_error("Falha crítica ao carregar o mapa!")
+		push_error("Falha crítica ao carregar o mapa!: ", success)
 	else:
 		_log_debug("Mapa carregado com sucesso")
 		

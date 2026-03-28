@@ -475,8 +475,8 @@ func _connect_button_signals():
 	
 	# Menu de gameplay
 	_connect_if_exists(gameplay_menu, "BackButton", _on_gameplay_menu_back_pressed)
-	_connect_if_exists(gameplay_menu, "ExitGame", _on_gameplay_menu_exit_game_pressed)
-	_connect_if_exists(gameplay_menu, "DisconnectFromServer", _on_gameplay_menu_disconnect_f_server_pressed)
+	_connect_if_exists(gameplay_menu, "ExitGameButton", _on_gameplay_menu_exit_game_pressed)
+	_connect_if_exists(gameplay_menu, "LeaveGameButton", _on_gameplay_menu_leave_game_pressed)
 	
 	# Menu de confirmação de saída
 	_connect_if_exists(exit_confirm_menu, "BackButton", _on_exit_confirm_menu_back_pressed)
@@ -588,9 +588,6 @@ func show_delete_server_menu():
 
 func show_exit_confirm_menu(exit_server: bool):
 	hide_all_menus()
-	
-	# Implementar: Se for o antitrião/host:
-	# Você pode voltar, mas perderá o status de anfitrião
 	
 	if not exit_server:
 		warning_label.visible = false
@@ -1210,7 +1207,7 @@ func _on_gameplay_menu_exit_game_pressed():
 	exit_server_button_pressed = false
 	show_exit_confirm_menu(exit_server_button_pressed)
 	
-func _on_gameplay_menu_disconnect_f_server_pressed():
+func _on_gameplay_menu_leave_game_pressed():
 	_log_debug("Pressionado botão de desconectar do servidor")
 	exit_server_button_pressed = true
 	show_exit_confirm_menu(exit_server_button_pressed)

@@ -717,16 +717,11 @@ func _on_gameplay_menu_exit_game_pressed():
 	# Sinalizar pra o servidor que está desconectado da rodada
 	_mark_player_disconnected()
 
-	
 	# Volta para o menu da sala
 	if main_menu_node:
 		main_menu_node.show_main_menu()
 		
 	_log_debug("_on_gameplay_menu_exit_game_pressed")
-
-func _on_gameplay_menu_disconnect_f_server_pressed():
-	_log_debug("_on_gameplay_menu_disconnect_f_server_pressed")
-	_disconnect_from_server(true)
 
 func _on_gameplay_menu_give_up_game_pressed():
 	_cleanup_local_round()

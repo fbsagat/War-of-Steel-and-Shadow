@@ -348,6 +348,8 @@ func _mark_player_disconnected(round_id: int, uuid_base: String):
 	if uuid_base in round_data["disconnected_players"]:
 		return
 	
+	client_registry.set_player_state(uuid_base, client_registry.ClientState.LOBBY)
+	
 	round_data["disconnected_players"].append(uuid_base)
 	_add_event(round_id, "player_disconnected", {"uuid_base": uuid_base})
 	

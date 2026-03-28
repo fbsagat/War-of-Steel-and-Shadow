@@ -906,6 +906,7 @@ layout_mode = 2
 text = "Iniciar"
 
 [node name="CreateRoomMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=765356564]
+visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -1326,7 +1327,6 @@ layout_mode = 2
 text = "Cancelar"
 
 [node name="GameplayMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=1821625676]
-visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -1351,12 +1351,12 @@ custom_minimum_size = Vector2(200, 50)
 layout_mode = 2
 text = "Voltar ao Jogo"
 
-[node name="ExitGame" type="Button" parent="CanvasLayer/CenterContainer/Control/GameplayMenu/ButtonsContainer" unique_id=1192511840]
+[node name="ExitGameButton" type="Button" parent="CanvasLayer/CenterContainer/Control/GameplayMenu/ButtonsContainer" unique_id=1192511840]
 custom_minimum_size = Vector2(200, 50)
 layout_mode = 2
 text = "Sair da Partida"
 
-[node name="DisconnectFromServer" type="Button" parent="CanvasLayer/CenterContainer/Control/GameplayMenu/ButtonsContainer" unique_id=1933868508]
+[node name="LeaveGameButton" type="Button" parent="CanvasLayer/CenterContainer/Control/GameplayMenu/ButtonsContainer" unique_id=1933868508]
 custom_minimum_size = Vector2(200, 50)
 layout_mode = 2
 text = "Abandonar Partida"

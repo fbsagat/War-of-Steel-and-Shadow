@@ -241,7 +241,7 @@ func update_peer_id(uuid_base: String, new_peer_id: int):
 	
 func set_disconnected_peer(peer_id: int):
 	"""Marca jogador como desconectado do servidor a partir do peer_id da sessão."""
-	print("[111] set_disconnected_peer !")
+	
 	var uuid_base = get_uuid_by_peer_id(peer_id)
 	if uuid_base.is_empty():
 		_log_debug("⚠ Tentou desconectar peer inexistente: %d" % peer_id)
@@ -312,8 +312,10 @@ func _register_connection(uuid_base: String):
 		_log_debug("❌ Tentou registrar conexão de UUID inexistente: %s" % uuid_base)
 		return
 	
-	# muda estado do jogador
-	set_player_state(uuid_base, ClientState.LOBBY)
+	# Muda estado do jogador para LOBBY se não estiver em uma partida
+	if players[uuid_base]["round_id"] != -1:
+		set_player_state(uuid_base, ClientState.LOBBY)
+	
 	players[uuid_base]["connected"] = true
 	_log_debug("Peer uuid=%s marcado como conectado" % uuid_base)
 	
