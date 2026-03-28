@@ -231,9 +231,10 @@ func _server_player_ready():
 	var peer_id = multiplayer.get_remote_sender_id()
 	var player_uuid = client_registry.get_uuid_by_peer_id(peer_id)
 	
+	# Sistema para impedir execução múltipla
 	# Só aceita se estava carregando
 	var state = client_registry.get_player_state(player_uuid)
-	var state_list = [client_registry.ClientState.LOADING, client_registry.ClientState.LOBBY, -1]
+	var state_list = [client_registry.ClientState.LOADING]
 	if state not in state_list:
 		_log_debug("Estado de jogador %s não está entre: %s" % [state, state_list])
 		return
@@ -262,8 +263,8 @@ func _server_start_round(round_settings: Dictionary):
 	server_manager._handle_start_round(peer_id, round_settings)
 	
 func _mark_player_disconnected(_chosen: bool):
-	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
-		return
+	#if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
+		#return
 	var peer_id = multiplayer.get_remote_sender_id()
 	server_manager._mark_player_disconnected(peer_id, _chosen)
 	
@@ -396,11 +397,6 @@ func _send_sync_for_object(object_id: int) -> void:
 	var config = entry.config
 	var pos = node.global_position
 	var rot = node.global_rotation if config.get("sync_rotation", true) else Vector3.ZERO
-	
-	var sender_id = multiplayer.get_remote_sender_id()
-	if sender_id <= 0:
-		return
-	
 	for peer_id in connected_peers:
 		_client_sync_object.rpc_id(peer_id, object_id, pos, rot)
 

@@ -799,9 +799,9 @@ func _player_exit_from_round(player_room_id: int, peer_id: int, player_uuid: Str
 		round_registry.unregister_spawned_player(round_id, player_uuid)
 		client_registry.clear_player_node_path(player_uuid)
 		round_registry.remove_player(round_id, player_uuid)
-		
+		# quitted_players buscar isso pra ver se uso em putros lugares
 		# Se todos quitaram permanentemente do round, finaliza automaticamente
-		if p_round["quitted_players"].size() >= round_registry.get_total_players(round_id):
+		if round_registry.get_total_players(round_id) == 0:
 			_log_debug("Finalizando round imediatamente, todos os players quitaram")
 			round_registry.end_round(round_id, "all_quitted")
 		

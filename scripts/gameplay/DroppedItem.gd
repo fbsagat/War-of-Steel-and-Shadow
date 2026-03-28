@@ -11,7 +11,7 @@ class_name DroppedItem
 
 @export_category("Network Sync")
 @export var sync_enabled: bool = true
-@export var sync_rate: float = 0.05
+@export var sync_rate: float = 0.04
 @export var interpolation_speed: float = 50.0
 @export var teleport_threshold: float = 0.01
 @export var sync_rotation: bool = true
@@ -183,7 +183,7 @@ func collect(collector_id: int) -> bool:
 	"""
 	Coleta o item - Autoridade exclusiva do servidor
 	"""
-
+	print("[111] ------------ collect() de DroppedItem executado!!!! vem apagar esse print agora !!!! id do coletor: ", collector_id)
 	if !is_server_authority() or is_collected:
 		return false
 	
@@ -214,7 +214,7 @@ func _notify_collected(collector_id: int):
 func despawn():
 	if !is_server_authority():
 		return
-	
+	print("[111] ------------- despawn executado!!!! vem apagar esse print agora !!!!")
 	# Notifica clientes para despawn
 	network_manager.rpc("_rpc_client_despawn_item", object_id, round_id)
 	

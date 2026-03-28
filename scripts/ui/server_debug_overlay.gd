@@ -45,13 +45,15 @@ extends Node
 # ─────────────────────────────────────────────────────────────────────────────
 
 ## Índice de cada aba (corresponde a posições nos arrays internos)
-enum Tab { NONE = -1, CLIENTS = 0, ROOMS = 1, MATCHES = 2 }
+enum Tab { NONE = -1, CLIENTS = 0, ROOMS = 1, MATCHES = 2, OBJECTS = 3 }
+var tabs_size: int = 4
 
 ## Rótulos exibidos no título do painel para cada aba
 const TAB_LABELS: Array[String] = [
 	"[F1]  Clientes",
 	"[F2]  Salas",
 	"[F3]  Partidas",
+	"[F4]  Objetos",
 ]
 
 ## Largura mínima padrão de colunas de texto (px)
@@ -80,6 +82,9 @@ var room_registry: RoomRegistry = null
 
 ## Referência ao MatchManager — configure via setup()
 var round_registry: RoundRegistry = null
+
+## Referência ao ObjectManager — configure via setup()
+var object_manager: ObjectManager = null
 
 ## Referência ao ServerManager - Injetado via initializer
 var server_manager: ServerManager = null
@@ -140,6 +145,8 @@ var _room_rows: Dictionary = {}
 ## Linhas da aba Partidas:  match_id       →  { chave: Label }
 var _match_rows: Dictionary = {}
 
+## Linhas da aba Objetos:  match_id       →  { chave: Label }
+var _object_rows: Dictionary = {}
 
 # ─────────────────────────────────────────────────────────────────────────────
 # CICLO DE VIDA
@@ -172,6 +179,7 @@ func _exit_tree() -> void:
 	client_registry = null
 	room_registry   = null
 	round_registry  = null
+	object_manager = null
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -188,10 +196,13 @@ func setup(
 		p_client_manager: Node,
 		p_room_manager:   Node,
 		p_match_manager:  Node,
+		p_object_manager:  Node,
+		
 ) -> void:
 	client_registry = p_client_manager
 	room_registry   = p_room_manager
 	round_registry  = p_match_manager
+	object_manager = p_object_manager
 
 
 ## Sinaliza que a estrutura de dados mudou e a lista precisa ser reconstruída.
@@ -213,6 +224,7 @@ func _input(event: InputEvent) -> void:
 		KEY_F1: _toggle_tab(Tab.CLIENTS)
 		KEY_F2: _toggle_tab(Tab.ROOMS)
 		KEY_F3: _toggle_tab(Tab.MATCHES)
+		KEY_F4: _toggle_tab(Tab.OBJECTS)
 
 
 ## Alterna a aba. Se a aba solicitada já estiver aberta, fecha o painel.
@@ -295,6 +307,7 @@ func _do_rebuild() -> void:
 		Tab.CLIENTS: _rebuild_clients(list)
 		Tab.ROOMS:   _rebuild_rooms(list)
 		Tab.MATCHES: _rebuild_matches(list)
+		Tab.OBJECTS: _rebuild_objects(list)
 
 
 ## Despacha a atualização em tempo real para a aba ativa.
@@ -303,6 +316,7 @@ func _update_realtime() -> void:
 		Tab.CLIENTS: _update_clients_realtime()
 		Tab.ROOMS:   _update_rooms_realtime()
 		Tab.MATCHES: _update_matches_realtime()
+		Tab.OBJECTS: _update_objects_realtime()
 
 
 # ── ABA: CLIENTES ─────────────────────────────────────────────────────────────
@@ -316,7 +330,7 @@ func _rebuild_clients(list: VBoxContainer) -> void:
 	_add_header(list, col_names, column_sizes)
 
 	if client_registry == null:
-		_add_placeholder(list, "ClientManager não configurado — chame setup() primeiro.")
+		_add_placeholder(list, "ClientRegistry não configurado.")
 		return
 
 	for client_uuid in client_registry.get_all_players_uuid():
@@ -367,7 +381,7 @@ func _rebuild_rooms(list: VBoxContainer) -> void:
 	_add_header(list, col_names, col_sizes)
 
 	if room_registry == null:
-		_add_placeholder(list, "RoomManager não configurado — chame setup() primeiro.")
+		_add_placeholder(list, "RoomRegistry não configurado.")
 		return
 
 	for room_id in room_registry.get_all_rooms_ids():
@@ -410,7 +424,7 @@ func _rebuild_matches(list: VBoxContainer) -> void:
 	_add_header(list, col_names, col_sizes)
 
 	if round_registry == null:
-		_add_placeholder(list, "MatchManager não configurado — chame setup() primeiro.")
+		_add_placeholder(list, "RoundRegistry não configurado.")
 		return
 
 	for round_id in round_registry.get_all_rounds_ids():
@@ -443,6 +457,29 @@ func _update_matches_realtime() -> void:
 		if round == null: continue
 		var refs: Dictionary = _match_rows[round_id]
 		if refs.has("since"):  refs["since"].text  = time_ago_
+
+
+# ── ABA: OBJETOS ─────────────────────────────────────────────────────────────
+
+## Reconstrói a lista de partidas.
+func _rebuild_objects(list: VBoxContainer) -> void:
+	_object_rows.clear()
+	var col_names: Array[String] = ["ID"]
+	var col_sizes: Array[int] = [    40]
+	_add_header(list, col_names, col_sizes)
+
+	if object_manager == null:
+		_add_placeholder(list, "ObjectManager não configurado.")
+		return
+
+
+## Atualiza em tempo real os campos dinâmicos dos objetos.
+func _update_objects_realtime() -> void:
+	if object_manager == null or _object_rows.is_empty():
+		return
+	# ┌─────────────────────────────────────────────────────────────────────┐
+	# │  LÓGICA AQUI                                                        │
+	# └─────────────────────────────────────────────────────────────────────┘
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -654,7 +691,7 @@ func _build_ui() -> void:
 	header_hbox.add_child(_tab_title)
 
 	var hint: Label = Label.new()
-	hint.text = "F1 Clientes | F2 Salas | F3 Partidas  (mesma tecla ou esc = fechar)"
+	hint.text = "F1 Clientes | F2 Salas | F3 Partidas | F4 Objetos  (mesma tecla ou esc = fechar)"
 	hint.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
 	hint.add_theme_font_size_override("font_size", 12)
 	hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -666,7 +703,7 @@ func _build_ui() -> void:
 	_tab_panels.clear()
 	_list_containers.clear()
 
-	for _i: int in 3:
+	for _i: int in tabs_size:
 		var scroll: ScrollContainer = ScrollContainer.new()
 		scroll.visible = false
 		scroll.size_flags_vertical    = Control.SIZE_EXPAND_FILL

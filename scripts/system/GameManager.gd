@@ -376,8 +376,6 @@ func _on_connected_to_server():
 	
 	_log_debug(" Cliente conectado ao servidor com sucesso! Peer ID: %d" % local_peer_id)
 	
-	if is_in_round:
-		network_manager._server_player_ready()
 	connected_to_server.emit()
 
 func _on_connection_failed():
