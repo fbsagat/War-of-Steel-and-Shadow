@@ -558,6 +558,7 @@ func _spawn_on_server(objects_node, object_id: int, round_id: int, item_name: St
 		return null
 
 	item_node.name = "Object_%d_%s_%d" % [object_id, item_name, round_id]
+	item_node.is_server = true
 
 	# Injeta dependências no nó antes de adicioná-lo à árvore
 	item_node.network_manager = network_manager

@@ -1955,6 +1955,7 @@ func _spawn_on_client(object_id: int, round_id: int, item_name: String, position
 	
 	# Nome consistente com servidor
 	item_node.name = "Object_%d_%s_%d" % [object_id, item_name, round_id]
+	item_node.is_server = false
 	_log_debug("[ITEM]📦 Spawnando no cliente: %s - %s" % [owner_uuid, item_node.name])
 	
 	# Injeta dependências

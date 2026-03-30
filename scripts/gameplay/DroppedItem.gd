@@ -30,10 +30,6 @@ var network_manager: NetworkManager = null
 var server_manager: ServerManager = null
 var initializer = null
 
-# ===== SINAIS =====
-
-signal despawned(object_id: int)
-
 # ===== VARIÁVEIS INTERNAS =====
 
 var object_id: int = -1
@@ -46,6 +42,7 @@ var lifetime_timer: Timer = null
 var is_collected: bool = false
 var spawn_time: float = 0.0
 var can_be_collected: bool = false
+var is_server: bool = false
 
 # ===== INICIALIZAÇÃO =====
 func initialize(
@@ -66,20 +63,13 @@ func initialize(
 
 	_setup_authority_settings()
 
-	if is_server_authority() and initial_velocity != Vector3.ZERO:
+	if is_server and initial_velocity != Vector3.ZERO:
 		await get_tree().process_frame
 		linear_velocity = initial_velocity
 
-	_start_collection_delay()
-
-	if has_lifetime and is_server_authority():
-		_setup_lifetime_timer()
-
-	_setup_visual()
-
 	# Registra no NetworkManager com round_id no config
 	# A frequência de envio é gerenciada por start_round_sync(), não aqui
-	if sync_enabled and is_server_authority():
+	if sync_enabled and is_server:
 		network_manager.register_syncable_object(
 			object_id,
 			self,
@@ -103,7 +93,6 @@ func get_sync_config() -> Dictionary:
 
 func _ready():
 	add_to_group("item")
-	body_entered.connect(_on_body_entered)
 	_setup_authority_settings()
 	
 func _setup_authority_settings():
@@ -112,7 +101,7 @@ func _setup_authority_settings():
 	- Servidor: Física ativa
 	- Cliente: Física congelada, apenas interpolação visual
 	"""
-	if is_server_authority():
+	if is_server:
 		# SERVIDOR: Física completa
 		gravity_scale = 1.0
 		sleeping = false
@@ -120,132 +109,14 @@ func _setup_authority_settings():
 		freeze = false
 		contact_monitor = true  # Para detecção de colisão
 		max_contacts_reported = 4
-		_log_debug("🖥️  [SERVIDOR] Física ativa")
+		_log_debug("🖥️ Física ativa")
 	else:
 		# CLIENTE: Física desabilitada
 		freeze = true
 		sleeping = true
 		gravity_scale = 0.0
 		contact_monitor = false
-		_log_debug("💻 [CLIENTE] Física congelada")
-
-# ===== VERIFICAÇÕES DE REDE =====
-func is_server_authority() -> bool:
-	var peer = multiplayer.multiplayer_peer
-	if peer != null and peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED:
-		return !has_network() or (multiplayer.has_multiplayer_peer() and multiplayer.is_server())
-	return false
-
-func has_network() -> bool:
-	return multiplayer != null and multiplayer.has_multiplayer_peer()
-
-# ===== PROCESSAMENTO PRINCIPAL =====
-func _physics_process(_delta: float):
-	if is_collected:
-		return
-	
-	# Sistema de coleta (apenas servidor)
-	if is_server_authority() and can_be_collected and !is_collected:
-		_check_nearby_players()
-
-# ===== SISTEMA DE COLETA =====
-func _start_collection_delay():
-	if !is_server_authority():
-		return
-	
-	can_be_collected = false
-	await get_tree().create_timer(auto_collect_delay).timeout
-	
-	if !is_collected:
-		can_be_collected = true
-		_log_debug("Item pronto para coleta")
-
-func _check_nearby_players():
-	if !auto_collect or !has_network():
-		return
-	
-	var active_players = server_manager.round_registry.get_all_spawned_players(round_id)
-	
-	for player_node in active_players:
-		if !player_node or !is_instance_valid(player_node):
-			continue
-		
-		var distance = global_position.distance_to(player_node.global_position)
-		if distance <= collection_radius:
-			collect(player_node.player_id)
-			return
-
-@rpc("any_peer", "call_remote", "reliable")
-func collect(collector_id: int) -> bool:
-	"""
-	Coleta o item - Autoridade exclusiva do servidor
-	"""
-	
-	if !is_server_authority() or is_collected:
-		return false
-	
-	if !can_be_collected:
-		return false
-	
-	# Validação de distância
-	var player_uuid = server_manager.client_registry.get_uuid_by_peer_id(collector_id)
-	var player_node = server_manager.client_registry.get_player_node(player_uuid)
-	if player_node:
-		var distance = global_position.distance_to(player_node.global_position)
-		if distance > collection_radius * 1.5:
-			_log_debug("  Coleta rejeitada: dist=%.2f" % distance)
-			return false
-	
-	is_collected = true
-	_notify_collected(collector_id)
-	return true
-
-func _notify_collected(collector_id: int):
-	# Adiciona ao inventário
-	#ServerManager.client_registry.add_item_to_inventory(round_id, collector_id, item_name)
-	_log_debug("✓ Item coletado por player %d" % collector_id)
-	
-	# Remove do servidor
-	despawn()
-
-func despawn():
-	if !is_server_authority():
-		return
-
-	# Notifica clientes para despawn
-	network_manager.rpc("_rpc_client_despawn_item", object_id, round_id)
-	server_manager.object_manager.despawn_object(round_id, object_id)
-	queue_free()
-	emit_signal("despawned", object_id)
-
-# ===== LIFETIME =====
-func _setup_lifetime_timer():
-	lifetime_timer = Timer.new()
-	lifetime_timer.wait_time = lifetime_seconds
-	lifetime_timer.one_shot = true
-	lifetime_timer.timeout.connect(_on_lifetime_expired)
-	add_child(lifetime_timer)
-	lifetime_timer.start()
-
-func _on_lifetime_expired():
-	if !is_server_authority():
-		return
-	
-	_log_debug("  Lifetime expirado")
-	despawn()
-
-# ===== AUXILIARES =====
-func try_collect_from_client():
-	if !has_network() or is_server_authority():
-		return
-	
-	collect.rpc_id(1, multiplayer.get_unique_id())
-
-func _setup_visual():
-	pass
-
-func _on_body_entered(_body: Node):
-	pass
+		_log_debug("💻 Física congelada")
 
 func _log_debug(message: String):
 	if not debug_mode:
@@ -255,5 +126,5 @@ func _log_debug(message: String):
 	if initializer.activate_only_selected and not "DroppedItem" in initializer.selected:
 		return
 	
-	var prefix = "[SERVER]" if is_server_authority() else "[CLIENT]"
+	var prefix = "[SERVER]" if is_server else "[CLIENT]"
 	print("%s[DroppedItem:%d]%s" % [prefix, object_id, message])
