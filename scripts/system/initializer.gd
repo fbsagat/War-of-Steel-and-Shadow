@@ -4,7 +4,7 @@ extends Node
 ## [TESTES] Usa o TestManager para iniciar uma partida logo na execução (localhost)
 ## (configura server e clients / server cria round e inicia partida com primeiros clientes /
 ##  clientes recebem localhost_auto_connect = true)
-@export var test_mode: bool = false
+@export var test_mode: bool = true
 ## [TESTES] Define a quantidade de instâcias de clientes conectadas para executar fast_round
 @export var simulador_players_qtd: int = 2
 ## Ativa/desativa o debug visual na gameplay
@@ -18,11 +18,11 @@ extends Node
 
 # Instruções para debug
 ## Executa _log_debug apenas nos itens selecionados
-var activate_only_selected: bool = true
+var activate_only_selected: bool = false
 # Disponíveis: "Server", "NetworkManager", "TestManager", "GameManager", "RoomRegistry"
 # "RoundRegistry", "ClientRegistry", "Player_node", "ObjectManager", "MapManager", "MainMenu"
 # "ItemDatabase", "InventoryMenu", "DroppedItem"
-var selected: Array = ["Server", "NetworkManager", "TestManager", "GameManager", "MapManager"]
+var selected: Array = ["Server", "NetworkManager", "GameManager", "ObjectManager"]
 
 # Referências
 ## Manager de rede, gerencia comunicação entre servidor e clientes
@@ -192,7 +192,6 @@ func _init_server(is_headless):
 	
 	# configurações
 	server_manager.is_headless = is_headless
-	network_manager.server_is_headless = is_headless
 	map_manager.is_server = true
 	item_database.is_server = true
 	
@@ -206,7 +205,7 @@ func _init_server(is_headless):
 	debug_overlay.server_manager = server_manager
 	server_manager.debug_overlay = debug_overlay
 	debug_overlay.network_manager = network_manager
-	debug_overlay.setup(client_registry, room_registry, round_registry)
+	debug_overlay.setup(client_registry, room_registry, round_registry, object_manager)
 	debug_overlay._connect_signals()
 	
 	# Aguarda até que os nós tenham sido adicionados à árvore

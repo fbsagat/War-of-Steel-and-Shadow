@@ -562,6 +562,9 @@ func _on_peer_disconnected(peer_id: int):
 				else:
 					_log_debug("Sala foi deletada (ficou vazia)")
 					_send_rooms_list_to_all()
+	
+	# Para o sync de objetos pra este peer:
+	network_manager.stop_peer_sync(peer_id)
 		
 	# Define cliente como desconectado
 	client_registry.set_disconnected_peer(peer_id)
@@ -761,6 +764,9 @@ func _execute_player_return_to_round(peer_id: int, player_uuid: String):
 		# muda estado do jogador
 		client_registry.set_player_state(player_uuid, client_registry.ClientState.LOADING)
 		
+		# Retorna o sync de objetos para este player
+		network_manager.resume_peer_sync(peer_id)
+		
 		# Envia comando de retorno para o cliente
 		network_manager.rpc_id(peer_id, "_client_round_return", server_id, match_data)
 
@@ -851,9 +857,17 @@ func _mark_player_disconnected(peer_id: int, _chosen: bool):
 	
 	if _chosen:
 		round_registry._mark_player_disconnected(_round["round_id"], player_uuid)
+		
+		# Para o sync de objetos pra este peer:
+		network_manager.stop_peer_sync(peer_id)
+		
 		_log_debug("⚠ uuid=%s marcado como desconectado na rodada %d" % [player_uuid, _round["round_id"]])
 	else:
 		round_registry._unmark_player_disconnected(_round["round_id"], player_uuid)
+		
+		# Retoma o sync de objetos pra este peer:
+		network_manager.resume_peer_sync(peer_id)
+		
 		_log_debug("✓ uuid=%s removido de disconnected_players na rodada %d" % [player_uuid, _round["round_id"]])
 
 func _handle_create_room(peer_id: int, room_name: String, password: String):
@@ -1367,6 +1381,11 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 		
 	await get_tree().process_frame
 	
+	# Inicia a sincronização de objetos
+	network_manager.start_round_sync(round_data["round_id"], 0.04)
+	
+	await get_tree().process_frame
+	
 	# Se não headless, joga este primeiro round para a camera do servidor
 	var rounds_count = round_registry.get_active_rounds_count()
 	if not is_headless and rounds_count == 1:
@@ -1611,6 +1630,9 @@ func _on_round_ending(round_id: int, reason: String):
 	# Aguarda tempo de transição (para mostrar resultados)
 	await get_tree().create_timer(round_transition_time).timeout
 	
+	# Para totalmente o sync de objetos para este round:
+	network_manager.stop_round_sync(round_id)
+	
 	# Limpa os objetos do round
 	object_manager.clear_round_objects(round_id)
 		
@@ -1830,7 +1852,7 @@ func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 	"""Servidor recebe pedido de pegar item para o inventário, valida e redistribui"""
 	var player_uuid = client_registry.get_uuid_by_peer_id(requesting_player_id)
 	var round_id = client_registry.get_player_round(player_uuid)
-	var object = _get_spawned_object(round_id ,object_id)
+	var object = object_manager.get_object_node(round_id ,object_id)
 	
 	# Verificação se item é válido (é um objeto spawnado corretamente / tem os atributos adicionado pelo objeta manager)
 	if not object:
@@ -1850,7 +1872,7 @@ func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 		return
 	
 	# Verificação se o item está perto do player na cena do servidor também
-	if not server_nearby.has(object["node"]):
+	if not server_nearby.has(object):
 		_log_debug("O nó deste player no servidor não tem este item por perto para pickup, recusar!")
 		return
 	
@@ -1873,12 +1895,6 @@ func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 	
 	# Despawn do objeto no mapa dos clientes
 	_rpc_despawn_on_clients(round_players, round_["round_id"], object_id)
-	
-	# Despawn do objeto no mapa do servidor
-	var item_node = object.get("node")
-	if item_node and is_instance_valid(item_node) and item_node.is_inside_tree():
-		item_node.queue_free()
-		_log_debug("_server_validate_pick_up_item: Node removido da cena")
 		
 	await get_tree().process_frame
 	
@@ -2383,11 +2399,10 @@ func attack_validation(group: String, player_id: int, actual_weapon: String, vic
 		
 		_log_debug("Ataque executado!: %s, %d com um(a) %s em %d" % [group, player_id, actual_weapon,  victim_session_id])
 
-@rpc("any_peer", "call_remote", "reliable")
 func _server_player_action(p_id: int, action_type: String, item_equipado_nome, anim_name: String):
 	"""RPC: Servidor recebe ação do jogador e redistribui para os remotos do mesmo round e remoto 
 	corresondente no servidor também"""
-	
+
 	var player_uuid = client_registry.get_uuid_by_peer_id(p_id)
 	var player = client_registry.get_player_round(player_uuid)
 	var round_id = round_registry.get_round_by_player_uuid(player_uuid)["round_id"]
@@ -2542,15 +2557,6 @@ func _is_peer_connected(peer_id: int) -> bool:
 	
 	var connected_peers = multiplayer.get_peers()
 	return peer_id in connected_peers
-
-func _get_spawned_object(round_id: int, object_id: int):
-	if (
-		object_manager and
-		object_manager.spawned_objects.has(round_id) and
-		object_manager.spawned_objects[round_id].has(object_id)
-	):
-		return object_manager.spawned_objects[round_id][object_id]
-	return null
 
 func _cleanup_empty_rounds():
 	"""Limpa as rounds vazios após tempo determinado desde que ficou vazio

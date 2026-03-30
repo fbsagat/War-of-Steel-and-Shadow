@@ -36,7 +36,7 @@ func _log_debug(message: String) -> void:
 		return
 	if initializer.activate_only_selected and not "NetworkManager" in initializer.selected:
 		return
-	print("%s %s" % [_get_log_prefix(), message])
+	print("%s%s" % [_get_log_prefix(), message])
 
 func _get_log_prefix() -> String:
 	assert(false, "_get_log_prefix() deve ser implementado nas classes filhas")
@@ -320,9 +320,9 @@ func _client_player_animation_state(_p_id: int, _speed: float, _attacking: bool,
 	pass
 
 # ===== SINCRONIZAÇÃO DE OBJETOS =====
-
+	
 @rpc("authority", "call_remote", "unreliable")
-func _client_sync_object(_object_id: int, _pos: Vector3, _rot: Vector3):
+func _rpc_client_batch_sync(_round_id: int, _ids: PackedInt32Array, _positions: PackedVector3Array, _rotations: PackedVector3Array):
 	pass
 
 # ===== AÇÕES (ATAQUES, DEFESA) =====

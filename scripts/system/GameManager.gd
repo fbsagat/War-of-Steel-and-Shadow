@@ -1669,14 +1669,14 @@ func _cleanup_local_round():
 	gameplay_menu = false
 	
 	# Limpa objetos spawnados
-	for round_id in spawned_objects.keys():
-		await get_tree().process_frame
-		for object_id in spawned_objects[round_id].keys():
-			var obj_data = spawned_objects[round_id][object_id]
+	for obj in spawned_objects.keys():
+		for object_id in spawned_objects[obj].keys():
+			var obj_data = spawned_objects[obj][object_id]
 			var item_node = obj_data.get("node")
 			
 			if item_node and is_instance_valid(item_node) and item_node.is_inside_tree():
 				item_node.queue_free()
+		await get_tree().process_frame
 	
 	spawned_objects.clear()
 	
@@ -1923,12 +1923,9 @@ func _spawn_on_client(object_id: int, round_id: int, item_name: String, position
 	"""
 	Spawna objeto no cliente (chamado via RPC)
 	"""
-	
+
 	if not is_in_round:
 		return
-	
-	if multiplayer.is_server():
-		return  # Servidor já spawnou na função principal
 	
 	# Valida ItemDatabase
 	if not item_database or not item_database.is_loaded:
@@ -2017,9 +2014,6 @@ func _despawn_on_client(object_id: int, round_id: int):
 	✅ NOVO MÉTODO: Despawna objeto no cliente
 	Chamado via RPC pelo servidor
 	"""
-	
-	if multiplayer.is_server():
-		return
 	
 	_log_debug("🗑️  Despawnando objeto: ID=%d, Round=%d" % [object_id, round_id])
 	

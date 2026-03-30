@@ -57,52 +57,49 @@ func initialize(
 	_initial_velocity: Vector3
 ):
 	object_id = _object_id
-	round_id = _round_id
+	round_id  = _round_id
 	item_name = _item_name
 	item_data = _item_data
 	owner_uuid = _owner_uuid
 	initial_velocity = _initial_velocity
 	spawn_time = Time.get_unix_time_from_system()
-	
-	# Configura autoridade
+
 	_setup_authority_settings()
-	
-	# ✅ CORRIGIDO: Aplica velocidade inicial DEPOIS de configurar física
+
 	if is_server_authority() and initial_velocity != Vector3.ZERO:
-		await get_tree().process_frame  # Aguarda física estabilizar
+		await get_tree().process_frame
 		linear_velocity = initial_velocity
-		_log_debug("  Velocidade inicial aplicada: %s" % initial_velocity)
-	
-	# Inicia delay de coleta
+
 	_start_collection_delay()
-	
-	# Configura lifetime apenas no servidor
+
 	if has_lifetime and is_server_authority():
 		_setup_lifetime_timer()
-	
+
 	_setup_visual()
-	
-	# ✅ Registra no NetworkManager se sync_enabled
+
+	# Registra no NetworkManager com round_id no config
+	# A frequência de envio é gerenciada por start_round_sync(), não aqui
 	if sync_enabled and is_server_authority():
-		# Servidor registra imediatamente
 		network_manager.register_syncable_object(
 			object_id,
 			self,
 			{
-				"sync_rate": sync_rate,
-				"interpolation_speed": interpolation_speed,
-				"teleport_threshold": teleport_threshold,
-				"sync_rotation": sync_rotation
+				"round_id":             round_id,
+				"interpolation_speed":  interpolation_speed,
+				"teleport_threshold":   teleport_threshold,
+				"sync_rotation":        sync_rotation
 			}
 		)
-		
-	elif sync_enabled and !is_server_authority():
-		pass
-		# Cliente: espera o primeiro sync para registrar
-		# (opcional: pode registrar aqui também, mas sem enviar)
-		#NetworkManager.register_syncable_object(...)
-	
-	_log_debug("✓ Item inicializado: %s (ID: %d, Sync: %s)" % [item_name, object_id, sync_enabled])
+
+	_log_debug("✓ Item inicializado: %s (ID: %d)" % [item_name, object_id])
+
+func get_sync_config() -> Dictionary:
+	return {
+		"round_id":            round_id,
+		"interpolation_speed": interpolation_speed,
+		"teleport_threshold":  teleport_threshold,
+		"sync_rotation":       sync_rotation
+	}
 
 func _ready():
 	add_to_group("item")
@@ -217,25 +214,9 @@ func despawn():
 
 	# Notifica clientes para despawn
 	network_manager.rpc("_rpc_client_despawn_item", object_id, round_id)
-	
-	# Remove do servidor
-	if sync_enabled:
-		network_manager.unregister_syncable_object(object_id)  # opcional, mas seguro
-	
 	server_manager.object_manager.despawn_object(round_id, object_id)
 	queue_free()
 	emit_signal("despawned", object_id)
-
-func get_sync_config() -> Dictionary:
-	"""
-	Retorna configuração de sincronização para o NetworkManager.
-	"""
-	return {
-		"sync_rate": sync_rate,
-		"interpolation_speed": interpolation_speed,
-		"teleport_threshold": teleport_threshold,
-		"sync_rotation": sync_rotation
-	}
 
 # ===== LIFETIME =====
 func _setup_lifetime_timer():

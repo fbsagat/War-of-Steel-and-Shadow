@@ -45,15 +45,16 @@ extends Node
 # ─────────────────────────────────────────────────────────────────────────────
 
 ## Índice de cada aba (corresponde a posições nos arrays internos)
-enum Tab { NONE = -1, CLIENTS = 0, ROOMS = 1, MATCHES = 2, OBJECTS = 3 }
-var tabs_size: int = 4
+enum Tab { NONE = -1, CLIENTS = 0, ROOMS = 1, MATCHES = 2, OBJECTS = 3, ST_OBJECTS = 4 }
+var tabs_size: int = 5
 
 ## Rótulos exibidos no título do painel para cada aba
 const TAB_LABELS: Array[String] = [
 	"[F1]  Clientes",
 	"[F2]  Salas",
 	"[F3]  Partidas",
-	"[F4]  Objetos",
+	"[F4]  Objetos Spawnados",
+	"[F5]  Objetos Guardados",
 ]
 
 ## Largura mínima padrão de colunas de texto (px)
@@ -145,8 +146,11 @@ var _room_rows: Dictionary = {}
 ## Linhas da aba Partidas:  match_id       →  { chave: Label }
 var _match_rows: Dictionary = {}
 
-## Linhas da aba Objetos:  match_id       →  { chave: Label }
-var _object_rows: Dictionary = {}
+## Linhas da aba Objetos Spawnados:  match_id       →  { chave: Label }
+var _spawned_object_rows: Dictionary = {}
+
+## Linhas da aba Objetos Guardados:  match_id       →  { chave: Label }
+var _stored_object_rows: Dictionary = {}
 
 # ─────────────────────────────────────────────────────────────────────────────
 # CICLO DE VIDA
@@ -163,6 +167,7 @@ func _connect_signals():
 	client_registry.player_left_room.connect(notify_structure_changed)
 	client_registry.peer_state_changed.connect(notify_structure_changed)
 	client_registry.peer_id_updated.connect(notify_structure_changed)
+	
 	room_registry.room_created.connect(notify_structure_changed)
 	room_registry.room_removed.connect(notify_structure_changed)
 	room_registry.player_joined_room.connect(notify_structure_changed)
@@ -173,6 +178,12 @@ func _connect_signals():
 	round_registry.round_started.connect(notify_structure_changed)
 	round_registry.player_connected.connect(notify_structure_changed)
 	round_registry.player_disconnected.connect(notify_structure_changed)
+	
+	object_manager.object_spawned.connect(notify_structure_changed)
+	object_manager.object_despawned.connect(notify_structure_changed)
+	object_manager.object_retrieved.connect(notify_structure_changed)
+	object_manager.round_objects_cleared.connect(notify_structure_changed)
+	object_manager.object_stored.connect(notify_structure_changed)
 	
 func _exit_tree() -> void:
 	# Solta referências para não segurar objetos na memória após remoção
@@ -225,6 +236,7 @@ func _input(event: InputEvent) -> void:
 		KEY_F2: _toggle_tab(Tab.ROOMS)
 		KEY_F3: _toggle_tab(Tab.MATCHES)
 		KEY_F4: _toggle_tab(Tab.OBJECTS)
+		KEY_F5: _toggle_tab(Tab.ST_OBJECTS)
 
 
 ## Alterna a aba. Se a aba solicitada já estiver aberta, fecha o painel.
@@ -307,7 +319,8 @@ func _do_rebuild() -> void:
 		Tab.CLIENTS: _rebuild_clients(list)
 		Tab.ROOMS:   _rebuild_rooms(list)
 		Tab.MATCHES: _rebuild_matches(list)
-		Tab.OBJECTS: _rebuild_objects(list)
+		Tab.OBJECTS: _rebuild_spawned_objects(list)
+		Tab.ST_OBJECTS: _rebuild_stored_objects(list)
 
 
 ## Despacha a atualização em tempo real para a aba ativa.
@@ -317,6 +330,7 @@ func _update_realtime() -> void:
 		Tab.ROOMS:   _update_rooms_realtime()
 		Tab.MATCHES: _update_matches_realtime()
 		Tab.OBJECTS: _update_objects_realtime()
+		Tab.ST_OBJECTS: _update_st_objects_realtime()
 
 
 # ── ABA: CLIENTES ─────────────────────────────────────────────────────────────
@@ -409,9 +423,8 @@ func _rebuild_rooms(list: VBoxContainer) -> void:
 func _update_rooms_realtime() -> void:
 	if room_registry == null or _room_rows.is_empty():
 		return
-	# ┌─────────────────────────────────────────────────────────────────────┐
-	# │  LÓGICA AQUI                                                        │
-	# └─────────────────────────────────────────────────────────────────────┘
+		
+	# Lógica aqui
 
 
 # ── ABA: PARTIDAS ─────────────────────────────────────────────────────────────
@@ -441,7 +454,6 @@ func _rebuild_matches(list: VBoxContainer) -> void:
 			_col_btn("Print",  func(): print(m),                                        75)
 		   ])
 		_match_rows[round_id] = _refs
-	#_add_placeholder(list, "Implemente _rebuild_matches() com os dados do seu MatchManager.")
 
 
 ## Atualiza em tempo real os campos dinâmicos das partidas (ex: tempo decorrido).
@@ -451,41 +463,127 @@ func _update_matches_realtime() -> void:
 
 	for round_id in _match_rows:
 		var round_ = round_registry.get_round(round_id)
+		
 		if not round_:
-			return
-		var time_ago_ = time_ago(round_["start_time"])
-		if round == null: continue
+			continue
+		
 		var refs: Dictionary = _match_rows[round_id]
-		if refs.has("since"):  refs["since"].text  = time_ago_
+		var time_ago_ = time_ago(round_["start_time"])
+		
+		if refs.has("since"):
+			refs["since"].text = time_ago_
 
 
-# ── ABA: OBJETOS ─────────────────────────────────────────────────────────────
+# ── ABA: OBJETOS SPAWNADOS ─────────────────────────────────────────────────────────────
 
-## Reconstrói a lista de partidas.
-func _rebuild_objects(list: VBoxContainer) -> void:
-	_object_rows.clear()
-	var col_names: Array[String] = ["ID"]
-	var col_sizes: Array[int] = [    40]
+## Reconstrói a lista de objetos spawnados.
+func _rebuild_spawned_objects(list: VBoxContainer) -> void:
+	_spawned_object_rows.clear()
+	var col_names: Array[String] = ["ID", "Valid", "Round ID", "Item N", "Owner", "Pos", ""]
+	var col_sizes: Array[int] = [    50,    50,       50,        90,      50,     200,   75]
 	_add_header(list, col_names, col_sizes)
 
 	if object_manager == null:
 		_add_placeholder(list, "ObjectManager não configurado.")
 		return
-
+		
+	if network_manager == null:
+		_add_placeholder(list, "NetworkManager não configurado.")
+		return
+	
+	for spawned_object in object_manager.all_spawned_objects.keys():
+		var obj = object_manager.all_spawned_objects[spawned_object]
+		if network_manager.syncable_objects.has(spawned_object):
+			var syncable_obj = network_manager.syncable_objects[spawned_object]
+			var syncable_obj_node = syncable_obj["node"]
+			var syncable_obj_config = syncable_obj["config"]
+		
+			var valid : bool = is_instance_valid(syncable_obj_node) and syncable_obj_node.is_inside_tree()
+			var round_id: int = syncable_obj_config.get("round_id", -1)
+			var player = client_registry.get_player_by_uuid(syncable_obj_node["owner_uuid"])
+			var owner_ = str(player["entry_position"]) if player else ""
+			var _refs: Dictionary = _add_row(list, [
+				_col(str(obj["object_id"]),                                  "",                  50),
+				_col(str("🟢" if valid else "🔴"),                           "",                 50),
+				_col(str(round_id),                                           "",                 50),
+				_col(syncable_obj_node["item_name"],                          "",                 90),
+				_col(owner_,                                                  "",                 50),
+				_col("...",                                                "pos",                200),
+				_col_btn("Print",  func(): print(syncable_obj),                                   75),
+				##_col_btn("Print Settings",  func(): print(m["settings"]),                       75),
+			   ])
+			_spawned_object_rows[spawned_object] = _refs	
 
 ## Atualiza em tempo real os campos dinâmicos dos objetos.
 func _update_objects_realtime() -> void:
-	if object_manager == null or _object_rows.is_empty():
+	if object_manager == null or network_manager == null or _spawned_object_rows.is_empty():
 		return
-	# ┌─────────────────────────────────────────────────────────────────────┐
-	# │  LÓGICA AQUI                                                        │
-	# └─────────────────────────────────────────────────────────────────────┘
+	
+	for spawned_object in object_manager.all_spawned_objects.keys():
+		if network_manager.syncable_objects.has(spawned_object):
+			var syncable_obj = network_manager.syncable_objects[spawned_object]
+			#var syncable_obj_node = syncable_obj["node"]
+			#var syncable_obj_config = syncable_obj["config"]
+			
+			if syncable_obj == null: continue
+			if _spawned_object_rows.has(spawned_object):
+				var refs: Dictionary = _spawned_object_rows[spawned_object]
+				var p = syncable_obj.node.global_position
+				if refs.has("pos"):  refs["pos"].text  = "X: %.2f/ Y: %.2f/ Z: %.2f" % [p.x, p.y, p.z]
+				
+				
+# ── ABA: OBJETOS GUARDADOS ─────────────────────────────────────────────────────────────
 
+## Reconstrói a lista de objetos guardados.
+func _rebuild_stored_objects(list: VBoxContainer) -> void:
+	_stored_object_rows.clear()
+	var col_names: Array[String] = ["ID","Round ID", "Item N", "Owner", ""]
+	var col_sizes: Array[int] = [     50,   50,        90,       50,    75]
+	_add_header(list, col_names, col_sizes)
 
+	if object_manager == null:
+		_add_placeholder(list, "ObjectManager não configurado.")
+		return
+		
+	if network_manager == null:
+		_add_placeholder(list, "NetworkManager não configurado.")
+		return
+	
+	for stored_object in object_manager.get_all_stored_objects_full_data():
+		var player = client_registry.get_player_by_uuid(stored_object["owner_uuid"])
+		var owner_ = str(player["entry_position"]) if player else ""
+		var _refs: Dictionary = _add_row(list, [
+			_col(str(stored_object.get("object_id", -1)),              "",                    50),
+			_col(str(stored_object.get("round_id", -1)),               "",                    50),
+			_col(stored_object["item_name"],                           "",                    90),
+			_col(owner_,                                               "",                    50),
+			_col_btn("Print",                             func(): print(stored_object),       75),
+			##_col_btn("Print Settings",  func(): print(m["settings"]),                       75),
+		   ])
+		_stored_object_rows[stored_object] = _refs
+
+## Atualiza em tempo real os campos dinâmicos dos objetos guardados.
+func _update_st_objects_realtime() -> void:
+	if object_manager == null or network_manager == null or _stored_object_rows.is_empty():
+		return
+	
+	#for spawned_object in object_manager.all_spawned_objects.keys():
+		#if network_manager.syncable_objects.has(spawned_object):
+			#var syncable_obj = network_manager.syncable_objects[spawned_object]
+			##var syncable_obj_node = syncable_obj["node"]
+			##var syncable_obj_config = syncable_obj["config"]
+			#
+			#if syncable_obj == null: continue
+			#if _object_rows.has(spawned_object):
+				#var refs: Dictionary = _object_rows[spawned_object]
+				#var p = syncable_obj.node.global_position
+				#if refs.has("pos"):  refs["pos"].text  = "X: %.2f/ Y: %.2f/ Z: %.2f" % [p.x, p.y, p.z]
+				
+				
 # ─────────────────────────────────────────────────────────────────────────────
 # HELPERS DE LINHA — use estes para construir as listas nos _rebuild_*()
 # ─────────────────────────────────────────────────────────────────────────────
-
+#
 ## Cria um descritor de coluna de TEXTO.
 ## O Label criado ficará acessível em refs[key] para atualização em tempo real.
 ## Passe key = "" (padrão) se não precisar atualizar este campo depois.
@@ -691,7 +789,7 @@ func _build_ui() -> void:
 	header_hbox.add_child(_tab_title)
 
 	var hint: Label = Label.new()
-	hint.text = "F1 Clientes | F2 Salas | F3 Partidas | F4 Objetos  (mesma tecla ou esc = fechar)"
+	hint.text = "F1 Clientes | F2 Salas | F3 Partidas | F4 Objetos Spawnados | F4 Objetos Guardados (mesma tecla ou esc = fechar)"
 	hint.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
 	hint.add_theme_font_size_override("font_size", 12)
 	hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER

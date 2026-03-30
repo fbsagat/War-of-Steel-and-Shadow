@@ -15,11 +15,6 @@ var item_database: ItemDatabase = null
 
 # ===== VARIÁVEIS INTERNAS =====
 
-var server_is_headless: bool
-
-## { object_id: float }  — contagem regressiva até próximo envio
-var sync_timers: Dictionary = {}
-
 var _blocked_until := {}
 
 var _player_rpc_timestamps = {}
@@ -28,6 +23,14 @@ var _player_rpc_timestamps = {}
 var client_latency_map: Dictionary = {}
 var last_ping_from_client : Dictionary = {} # peer_id -> timestamp
 var timeout_limit := 8000 # ms
+
+## Sincronização de objetos
+var _pending_peers: Dictionary = {}
+const _PEER_READY_DELAY := 0.15  # segundos de carência pós-conexão
+# round_id → { "timer": float, "rate": float }
+var _round_sync: Dictionary = {}
+# peer_ids explicitamente excluídos do sync (desconexão imediata)
+var _excluded_peers: Dictionary = {}  # peer_id → true
 
 # ===== INICIALIZAÇÃO =====
 
@@ -38,7 +41,8 @@ func initialize():
 	_log_debug("▶️ NetworkManager inicializado com sucesso!")
 
 func _process(delta: float):
-	_server_update_sync_timers(delta)
+	_drain_pending_peers(delta)  
+	_server_update_batch(delta)
 	_client_timout_detection(delta)
 
 # ===== CLIENT TIMOUT DETECTOR =====
@@ -107,6 +111,10 @@ func _server_report_ping(client_latency: int):
 
 # ===== CONECÇÃO =====
 
+func _on_peer_connected(peer_id: int) -> void:
+	# Não adiciona direto ao ciclo de sync — coloca em quarentena primeiro
+	_pending_peers[peer_id] = _PEER_READY_DELAY
+
 func _on_peer_disconnected(peer_id: int):
 	if _player_rpc_timestamps.has(peer_id):
 		_player_rpc_timestamps.erase(peer_id)
@@ -170,7 +178,7 @@ func _server_request_return_or_exit(_chosen: bool):
 	var state = client_registry.get_player_state(player_uuid)
 	var state_list = [client_registry.ClientState.IN_GAME, client_registry.ClientState.LOBBY]
 	if state not in state_list:
-		_log_debug("Estado de jogador %s não está entre: %s. Estado atual:  %s" % [player_uuid,state_list, state])
+		_log_debug("Estado de jogador %s não está entre: %s. Estado atual:  %s" % [player_uuid, state_list, state])
 		return
 	
 	# Se está voltando, define RETURNING, se false, quer abandonar: DISCONNECTED
@@ -225,7 +233,8 @@ func _server_player_ready():
 	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
 		return
 	var peer_id = multiplayer.get_remote_sender_id()
-
+	_log_debug("Cliente de peer_id %d informou que seu round está carregado" % [peer_id])
+	
 	var player_uuid = client_registry.get_uuid_by_peer_id(peer_id)
 	
 	# Sistema para impedir execução múltipla
@@ -233,7 +242,7 @@ func _server_player_ready():
 	var state = client_registry.get_player_state(player_uuid)
 	var state_list = [client_registry.ClientState.LOADING]
 	if state not in state_list:
-		_log_debug("Estado de jogador %s não está entre: %s" % [state, state_list])
+		_log_debug("Estado (Atual: %s) de jogador %d não está entre: %s" % [state, peer_id, state_list])
 		return
 		
 	await get_tree().process_frame
@@ -308,6 +317,9 @@ func _server_drop_item(player_id, obj_id):
 		return
 	server_manager._server_validate_drop_item(player_id, obj_id)
 
+func _server_player_action(p_id: int, action_type: String, item_equipado_nome, anim_name: String):
+	server_manager._server_player_action(p_id, action_type, item_equipado_nome, anim_name)
+
 # ===== SINCRONIZAÇÃO DE ESTADO DE JOGADORES =====
 
 func _server_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
@@ -362,132 +374,128 @@ func _server_player_animation_state(p_id: int, speed: float, attacking: bool, de
 			rpc_id(session_id, "_client_player_animation_state", int(p_id), speed, attacking,
 				   defending, jumping, aiming, running, block_attacking, on_floor)
 
-# ===== SINCRONIZAÇÃO DE OBJETOS =====
+# ===== SYNC EM LOTE POR ROUND =====
 
-## Peers em "quarentena" após (re)conexão.
-## O ENet pode ainda não ter inicializado os canais quando peer_connected dispara,
-## então aguardamos um breve delay antes de incluir o peer no ciclo de sync.
-## Estrutura: { peer_id (int) → tempo_restante (float) }
-var _pending_peers: Dictionary = {}
-const _PEER_READY_DELAY := 0.15  # segundos de carência pós-conexão
+func start_round_sync(round_id: int, sync_rate: float = 0.04) -> void:
+	"""
+	Inicia o loop de sincronização em lote para um round.
+	Chame quando o round realmente começar.
+	"""
+	if _round_sync.has(round_id):
+		push_warning("[ObjSync] Round %d já está em sync." % round_id)
+		return
+	_round_sync[round_id] = { "timer": 0.0, "rate": sync_rate }
+	_log_debug("[ObjSync]▶ Sync iniciado — round %d (rate: %.3fs)" % [round_id, sync_rate])
 
+func stop_round_sync(round_id: int) -> void:
+	"""
+	Para o sync de um round inteiro (fim de round).
+	Chame também quando o último jogador de um round desconectar.
+	"""
+	_round_sync.erase(round_id)
+	_log_debug("[ObjSync]⏹ Sync parado — round %d" % round_id)
 
-## Chame isso no initialize() junto com peer_disconnected
-## multiplayer.peer_connected.connect(_on_peer_connected)
-func _on_peer_connected(peer_id: int) -> void:
-	# Não adiciona direto ao ciclo de sync — coloca em quarentena primeiro
-	_pending_peers[peer_id] = _PEER_READY_DELAY
+func stop_peer_sync(peer_id: int) -> void:
+	"""
+	Exclui imediatamente um peer de todos os envios futuros.
+	Chame ao detectar desconexão, antes que o registry seja limpo.
+	"""
+	_excluded_peers[peer_id] = true
+	_log_debug("[ObjSync]🚫 Peer %d excluído do sync" % peer_id)
 
+func resume_peer_sync(peer_id: int) -> void:
+	"""Remove a exclusão (reconexão ou troca de round)."""
+	_excluded_peers.erase(peer_id)
 
-func _server_update_sync_timers(delta: float) -> void:
-	# ── 1. Promove peers prontos da quarentena ──────────────────────────────
-	var ready_peers: Array = []
+func _server_update_batch(delta: float) -> void:
+	for round_id in _round_sync.keys():
+		var state: Dictionary = _round_sync[round_id]
+		state["timer"] += delta
+		if state["timer"] >= state["rate"]:
+			state["timer"] = 0.0
+			_send_batch_for_round(round_id)
+
+func _send_batch_for_round(round_id: int) -> void:
+	# 1. Coleta todos os objetos vivos deste round
+	var ids      := PackedInt32Array()
+	var positions := PackedVector3Array()
+	var rotations := PackedVector3Array()
+
+	for object_id in syncable_objects.keys():
+		var entry: Dictionary = syncable_objects[object_id]
+		if entry.config.get("round_id", -1) != round_id:
+			continue
+		var node = entry.node
+		if !is_instance_valid(node) or !node.is_inside_tree():
+			continue
+		ids.append(object_id)
+		positions.append(node.global_position)
+		rotations.append(
+			node.global_rotation if entry.config.get("sync_rotation", true)
+			else Vector3.ZERO
+		)
+
+	if ids.is_empty():
+		return
+
+	# 2. Resolve peers do round
+	var target_peers: Array = _get_round_peers(round_id)
+	if target_peers.is_empty():
+		return
+
+	# 3. Envia — um único RPC para cada peer válido do round
+	var enet_mp := multiplayer.multiplayer_peer as ENetMultiplayerPeer
+	for peer_id in target_peers:
+		#_log_debug("[ObjSync] peer=%d  pending=%s  excluded=%s  pending_timer=%.2f" % [
+			#peer_id,
+			#_pending_peers.has(peer_id),
+			#_excluded_peers.has(peer_id),
+			#_pending_peers.get(peer_id, -1.0)
+		#])
+		if _pending_peers.has(peer_id) or _excluded_peers.has(peer_id):
+			continue
+		if enet_mp:
+			var ep_: ENetPacketPeer = enet_mp.get_peer(peer_id)
+			#_log_debug("[ObjSync] ep=%s  state=%s  STATE_CONNECTED=%s" % 
+			#[ep_, ep_.get_state() if ep_ else "NULL", ENetPacketPeer.STATE_CONNECTED])
+			if not ep_ or ep_.get_state() != ENetPacketPeer.STATE_CONNECTED:
+				continue
+		_rpc_client_batch_sync.rpc_id(peer_id, round_id, ids, positions, rotations)
+
+func _get_round_peers(round_id: int) -> Array:
+	if !round_registry:
+		return []
+	var peers: Array = []
+	for uuid in round_registry.get_active_players_ids(round_id):
+		var pid: int = client_registry.get_peer_id_by_uuid(uuid)
+		if pid > 0:
+			peers.append(pid)
+	return peers
+
+# Registro de objeto — agora exige round_id no config
+func register_syncable_object(object_id: int, node: Node, config: Dictionary) -> void:
+	if syncable_objects.has(object_id):
+		push_warning("[ObjSync] Objeto duplicado: %d" % object_id)
+		return
+	if !node.is_inside_tree():
+		push_error("[ObjSync] Nó fora da árvore: %d" % object_id)
+		return
+	syncable_objects[object_id] = { "node": node, "config": config }
+	_log_debug("[ObjSync]✅ Objeto registrado: %d (round %d)" % [object_id, config.get("round_id", -1)])
+
+func unregister_syncable_object(object_id: int) -> void:
+	syncable_objects.erase(object_id)
+	_log_debug("[ObjSync]🗑️ Objeto removido do sync: %d" % object_id)
+
+func _drain_pending_peers(delta: float) -> void:
+	var is_ready: Array = []
 	for peer_id in _pending_peers.keys():
 		_pending_peers[peer_id] -= delta
 		if _pending_peers[peer_id] <= 0.0:
-			ready_peers.append(peer_id)
-	for peer_id in ready_peers:
+			is_ready.append(peer_id)
+	for peer_id in is_ready:
 		_pending_peers.erase(peer_id)
-
-	# ── 2. Atualiza timers e dispara sync dos objetos ───────────────────────
-	var to_remove: Array = []
-	for object_id in sync_timers.keys():
-
-		if !syncable_objects.has(object_id):
-			to_remove.append(object_id)
-			continue
-
-		var entry = syncable_objects[object_id]
-
-		# ⚠️ SEM tipo aqui — variável sem tipo não valida na atribuição,
-		# permitindo que is_instance_valid() detecte o freed node corretamente.
-		var node = entry.node
-
-		if !is_instance_valid(node) or !node.is_inside_tree():
-			to_remove.append(object_id)
-			continue
-
-		var config: Dictionary = entry.config
-		var rate: float = config.get("sync_rate", 0.03)
-		sync_timers[object_id] += delta
-		if sync_timers[object_id] >= rate:
-			sync_timers[object_id] = 0.0
-			_send_sync_for_object(object_id)
-
-	for oid in to_remove:
-		unregister_syncable_object(oid)
-
-
-func _send_sync_for_object(object_id: int) -> void:
-	var entry = syncable_objects.get(object_id)
-	if !entry:
-		return
-
-	# Mesma razão: sem tipo para não crashar no assign
-	var node = entry.node
-
-	if !is_instance_valid(node) or !node.is_inside_tree():
-		return
-
-	var config: Dictionary = entry.config
-	var pos: Vector3 = node.global_position
-	var rot: Vector3 = node.global_rotation if config.get("sync_rotation", true) else Vector3.ZERO
-
-	# ── Determina quais peers devem receber este objeto ─────────────────────
-	# Se o objeto pertence a um round específico (round_id no config),
-	# entregamos só para os jogadores daquele round — evita vazamento de estado
-	# entre rounds diferentes rodando em paralelo.
-	# Caso contrário, envia para todos os peers conectados.
-	var target_peer_ids: Array = []
-	var round_id: int = config.get("round_id", -1)
-
-	if round_id >= 0 and round_registry:
-		# Obtém UUIDs dos jogadores ativos no round e resolve para peer_id de sessão
-		var player_uuids: Array = round_registry.get_active_players_ids(round_id)
-		for uuid in player_uuids:
-			var pid: int = client_registry.get_peer_id_by_uuid(uuid)
-			if pid > 0:
-				target_peer_ids.append(pid)
-	else:
-		target_peer_ids = multiplayer.get_peers()
-
-	# ── Referência ENet para validar estado do canal antes de cada envio ────
-	# Isso resolve o erro "Unable to send packet on channel 0, max channels: 0"
-	# que ocorre quando tentamos enviar para um peer cujo handshake ENet
-	# ainda não foi concluído (comum em reconexões).
-	var enet_mp := multiplayer.multiplayer_peer as ENetMultiplayerPeer
-
-	for peer_id in target_peer_ids:
-		# Pula peers ainda em quarentena (recém conectados / reconectados)
-		if _pending_peers.has(peer_id):
-			continue
-
-		# Valida o estado do canal ENet antes de enviar
-		# STATE_CONNECTED = handshake completo, canais inicializados
-		if enet_mp:
-			var enet_peer: ENetPacketPeer = enet_mp.get_peer(peer_id)
-			if not enet_peer or enet_peer.get_state() != ENetPacketPeer.STATE_CONNECTED:
-				continue
-
-		_client_sync_object.rpc_id(peer_id, object_id, pos, rot)
-
-
-func register_syncable_object(object_id: int, node: Node, config: Dictionary) -> void:
-	if syncable_objects.has(object_id):
-		push_warning("Tentativa de registrar objeto sincronizável duplicado: %d" % object_id)
-		return
-	if !node.is_inside_tree():
-		push_error("Não é possível registrar nó fora da árvore: %d" % object_id)
-		return
-	syncable_objects[object_id] = { "node": node, "config": config }
-	sync_timers[object_id] = 0.0
-	_log_debug("✅ Objeto registrado para sync: %d" % object_id)
-
-
-func unregister_syncable_object(object_id: int) -> void:
-	syncable_objects.erase(object_id)   # erase é no-op se a chave não existe
-	sync_timers.erase(object_id)
-	_log_debug("🗑️ Objeto removido do sync: %d" % object_id)
+		_log_debug("✅ Peer %d saiu da quarentena" % peer_id)
 
 # ===== UTILITÁRIOS =====
 

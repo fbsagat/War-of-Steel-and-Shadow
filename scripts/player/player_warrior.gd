@@ -1112,10 +1112,11 @@ func action_sword_attack_call():
 		# Verificação local: Apenas atacar se for item de categoria weapon, (uma arma)
 		if item_equipado["category"] != "weapon":
 			return
-	
+
 		# Sincroniza ataque pela rede (Reliable = Garantido)
 		if network_manager and network_manager.is_connected:
 			var anim_name = _determine_attack_from_input()
+			
 			network_manager.send_player_action(player_id, "attack", item_equipado["name"], anim_name)
 			
 			# executa animação localmente
