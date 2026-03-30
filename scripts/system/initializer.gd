@@ -18,11 +18,11 @@ extends Node
 
 # Instruções para debug
 ## Executa _log_debug apenas nos itens selecionados
-var activate_only_selected: bool = true
+var activate_only_selected: bool = false
 # Disponíveis: "Server", "NetworkManager", "TestManager", "GameManager", "RoomRegistry"
 # "RoundRegistry", "ClientRegistry", "Player_node", "ObjectManager", "MapManager", "MainMenu"
 # "ItemDatabase", "InventoryMenu", "DroppedItem"
-var selected: Array = ["ObjectManager", "DroppedItem"]
+var selected: Array = ["ObjectManager", "DroppedItem", "GameManager", "Player_node"]
 
 # Referências
 ## Manager de rede, gerencia comunicação entre servidor e clientes

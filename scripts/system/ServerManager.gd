@@ -226,7 +226,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	
 	# Envia o evento para o viewport ativo
-	current_active_viewport.push_input(event, true)
+	if current_active_viewport:
+		current_active_viewport.push_input(event, true)
 	
 func _input(event: InputEvent) -> void:
 	if is_headless:
@@ -1320,6 +1321,7 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 		push_error("Falha crítica ao carregar o mapa!: ", success)
 	else:
 		_log_debug("Mapa carregado com sucesso")
+		round_registry.set_round_map_node(round_data["round_id"], round_node.get_node_or_null("Terrain3D"))
 		
 	await get_tree().process_frame
 	
@@ -1387,10 +1389,11 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary):
 	await get_tree().process_frame
 	
 	# Se não headless, joga este primeiro round para a camera do servidor
-	var rounds_count = round_registry.get_active_rounds_count()
-	if not is_headless and rounds_count == 1:
-		await get_tree().process_frame
-		_find_a_next_round_to_camera(round_data["round_id"])
+	if not is_headless:
+		var rounds_count = round_registry.get_active_rounds_count()
+		if rounds_count == 1:
+			await get_tree().process_frame
+			_find_a_next_round_to_camera(round_data["round_id"])
 
 # ===== INSTANCIAÇÃO NO SERVIDOR =====
 
@@ -1641,16 +1644,15 @@ func _on_round_ending(round_id: int, reason: String):
 	# Remove o nó deste round da lista de rounds do servidor
 	var round_ = round_registry.get_round(round_id)
 	all_rounds_node.remove_child(round_["round_node"])
-	round_["round_node"].queue_free()
 		
 	await get_tree().process_frame
-	
-	# Finaliza completamente a rodada
-	_complete_round_end(round_id)
 	
 	# Se a câmera estiver neste round, mover para o próximo
 	if not is_headless and current_cam_round_index == round_["round_id"]:
 		_find_a_next_round_to_camera()
+	
+	# Finaliza completamente a rodada
+	_complete_round_end(round_id)
 
 func _complete_round_end(round_id: int):
 	"""
@@ -1686,7 +1688,7 @@ func _complete_round_end(round_id: int):
 	_log_debug("========================================")
 	
 	# Finaliza completamente no RoundRegistry
-	# IMPORTANTE: Isso adiciona ao histórico da sala automaticamente
+	# IMPORTANTE: Isso adiciona ao histórico da sala automaticamente e já executa _cleanup_round
 	round_registry.complete_round_end(round_id)
 	
 	# Atualiza estado da sala

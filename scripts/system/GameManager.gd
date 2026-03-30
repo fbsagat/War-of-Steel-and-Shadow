@@ -1481,8 +1481,10 @@ func _spawn_player(player_data: Dictionary, is_local: bool, _match_data: Diction
 		player_uuid, 
 		player_pos["position"]
 	)
+
 	player_instance.rotation = player_pos["rotation"]
-	
+	player_instance.visual_rotation_y = player_instance.rotation.y
+	player_instance.target_rotation_y = player_instance.rotation.y
 	# Aguarda processamento da inicialização
 	await get_tree().process_frame
 	
@@ -1582,8 +1584,7 @@ func _setup_local_player(player_instance: Node, camera_name: String, player_pos:
 	player_instance.add_to_group("myself_player")
 	
 	_log_debug("✓ [LOCAL] Jogador local configurado: %s em %s" % [
-		player_instance.player_name if player_instance.has_node("player_name") else "Unknown",
-		player_pos["position"]
+		player_instance.player_name,player_pos["position"]
 	])
 
 func _setup_remote_player(player_instance: Node, player_name_: String, player_pos: Dictionary) -> void:

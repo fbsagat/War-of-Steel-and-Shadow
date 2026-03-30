@@ -251,6 +251,7 @@ func create_test_round(nome_sala: String = "Sala de Teste", configuracoes_round:
 		push_error("Falha crítica ao carregar o mapa!")
 	else:
 		_log_debug("Mapa carregado com sucesso")
+		round_registry.set_round_map_node(round_data["round_id"], round_node.get_node_or_null("Terrain3D"))
 		
 	# Gera spawn points
 	var players_qtd = round_registry.get_total_players(round_data["round_id"])
@@ -467,6 +468,7 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 		player_data["id"], 
 		spawn_data["position"]
 	)
+	
 	player_instance.rotation = spawn_data["rotation"]
 	
 	# Aguarda processamento da inicialização
@@ -496,7 +498,7 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 	round_registry.register_spawned_player(round_id, p_uuid, player_instance)
 	
 	await get_tree().process_frame
-	
+
 	# ===== ESTADO NO SERVER MANAGER =====
 	server_manager.player_states[p_uuid] = {
 		"pos": spawn_data["position"],

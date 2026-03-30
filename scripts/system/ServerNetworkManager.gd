@@ -330,7 +330,7 @@ func _server_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, r
 	
 	if p_id not in peers:
 		return
-	
+
 	var sender_id = multiplayer.get_remote_sender_id()
 	if sender_id != p_id:
 		push_warning("⚠️ Jogador %d tentou enviar estado do jogador %d" % [sender_id, p_id])

@@ -269,7 +269,9 @@ func _execute_load_map(map_scene_path: String, round_node: Node, actual_camera: 
 		push_error("Falha ao instanciar mapa")
 		is_loading = false
 		return false
-
+	
+	_make_resources_unique(current_map)
+	
 	var has_ready = false
 	if current_map.get_script() and current_map.has_method("_ready"):
 		has_ready = true
@@ -509,6 +511,21 @@ func apply_sky_configs(sky_node: Node, config: Dictionary) -> void:
 		env_node.environment.ambient_light_color            = ambient.get("sky_color", Color.WHITE)
 
 	_log_debug("✓ Configurações de céu aplicadas!")
+
+func _make_resources_unique(node: Node):
+	for child in node.get_children():
+		_make_resources_unique(child)
+	
+	# Duplica materiais
+	if node is MeshInstance3D:
+		if node.material_override:
+			node.material_override = node.material_override.duplicate(true)
+	
+	# Duplica Terrain3D (ESSENCIAL)
+	if node.has_method("get_data") and node.has_method("set_data"):
+		var data = node.get("data")
+		if data:
+			node.set("data", data.duplicate(true))
 
 func _log_debug(message: String):
 	if not debug_mode:

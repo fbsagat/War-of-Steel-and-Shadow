@@ -45,7 +45,7 @@ extends CharacterBody3D
 @export var position_threshold: float = 0.01 # Distância mínima para sincronizar
 @export var rotation_threshold: float = 0.01 # Rotação mínima para sincronizar
 @export var anim_sync_rate: float = 0.1  # 10 updates/segundo (menos que posição)
-@export var visual_rotation_y: float = 0.0
+@export var visual_rotation_y: float
 @export var initial_sync_duration: float = 3.0
 @export var initial_sync_elapsed: float = 0.0
 
@@ -67,7 +67,7 @@ var initializer = null
 
 # Estados de sincronização
 var target_position: Vector3 = Vector3.ZERO
-var target_rotation_y: float = 0.0
+var target_rotation_y: float
 var sync_timer: float = 0.0
 
 # Estados de animação (para sincronização)
@@ -973,9 +973,7 @@ func _interpolate_remote_player(delta: float):
 	# ===== INTERPOLAÇÃO DE ROTAÇÃO =====
 	visual_rotation_y = lerp_angle(visual_rotation_y, target_rotation_y, interpolation_speed * delta)
 	rotation.y = visual_rotation_y
-
-	# ⚠️ REMOVIDO: todo o bloco de correção de altura com terreno, snap final, cache, etc.
-			
+	
 # ===== RECEPÇÃO DE ESTADO (REMOTOS) =====
 
 @rpc("authority", "call_remote", "unreliable")

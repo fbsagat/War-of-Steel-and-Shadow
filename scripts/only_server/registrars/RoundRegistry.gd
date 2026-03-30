@@ -74,7 +74,7 @@ signal player_despawned_from_round(round_id: int, uuid_base: String)
 ##   "end_reason": String,
 ##   "state": String,                          # "loading", "playing", "ending", "results"
 ##   "is_spawned",
-##   "map_manager": Node,
+##   "map_node": Node,
 ##   "round_node": Node,
 ##   "spawned_players": Dictionary,            # {uuid_base: Node}
 ##   "round_timer": Timer,
@@ -144,7 +144,7 @@ func create_round(room_id: int, room_name: String, players: Array, settings: Dic
 		"end_reason": "",
 		"state": "loading",
 		"round_node": null,
-		"map_manager": null,
+		"map_node": null,
 		"spawned_players": {},
 		"round_timer": null,
 		"empty_since": null
@@ -177,6 +177,15 @@ func set_round_node(round_id: int, node: Node):
 		return false
 	rounds[round_id]["round_node"] = node
 	_log_debug("Nó da rodada %d definido: %s" % [round_id, node.name])
+	return true
+
+func set_round_map_node(round_id: int, node: Node):
+	"""Define o nó da cena do mapa para uma rodada existente."""
+	if not rounds.has(round_id):
+		push_error("RoundRegistry: Rodada %d não existe" % round_id)
+		return false
+	rounds[round_id]["map_node"] = node
+	_log_debug("Nó do mapa da rodada %d definido: %s" % [round_id, node.name])
 	return true
 
 func start_round(round_id: int):
@@ -272,6 +281,7 @@ func complete_round_end(round_id: int) -> Dictionary:
 
 func _cleanup_round(round_id: int):
 	"""Limpa todos os recursos da rodada."""
+
 	if not rounds.has(round_id):
 		return
 
@@ -283,10 +293,16 @@ func _cleanup_round(round_id: int):
 			remove_child(round_data["round_timer"])
 		round_data["round_timer"].queue_free()
 
-	round_data["map_manager"] = null
 	round_data["spawned_players"].clear()
 	round_data["round_timer"] = null
-
+	
+	# Finaliza os processos do mapa:
+	if round_data["map_node"]:
+		round_data["map_node"].set_process(false)
+		round_data["map_node"].set_physics_process(false)
+		round_data["round_node"].remove_child(round_data["map_node"])
+		round_data["map_node"] = null
+	
 	rounds.erase(round_id)
 
 	if rounds.is_empty() and disconnect_check_timer:
