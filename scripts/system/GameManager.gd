@@ -110,6 +110,7 @@ signal item_equipped(object_id: String, slot_type: String)
 signal item_unequipped(object_id: String)
 signal items_swapped(item_id_1: String, item_id_2: String)
 
+
 # ===== FUNÇÕES DE INICIALIZAÇÃO =====
 
 func _ready():
@@ -157,6 +158,7 @@ func connect_muiltiplayer_signals():
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
 	multiplayer.connection_failed.connect(_on_connection_failed)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
+
 
 # ===== HEARTBEAT =====
 
@@ -224,6 +226,7 @@ func finish_loading():
 	
 	network_manager._server_player_ready()
 
+
 # ===== FUNÇÕES DE MENU e INPUT =====
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -251,8 +254,8 @@ func _can_process_menu_input() -> bool:
 		and main_menu_node != null \
 		and inventory_node != null
 
-# ESC (ui_cancel)
-# Prioridade: 1. Fecha inventário. 2. Fecha gameplay menu. 3. Abre gameplay menu.
+## ESC (ui_cancel)
+## Prioridade: 1. Fecha inventário. 2. Fecha gameplay menu. 3. Abre gameplay menu.
 func _handle_escape() -> void:
 	# Fecha inventário primeiro
 	if inventory_menu:
@@ -270,7 +273,7 @@ func _handle_escape() -> void:
 	gameplay_menu = true
 	_toggle_gameplay_menu(false)
 
-# Inventory menu (ui_inventory)
+## Inventory menu (ui_inventory)
 func _handle_inventory() -> void:
 	# Não abre inventário se gameplay menu estiver aberto
 	if gameplay_menu:
@@ -297,7 +300,7 @@ func _toggle_inventory_menu(hide: bool = false) -> void:
 		inventory_node.show_inventory()
 		_log_debug("Mostrando menu de inventário e exibindo ponteiro do mouse")
 
-# Gameplay menu
+## Gameplay menu
 func _toggle_gameplay_menu(hide: bool = false) -> void:
 	
 	if main_menu_node == null:
@@ -317,11 +320,11 @@ func _toggle_gameplay_menu(hide: bool = false) -> void:
 		main_menu_node.show_gameplay_menu()
 		_log_debug("Mostrando menu de gameplay e exibindo ponteiro do mouse")
 
+
 # ===== FUNÇÕES DE CONEXÃO COM O SERVIDOR =====
 
+## Conecta ao servidor dedicado.
 func connect_to_server():
-	"""Conecta ao servidor dedicado"""
-	
 	if is_connected_to_server:
 		_log_debug("Já conectado ao servidor")
 		return
@@ -349,10 +352,9 @@ func connect_to_server():
 	
 	_log_debug("Cliente criado, aguardando conexão...")
 
+## Esse sinal é emitido quando o cliente consegue se conectar com sucesso ao servidor."""
+## Callback quando conecta com sucesso ao servidor.
 func _on_connected_to_server():
-	"""Esse sinal é emitido quando o cliente consegue se conectar com sucesso ao servidor."""
-	"""Callback quando conecta com sucesso ao servidor"""
-
 	if not is_connecting:
 		return
 
@@ -378,8 +380,8 @@ func _on_connected_to_server():
 	
 	connected_to_server.emit()
 
+## Dispara quando a tentativa de conexão falha.
 func _on_connection_failed():
-	"""Dispara quando a tentativa de conexão falha."""
 	_log_debug("Falha ao conectar ao servidor")
 
 func _on_reconnect_timeout() -> void:
@@ -393,6 +395,7 @@ func _on_reconnect_timeout() -> void:
 	peer = null
 	_try_reconnect()
 
+## Nova tentativa de conexão com o servidor
 func _schedule_next_retry() -> void:
 	if reconnect_attempts >= MAX_RECONNECT_ATTEMPTS:
 		_log_debug("Não foi possível reconectar.")
@@ -406,11 +409,10 @@ func _schedule_next_retry() -> void:
 
 	reconnect_timer.start(RECONNECT_DELAY)
 
+## Dispara quando o cliente já estava conectado, mas perde a conexão com o servidor.
+## Aqui o jogo deve mostrar o menu de reconexão, se não conseguir no tempo e tentativas determinadas,
+## desconecta totalmente e reseta, se conseguir, esconde a tela de reconexão e volta à partida normalmente.
 func _on_server_disconnected():
-	"""Dispara quando o cliente já estava conectado, mas perde a conexão com o servidor.
-	Aqui o jogo deve mostrar o menu de reconexão, se não conseguir no tempo e tentativas determinadas,
-	desconecta totalmente e reseta, se conseguir, esconde a tela de reconexão e volta à partida normalmente"""
-	
 	_log_debug("Conexão perdida com o servidor, tentando reconectar para voltar à partida")
 	
 	# Fecha conexão com o servidor
@@ -471,20 +473,17 @@ func _try_reconnect() -> void:
 	reconnect_timer.start(RECONNECT_DELAY)
 
 func _on_reconnect_gave_up() -> void:
-	
 	_disconnect_from_server()
 	if main_menu_node:
 		main_menu_node.show_main_menu()
 
 	_log_debug("Conexão perdida permanentemente.")
 
+## Dispara quando o cliente quer desconectar do servidor intencionalmente
+## Aqui o jogo deve retornar para a tela inicial, desconectado do servidor, tudo resetado e sem 
+## possibilidade de o cliente retornar ao round em que estava
+## notify = avisa o servidor.
 func _disconnect_from_server(notify_server: bool = false):
-	"""Dispara quando o cliente quer desconectar do servidor intencionalmente
-	Aqui o jogo deve retornar para a tela inicial, desconectado do servidor, tudo resetado e sem 
-	possibilidade de o cliente retornar ao round em que estava
-	notify = avisa o servidor.
-	"""
-	
 	_log_debug("Cliente desconectado intencionalmente do servidor, resetando estado do cliente e voltando ao menu principal")
 	
 	if notify_server:
@@ -532,8 +531,8 @@ func _disconnect_from_server(notify_server: bool = false):
 	# Emite sinal
 	disconnected_from_server.emit()
 
+## Validar IP/hostname
 func join_server_by_ip(received_ip: String, received_port: String) -> bool:
-	# Validar IP/hostname
 	if received_ip and received_ip.strip_edges() != "":
 		var trimmed_ip: String = received_ip.strip_edges()
 		
@@ -563,8 +562,9 @@ func join_server_by_ip(received_ip: String, received_port: String) -> bool:
 	connect_to_server()
 	return true
 
+## Validar localhost
 func _is_valid_address(address: String) -> bool:
-	# Validar localhost
+
 	if address.to_lower() in ["localhost", "::1"]:
 		return true
 	
@@ -624,13 +624,12 @@ func _is_valid_hostname(hostname: String) -> bool:
 	
 	return true
 
+
 # ===== SISTEMA DE IDENTIFIAÇÃO =====
 
+## Gera identidade persistente do cliente.
+## Nunca muda após criação.
 func _load_or_create_uuid() -> String:
-	"""
-	Gera identidade persistente do cliente.
-	Nunca muda após criação.
-	"""
 	if FileAccess.file_exists(UUID_FILE):
 		var data = JSON.parse_string(FileAccess.get_file_as_string(UUID_FILE))
 		return data["uuid_base"]
@@ -649,16 +648,13 @@ func _load_tokens() -> Dictionary:
 		return JSON.parse_string(FileAccess.get_file_as_string(TOKEN_FILE))
 	return {}
 
+## Salva apenas os tokens mais recentes.
+## Mantém no máximo MAX_SAVED_TOKENS entradas.
+## Funciona com Dictionary simples:
+## {
+##     "server_id": "token"
+## }
 func _save_tokens() -> void:
-	"""
-	Salva apenas os tokens mais recentes.
-	Mantém no máximo MAX_SAVED_TOKENS entradas.
-	Funciona com Dictionary simples:
-	{
-		"server_id": "token"
-	}
-	"""
-	
 	# Se exceder limite, remove os mais antigos
 	while server_tokens.size() > MAX_SAVED_TOKENS:
 		# Pega a primeira chave inserida (mais antiga)
@@ -669,12 +665,9 @@ func _save_tokens() -> void:
 	file.store_string(JSON.stringify(server_tokens))
 	file.close()
 
+## Processa resposta do servidor.
+## Salva novo token se necessário.
 func handle_server_response(response: Dictionary) -> void:
-	"""
-	Processa resposta do servidor.
-	Salva novo token se necessário.
-	"""
-
 	if response["status"] == "new_token":
 		var sid = response["server_id"]
 		server_tokens[sid] = response["token"]
@@ -707,6 +700,7 @@ func handle_server_response(response: Dictionary) -> void:
 		_log_debug("Conexão rejeitada: %s" % response.get("reason",""))
 		_disconnect_from_server()
 
+
 # ===== EXECUÇÃO DE BOTÕES DE CONEXÃO =====
 
 func _on_gameplay_menu_exit_game_pressed():
@@ -729,10 +723,11 @@ func _on_gameplay_menu_give_up_game_pressed():
 	if main_menu_node:
 		main_menu_node.show_main_menu()
 
+
 # ===== ATUALIZAÇÃO DE CONFIGURAÇÕES =====
 
+## Atualiza configurações do servidor para o cliente
 func update_client_info(info: Dictionary):
-	"""Atualiza configurações do servidor para o cliente"""
 	_log_debug("Atualizando configurações do servidor: %s" % info)
 	
 	for key in info.keys():
@@ -768,10 +763,9 @@ func update_client_info(info: Dictionary):
 
 # ===== CRIAÇÃO DE REDE LOCAL =====
 
+## Criar uma partida local
 func create_local_match():
-	"""Criar uma partida local"""
 	_log_debug("Iniciando uma partida local")
-	
 	# Executar build do servidor.
 	#var server_pid := -1
 	#var server_path = ProjectSettings.globalize_path("res://server/server.exe")
@@ -779,8 +773,8 @@ func create_local_match():
 
 # ===== REGISTRO DE JOGADOR =====
 	
+## Envia nome do jogador para registro no servidor
 func set_player_name(p_name: String):
-	"""Envia nome do jogador para registro no servidor"""
 	if not is_connected_to_server:
 		main_menu_node._show_error_("Não conectado ao servidor", main_menu_node.name_input_error_label, "Red")
 		return
@@ -791,9 +785,9 @@ func set_player_name(p_name: String):
 		main_menu_node.show_loading_menu("Registrando jogador...")
 	
 	network_manager.register_player_name(p_name)
-	
+
+## Callback quando o nome é aceito pelo servidor
 func _client_name_accepted(accepted_name: String):
-	"""Callback quando o nome é aceito pelo servidor"""
 	player_name = accepted_name
 	_log_debug("Nome aceito pelo servidor: " + player_name)
 	
@@ -801,9 +795,9 @@ func _client_name_accepted(accepted_name: String):
 		main_menu_node.update_name_e_connected(configs["server_name"], accepted_name)
 		
 	name_accepted.emit()
-	
+
+## Callback quando o nome é rejeitado
 func _client_name_rejected(reason: String):
-	"""Callback quando o nome é rejeitado"""
 	_log_debug("Nome rejeitado: " + reason)
 	
 	if main_menu_node:
@@ -814,11 +808,11 @@ func _client_name_rejected(reason: String):
 	
 	name_rejected.emit(reason)
 
+
 # ===== GERENCIAMENTO DE SALAS =====
 
+## Callback quando a senha está incorreta
 func _client_wrong_password():
-	"""Callback quando a senha está incorreta"""
-	
 	var current_menu_visible_name = main_menu_node.current_menu_visible.name
 	main_menu_node.room_list_menu.visible = true
 	
@@ -829,15 +823,15 @@ func _client_wrong_password():
 	if main_menu_node and current_menu_visible_name == "ManualRoomJoinMenu":
 		main_menu_node._show_error_("Senha incorreta", main_menu_node.manual_room_join_error_label, "Red")
 		main_menu_node.show_manual_room_join_menu(true)
-		
+
+## Callback de quando existe um erro com o nome da sala
 func _client_room_name_error(error_msg : String):
-	"""Callback de quando existe um erro com o nome da sala"""
 	if main_menu_node:
 		main_menu_node.show_create_match_menu()
 		main_menu_node._show_error_(error_msg, main_menu_node.create_room_error_label, "Red")
 
+## Callback quando a sala não é encontrada
 func _client_room_not_found():
-	"""Callback quando a sala não é encontrada"""
 	if main_menu_node:
 		main_menu_node.show_room_list_menu(true, false)
 		main_menu_node.match_password_container.visible = true
@@ -854,28 +848,28 @@ func _request_rooms_list():
 		return
 		
 	network_manager.request_rooms_list()
-
+	
+## Callback quando recebe lista de salas, requisitado pelo cliente
 func _client_receive_rooms_list(rooms: Array):
-	"""Callback quando recebe lista de salas, requisitado pelo cliente"""
 	rooms_list_received.emit(true, rooms)
 
+## Cliente recebe requisição do servidor para retornar à partida onde estava ou abandonar
 func _client_receive_round_return_request(_room_name: String):
-	"""Cliente recebe requisição do servidor para retornar à partida onde estava ou abandonar"""
 	_log_debug("Recebendo requisição do servidor para retornar à prtid onde estava: %s" % _room_name)
 	if main_menu_node:
 			main_menu_node.show_round_return_menu(_room_name)
 
+## Cliente envia resposta dizendo que quer voltar à partida em que estava
 func _request_return_to_round():
-	"""Cliente envia resposta dizendo que quer voltar à partida em que estava"""
 	is_loading = true
 	network_manager._server_request_return_or_exit(true)
-	
+
+## Cliente envia resposta dizendo que quer abandonar a partida em que estava
 func _request_exit_from_round():
-	"""Cliente envia resposta dizendo que quer abandonar a partida em que estava"""
 	network_manager._server_request_return_or_exit(false)
 
+## Callback quando recebe atualização de lista de salas por prte do servidor(não requisitado)
 func all_client_receive_rooms_list(rooms: Array):
-	"""Callback quando recebe atualização de lista de salas por prte do servidor(não requisitado)"""
 	_log_debug("Lista de salas atualizada: %d salas" % rooms.size())
 	
 	# Ignora se não estiver na lista de salas
@@ -883,9 +877,8 @@ func all_client_receive_rooms_list(rooms: Array):
 		return
 	rooms_list_received.emit(true, rooms)
 
+## Cria uma nova sala
 func create_room(room_name: String, password: String = ""):
-	"""Cria uma nova sala"""
-	
 	if is_in_round:
 		return
 	
@@ -906,8 +899,8 @@ func create_room(room_name: String, password: String = ""):
 	
 	network_manager.create_room(room_name, password)
 
+## Callback quando sala é criada com sucesso
 func _client_room_created(room_data: Dictionary):
-	"""Callback quando sala é criada com sucesso"""
 	current_room = room_data
 	_log_debug(" Sala criada com sucesso: %s (ID: %d)" % [room_data["name"], room_data["id"]])
 	
@@ -916,9 +909,8 @@ func _client_room_created(room_data: Dictionary):
 	
 	room_created.emit(room_data)
 
+## Entra em uma sala por ID
 func join_room(room_id: int, password: String = ""):
-	"""Entra em uma sala por ID"""
-	
 	if is_in_round:
 		return
 	
@@ -936,9 +928,8 @@ func join_room(room_id: int, password: String = ""):
 	
 	network_manager.join_room(room_id, password)
 
+## Entra em uma sala por nome
 func join_room_by_name(room_name: String, password: String = ""):
-	"""Entra em uma sala por nome"""
-	
 	if is_in_round:
 		return
 	
@@ -959,8 +950,8 @@ func join_room_by_name(room_name: String, password: String = ""):
 	
 	network_manager.join_room_by_name(room_name, password)
 
+## Callback quando entra em uma sala com sucesso
 func _client_joined_room(room_data: Dictionary):
-	"""Callback quando entra em uma sala com sucesso"""
 	current_room = room_data
 	_log_debug("Entrou na sala com sucesso: %s (ID: %d)" % [room_data["name"], room_data["id"]])
 	
@@ -969,8 +960,8 @@ func _client_joined_room(room_data: Dictionary):
 	
 	joined_room.emit(room_data)
 
+## Callback quando a sala é atualizada
 func _client_room_updated(room_data: Dictionary):
-	"""Callback quando a sala é atualizada"""
 	current_room = room_data
 	_log_debug("Sala atualizada: %s (%d jogadores)" % [room_data["name"], room_data["players"].size()])
 	
@@ -979,9 +970,8 @@ func _client_room_updated(room_data: Dictionary):
 	
 	room_updated.emit(room_data)
 
+## Envia pedido para expulsar um player da sala (somente para o host)
 func kick_player_from_room(_selected_player_id: String):
-	"""Envia pedido para expulsar um player da sala (somente para o host)"""
-	
 	if is_in_round:
 		return
 	
@@ -1000,8 +990,8 @@ func kick_player_from_room(_selected_player_id: String):
 		network_manager.kick_player_from_room(_selected_player_id)
 		_log_debug("Pedido para expulsar player, id: %s feito ao servidor" % _selected_player_id)
 
+## Recebe notificação do servidor de que foi expulso da sala em que está
 func _client_kicked_from_room():
-	"""Recebe notificação do servidor de que foi expulso da sala em que está"""
 	var name_room = current_room["name"]
 	current_room = {}
 	
@@ -1013,9 +1003,8 @@ func _client_kicked_from_room():
 	# Se estiver em uma partida, sair e limpar tudo
 	_cleanup_local_round()
 
+## Sai da sala atual
 func leave_room():
-	"""Sai da sala atual"""
-	
 	if is_in_round:
 		return
 		
@@ -1027,9 +1016,8 @@ func leave_room():
 	network_manager.leave_room()
 	current_room = {}
 
+## Fecha a sala atual (apenas host)
 func close_room():
-	"""Fecha a sala atual (apenas host)"""
-	
 	if is_in_round:
 		return
 	
@@ -1046,8 +1034,8 @@ func close_room():
 	if main_menu_node:
 		main_menu_node.show_room_list_menu(true, false)
 
+## Callback quando a sala é fechada
 func _client_room_closed(reason: String):
-	"""Callback quando a sala é fechada"""
 	_log_debug("Sala fechada: " + reason)
 	current_room = {}
 	
@@ -1055,12 +1043,9 @@ func _client_room_closed(reason: String):
 		main_menu_node._show_error_(reason, main_menu_node.match_list_error_label, "Red")
 		main_menu_node.show_room_list_menu(true)
 
+## Envia ao servidor as configurações modificadas (apenas elas).
+## Compara com match_settings atual e envia somente o diff.
 func request_update_settings(new_values: Dictionary) -> void:
-	"""
-	Envia ao servidor as configurações modificadas (apenas elas).
-	Compara com match_settings atual e envia somente o diff.
-	"""
-	
 	if is_in_round:
 		return
 	
@@ -1080,9 +1065,8 @@ func request_update_settings(new_values: Dictionary) -> void:
 	# Envia pedido ao servidor (ID 1 = servidor dedicado)
 	network_manager.request_update_room_settings(changed_settings)
 
+## Callback que atualiza apenas as configurações modificadas.
 func client_update_match_settings(changed_settings: Dictionary) -> void:
-	"""Callback que atualiza apenas as configurações modificadas."""
-	
 	for key in changed_settings.keys():
 		room_settings[key] = changed_settings[key]
 	
@@ -1096,11 +1080,11 @@ func client_update_match_settings(changed_settings: Dictionary) -> void:
 			main_menu_node.room_lock_button.text = "Trancar Sala"
 			main_menu_node._show_error_("Sala liberada, chama a glr!", main_menu_node.room_error_label, "Yellow")
 
+
 # ===== GERENCIAMENTO DE RODADAS =====
 
+## Inicia uma nova rodada (apenas host, que irá solicitar início da rodada)
 func start_round(round_settings: Dictionary = {}):
-	"""Inicia uma nova rodada (apenas host, que irá solicitar início da rodada)"""
-	
 	if is_in_round:
 		return
 	
@@ -1119,18 +1103,18 @@ func start_round(round_settings: Dictionary = {}):
 	is_loading = true
 	network_manager._server_request_start_round(round_settings)
 	
+## Callback quando a rodada inicia.
 func _client_round_started(server_id: String, match_data: Dictionary):
-	"""Callback quando a rodada inicia"""
 	_log_debug("Rodada iniciada pelo servidor!")
 	_start_round_locally(server_id, match_data)
 
+## Callback quando o jogador retorna à rodada
 func _client_round_return(server_id: String, match_data: Dictionary):
-	"""Callback quando o jogador retorna à rodada"""
 	_log_debug("retornando à rodada")
 	_return_round_locally(server_id, match_data)
 
+## Callback quando a rodada termina.
 func _client_round_ended(end_data: Dictionary):
-	"""Callback quando a rodada termina"""
 	_log_debug("========================================")
 	_log_debug("RODADA FINALIZADA")
 	_log_debug("Rodada: %d" % end_data["round_number"])
@@ -1157,8 +1141,8 @@ func _client_round_ended(end_data: Dictionary):
 	# Limpa objetos locais
 	_cleanup_local_round()
 
+## Inicia a rodada localmente no cliente.
 func _start_round_locally(server_id: String, match_data: Dictionary):
-	"""Inicia a rodada localmente no cliente"""
 	_log_debug("========================================")
 	_log_debug("INICIANDO RODADA")
 	_log_debug("Sala: ID %d" % match_data["room_id"])
@@ -1234,8 +1218,8 @@ func _start_round_locally(server_id: String, match_data: Dictionary):
 	await get_tree().process_frame
 	_log_debug("Rodada carregada no cliente")
 
+## Retorna à rodada localmente no cliente.
 func _return_round_locally(server_id: String, match_data: Dictionary):
-	"""Retorna à rodada localmente no cliente"""
 	_log_debug("========================================")
 	_log_debug("RETORNANDO À RODADA")
 	_log_debug("Sala: ID %d" % match_data["room_id"])
@@ -1355,14 +1339,12 @@ func _return_round_locally(server_id: String, match_data: Dictionary):
 	await get_tree().process_frame
 	_log_debug("Rodada recarregada no cliente")
 
+## Spawna players para cada cliente.
+## Cada cliente recebe X execuções: a do seu jogador local e a do(s) jogador(es) remoto(s).
+## is_local = true → jogador local | is_local = false → jogador remoto
 func _spawn_player(player_data: Dictionary, is_local: bool, _match_data: Dictionary):
-	"""
-	Spawna players para cada cliente.
-	Cada cliente recebe X execuções: a do seu jogador local e a do(s) jogador(es) remoto(s).
-	is_local = true → jogador local | is_local = false → jogador remoto
-	"""
 	
-	# ===== VALIDAÇÕES INICIAIS =====
+	# VALIDAÇÕES INICIAIS
 	if not player_data.has("id") or not player_data.has("name") or not player_data.has("session_id"):
 		push_error("GameManager: player_data inválido: faltam campos obrigatórios")
 		return
@@ -1381,7 +1363,7 @@ func _spawn_player(player_data: Dictionary, is_local: bool, _match_data: Diction
 		player_display_name, session_id, "SIM" if is_local else "NÃO"
 	])
 	
-	# ===== VERIFICA DUPLICAÇÃO =====
+	# VERIFICA DUPLICAÇÃO
 	if players_node.has_node(player_name_):
 		_log_debug("⚠️ [Spawn] Player já existe: %s" % player_name_)
 		return
@@ -1390,7 +1372,7 @@ func _spawn_player(player_data: Dictionary, is_local: bool, _match_data: Diction
 		_log_debug("⚠️ [Spawn] Câmera já existe: %s" % camera_name)
 		return
 	
-	# ===== VALIDA NÓS NECESSÁRIOS =====
+	# VALIDA NÓS NECESSÁRIOS
 	if not players_node:
 		push_error("GameManager: players_node é null!")
 		return
@@ -1399,7 +1381,7 @@ func _spawn_player(player_data: Dictionary, is_local: bool, _match_data: Diction
 		push_error("GameManager: camera_instance é null para jogador local!")
 		return
 	
-	# ===== CARREGAMENTO DA CENA =====
+	# CARREGAMENTO DA CENA
 	_log_debug("📦 [Spawn] Carregando cena do player: %s" % player_scene)
 	
 	var player_scene_ = preload(player_scene)
@@ -1407,7 +1389,7 @@ func _spawn_player(player_data: Dictionary, is_local: bool, _match_data: Diction
 		push_error("GameManager: Falha ao carregar player_scene: %s" % player_scene)
 		return
 	
-	# ===== INSTANCIAÇÃO =====
+	# INSTANCIAÇÃO
 	var player_instance = player_scene_.instantiate()
 	if not player_instance:
 		push_error("GameManager: Falha ao instanciar player_scene")
@@ -1415,7 +1397,7 @@ func _spawn_player(player_data: Dictionary, is_local: bool, _match_data: Diction
 	
 	_log_debug("✓ [Spawn] Cena instanciada com sucesso")
 	
-	# ===== INJEÇÃO DE DEPENDÊNCIAS (PRÉ-ÁRVORE) =====
+	# INJEÇÃO DE DEPENDÊNCIAS (PRÉ-ÁRVORE)
 	_log_debug("💉 [Spawn] Injetando dependências...")
 	
 	player_instance.item_database = item_database
@@ -1423,7 +1405,7 @@ func _spawn_player(player_data: Dictionary, is_local: bool, _match_data: Diction
 	player_instance.initializer = initializer
 	player_instance.game_manager = self
 	
-	# ===== ADIÇÃO À ÁRVORE DE CENA =====
+	# ADIÇÃO À ÁRVORE DE CENA
 	_log_debug("🌳 [Spawn] Adicionando player à cena...")
 	
 	players_node.add_child(player_instance)
@@ -1443,7 +1425,7 @@ func _spawn_player(player_data: Dictionary, is_local: bool, _match_data: Diction
 	
 	_log_debug("✓ [Spawn] Player adicionado à árvore de cena")
 	
-	# ===== AGUARDA READY COM TIMEOUT =====
+	# AGUARDA READY COM TIMEOUT
 	if player_instance.has_method("_ready"):
 		_log_debug("⏳ [Spawn] Aguardando _ready() do player...")
 		
@@ -1463,7 +1445,7 @@ func _spawn_player(player_data: Dictionary, is_local: bool, _match_data: Diction
 		await get_tree().process_frame
 		await get_tree().process_frame
 	
-	# ===== INICIALIZAÇÃO DO JOGADOR =====
+	# INICIALIZAÇÃO DO JOGADOR
 	_log_debug("🔧 [Spawn] Inicializando dados do player...")
 	
 	var player_pos = _match_data["settings"]["spawn_points"][session_id]
@@ -1488,7 +1470,7 @@ func _spawn_player(player_data: Dictionary, is_local: bool, _match_data: Diction
 	# Aguarda processamento da inicialização
 	await get_tree().process_frame
 	
-	# ===== CONFIGURAÇÃO ESPECÍFICA POR TIPO DE JOGADOR =====
+	# CONFIGURAÇÃO ESPECÍFICA POR TIPO DE JOGADOR
 	if is_local:
 		await _setup_local_player(player_instance, camera_name, player_pos)
 	else:
@@ -1498,10 +1480,11 @@ func _spawn_player(player_data: Dictionary, is_local: bool, _match_data: Diction
 		player_display_name, "SIM" if is_local else "NÃO"
 	])
 
+
 # ===== FUNÇÕES AUXILIARES DE SETUP =====
 
+## Configurações específicas para jogador LOCAL
 func _setup_local_player(player_instance: Node, camera_name: String, player_pos: Dictionary) -> void:
-	"""Configurações específicas para jogador LOCAL"""
 	_log_debug("🎮 [LOCAL] Configurando jogador local...")
 	
 	# Configura câmera
@@ -1587,14 +1570,14 @@ func _setup_local_player(player_instance: Node, camera_name: String, player_pos:
 		player_instance.player_name,player_pos["position"]
 	])
 
+## Recebe comando do servidor para teleportar para um local determinado.
 func server_force_position(pos: Vector3):
-	"""Recebe comando do servidor para teleportar para um local determinado"""
 	if local_player_node and is_in_round:
 		local_player_node._respawn_player(pos)
 		_log_debug("Jogador local teleportado pelo servidor para a posição: %s" % pos)
 
+## Configurações específicas para jogador REMOTO.
 func _setup_remote_player(player_instance: Node, player_name_: String, player_pos: Dictionary) -> void:
-	"""Configurações específicas para jogador REMOTO"""
 	_log_debug("🌐 [REMOTO] Configurando jogador remoto...")
 	
 	# Jogador remoto: NÃO tem câmera atribuída
@@ -1609,8 +1592,8 @@ func _setup_remote_player(player_instance: Node, player_name_: String, player_po
 		player_pos["position"]
 	])
 
+## Callback quando deve retornar à sala.
 func _client_return_to_room(room_data: Dictionary):
-	"""Callback quando deve retornar à sala"""
 	_log_debug("========================================")
 	_log_debug("RETORNANDO À SALA")
 	_log_debug("Sala: %s (ID: %d)" % [room_data["name"], room_data["id"]])
@@ -1632,17 +1615,17 @@ func _client_return_to_room(room_data: Dictionary):
 	
 	_log_debug(" De volta à sala")
 
+## Limpa o nó do cliente que se desconectou, esta função é para os outros 
+## que estão conectados
 func _client_remove_player(peer_id : int):
-	"""Limpa o nó do cliente que se desconectou, esta função é para os outros 
-	que estão conectados"""
 	if peer_id and players_node and local_peer_id != peer_id:
 		var player_node = players_node.get_node_or_null(str(peer_id))
 		if player_node:
 			player_node.queue_free()
 
+## Atualiza o id de sessão do cliente reconectado no round para manutenção de sincronia, 
+## isso acontece nos clientes que ainda estão no round
 func _client_update_character_peer_id(_uuid_base: String, _new_peer_id: int):
-	"""Atualiza o id de sessão do cliente reconectado no round para manutenção de sincronia, 
-	isso acontece nos clientes que ainda estão no round"""
 	_log_debug("👤 Atualizando session id de remoto: %s para %d" % [_uuid_base, _new_peer_id])
 	
 	# Se não ter um round carregado ignora, vai receber atualizado quando carregar com _client_round_return
@@ -1666,8 +1649,8 @@ func _client_update_character_peer_id(_uuid_base: String, _new_peer_id: int):
 			child.set_multiplayer_authority(_new_peer_id)
 			_log_debug("👤 Session id de remoto atualizado com sucesso para %s" % _new_peer_id)
 
+## Limpa todos os objetos da rodada no cliente.
 func _cleanup_local_round():
-	"""Limpa todos os objetos da rodada no cliente"""
 	_log_debug("Limpando objetos da rodada...")
 	is_loading = true
 	local_player_node = null
@@ -1693,18 +1676,19 @@ func _cleanup_local_round():
 	finish_loading()
 	_log_debug("✓ Limpeza completa")
 
+## Sinaliza para o servidor como desconectado durante a rodada.
 func _mark_player_disconnected():
-	"""Sinaliza para o servidor como desconectado durante a rodada."""
 	network_manager._mark_player_disconnected(true)
 
+## Sinaliza para o servidor como reconectado durante a rodada.
 func _unmark_player_disconnected():
-	"""Sinaliza para o servidor como reconectado durante a rodada."""
 	network_manager._mark_player_disconnected(false)
+
 
 # ===== SISTEMA DE INVENTÁRIO POR RODADA =====
 	
+## Inicializa inventário do jogador em uma rodada específica
 func init_player_inventory() -> bool:
-	"""Inicializa inventário do jogador em uma rodada específica"""
 	
 	local_inventory = {
 		"inventory": [],
@@ -1720,8 +1704,8 @@ func init_player_inventory() -> bool:
 	_log_debug("✓ Inventário deste player inicializado")
 	return true
 
+## Adiciona item ao inventário do jogador
 func add_item_to_inventory(item_id: String, object_id: int) -> bool:
-	"""Adiciona item ao inventário do jogador"""
 	
 	if local_inventory["inventory"].size() >= 9:
 		_log_debug("⚠ Inventário deste player cheio")
@@ -1751,8 +1735,8 @@ func add_item_to_inventory(item_id: String, object_id: int) -> bool:
 
 	return true
 
+## Remove item do inventário pelo object_id
 func remove_item_from_inventory(object_id: int) -> bool:
-	"""Remove item do inventário pelo object_id"""
 	if local_inventory["inventory"].is_empty():
 		return false
 	
@@ -1776,12 +1760,9 @@ func remove_item_from_inventory(object_id: int) -> bool:
 	
 	return true
 
+## Equipa item em um slot (detecta automaticamente se não especificado)
+## Slots válidos: hand-right, hand-left, head, body, back
 func equip_item(object_id, item_slot: String = "", item_name: String = "") -> bool:
-	"""
-	Equipa item em um slot (detecta automaticamente se não especificado)
-	Slots válidos: hand-right, hand-left, head, body, back
-	"""
-
 	if local_inventory["inventory"].is_empty():
 		return false
 	
@@ -1833,9 +1814,8 @@ func equip_item(object_id, item_slot: String = "", item_name: String = "") -> bo
 	
 	return true
 
+## Desequipa item de um slot e retorna ao inventário.
 func unequip_item(_object_id: int, item_slot: String, verify: bool = true) -> bool:
-	"""Desequipa item de um slot e retorna ao inventário"""
-
 	if local_inventory.is_empty():
 		return false
 	
@@ -1867,14 +1847,11 @@ func unequip_item(_object_id: int, item_slot: String, verify: bool = true) -> bo
 	
 	return true
 
+## Troca item equipado diretamente (desequipa antigo, equipa novo).
+##   - Não emite sinais intermediários de equip/unequip.
+##   - Mantém ambos os itens no inventário/equipamento.
+##   - Emite apenas items_swapped no final.
 func swap_equipped_item(new_item_name: String, dragged_item: Dictionary, existing_item_id: int, target_slot: String) -> bool:
-	"""
-	Troca item equipado diretamente (desequipa antigo, equipa novo)
-	- Não emite sinais intermediários de equip/unequip
-	- Mantém ambos os itens no inventário/equipamento
-	- Emite apenas items_swapped no final
-	"""
-
 	if local_inventory.is_empty():
 		return false
 	
@@ -1918,19 +1895,16 @@ func swap_equipped_item(new_item_name: String, dragged_item: Dictionary, existin
 	
 	return true
 
+## Limpa inventário do jogador em uma rodada.
 func clear_player_inventory():
-	"""Limpa inventário do jogador em uma rodada"""
-	
 	local_inventory.clear()
 	_log_debug("✓ Inventário limpo")
 
+
 # ===== SPAWN DE OBJETOS =====
 
+## Spawna objeto no cliente (chamado via RPC).
 func _spawn_on_client(object_id: int, round_id: int, item_name: String, position: Vector3, rotation: Vector3, drop_velocity: Vector3, owner_uuid: String):
-	"""
-	Spawna objeto no cliente (chamado via RPC)
-	"""
-
 	if not is_in_round:
 		return
 	
@@ -2017,12 +1991,8 @@ func _spawn_on_client(object_id: int, round_id: int, item_name: String, position
 	
 	_log_debug("✓ Objeto spawnado no cliente: Obj_ID=%d, Item=%s" % [object_id, item_name])
 
+## Despawna objeto no cliente. Chamado via RPC pelo servidor.
 func _despawn_on_client(object_id: int, round_id: int):
-	"""
-	✅ NOVO MÉTODO: Despawna objeto no cliente
-	Chamado via RPC pelo servidor
-	"""
-	
 	_log_debug("🗑️  Despawnando objeto: ID=%d, Round=%d" % [object_id, round_id])
 	
 	# Valida existência
@@ -2050,32 +2020,32 @@ func _despawn_on_client(object_id: int, round_id: int):
 	
 	_log_debug("✓ Objeto despawnado no cliente: ID=%d" % object_id)
 
+
 # ===== TRATAMENTO DE ERROS =====
 
+## Trata erro de conexão.
 func _handle_connection_error(message: String):
-	"""Trata erro de conexão"""
 	if main_menu_node:
 		main_menu_node.show_connecting_menu()
 		main_menu_node.show_error_connecting(message)
 	
 	connection_failed.emit(message)
 
+## Callback quando recebe erro do servidor.
 func _server_to_client_error(error_message: String):
-	"""Callback quando recebe erro do servidor"""
 	_show_error(error_message)
 
+## Callback quando recebe mensagem do servidor durante um round.
+## tipos: info, success, warning e error.
 func _server_to_client_message(text: String, duration: float = 3.0, type: String = "info"):
-	"""Callback quando recebe mensagem do servidor durante um round.
-	tipos: info, success, warning e error """
-	
 	_log_debug("Mensagem recebida do servidor: " + text)
 	if warning_overlay_node:
 		warning_overlay_node.show_message(text, duration, type)
 	else:
 		push_error("Warning_overlay_node não existe no game manager")
 
+## Mostra erro na UI apropriada.
 func _show_error(message: String, color= "Red"):
-	"""Mostra erro na UI apropriada"""
 	var current = main_menu_node.current_menu_visible
 	_log_debug("ERRO (Em: %s): %s" % [current.name, message])
 	if main_menu_node:
@@ -2091,7 +2061,8 @@ func _show_error(message: String, color= "Red"):
 		elif main_menu_node.create_room_menu and main_menu_node.create_room_menu.visible:
 			main_menu_node._show_error_(message, main_menu_node.create_room_error_label, color)
 	error_occurred.emit(message)
-			
+
+
 # ===== UTILITÁRIOS =====
 
 func filtrar_dict_invertido(original: Dictionary) -> Dictionary:
