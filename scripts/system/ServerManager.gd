@@ -25,7 +25,7 @@ class_name ServerManager
 ## [TESTES] Define a quantidade de instnacias de clientes para executar fast_round (initializer sobrepõe)
 @export var simulador_players_qtd: int = 12
 ## [TESTES] Dropa itens perto dos players e ativa o trainer de cada player (initializer sobrepõe)
-@export var test_trainer: bool = false
+@export var test_trainer: bool = true
 
 @export_category("Server Settings")
 @export var server_port: int = 7777
@@ -67,6 +67,8 @@ const server_camera : String = "res://scenes/server_scenes/server_camera.tscn"
 @export var validation_interval: float = 0.1
 ## Ativar validação anti-cheat
 @export var enable_anticheat: bool = true
+## Diferença mínima de comparação com time_diff para validação de posição
+@export var min_diff: float = 0.005 # ms
 
 # ===== REGISTROS (Injetados pelo initializer.gd) =====
 
@@ -226,7 +228,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	
 	# Envia o evento para o viewport ativo
-	if current_active_viewport:
+	if is_instance_valid(current_active_viewport) and current_active_viewport.is_inside_tree():
 		current_active_viewport.push_input(event, true)
 	
 func _input(event: InputEvent) -> void:
@@ -563,9 +565,6 @@ func _on_peer_disconnected(peer_id: int):
 				else:
 					_log_debug("Sala foi deletada (ficou vazia)")
 					_send_rooms_list_to_all()
-	
-	# Para o sync de objetos pra este peer:
-	network_manager.stop_peer_sync(peer_id)
 		
 	# Define cliente como desconectado
 	client_registry.set_disconnected_peer(peer_id)
@@ -1709,25 +1708,21 @@ func _complete_round_end(round_id: int):
 	# Atualiza lista de salas (sala volta a ficar disponível)
 	_send_rooms_list_to_all()
 
+
 # ===== VALIDAÇÃO ANTI-CHEAT =====
 
-func _validate_player_movement(p_uuid: String, pos: Vector3, vel: Vector3, rot: Vector3 = Vector3.ZERO) -> bool:
-	"""
-	Valida se o movimento do jogador é razoável (anti-cheat)
-	
-	VALIDAÇÕES:
-	1. Distância máxima percorrida no intervalo de tempo
-	2. Velocidade reportada vs velocidade máxima permitida
-	3. Discrepância entre velocidade real e reportada
-	
-	Retorna true se válido, false se suspeito de hack
-	"""
-
+func _validate_player_movement(
+		player_node: CharacterBody3D,
+		p_uuid: String,
+		pos: Vector3,
+		vel: Vector3,
+		rot: Vector3 = Vector3.ZERO
+) -> String:
 	# Se anti-cheat desativado, sempre aceita
 	if not enable_anticheat:
-		return true
-	
-	# Se não tem estado anterior, aceita (primeira sincronização)
+		return "pass"
+
+	# Primeira sincronização: sem estado anterior, apenas registra e aceita
 	if not player_states.has(p_uuid):
 		player_states[p_uuid] = {
 			"pos": pos,
@@ -1735,79 +1730,113 @@ func _validate_player_movement(p_uuid: String, pos: Vector3, vel: Vector3, rot: 
 			"rot": rot,
 			"timestamp": Time.get_ticks_msec()
 		}
-		return true
-	
-	var last_state = player_states[p_uuid]
-	var current_time = Time.get_ticks_msec()
-	var time_diff = (current_time - last_state["timestamp"]) / 1000.0
-	
-	# Ignora validação se intervalo muito curto (evita falsos positivos)
-	if time_diff < validation_interval:
-		return true
-	
-	# Calcula distância percorrida
-	var distance = pos.distance_to(last_state["pos"])
-	
-	# VALIDAÇÃO 1: Distância máxima permitida
-	var max_distance = max_player_speed * time_diff * speed_tolerance
-	
+		return "pass"
+
+	var last_state: Dictionary = player_states[p_uuid]
+	var current_time: int = Time.get_ticks_msec()
+	var time_diff: float = (current_time - last_state["timestamp"]) / 1000.0
+
+	if time_diff < min_diff:
+		return "pass"
+
+	var distance: float = pos.distance_to(last_state["pos"])
+
+	# VALIDAÇÃO 1: Distância máxima permitida no intervalo de tempo
+	# Se o jogador "pulou" mais do que poderia andar no tempo decorrido → teleporte
+	var max_distance: float = max_player_speed * time_diff * speed_tolerance
+
 	if distance > max_distance:
 		_log_debug("⚠️ ANTI-CHEAT: Distância suspeita")
 		_log_debug("Player: %s" % p_uuid)
 		_log_debug("Distância: %.2f m em %.3f s" % [distance, time_diff])
-		_log_debug("Máximo: %.2f m" % max_distance)
-		_log_debug("Velocidade: %.2f m/s (máx: %.2f m/s)" % [distance/time_diff, max_player_speed * speed_tolerance])
-		return false
-	
-	# VALIDAÇÃO 2: Velocidade reportada vs máxima
-	var reported_speed = vel.length()
-	
+		_log_debug("Máximo permitido: %.2f m" % max_distance)
+		_log_debug("Vel. efetiva: %.2f m/s (máx: %.2f m/s)" % [
+			distance / time_diff,
+			max_player_speed * speed_tolerance
+		])
+		return "distance"
+
+	# VALIDAÇÃO 2: Velocidade reportada vs máxima permitida
+	# O cliente informa sua própria velocidade; verificamos se é fisicamente possível
+	var reported_speed: float = vel.length()
+
 	if reported_speed > max_player_speed * speed_tolerance:
 		_log_debug("⚠️ ANTI-CHEAT: Velocidade reportada suspeita")
 		_log_debug("Player: %s" % p_uuid)
 		_log_debug("Reportada: %.2f m/s" % reported_speed)
 		_log_debug("Máximo: %.2f m/s" % (max_player_speed * speed_tolerance))
-		return false
-	
-	# VALIDAÇÃO 3: Discrepância entre velocidade real e reportada
-	var actual_speed = distance / time_diff if time_diff > 0 else 0
-	
+		return "max_speed"
+
+	# VALIDAÇÃO 3: Discrepância entre velocidade real (calculada) e reportada
+	# Apenas loga — não rejeita, pois lag legítimo pode causar discrepância
+	var actual_speed: float = distance / time_diff
+
 	if abs(actual_speed - reported_speed) > max_player_speed * 0.5:
-		_log_debug("⚠️ ANTI-CHEAT: Discrepância entre velocidade real e reportada")
+		_log_debug("⚠️ ANTI-CHEAT: Discrepância de velocidade (possível lag)")
 		_log_debug("Player: %s" % p_uuid)
-		_log_debug("Real: %.2f m/s" % actual_speed)
-		_log_debug("Reportada: %.2f m/s" % reported_speed)
-		# Nota: Não retorna false aqui, pois pode ser lag legítimo
-	
-	# ATUALIZA ESTADO PARA PRÓXIMA VALIDAÇÃO
-	player_states[p_uuid] = {
-		"pos": pos,
-		"vel": vel,
-		"rot": rot,
-		"timestamp": current_time
-	}
-	
-	return true
+		_log_debug("Real: %.2f m/s | Reportada: %.2f m/s" % [actual_speed, reported_speed])
+		
+	return "pass"
+
 
 # ===== SINCRONIZAÇÃO =====
 
-func _apply_player_state_on_server(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
-	
-	var player_uuid = client_registry.get_uuid_by_peer_id(p_id)
-	#var player = client_registry.get_player(player_uuid)
-	var node = client_registry.get_player_node(player_uuid)
-	if not (node and node.is_inside_tree()):
+func _apply_player_state_on_server(
+		p_id: int,
+		pos: Vector3,
+		rot: Vector3,
+		vel: Vector3,
+		running: bool,
+		jumping: bool
+) -> void:
+	var player_uuid: String = client_registry.get_uuid_by_peer_id(p_id)
+	if not player_uuid:
 		return
-	
-	# Aplica no nó
-	node.global_position = pos
-	node.global_rotation = rot
-	
-	node.is_running = running
-	node.is_jumping = jumping
-	node.velocity = vel
-	
-	# Atualiza player_states para validação futura
+
+	var player_node: CharacterBody3D = client_registry.get_player_node(player_uuid)
+	if not (player_node and player_node.is_inside_tree()):
+		return
+
+	# Executa validação ANTES de qualquer modificação no nó
+	var result: String = _validate_player_movement(player_node, player_uuid, pos, vel, rot)
+
+	# Caso 1: Teleporte detectado
+	# Reenvia ao cliente a posição do último estado válido no servidor
+	if result == "distance":
+		if _is_peer_connected(p_id):
+			network_manager._correct_player_position(p_id, player_states[player_uuid]["pos"])
+		return
+
+	if result == "max_speed":
+		var safe_vel: Vector3 = Vector3.ZERO
+		if player_states.has(player_uuid):
+			safe_vel = player_states[player_uuid]["vel"]
+
+		player_node.global_position = pos
+		player_node.global_rotation = rot
+		player_node.is_running = running
+		player_node.is_jumping = jumping
+		player_node.velocity = safe_vel  # Velocidade hackeada descartada
+
+		# Registra estado com velocidade segura para a próxima validação
+		player_states[player_uuid] = {
+			"pos": pos,
+			"rot": rot,
+			"vel": safe_vel,
+			"running": running,
+			"jumping": jumping,
+			"timestamp": Time.get_ticks_msec()
+		}
+		return
+
+	# Caso normal ("pass"): aplica tudo como recebido
+	player_node.global_position = pos
+	player_node.global_rotation = rot
+	player_node.is_running = running
+	player_node.is_jumping = jumping
+	player_node.velocity = vel
+
+	# Atualiza estado para a próxima rodada de validação
 	player_states[player_uuid] = {
 		"pos": pos,
 		"rot": rot,
@@ -1816,9 +1845,6 @@ func _apply_player_state_on_server(p_id: int, pos: Vector3, rot: Vector3, vel: V
 		"jumping": jumping,
 		"timestamp": Time.get_ticks_msec()
 	}
-	
-	# Validação de movimento
-	#_validate_player_movement(player_uuid, pos, vel, rot)
 
 func _apply_animation_state_on_server(p_id: int, speed: float, attacking: bool, defending: bool,
 									jumping: bool, aiming: bool, running: bool, block_attacking: bool, on_floor: bool):
@@ -2360,12 +2386,22 @@ func _server_trainer_repawn_player(player_id, player_uuid):
 		
 	await get_tree().process_frame
 	
+	
 	# Aplica na cena de player do servidor
 	var player_node = players_node.get_node_or_null(str(player_id))
 	if player_node and player_node.has_method("_respawn_player"):
 		player_node._respawn_player(map_manager.spawn_center)
 		
 	await get_tree().process_frame
+	
+	# Atuliza nova posição no player_states
+	if player_states.has(player_uuid):
+		player_states[player_uuid] = {
+		"pos": map_manager.spawn_center,
+		"vel": player_node.velocity,
+		"rot": player_node.rotation,
+		"timestamp": Time.get_ticks_msec()
+	}
 	
 	# Aplica nas cenas do players remotos
 	var filtered_ = round_registry.get_round_players_spawned_filter(round_["round_id"])

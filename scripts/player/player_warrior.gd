@@ -37,8 +37,6 @@ extends CharacterBody3D
 @export var use_360_vision_as_backup: bool = true # Ativa a visão 360° como fallback
 @export var update_interval: float = 0.5 # atualização a cada X segundos (0 = cada frame)
 
-# ===== CONFIGURAÇÕES DE REDE =====
-
 @export_category("Network Sync")
 @export var sync_rate: float = 0.03 # 33 updates/segundo (melhor que 0.05)
 @export var interpolation_speed: float = 12.0 # Interpolação mais rápida
@@ -65,6 +63,13 @@ var server_manager: ServerManager = null
 var game_manager: GameManager = null
 var initializer = null
 
+# Identificação multiplayer
+var player_id: int = 0
+var player_uuid: String = ""
+var player_name: String = ""
+var is_local_player: bool = false
+var _is_server: bool = false
+
 # Estados de sincronização
 var target_position: Vector3 = Vector3.ZERO
 var target_rotation_y: float
@@ -73,13 +78,6 @@ var sync_timer: float = 0.0
 # Estados de animação (para sincronização)
 var anim_sync_timer: float = 0.0
 var last_anim_state: Dictionary = {}
-
-# Identificação multiplayer
-var player_id: int = 0
-var player_uuid: String = ""
-var player_name: String = ""
-var is_local_player: bool = false
-var _is_server: bool = false
 
 # Estados
 var is_attacking: bool = false # True se está Atacando
@@ -212,12 +210,6 @@ func _physics_process(delta: float) -> void:
 	if inventory_node:
 		inventory_node.set_stamina(stamina_level)
 	#_log_debug("Stamina: %s" % stamina_level)
-	
-func _respawn_player(_position : Vector3):
-	global_position = _position
-
-func _process(_delta: float) -> void:
-	pass
 	
 func connect_inventory_signals():
 	inventory_node.request_drop_item.connect(action_drop_item_call)
@@ -1502,6 +1494,9 @@ func _item_model_change_visibility(player_node, node_link: String, unnequip = fa
 	_log_debug("🚫_item_model_change_visibility: Monstrando: %s" % item_node.name)
 	
 # ===== UTILS =====
+
+func _respawn_player(_position : Vector3):
+	global_position = _position
 
 func setup_name_label(color: Color):
 	"""Configura label de nome para multiplayer"""

@@ -120,6 +120,9 @@ func _on_peer_disconnected(peer_id: int):
 		_player_rpc_timestamps.erase(peer_id)
 	if not _player_rpc_timestamps.has(peer_id):
 		_player_rpc_timestamps[peer_id] = []
+		
+	# Para o sync de objetos pra este peer:
+	stop_peer_sync(peer_id)
 
 func is_rpc_allowed(peer_id: int) -> bool:
 	var now := Time.get_ticks_msec()
@@ -373,6 +376,9 @@ func _server_player_animation_state(p_id: int, speed: float, attacking: bool, de
 			var session_id = client_registry.get_peer_id_by_uuid(peer_id)
 			rpc_id(session_id, "_client_player_animation_state", int(p_id), speed, attacking,
 				   defending, jumping, aiming, running, block_attacking, on_floor)
+				
+func _correct_player_position(peer_id: int, correct_position: Vector3):
+	rpc_id(peer_id, "server_force_position", correct_position)
 
 # ===== SYNC EM LOTE POR ROUND =====
 
@@ -515,7 +521,7 @@ func _safe_disconnect(peer_id: int):
 	if peer_id in multiplayer.get_peers():
 		peer.disconnect_peer(peer_id)
 	else:
-		print("⚠️ Peer já desconectado:", peer_id)
+		_log_debug("⚠️ Peer já desconectado: %d" % peer_id)
 		
 func _get_log_prefix() -> String:
 	return "[SERVER][NetworkManager]"

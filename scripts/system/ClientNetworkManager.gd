@@ -434,6 +434,8 @@ func _client_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, r
 	else:
 		_log_debug("Erro! _client_player_state não encontrou método _client_receive_state em %s" % str(p_id))
 
+func server_force_position(pos: Vector3):
+	game_manager.server_force_position(pos)
 
 # ===== SINCRONIZAÇÃO DE ANIMAÇÕES =====
 

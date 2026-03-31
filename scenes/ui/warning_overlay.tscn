@@ -6,7 +6,7 @@
 bg_color = Color(0, 0, 0, 0.77254903)
 
 [node name="WarningOverlay" type="CanvasLayer" unique_id=1498065603]
-layer = 99
+layer = 60
 script = ExtResource("1_lpbxh")
 
 [node name="Panel" type="Panel" parent="." unique_id=1108596932]

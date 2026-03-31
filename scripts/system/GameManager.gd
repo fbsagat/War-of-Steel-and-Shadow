@@ -1587,6 +1587,12 @@ func _setup_local_player(player_instance: Node, camera_name: String, player_pos:
 		player_instance.player_name,player_pos["position"]
 	])
 
+func server_force_position(pos: Vector3):
+	"""Recebe comando do servidor para teleportar para um local determinado"""
+	if local_player_node and is_in_round:
+		local_player_node._respawn_player(pos)
+		_log_debug("Jogador local teleportado pelo servidor para a posição: %s" % pos)
+
 func _setup_remote_player(player_instance: Node, player_name_: String, player_pos: Dictionary) -> void:
 	"""Configurações específicas para jogador REMOTO"""
 	_log_debug("🌐 [REMOTO] Configurando jogador remoto...")

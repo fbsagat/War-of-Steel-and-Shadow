@@ -311,6 +311,10 @@ func _server_player_state(_p_id: int, _pos: Vector3, _rot: Vector3, _vel: Vector
 func _client_player_state(_p_id: int, _pos: Vector3, _rot: Vector3, _vel: Vector3, _running: bool, _jumping: bool):
 	pass
 
+@rpc("authority", "call_remote", "unreliable")
+func server_force_position(_pos: Vector3):
+	pass
+
 @rpc("any_peer", "call_remote", "unreliable")
 func _server_player_animation_state(_p_id: int, _speed: float, _attacking: bool, _defending: bool, _jumping: bool, _aiming: bool, _running: bool, _block_attacking: bool, _on_floor: bool):
 	pass

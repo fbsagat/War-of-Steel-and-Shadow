@@ -54,6 +54,7 @@ grow_vertical = 2
 script = ExtResource("1_fe2o3")
 
 [node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=2047922715]
+layer = 70
 follow_viewport_enabled = true
 
 [node name="Transparent" type="ColorRect" parent="CanvasLayer" unique_id=1947052350]
