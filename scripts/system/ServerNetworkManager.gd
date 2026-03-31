@@ -32,6 +32,7 @@ var _round_sync: Dictionary = {}
 # peer_ids explicitamente excluídos do sync (desconexão imediata)
 var _excluded_peers: Dictionary = {}  # peer_id → true
 
+
 # ===== INICIALIZAÇÃO =====
 
 func initialize():
@@ -44,6 +45,7 @@ func _process(delta: float):
 	_drain_pending_peers(delta)  
 	_server_update_batch(delta)
 	_client_timout_detection(delta)
+
 
 # ===== CLIENT TIMOUT DETECTOR =====
 
@@ -82,6 +84,7 @@ func _on_client_timeout(peer_uuid: String):
 	# Define cliente como desconectado
 	client_registry.set_disconnected_peer(peer_id)
 
+
 # ===== HEARTBEAT =====
 
 # No seu script do Servidor
@@ -108,6 +111,7 @@ func _server_report_ping(client_latency: int):
 	if player_uuid != "":
 		# Armazena o ping para usar em lag compensation ou matchmaking
 		client_latency_map[player_uuid] = client_latency
+
 
 # ===== CONECÇÃO =====
 
@@ -145,6 +149,7 @@ func is_rpc_allowed(peer_id: int) -> bool:
 	timestamps.append(now)
 	return true
 
+
 # ===== AUTENTICAÇÃO =====
 
 func _server_receive_hello(payload: Dictionary):
@@ -162,6 +167,7 @@ func _server_register_player_name(player_name: String):
 		return
 	var peer_id = multiplayer.get_remote_sender_id()
 	server_manager._handle_register_player_name(peer_id, player_name)
+
 
 # ===== SALAS =====
 
@@ -252,6 +258,7 @@ func _server_player_ready():
 	
 	client_registry.set_player_state(player_uuid, client_registry.ClientState.IN_GAME)
 
+
 # ===== RODADAS =====
 
 func _server_start_round(round_settings: Dictionary):
@@ -276,6 +283,7 @@ func _mark_player_disconnected(_chosen: bool):
 		#return
 	var peer_id = multiplayer.get_remote_sender_id()
 	server_manager._mark_player_disconnected(peer_id, _chosen)
+	
 	
 # ===== ITENS — RECEBIMENTOS DO CLIENTE =====
 
@@ -322,6 +330,7 @@ func _server_drop_item(player_id, obj_id):
 
 func _server_player_action(p_id: int, action_type: String, item_equipado_nome, anim_name: String):
 	server_manager._server_player_action(p_id, action_type, item_equipado_nome, anim_name)
+
 
 # ===== SINCRONIZAÇÃO DE ESTADO DE JOGADORES =====
 
@@ -380,37 +389,32 @@ func _server_player_animation_state(p_id: int, speed: float, attacking: bool, de
 func _correct_player_position(peer_id: int, correct_position: Vector3):
 	rpc_id(peer_id, "server_force_position", correct_position)
 
+
 # ===== SYNC EM LOTE POR ROUND =====
 
+## Inicia o loop de sincronização em lote para um round.
+## Chame quando o round realmente começar.
 func start_round_sync(round_id: int, sync_rate: float = 0.04) -> void:
-	"""
-	Inicia o loop de sincronização em lote para um round.
-	Chame quando o round realmente começar.
-	"""
 	if _round_sync.has(round_id):
 		push_warning("[ObjSync] Round %d já está em sync." % round_id)
 		return
 	_round_sync[round_id] = { "timer": 0.0, "rate": sync_rate }
 	_log_debug("[ObjSync]▶ Sync iniciado — round %d (rate: %.3fs)" % [round_id, sync_rate])
 
+## Para o sync de um round inteiro (fim de round).
+## Chame também quando o último jogador de um round desconectar.
 func stop_round_sync(round_id: int) -> void:
-	"""
-	Para o sync de um round inteiro (fim de round).
-	Chame também quando o último jogador de um round desconectar.
-	"""
 	_round_sync.erase(round_id)
 	_log_debug("[ObjSync]⏹ Sync parado — round %d" % round_id)
 
+## Exclui imediatamente um peer de todos os envios futuros.
+## Chame ao detectar desconexão, antes que o registry seja limpo.
 func stop_peer_sync(peer_id: int) -> void:
-	"""
-	Exclui imediatamente um peer de todos os envios futuros.
-	Chame ao detectar desconexão, antes que o registry seja limpo.
-	"""
 	_excluded_peers[peer_id] = true
 	_log_debug("[ObjSync]🚫 Peer %d excluído do sync" % peer_id)
 
+## Remove a exclusão (reconexão ou troca de round).
 func resume_peer_sync(peer_id: int) -> void:
-	"""Remove a exclusão (reconexão ou troca de round)."""
 	_excluded_peers.erase(peer_id)
 
 func _server_update_batch(delta: float) -> void:
@@ -478,7 +482,7 @@ func _get_round_peers(round_id: int) -> Array:
 			peers.append(pid)
 	return peers
 
-# Registro de objeto — agora exige round_id no config
+## Registro de objeto.
 func register_syncable_object(object_id: int, node: Node, config: Dictionary) -> void:
 	if syncable_objects.has(object_id):
 		push_warning("[ObjSync] Objeto duplicado: %d" % object_id)
@@ -502,6 +506,7 @@ func _drain_pending_peers(delta: float) -> void:
 	for peer_id in is_ready:
 		_pending_peers.erase(peer_id)
 		_log_debug("✅ Peer %d saiu da quarentena" % peer_id)
+
 
 # ===== UTILITÁRIOS =====
 

@@ -66,10 +66,11 @@ signal room_state_changed(room_id: int, in_game: bool)
 ##   "settings": Dictionary
 ## }
 
+
 # ===== INICIALIZAÇÃO =====
 
+## Inicializa o RoomRegistry (chamado apenas no servidor).
 func initialize():
-	"""Inicializa o RoomRegistry (chamado apenas no servidor)"""
 	if _initialized:
 		_log_debug("⚠ RoomRegistry já inicializado")
 		return
@@ -80,11 +81,12 @@ func initialize():
 	_initialized = true
 	_log_debug("▶️ RoomRegistry inicializado")
 
+## Reseta completamente o registro (usado ao desligar servidor).
 func reset():
-	"""Reseta completamente o registro (usado ao desligar servidor)"""
 	rooms.clear()
 	_initialized = false
 	_log_debug("🔄 RoomRegistry resetado")
+
 
 # ===== GERENCIAMENTO DE SALAS =====
 
@@ -92,8 +94,8 @@ func _get_next_room_id() -> int:
 	max_id += 1
 	return max_id
 
+## Cria nova sala. Retorna RoomData completo ou {} se falhar.
 func create_room(room_name: String, password: String, host_uuid: String, min_players: int, max_players: int) -> Dictionary:
-	"""Cria nova sala. Retorna RoomData completo ou {} se falhar."""
 	var room_id = _get_next_room_id()
 
 	if rooms.has(room_id):
@@ -134,9 +136,8 @@ func create_room(room_name: String, password: String, host_uuid: String, min_pla
 
 	return room_data.duplicate()
 
+## Remove sala completamente após remover todos os jogadores.
 func remove_room(room_id: int) -> bool:
-	"""Remove sala completamente após remover todos os jogadores."""
-	
 	if not rooms.has(room_id):
 		_log_debug("⚠ Tentou remover sala inexistente: %d" % room_id)
 		return false
@@ -155,8 +156,8 @@ func remove_room(room_id: int) -> bool:
 
 	return true
 
+## Retorna cópia completa dos dados da sala.
 func get_room(room_id: int) -> Dictionary:
-	"""Retorna cópia completa dos dados da sala."""
 	if not rooms.has(room_id):
 		return {}
 	return rooms[room_id].duplicate(true)
@@ -179,8 +180,8 @@ func get_all_room_players_uuids(room_id: int) -> Array:
 				p_ids.append(player["id"])
 	return p_ids
 
+## Posiçoes de entrada no servidor. Ordenamento.
 func get_all_room_players_positions(room_id: int) -> Array:
-	"""Posiçoes de entrada no servidor. Ordenamento."""
 	var p_entrys: Array = []
 	for room in rooms.values():
 		if room.has("id"):
@@ -213,8 +214,8 @@ func get_rooms_list(include_password: bool = false) -> Array:
 		rooms_list.append(room)
 	return rooms_list
 
+## Retorna apenas salas que NÃO estão em partida.
 func get_rooms_in_lobby() -> Array:
-	"""Retorna apenas salas que NÃO estão em partida."""
 	var lobby_rooms = []
 	for room_id in rooms:
 		if not rooms[room_id]["in_game"]:
@@ -223,8 +224,8 @@ func get_rooms_in_lobby() -> Array:
 			lobby_rooms.append(room)
 	return lobby_rooms
 
+## Retorna salas fora de jogo com dados normalizados para o menu.
 func get_rooms_in_lobby_clean_to_menu() -> Array:
-	"""Retorna salas fora de jogo com dados normalizados para o menu."""
 	var lobby_rooms: Array = []
 
 	for room_id in rooms:
@@ -272,8 +273,8 @@ func get_rooms_in_lobby_clean_to_menu() -> Array:
 		lobby_rooms.append(room)
 	return lobby_rooms
 
+## Retorna apenas salas que ESTÃO em partida.
 func get_rooms_in_game() -> Array:
-	"""Retorna apenas salas que ESTÃO em partida."""
 	var game_rooms = []
 	for room_id in rooms:
 		if rooms[room_id]["in_game"]:
@@ -282,10 +283,11 @@ func get_rooms_in_game() -> Array:
 			game_rooms.append(room)
 	return game_rooms
 
+
 # ===== GERENCIAMENTO DE PLAYERS =====
 
+## Adiciona jogador à sala. Atualiza ClientRegistry automaticamente.
 func add_player_to_room(room_id: int, uuid_base: String) -> bool:
-	"""Adiciona jogador à sala. Atualiza ClientRegistry automaticamente."""
 	if not rooms.has(room_id):
 		_log_debug("❌ Sala %d não existe" % room_id)
 		return false
@@ -332,8 +334,8 @@ func add_player_to_room(room_id: int, uuid_base: String) -> bool:
 
 	return true
 
+## Armazena configurações de personagens de cada cliente na sala.
 func _create_default_character(room_id: int, uuid_base: String) -> Dictionary:
-	"""Armazena configurações de personagens de cada cliente na sala"""
 	_log_debug("Criando configurações de personagem para player %s na sala: %d" % [uuid_base, room_id])
 	var character_data: Dictionary
 	character_data["color"] = _assign_color_to_player(room_id)
@@ -368,8 +370,8 @@ func _return_color_to_pool(room_id_: int, color: Color) -> void:
 
 	room["available_colors"].append(color)
 
+## Adiciona jogador à lista de expulsos.
 func add_player_to_kicked(room_id: int, uuid_base: String) -> bool:
-	"""Adiciona jogador à lista de expulsos."""
 	if not rooms.has(room_id):
 		_log_debug("❌ Sala %d não existe" % room_id)
 		return false
@@ -386,9 +388,9 @@ func add_player_to_kicked(room_id: int, uuid_base: String) -> bool:
 	_log_debug("✓ Player '%s' (uuid=%s) adicionado como expulso da sala '%s'" % [player_["name"], uuid_base, room["name"]])
 	return true
 
+## Retorna UUIDs de todos od jogadores expulsos da partida.
+## Entry: Retorna entry_position ao invés dos UUIDs.
 func get_all_kicked_players(room_id: int, entry: bool = false) -> Array:
-	"""Retorna UUIDs de todos od jogadores expulsos da partida.
-	Entry: Retorna entry_position ao invés dos UUIDs."""
 	var kicked: Array = []
 	for player in rooms[room_id]["kicked_players"]:
 		var uuid = player["uuid_base"]
@@ -396,10 +398,10 @@ func get_all_kicked_players(room_id: int, entry: bool = false) -> Array:
 		kicked.append(client["uuid_base" if not entry else "entry_position"])
 	return kicked
 
+## Verifica se o jogador ainda está banido.
+## Se o tempo ultrapassou time_limit, remove da lista.
+## Retorna true se ainda estiver banido.
 func check_kicked_timeout(room_id: int, uuid_base: String, time_limit: float) -> bool:
-	"""Verifica se o jogador ainda está banido.
-	Se o tempo ultrapassou time_limit, remove da lista.
-	Retorna true se ainda estiver banido."""
 	if not rooms.has(room_id):
 		return false
 
@@ -422,9 +424,9 @@ func check_kicked_timeout(room_id: int, uuid_base: String, time_limit: float) ->
 
 	return false
 
+## Remove jogador da sala. Transfere host se necessário. Remove sala se ficar vazia.
+## retorna "" se não mudar de host, retorna a uuid do host quando novo host selecionado
 func remove_player_from_room(room_id: int, uuid_base: String) -> String:
-	"""Remove jogador da sala. Transfere host se necessário. Remove sala se ficar vazia.
-	retorna "" se não mudar de host, retorna a uuid do host quando novo host selecionado"""
 	if not rooms.has(room_id):
 		return ""
 
@@ -464,16 +466,16 @@ func remove_player_from_room(room_id: int, uuid_base: String) -> String:
 	player_left_room.emit(room_id, uuid_base)
 	return ""
 
+## Retorna sala em que o jogador está (ou {} se não estiver em nenhuma).
 func get_player_room(uuid_base: String) -> Dictionary:
-	"""Retorna sala em que o jogador está (ou {} se não estiver em nenhuma)."""
 	for room_id in rooms:
 		for player in rooms[room_id]["players"]:
 			if player["id"] == uuid_base:
 				return rooms[room_id].duplicate(true)
 	return {}
 
+## Verifica se jogador está em sala específica.
 func is_player_in_room(uuid_base: String, room_id: int) -> bool:
-	"""Verifica se jogador está em sala específica."""
 	if not rooms.has(room_id):
 		return false
 	for player in rooms[room_id]["players"]:
@@ -481,8 +483,8 @@ func is_player_in_room(uuid_base: String, room_id: int) -> bool:
 			return true
 	return false
 
+## Verifica se jogador é host da sala.
 func is_player_host(uuid_base: String, room_id: int) -> bool:
-	"""Verifica se jogador é host da sala."""
 	if not rooms.has(room_id):
 		return false
 	return rooms[room_id]["host_id"] == uuid_base
@@ -519,10 +521,11 @@ func _get_color_pool() -> Array:
 		Color(0.9, 0.9, 0.9)
 	]
 
+
 # ===== ESTADO DA SALA =====
 
+## Marca sala como 'em jogo' ou 'no lobby'.
 func set_room_in_game(room_id: int, in_game: bool):
-	"""Marca sala como 'em jogo' ou 'no lobby'."""
 	if not rooms.has(room_id):
 		return
 
@@ -535,8 +538,8 @@ func is_room_in_game(room_id: int) -> bool:
 		return false
 	return rooms[room_id]["in_game"]
 
+## Executada pelo client registry. Marca jogador como desconectado a partir do peer_id da sessão.
 func _set_disconnected_peer(peer_id: int, room_id: int):
-	"""Executada pelo client registry. Marca jogador como desconectado a partir do peer_id da sessão."""
 	var uuid_base = client_registry.get_uuid_by_peer_id(peer_id)
 	
 	if uuid_base.is_empty():
@@ -551,8 +554,8 @@ func _set_disconnected_peer(peer_id: int, room_id: int):
 			player["is_offline"] = true
 			_log_debug("⚠ uuid=%s marcado como desconectado na sala %s" % [uuid_base, rooms[room_id]["id"]])
 
+## Executada pelo client registry. Marca jogador como conectado a partir do peer_id da sessão.
 func _set_connected_peer(peer_id: int, room_id: int):
-	"""Executada pelo client registry. Marca jogador como conectado a partir do peer_id da sessão."""
 	var uuid_base = client_registry.get_uuid_by_peer_id(peer_id)
 	
 	if uuid_base.is_empty():
@@ -567,10 +570,11 @@ func _set_connected_peer(peer_id: int, room_id: int):
 			player["is_offline"] = false
 			_log_debug("⚠ uuid=%s marcado como conectado na sala %s" % [uuid_base, rooms[room_id]["id"]])
 
+
 # ===== HISTÓRICO DE RODADAS =====
 
+## Adiciona rodada finalizada ao histórico da sala e atualiza estatísticas.
 func add_round_to_history(room_id: int, round_data: Dictionary) -> bool:
-	"""Adiciona rodada finalizada ao histórico da sala e atualiza estatísticas."""
 	if not rooms.has(room_id):
 		_log_debug("❌ Tentou adicionar rodada ao histórico de sala inexistente: %d" % room_id)
 		return false
@@ -619,10 +623,11 @@ func clear_rounds_history(room_id: int):
 	rooms[room_id]["total_playtime"] = 0.0
 	_log_debug("✓ Histórico da sala %d limpo" % room_id)
 
+
 # ===== ESTATÍSTICAS ACUMULADAS =====
 
+## Retorna estatísticas gerais da sala (jogadores identificados por uuid_base).
 func get_room_statistics(room_id: int) -> Dictionary:
-	"""Retorna estatísticas gerais da sala (jogadores identificados por uuid_base)."""
 	if not rooms.has(room_id):
 		return {}
 
@@ -681,8 +686,8 @@ func get_room_statistics(room_id: int) -> Dictionary:
 
 	return stats
 
+## Retorna estatísticas de um jogador específico na sala.
 func get_player_stats_in_room(room_id: int, uuid_base: String) -> Dictionary:
-	"""Retorna estatísticas de um jogador específico na sala."""
 	if not rooms.has(room_id):
 		return {}
 
@@ -715,10 +720,11 @@ func get_player_stats_in_room(room_id: int, uuid_base: String) -> Dictionary:
 
 	return stats
 
+
 # ===== VALIDAÇÕES PARA INICIAR PARTIDA =====
 
+## Verifica se sala pode iniciar partida.
 func can_start_match(room_id: int, uuid_base: String) -> Array:
-	"""Verifica se sala pode iniciar partida."""
 	if not rooms.has(room_id):
 		return [false, "A sala não existe"]
 
@@ -751,8 +757,8 @@ func can_start_match(room_id: int, uuid_base: String) -> Array:
 
 	return [true, ""]
 
+## Retorna informações sobre requisitos para iniciar partida.
 func get_match_requirements(room_id: int) -> Dictionary:
-	"""Retorna informações sobre requisitos para iniciar partida."""
 	if not rooms.has(room_id):
 		return {}
 
@@ -763,6 +769,7 @@ func get_match_requirements(room_id: int) -> Dictionary:
 		"min_players": room["min_players"],
 		"max_players": room["max_players"],
 	}
+
 
 # ===== CONFIGURAÇÕES DA SALA =====
 
@@ -782,6 +789,7 @@ func update_room_setting(room_id: int, key: String, value):
 		return
 	rooms[room_id]["settings"][key] = value
 	_log_debug("✓ Setting '%s' atualizado na sala %d" % [key, room_id])
+
 
 # ===== UTILITÁRIOS =====
 
@@ -808,11 +816,9 @@ func get_next_room_id() -> int:
 			max_id = room_id
 	return max_id + 1
 
+## Valida nome da sala.
+## Retorna string vazia se válido, mensagem de erro caso contrário.
 func _validate_room_name(room_name: String) -> String:
-	"""
-	Valida nome da sala
-	Retorna string vazia se válido, mensagem de erro caso contrário
-	"""
 	var trimmed = room_name.strip_edges()
 	
 	if trimmed.is_empty():

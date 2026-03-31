@@ -321,7 +321,7 @@ func _client_player_animation_state(_p_id: int, _speed: float, _attacking: bool,
 
 # ===== SINCRONIZAÇÃO DE OBJETOS =====
 	
-@rpc("authority", "call_remote", "unreliable")
+@rpc("authority", "call_remote", "unreliable_ordered")
 func _rpc_client_batch_sync(_round_id: int, _ids: PackedInt32Array, _positions: PackedVector3Array, _rotations: PackedVector3Array):
 	pass
 

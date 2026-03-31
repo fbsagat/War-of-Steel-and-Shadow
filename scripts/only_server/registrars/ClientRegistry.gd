@@ -114,10 +114,11 @@ signal player_left_round(uuid_base: String, round_id: int)
 ##   }
 ## }
 
+
 # ===== INICIALIZAÇÃO =====
 
+## Inicializa o ClientRegistry (chamado apenas no servidor).
 func initialize():
-	"""Inicializa o ClientRegistry (chamado apenas no servidor)"""
 	if _initialized:
 		_log_debug("⚠ ClientRegistry já inicializado")
 		return
@@ -125,13 +126,14 @@ func initialize():
 	_initialized = true
 	_log_debug("▶️ ClientRegistry inicializado com sucesso!")
 
+## Reseta completamente o registro (usado ao desligar servidor).
 func reset():
-	"""Reseta completamente o registro (usado ao desligar servidor)"""
 	players.clear()
 	players_cache.clear()
 	player_inventories.clear()
 	_initialized = false
 	_log_debug("🔄 ClientRegistry resetado")
+
 
 # ===== GERENCIAMENTO DE PEERS =====
 
@@ -139,9 +141,9 @@ func _get_next_position() -> int:
 	entry_position += 1
 	return entry_position
 
+## Adiciona um novo peer conectado (ainda não registrado).
+## uuid_base é obrigatório e será a chave primária do jogador.
 func add_peer(peer_id: int, uuid_base: String):
-	"""Adiciona um novo peer conectado (ainda não registrado).
-	uuid_base é obrigatório e será a chave primária do jogador."""
 	if uuid_base.is_empty():
 		push_error("ClientRegistry: Tentou adicionar peer %d sem uuid_base" % peer_id)
 		return
@@ -187,9 +189,9 @@ func connected_since(uuid_base: String) -> float:
 	
 	return now - start_time
 
+## Atualiza peer_id quando jogador reconecta com nova sessão.
+## Substitui o antigo update_player_id — sem necessidade de mover entradas.
 func update_peer_id(uuid_base: String, new_peer_id: int):
-	"""Atualiza peer_id quando jogador reconecta com nova sessão.
-	Substitui o antigo update_player_id — sem necessidade de mover entradas."""
 	if not players.has(uuid_base):
 		push_error("ClientRegistry: UUID %s não encontrado para atualizar peer_id" % uuid_base)
 		return
@@ -243,9 +245,8 @@ func update_peer_id(uuid_base: String, new_peer_id: int):
 	_log_debug("✓ peer_id atualizado para %s: %d → %d" % [uuid_base, old_peer_id, new_peer_id])
 	peer_id_updated.emit(uuid_base, new_peer_id)
 	
+## Marca jogador como desconectado do servidor a partir do peer_id da sessão.
 func set_disconnected_peer(peer_id: int):
-	"""Marca jogador como desconectado do servidor a partir do peer_id da sessão."""
-	
 	var uuid_base = get_uuid_by_peer_id(peer_id)
 	if uuid_base.is_empty():
 		_log_debug("⚠ Tentou desconectar peer inexistente: %d" % peer_id)
@@ -259,9 +260,8 @@ func set_disconnected_peer(peer_id: int):
 	set_disconnected_peer_from_room_and_round(peer_id)
 	peer_disconnected.emit(uuid_base)
 
+## Marca jogador como desconectado de sala e round a partir do peer_id da sessão.
 func set_disconnected_peer_from_room_and_round(peer_id: int, from_room: bool = true, from_round: bool = true):
-	"""Marca jogador como desconectado de sala e round a partir do peer_id da sessão."""
-
 	var uuid_base = get_uuid_by_peer_id(peer_id)
 	if uuid_base.is_empty():
 		_log_debug("⚠ Tentou desconectar peer inexistente: %d" % peer_id)
@@ -277,8 +277,8 @@ func set_disconnected_peer_from_room_and_round(peer_id: int, from_room: bool = t
 		_log_debug("Definindo player como desconectado da rodada em que está")
 		round_registry._mark_player_disconnected(round_, uuid_base)
 
+## Remove jogador desconectado a partir do peer_id da sessão.
 func remove_peer(peer_id: int):
-	"""Remove jogador desconectado a partir do peer_id da sessão."""
 	var uuid_base = get_uuid_by_peer_id(peer_id)
 	if uuid_base.is_empty():
 		_log_debug("⚠ Tentou remover peer inexistente: %d" % peer_id)
@@ -298,8 +298,8 @@ func remove_peer(peer_id: int):
 	_log_debug("✓ Peer removido: %d (%s / uuid=%s)" % [peer_id, player_name, uuid_base])
 	peer_removed.emit(uuid_base)
 
+## Registra nome do jogador.
 func register_player_name(uuid_base: String, player_name: String) -> bool:
-	"""Registra nome do jogador."""
 	if not players.has(uuid_base):
 		_log_debug("❌ Tentou registrar nome de UUID inexistente: %s" % uuid_base)
 		return false
@@ -310,8 +310,8 @@ func register_player_name(uuid_base: String, player_name: String) -> bool:
 	_log_debug("✓ Nome registrado: %s (uuid=%s)" % [player_name, uuid_base])
 	return true
 
+## Marca jogador como conectado.
 func _register_connection(uuid_base: String):
-	"""Marca jogador como conectado."""
 	if not players.has(uuid_base):
 		_log_debug("❌ Tentou registrar conexão de UUID inexistente: %s" % uuid_base)
 		return
@@ -332,42 +332,44 @@ func _register_connection(uuid_base: String):
 	# Sinal
 	peer_connected.emit(uuid_base)
 	
+## Verifica se já existe jogador com este uuid_base conectado.
 func _is_uuid_connected(uuid_base: String) -> bool:
-	"""Verifica se já existe jogador com este uuid_base conectado"""
 	if players.has(uuid_base):
 		return players[uuid_base].get("connected", false)
 	return false
 
+# Verifica se um nome já está em uso.
 func is_name_taken(player_name: String) -> bool:
-	"""Verifica se um nome já está em uso."""
 	var normalized_name = player_name.strip_edges().to_lower()
 	for player in players.values():
 		if player.has("name") and player["name"].strip_edges().to_lower() == normalized_name:
 			return true
 	return false
 
+
 # ===== CONVERSÃO PEER_ID ↔ UUID_BASE =====
 
+## Retorna uuid_base a partir do peer_id atual.
+## Necessário para callbacks de rede que entregam peer_id.
+## Complexidade O(n) — use com parcimônia em loops.
 func get_uuid_by_peer_id(peer_id: int) -> String:
-	"""Retorna uuid_base a partir do peer_id atual.
-	Necessário para callbacks de rede que entregam peer_id.
-	Complexidade O(n) — use com parcimônia em loops."""
 	for uuid_base in players:
 		if players[uuid_base]["peer_id"] == peer_id:
 			return uuid_base
 	return ""
 
+## Retorna peer_id atual a partir do uuid_base.
+## Use este valor apenas para chamadas RPC (network_manager.rpc_id).
 func get_peer_id_by_uuid(uuid_base: String) -> int:
-	"""Retorna peer_id atual a partir do uuid_base.
-	Use este valor apenas para chamadas RPC (network_manager.rpc_id)."""
 	if not players.has(uuid_base):
 		return -1
 	return players[uuid_base].get("peer_id", -1)
 
+
 # ===== GERENCIAMENTO DE SALAS/RODADAS =====
 
+## Marca jogador como dentro de uma sala.
 func join_room(uuid_base: String, room_id: int):
-	"""Marca jogador como dentro de uma sala."""
 	if not players.has(uuid_base):
 		push_error("ClientRegistry: UUID %s não existe para join_room" % uuid_base)
 		return
@@ -381,8 +383,8 @@ func join_room(uuid_base: String, room_id: int):
 	_log_debug("✓ %s entrou na sala %d" % [uuid_base, room_id])
 	player_joined_room.emit(uuid_base, room_id)
 
+## Remove jogador da sala atual.
 func leave_room(uuid_base: String):
-	"""Remove jogador da sala atual."""
 	_leave_room_internal(uuid_base)
 
 func _leave_room_internal(uuid_base: String):
@@ -403,8 +405,8 @@ func _leave_room_internal(uuid_base: String):
 	_log_debug("✓ %s saiu da sala %d" % [uuid_base, old_room_id])
 	player_left_room.emit(uuid_base, old_room_id)
 
+## Marca jogador como dentro de uma rodada e inicializa inventário.
 func join_round(uuid_base: String, round_id: int):
-	"""Marca jogador como dentro de uma rodada e inicializa inventário."""
 	if not players.has(uuid_base):
 		push_error("ClientRegistry: UUID %s não existe para join_round" % uuid_base)
 		return
@@ -420,8 +422,8 @@ func join_round(uuid_base: String, round_id: int):
 	_log_debug("✓ %s entrou na rodada %d" % [uuid_base, round_id])
 	player_joined_round.emit(uuid_base, round_id)
 
+## Remove jogador da rodada atual.
 func leave_round(uuid_base: String):
-	"""Remove jogador da rodada atual."""
 	_leave_round_internal(uuid_base)
 
 func _leave_round_internal(uuid_base: String):
@@ -439,6 +441,7 @@ func _leave_round_internal(uuid_base: String):
 
 	_log_debug("✓ %s saiu da rodada %d" % [uuid_base, old_round_id])
 	player_left_round.emit(uuid_base, old_round_id)
+
 
 # ===== QUERIES DE LOCALIZAÇÃO =====
 
@@ -462,21 +465,22 @@ func get_player_round(uuid_base: String) -> int:
 		return -1
 	return players[uuid_base]["round_id"]
 
+## Retorna array de uuid_bases dos jogadores na sala.
 func get_players_in_room(room_id: int) -> Array:
-	"""Retorna array de uuid_bases dos jogadores na sala."""
 	var result = []
 	for uuid_base in players:
 		if players[uuid_base]["room_id"] == room_id:
 			result.append(uuid_base)
 	return result
 
+## Retorna array de uuid_bases dos jogadores na rodada.
 func get_players_in_round(round_id: int) -> Array:
-	"""Retorna array de uuid_bases dos jogadores na rodada."""
 	var result = []
 	for uuid_base in players:
 		if players[uuid_base]["round_id"] == round_id:
 			result.append(uuid_base)
 	return result
+
 
 # ===== QUERIES DE DADOS =====
 
@@ -499,10 +503,9 @@ func get_player_state_name(uuid_base: String) -> String:
 	
 	return CLIENT_STATE_NAMES.get(state, "UNKNOWN")
 
+## Modifica o estado do jogador.
+## Ex (exeterno/fora de client_registry): set_player_state(peer_id, client_registry.ClientState.RETURNING).
 func set_player_state(uuid_base: String, new_state: int) -> bool:
-	"""Modifica o estado do jogador
-	Ex (exeterno/fora de client_registry): set_player_state(peer_id, client_registry.ClientState.RETURNING)"""
-	
 	# Verificar se existe
 	if not players.has(uuid_base):
 		return false
@@ -521,8 +524,8 @@ func set_player_state(uuid_base: String, new_state: int) -> bool:
 	
 	return true
 
+## Alias de get_player() para compatibilidade explícita.
 func get_player_by_uuid(uuid_base: String) -> Dictionary:
-	"""Alias de get_player() para compatibilidade explícita."""
 	return get_player(uuid_base)
 
 func get_player_name(uuid_base: String) -> String:
@@ -572,11 +575,11 @@ func get_connected_player_count() -> int:
 			count += 1
 	return count
 
+
 # ===== SISTEMA DE INVENTÁRIO POR RODADA =====
 
+## Inicializa inventário do jogador em uma rodada específica.
 func init_player_inventory(round_id: int, uuid_base: String) -> bool:
-	"""Inicializa inventário do jogador em uma rodada específica."""
-
 	if not is_player_registered(uuid_base):
 		push_error("ClientRegistry: Tentou inicializar inventário de UUID %s não registrado" % uuid_base)
 		return false
@@ -602,8 +605,8 @@ func init_player_inventory(round_id: int, uuid_base: String) -> bool:
 	_log_debug("✓ Inventário inicializado: %s na rodada %d" % [uuid_base, round_id])
 	return true
 
+## Adiciona item ao inventário do jogador.
 func add_item_to_inventory(round_id: int, uuid_base: String, item_id: String, object_id: int) -> bool:
-	"""Adiciona item ao inventário do jogador."""
 	var inventory = _get_player_inventory(round_id, uuid_base)
 	if inventory.is_empty():
 		push_error("ClientRegistry: Inventário não encontrado: uuid=%s, rodada=%d" % [uuid_base, round_id])
@@ -629,8 +632,8 @@ func add_item_to_inventory(round_id: int, uuid_base: String, item_id: String, ob
 	network_manager.rpc_id(peer_id, "_client_add_item_to_inventory", item_id, object_id)
 	return true
 
+## Remove item do inventário pelo object_id.
 func remove_item_from_inventory(round_id: int, uuid_base: String, object_id: int) -> bool:
-	"""Remove item do inventário pelo object_id."""
 	var inventory = _get_player_inventory(round_id, uuid_base)
 	if inventory.is_empty():
 		return false
@@ -655,9 +658,9 @@ func remove_item_from_inventory(round_id: int, uuid_base: String, object_id: int
 	network_manager.rpc_id(peer_id, "_client_remove_item_from_inventory", object_id)
 	return true
 
+## Equipa item em um slot (detecta automaticamente se não especificado).
+## Slots válidos: hand-right, hand-left, head, body, back.
 func equip_item(round_id: int, uuid_base: String, item_name: String, object_id, slot: String = "") -> bool:
-	"""Equipa item em um slot (detecta automaticamente se não especificado).
-	Slots válidos: hand-right, hand-left, head, body, back"""
 	var inventory = _get_player_inventory(round_id, uuid_base)
 	if inventory.is_empty():
 		return false
@@ -701,9 +704,9 @@ func equip_item(round_id: int, uuid_base: String, item_name: String, object_id, 
 	network_manager.rpc_id(peer_id, "_client_equip_item", item_name, object_id, slot)
 	return true
 
+## Desequipa item de um slot e retorna ao inventário.
+## verify=false: não verifica max_inventory_slots (usado quando item será dropado).
 func unequip_item(round_id: int, uuid_base: String, slot: String, verify: bool = true) -> bool:
-	"""Desequipa item de um slot e retorna ao inventário.
-	verify=false: não verifica max_inventory_slots (usado quando item será dropado)."""
 	var inventory = _get_player_inventory(round_id, uuid_base)
 	if inventory.is_empty():
 		return false
@@ -731,8 +734,8 @@ func unequip_item(round_id: int, uuid_base: String, slot: String, verify: bool =
 	network_manager.rpc_id(peer_id, "_client_unequip_item", item_data["item_id"], slot, verify)
 	return true
 
+## Troca item equipado diretamente (desequipa antigo, equipa novo).
 func swap_equipped_item(round_id: int, uuid_base: String, new_item_name: String, inventory_item: Dictionary, equiped_item_id: int, target_slot: String) -> bool:
-	"""Troca item equipado diretamente (desequipa antigo, equipa novo)."""
 	var inventory = _get_player_inventory(round_id, uuid_base)
 	if inventory.is_empty():
 		return false
@@ -771,8 +774,8 @@ func swap_equipped_item(round_id: int, uuid_base: String, new_item_name: String,
 	network_manager.rpc_id(peer_id, "_client_swap_equipped_item", new_item_name, inventory_item, equiped_item_id, target_slot)
 	return true
 
+## Limpa inventário do jogador em uma rodada.
 func clear_player_inventory(round_id: int, uuid_base: String):
-	"""Limpa inventário do jogador em uma rodada."""
 	if not player_inventories.has(round_id):
 		return
 
@@ -780,14 +783,15 @@ func clear_player_inventory(round_id: int, uuid_base: String):
 		player_inventories[round_id].erase(uuid_base)
 		_log_debug("✓ Inventário limpo: %s na rodada %d" % [uuid_base, round_id])
 
+## Limpa todos os inventários de uma rodada.
 func clear_round_inventories(round_id: int):
-	"""Limpa todos os inventários de uma rodada."""
 	if not player_inventories.has(round_id):
 		return
 
 	var player_count = player_inventories[round_id].size()
 	player_inventories.erase(round_id)
 	_log_debug("✓ Inventários da rodada %d limpos (%d jogadores)" % [round_id, player_count])
+
 
 # ===== QUERIES DE INVENTÁRIO =====
 
@@ -941,6 +945,7 @@ func get_item_by_object_id(round_id: int, uuid_base: String, object_id: int) -> 
 			return item_data.duplicate()
 	return {}
 
+
 # ===== QUERIES DE FACILITAÇÃO =====
 
 func get_equipped_hand_items(round_id: int, uuid_base: String) -> Dictionary:
@@ -1011,10 +1016,11 @@ func get_first_equipped_item(round_id: int, uuid_base: String) -> Dictionary:
 			return item_data.duplicate()
 	return {}
 
+
 # ===== GERENCIAMENTO DE NODES =====
 
+## Registra referência ao node do jogador na cena.
 func register_player_node(uuid_base: String, player_node: Node):
-	"""Registra referência ao node do jogador na cena."""
 	if not is_player_registered(uuid_base):
 		push_error("ClientRegistry: Tentou registrar nó de UUID %s não registrado" % uuid_base)
 		return
@@ -1029,8 +1035,8 @@ func register_player_node(uuid_base: String, player_node: Node):
 
 	_log_debug("✓ Nó registrado: %s → %s" % [uuid_base, node_path])
 
+## Remove referência ao node do jogador.
 func unregister_player_node(uuid_base: String):
-	"""Remove referência ao node do jogador."""
 	if not players.has(uuid_base):
 		return
 
@@ -1038,8 +1044,8 @@ func unregister_player_node(uuid_base: String):
 	players_cache.erase(uuid_base)
 	_log_debug("✓ Nó desregistrado: %s" % uuid_base)
 
+## Retorna o node do jogador na cena.
 func get_player_node(uuid_base: String) -> Node:
-	"""Retorna o node do jogador na cena."""
 	if not is_player_registered(uuid_base):
 		return null
 
@@ -1075,34 +1081,33 @@ func clear_player_node_path(uuid_base: String):
 		return ""
 	players[uuid_base]["node_path"] = ""
 
+
 # ===== FUNÇÕES INTERNAS =====
 
+## Retorna referência INTERNA do inventário (não duplica).
 func _get_player_inventory(round_id: int, uuid_base: String) -> Dictionary:
-	"""Retorna referência INTERNA do inventário (não duplica)."""
 	if not player_inventories.has(round_id):
 		return {}
 	if not player_inventories[round_id].has(uuid_base):
 		return {}
 	return player_inventories[round_id][uuid_base]
 
+## Remove inventários do jogador de todas as rodadas.
 func _cleanup_player_inventories(uuid_base: String):
-	"""Remove inventários do jogador de todas as rodadas."""
 	for round_id in player_inventories:
 		if player_inventories[round_id].has(uuid_base):
 			player_inventories[round_id].erase(uuid_base)
 
+## Gera token HMAC-SHA256 baseado em server_secret + server_id + uuid_base.
 func _compute_token(uuid_base: String) -> String:
-	"""Gera token HMAC-SHA256 baseado em server_secret + server_id + uuid_base."""
 	var crypto = Crypto.new()
 	var message = (server_manager.server_id + ":" + uuid_base).to_utf8_buffer()
 	var hmac = crypto.hmac_digest(HashingContext.HASH_SHA256, server_manager.server_secret, message)
 	return hmac.hex_encode()
 	
+## Valida nome do jogador.
+## Retorna string vazia se válido, mensagem de erro caso contrário.
 func _validate_player_name(player_name: String) -> String:
-	"""
-	Valida nome do jogador
-	Retorna string vazia se válido, mensagem de erro caso contrário
-	"""
 	var trimmed_name = player_name.strip_edges()
 	
 	if trimmed_name.is_empty():
@@ -1123,6 +1128,7 @@ func _validate_player_name(player_name: String) -> String:
 		return "Este nome já está sendo usado"
 	
 	return ""
+
 
 # ===== DEBUG =====
 

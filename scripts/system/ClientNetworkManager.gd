@@ -48,6 +48,7 @@ func _get_log_prefix() -> String:
 	var client_id: String = "[ClientID: %d]" % cached_unique_id if cached_unique_id > 0 else ""
 	return "[CLIENT][NetworkManager]%s" % client_id
 
+
 # ===== HEARTBEAT =====
 
 func _send_ping(client_time):
@@ -65,11 +66,11 @@ func _server_report_ping(latency):
 func _client_receive_pong(client_time):
 	game_manager._client_receive_pong(client_time)
 
+
 # ===== AUTENTICAÇÃO =====
 
+## Helper local: envia hello ao servidor.
 func send_hello_to_server(_uuid_base: String, _token: String):
-	"""Helper local: envia hello ao servidor"""
-	# RENOMEADO DESTINO: "server_receive_hello" → "_server_receive_hello"
 	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
@@ -81,8 +82,8 @@ func _client_receive_auth_result(_response: Dictionary):
 
 # ===== REGISTRO DE JOGADOR =====
 
+## Helper local: envia requisição de registro ao servidor.
 func register_player_name(player_name: String):
-	"""Helper local: envia requisição de registro ao servidor"""
 	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
@@ -101,6 +102,7 @@ func _client_name_rejected(reason: String):
 	_log_debug("❌ Nome rejeitado: " + reason)
 	game_manager._client_name_rejected(reason)
 
+
 # ===== SALAS — HELPERS LOCAIS (enviam RPC ao servidor) =====
 
 func request_rooms_list():
@@ -110,8 +112,8 @@ func request_rooms_list():
 	_log_debug("📤 Solicitando lista de salas")
 	rpc_id(1, "_server_request_rooms_list")
 
+## Helper local: envia resposta sobre voltar (true) ou abandonar (false) a partida.
 func _server_request_return_or_exit(chosen: bool):
-	"""Helper local: envia resposta sobre voltar (true) ou abandonar (false) a partida"""
 	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
@@ -140,7 +142,6 @@ func join_room_by_name(room_name: String, password: String = ""):
 	rpc_id(1, "_server_join_room_by_name", room_name, password)
 
 func request_update_room_settings(changed_settings: Dictionary):
-	# RENOMEADO DESTINO: "server_receive_update_room_settings" → "_server_update_room_settings"
 	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
@@ -165,6 +166,7 @@ func close_room():
 		return
 	_log_debug("📤 Fechando sala")
 	rpc_id(1, "_server_close_room")
+
 
 # ===== SALAS — RECEBIMENTOS DO SERVIDOR =====
 
@@ -222,23 +224,25 @@ func _server_player_ready():
 		return
 	rpc_id(1, "_server_player_ready")
 
+
 # ===== RODADAS — HELPERS LOCAIS =====
 
+## Host de uma sala requisita ao servidor para iniciar uma partida.
 func _server_request_start_round(round_settings: Dictionary = {}):
-	"""Host de uma sala requisita ao servidor para iniciar uma partida"""
 	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
 	_log_debug("📤 Iniciando rodada")
 	rpc_id(1, "_server_start_round", round_settings)
 
+## Helper local: envia aviso para o servidor quando está desconectado ou não do round atual
 func _mark_player_disconnected(chosen: bool):
-	"""Helper local: envia aviso para o servidor quando está desconectado ou não do round atual"""
 	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
 	_log_debug("Enviando aviso para o servidor que está %s do round atual" % "DESCONECTADO" if chosen else "RECONECTADO")
 	rpc_id(1, "_mark_player_disconnected", chosen)
+
 
 # ===== RODADAS — RECEBIMENTOS DO SERVIDOR =====
 
@@ -267,6 +271,7 @@ func _client_remove_player(peer_id: int):
 func _client_update_character_peer_id(_uuid_base: String, _new_peer_id: int):
 	_log_debug("👤 Atualizando session id de remoto: %s para %d" % [_uuid_base, _new_peer_id])
 	game_manager._client_update_character_peer_id(_uuid_base, _new_peer_id)
+
 
 # ===== SPAWN DE OBJETOS — RECEBIMENTOS DO SERVIDOR =====
 
@@ -299,21 +304,18 @@ func _client_clear_all_objects():
 # ===== ITENS — HELPERS LOCAIS (enviam RPC ao servidor) =====
 
 func request_pick_up_item(player_id: int, object_id: int) -> void:
-	# RENOMEADO DESTINO: "_server_pick_up_player_item" → "_server_pick_up_item"
 	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
 	rpc_id(1, "_server_pick_up_item", player_id, object_id)
 
 func request_equip_item(player_id: int, object_id: int, slot_type) -> void:
-	# RENOMEADO DESTINO: "_server_equip_player_item" → "_server_equip_item"
 	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
 	rpc_id(1, "_server_equip_item", player_id, object_id, slot_type)
 
 func request_unequip_item(player_id: int, slot_type: String) -> void:
-	# RENOMEADO DESTINO: "_server_unequip_player_item" → "_server_unequip_item"
 	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
@@ -348,6 +350,7 @@ func request_drop_item(player_id, obj_id):
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
 	rpc_id(1, "_server_drop_item", player_id, obj_id)
+
 
 # ===== ITENS — APLICAÇÃO VISUAL NO CLIENTE (chamados pelo servidor) =====
 
@@ -390,6 +393,7 @@ func _client_apply_drop(player_id: int, item_name: String):
 	if player_node and player_node.has_method("execute_item_drop"):
 		player_node.execute_item_drop()
 
+
 # ===== ITENS — ATUALIZAÇÃO DE INVENTÁRIO NO CLIENTE =====
 
 func _client_add_item_to_inventory(item_id, object_id):
@@ -415,8 +419,8 @@ func _client_swap_equipped_item(new_item_name: String, dragged_item: Dictionary,
 
 # ===== SINCRONIZAÇÃO DE ESTADO DE JOGADORES =====
 
+## Helper local: envia estado do jogador ao servidor.
 func send_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
-	"""Helper local: envia estado do jogador ao servidor"""
 	if not is_connected_:
 		return
 	rpc_id(1, "_server_player_state", p_id, pos, rot, vel, running, jumping)
@@ -437,11 +441,12 @@ func _client_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, r
 func server_force_position(pos: Vector3):
 	game_manager.server_force_position(pos)
 
+
 # ===== SINCRONIZAÇÃO DE ANIMAÇÕES =====
 
+## Helper local: envia estado de animação ao servidor.
 func send_player_animation_state(p_id: int, speed: float, attacking: bool, defending: bool,
 	jumping: bool, aiming: bool, running: bool, block_attacking: bool, on_floor: bool):
-	"""Helper local: envia estado de animação ao servidor"""
 	if not is_connected_:
 		return
 	rpc_id(1, "_server_player_animation_state", p_id, speed, attacking, defending,
@@ -458,9 +463,9 @@ func _client_player_animation_state(p_id: int, speed: float, attacking: bool, de
 		player._client_receive_animation_state(speed, attacking, defending, jumping,
 											   aiming, running, block_attacking, on_floor)
 
+
 # ===== SYNC EM LOTE POR ROUND =====
 
-@rpc("authority", "call_remote", "unreliable_ordered")
 func _rpc_client_batch_sync(
 	_round_id: int,
 	ids: PackedInt32Array,
@@ -489,8 +494,8 @@ func _rpc_client_batch_sync(
 				if entry.config.get("sync_rotation", true):
 					entry.node.global_rotation = rotations[i]
 
+## Interpola todos os objetos registrados — chame em _process.
 func _client_interpolate_all(delta: float) -> void:
-	"""Interpola todos os objetos registrados — chame em _process."""
 	var now := Time.get_unix_time_from_system()
 	var stale: Array = []
 
@@ -535,7 +540,7 @@ func _client_interpolate_all(delta: float) -> void:
 	for oid in stale:
 		unregister_syncable_object(oid)
 
-# Cliente registra objeto (criado pelo spawn handler)
+## Cliente registra objeto (criado pelo spawn handler)
 func register_syncable_object(object_id: int, node: Node, config: Dictionary) -> void:
 	if syncable_objects.has(object_id):
 		return
@@ -556,8 +561,8 @@ func unregister_syncable_object(object_id: int) -> void:
 
 # ===== AÇÕES (ATAQUES, DEFESA) =====
 
+## Helper local: envia ação do jogador ao servidor
 func send_player_action(p_id: int, action_type: String, item_equipado_nome, anim_name: String):
-	"""Helper local: envia ação do jogador ao servidor"""
 	if not is_connected_:
 		return
 	_log_debug("⚔️ Enviando ação: %s (%s)" % [action_type, anim_name])
@@ -590,6 +595,7 @@ func _client_receive_message(text: String, duration: float, type: String):
 	_log_debug("Mensagem recebida do servidor: " + text)
 	if game_manager and game_manager.has_method("_server_to_client_message"):
 		game_manager._server_to_client_message(text, duration, type)
+
 
 # ===== ERROS =====
 

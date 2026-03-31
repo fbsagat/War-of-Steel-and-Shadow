@@ -1,5 +1,6 @@
 extends Node
 class_name TestManager
+
 ## TestManager - Ferramenta de desenvolvimento para testes automatizados
 ## 
 ## RESPONSABILIDADES:
@@ -10,10 +11,12 @@ class_name TestManager
 ##
 ## ⚠️ IMPORTANTE: Deve ser DESATIVADO em produção!
 
+
 # ===== CONFIGURAÇÕES =====
 
 @export_category("Debug")
 @export var debug_mode: bool = true
+
 
 # ===== REGISTROS (Injetados pelo initializer.gd) =====
 
@@ -27,6 +30,7 @@ var round_registry: RoundRegistry = null
 var object_manager: ObjectManager = null
 var initializer = null
 
+
 # ===== VARIÁVEIS INTERNAS =====
 
 ## Referência à câmera livre para visualização no servidor
@@ -37,6 +41,7 @@ var _initialized: bool = false
 
 var actual_camera: Camera3D = null
 var dummy_camera: Camera3D
+
 
 # ===== INICIALIZAÇÃO =====
 
@@ -49,30 +54,14 @@ func initialize():
 	_initialized = true
 	_log_debug("▶️ TestManager inicializado com sucesso!")
 
+
 # ===== CRIAÇÃO DE PARTIDA DE TESTE =====
+
 func sort_num(min_val: int, max_val: int) -> int:
 	return randi_range(min_val, max_val)
 	
+## Cria uma partida de teste usando os peers conectados reais.
 func create_test_round(nome_sala: String = "Sala de Teste", configuracoes_round: Dictionary = {}):
-	"""
-	Cria uma partida de teste usando os peers conectados reais
-	
-	FLUXO:
-	1. Valida peers conectados
-	2. Registra jogadores no ClientRegistry (se necessário)
-	3. Cria sala no RoomRegistry
-	4. Adiciona jogadores à sala
-	5. Valida requisitos para iniciar
-	6. Cria rodada no RoundRegistry
-	7. Gera spawn points
-	8. Envia comandos aos clientes
-	9. Instancia rodada no servidor
-	10. Inicia rodada
-	
-	@param nome_sala: Nome da sala a ser criada
-	@param configuracoes_round: Configurações personalizadas da rodada
-	"""
-	
 	if not _initialized:
 		_log_debug("❌ TestManager não inicializado!")
 		return
@@ -322,14 +311,12 @@ func create_test_round(nome_sala: String = "Sala de Teste", configuracoes_round:
 	_log_debug("  Rodada: %d" % round_data["round_id"])
 	_log_debug("==============================================")
 
+
 # ===== INSTANCIAÇÃO NO SERVIDOR =====
 
+## Instancia a rodada no servidor (mapa e players).
+## Similar ao ServerManager, mas com validações extras para testes.
 func _server_instantiate_round(match_data: Dictionary, players_node, round_node):
-	"""
-	Instancia a rodada no servidor (mapa e players)
-	Similar ao ServerManager, mas com validações extras para testes
-	"""
-
 	_log_debug(" Instanciando rodada no servidor...")
 	
 	# Aplica configurações de mapa
@@ -365,15 +352,13 @@ func _server_instantiate_round(match_data: Dictionary, players_node, round_node)
 	
 	_log_debug("  ✓ Rodada instanciada no servidor")
 
+
 # ===== SPAWN DE JOGADORES =====
 
+## Spawna um jogador no servidor (versão autoritativa).
+## Com carregamento assíncrono e timeouts de segurança.
 func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, round_id: int, players_node):
-	"""
-	Spawna um jogador no servidor (versão autoritativa)
-	Com carregamento assíncrono e timeouts de segurança
-	"""
-	
-	# ===== VALIDAÇÕES INICIAIS =====
+	# VALIDAÇÕES INICIAIS
 	if not player_data.has("id") or not player_data.has("name"):
 		push_error("TestManager: player_data inválido: faltam 'id' ou 'name'")
 		return
@@ -383,21 +368,21 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 	
 	_log_debug("🔄 Iniciando spawn do player: %s (UUID: %s)" % [player_name, p_uuid])
 	
-	# ===== CARREGAMENTO DA CENA =====
+	# CARREGAMENTO DA CENA
 	# Opção 1: preload() - Mais rápido, recurso já em memória (RECOMENDADO para players)
 	var player_scene = preload(server_manager.player_scene)
 	if not player_scene:
 		push_error("TestManager: Falha ao carregar player_scene: %s" % server_manager.player_scene)
 		return
 	
-	# Opção 2: ResourceLoader assíncrono - Use se quiser carregamento em thread
+	# Opção 2: ResourceLoader assíncrono - Carregamento em thread
 	# var player_scene = await _load_player_scene_async(server_manager.player_scene)
 	# if not player_scene:
 	# 	return
 	
 	_log_debug("📦 Cena do player carregada, instanciando...")
 	
-	# ===== INSTANCIAÇÃO =====
+	# INSTANCIAÇÃO
 	var player_instance = player_scene.instantiate()
 	if not player_instance:
 		push_error("TestManager: Falha ao instanciar player_scene")
@@ -417,7 +402,7 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 	
 	_log_debug("🌳 Adicionando player à cena...")
 	
-	# ===== ADIÇÃO À ÁRVORE DE CENA =====
+	# ADIÇÃO À ÁRVORE DE CENA
 	players_node.add_child(player_instance)
 	
 	# Aguarda o player estar na árvore
@@ -434,7 +419,7 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 	
 	_log_debug("✓ Player adicionado à árvore de cena")
 	
-	# ===== AGUARDA READY COM TIMEOUT =====
+	# AGUARDA READY COM TIMEOUT
 	if player_instance.has_method("_ready"):
 		_log_debug("⏳ Aguardando _ready() do player...")
 		
@@ -455,7 +440,7 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 		await get_tree().process_frame
 		await get_tree().process_frame
 	
-	# ===== INICIALIZAÇÃO DO JOGADOR =====
+	# INICIALIZAÇÃO DO JOGADOR
 	_log_debug("🔧 Inicializando player %s..." % player_name)
 	
 	var color: Color = Color(0.0, 0.0, 0.0, 1.0)
@@ -474,7 +459,7 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 	# Aguarda processamento da inicialização
 	await get_tree().process_frame
 	
-	# ===== CONFIGURAÇÕES DO MAPA =====
+	# CONFIGURAÇÕES DO MAPA
 	_log_debug("🗺️ Configurando referências do mapa...")
 	
 	player_instance.terrain_ = map_manager.current_map
@@ -485,13 +470,13 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 	else:
 		push_warning("⚠️ MapManager não tem mapa carregado!")
 	
-	# ===== VALIDAÇÃO FINAL =====
+	# VALIDAÇÃO FINAL
 	if not player_instance.is_inside_tree():
 		push_error("TestManager CRÍTICO: Player %s removido da árvore após inicialização!" % p_uuid)
 		player_instance.queue_free()
 		return
 	
-	# ===== REGISTROS =====
+	# REGISTROS
 	_log_debug("📝 Registrando player nos registries...")
 	
 	client_registry.register_player_node(p_uuid, player_instance)
@@ -499,7 +484,7 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, ro
 	
 	await get_tree().process_frame
 
-	# ===== ESTADO NO SERVER MANAGER =====
+	# ESTADO NO SERVER MANAGER
 	server_manager.player_states[p_uuid] = {
 		"pos": spawn_data["position"],
 		"vel": Vector3.ZERO,
@@ -521,10 +506,11 @@ func on_spawn_requested(_character) -> void:
 	var potions = ["potion_glass_heal", "potion_glass_stamina", "potion_glass_poison"]
 	object_manager.spawn_item(objects_node, _round_id, potions.pick_random(), Vector3(8.204, 2.30, 14.222), Vector3(randi_range(-5, 5), randi_range(-5, 5), randi_range(-5, 5)), Vector3(randi_range(-5, 5), randi_range(5, 30), randi_range(-5, 5)))
 	
+	
 # ===== UTILITÁRIOS =====
 
+## Função padrão de debug.
 func _log_debug(message: String):
-	"""Função padrão de debug"""
 	if not debug_mode:
 		return
 	

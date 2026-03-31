@@ -17,6 +17,7 @@ class_name ObjectManager
 ##
 ## IMPORTANTE: Toda lógica executa APENAS no servidor; clientes recebem via RPC.
 
+
 # ===== CONFIGURAÇÕES =====
 
 @export_category("Spawn Settings")
@@ -32,6 +33,7 @@ class_name ObjectManager
 @export_category("Debug")
 @export var debug_mode: bool = true
 
+
 # ===== DEPENDÊNCIAS (Injetadas pelo initializer.gd) =====
 
 var server_manager: ServerManager = null
@@ -40,6 +42,7 @@ var client_registry: ClientRegistry = null
 var round_registry: RoundRegistry = null
 var item_database: ItemDatabase = null
 var initializer = null
+
 
 # ===== REGISTROS =====
 
@@ -66,6 +69,7 @@ var next_object_id: int = 1
 
 var _initialized: bool = false
 
+
 # ===== SINAIS =====
 
 signal object_spawned(round_id: int, object_id: int, item_name: String)
@@ -74,6 +78,7 @@ signal object_stored(round_id: int, object_id: int, owner_uuid: String)
 signal object_retrieved(round_id: int, object_id: int)
 signal object_transferred(round_id: int, object_id: int, old_owner: String, new_owner: String)
 signal round_objects_cleared(round_id: int, count: int)
+
 
 # ===== INICIALIZAÇÃO =====
 
@@ -94,7 +99,6 @@ func initialize():
 	_initialized = true
 	_log_debug("✓ ObjectManager inicializado com sucesso!")
 
-
 ## Reseta completamente o manager, destruindo todos os objetos e limpando os registros.
 func reset():
 	for round_id in spawned_objects.keys():
@@ -107,6 +111,7 @@ func reset():
 	next_object_id = 1
 	_initialized = false
 	_log_debug("🔄 ObjectManager resetado")
+
 
 # ===== SPAWN =====
 
@@ -150,7 +155,6 @@ func spawn_item(objects_node, round_id: int, item_name: String, position: Vector
 
 	return object_id
 
-
 ## Spawna um item na frente do player identificado por player_uuid.
 ## Usa o estado atual do servidor (ServerManager.player_states).
 ## Retorna o object_id gerado, ou -1 em caso de falha.
@@ -165,7 +169,6 @@ func spawn_item_in_front_of_player(objects_node, round_id: int, player_uuid: Str
 	_log_debug("Spawn na frente do player '%s': pos=%s" % [player_uuid, spawn_pos])
 
 	return await spawn_item(objects_node, round_id, item_name, spawn_pos, Vector3.ZERO, Vector3.ZERO, player_uuid)
-
 
 ## Spawna um item acima do player identificado por player_uuid (+3 unidades no eixo Y).
 ## Usa o estado atual do servidor (ServerManager.player_states).
@@ -191,7 +194,6 @@ func spawn_item_at_random_position(objects_node, round_id: int, item_name: Strin
 	var spawn_pos = area_center + Vector3(cos(angle) * distance, 0.0, sin(angle) * distance)
 
 	return await spawn_item(objects_node, round_id, item_name, spawn_pos, Vector3.ZERO, Vector3.ZERO, owner_uuid)
-
 
 ## Envia RPC de spawn para cada cliente ativo na rodada (ignora servidor e peers desconectados).
 func _send_spawn_to_clients(round_id: int, object_id: int, item_name: String, position: Vector3, rotation: Vector3, drop_velocity: Vector3, owner_uuid: String):
@@ -219,6 +221,7 @@ func _send_spawn_to_clients(round_id: int, object_id: int, item_name: String, po
 		clients_sent += 1
 
 	_log_debug("📤 Spawn enviado para %d cliente(s)" % clients_sent)
+
 
 # ===== DESPAWN =====
 
@@ -248,7 +251,6 @@ func despawn_object(round_id: int, object_id: int) -> bool:
 
 	return true
 
-
 ## Despawna um objeto a partir da referência direta ao nó.
 ## Retorna true em caso de sucesso.
 func despawn_object_by_node(round_id: int, node: Node) -> bool:
@@ -261,7 +263,6 @@ func despawn_object_by_node(round_id: int, node: Node) -> bool:
 
 	push_warning("ObjectManager: Nó não encontrado no registro da rodada %d" % round_id)
 	return false
-
 
 ## Remove todos os objetos (spawnados e guardados) de uma rodada.
 func clear_round_objects(round_id: int):
@@ -284,7 +285,6 @@ func clear_round_objects(round_id: int):
 
 	round_objects_cleared.emit(round_id, total_count)
 
-
 ## Envia RPC de despawn para cada cliente ativo na rodada.
 func _send_despawn_to_clients(round_id: int, object_id: int):
 	var active_players = round_registry.get_all_spawned_players(round_id)
@@ -300,12 +300,12 @@ func _send_despawn_to_clients(round_id: int, object_id: int):
 
 		network_manager._client_despawn_item.rpc_id(player_id, object_id, round_id)
 
-
 ## Retorna true se o peer_id estiver conectado ao multiplayer.
 func _is_peer_connected(peer_id: int) -> bool:
 	if not multiplayer.has_multiplayer_peer():
 		return false
 	return peer_id in multiplayer.get_peers()
+
 
 # ===== OBJETOS GUARDADOS =====
 
@@ -359,7 +359,6 @@ func store_object(round_id: int, object_id: int, owner_uuid: String, custom_data
 
 	return true
 
-
 ## Move um objeto do estado GUARDADO de volta para SPAWNADO.
 ## Spawna o nó no mundo na posição indicada e restaura os dados customizados.
 ## Retorna true em caso de sucesso.
@@ -401,7 +400,6 @@ func retrieve_stored_object(objects_node, round_id: int, object_id: int, positio
 
 	return true
 
-
 ## Transfere a posse de um objeto guardado para new_owner_uuid.
 ## O estado permanece GUARDADO; apenas owner_uuid é atualizado.
 ## Retorna true em caso de sucesso.
@@ -426,7 +424,6 @@ func transfer_stored_object(round_id: int, object_id: int, new_owner_uuid: Strin
 
 	return true
 
-
 ## Destrói permanentemente um objeto guardado sem respawná-lo.
 ## Retorna true em caso de sucesso.
 func destroy_stored_object(round_id: int, object_id: int) -> bool:
@@ -442,6 +439,7 @@ func destroy_stored_object(round_id: int, object_id: int) -> bool:
 	object_despawned.emit(round_id, object_id)
 
 	return true
+
 
 # ===== QUERIES — OBJETOS GUARDADOS =====
 
@@ -496,18 +494,15 @@ func get_all_stored_objects_full_data() -> Array:
 			result.append(full_data)
 	return result
 
-
 ## Retorna a quantidade de objetos guardados em uma rodada.
 func get_round_stored_count(round_id: int) -> int:
 	if not stored_objects.has(round_id):
 		return 0
 	return stored_objects[round_id].size()
 
-
 ## Retorna a quantidade de objetos guardados pertencentes a owner_uuid.
 func get_owner_stored_count(round_id: int, owner_uuid: String) -> int:
 	return get_stored_objects_by_owner(round_id, owner_uuid).size()
-
 
 ## Retorna o UUID do dono de um objeto guardado, ou "" se não existir.
 func get_stored_object_owner(round_id: int, object_id: int) -> String:
@@ -515,13 +510,11 @@ func get_stored_object_owner(round_id: int, object_id: int) -> String:
 		return ""
 	return stored_objects[round_id][object_id]["owner_uuid"]
 
-
 ## Retorna o nome do item de um objeto guardado, ou "" se não existir.
 func get_stored_object_item_name(round_id: int, object_id: int) -> String:
 	if not stored_object_exists(round_id, object_id):
 		return ""
 	return stored_objects[round_id][object_id]["item_name"]
-
 
 ## Retorna os dados customizados de um objeto guardado, ou {} se não existir.
 func get_stored_object_custom_data(round_id: int, object_id: int) -> Dictionary:
@@ -529,12 +522,12 @@ func get_stored_object_custom_data(round_id: int, object_id: int) -> Dictionary:
 		return {}
 	return stored_objects[round_id][object_id].get("custom_data", {}).duplicate()
 
-
 ## Retorna o histórico de transferências de um objeto guardado.
 func get_stored_object_transfer_history(round_id: int, object_id: int) -> Array:
 	if not stored_object_exists(round_id, object_id):
 		return []
 	return stored_objects[round_id][object_id].get("transfer_history", []).duplicate()
+
 
 # ===== SPAWN INTERNO =====
 
@@ -594,6 +587,7 @@ func _spawn_on_server(objects_node, object_id: int, round_id: int, item_name: St
 
 	return item_node
 
+
 # ===== CÁLCULOS DE POSIÇÃO / IMPULSO =====
 
 ## Calcula a posição de spawn na frente do player com variação aleatória.
@@ -605,7 +599,6 @@ func _calculate_front_position(player_pos: Vector3, player_rot: Vector3) -> Vect
 		0.0,
 		randf_range(-drop_variance, drop_variance)
 	)
-
 
 ## Calcula o vetor de impulso de drop com base na rotação (yaw) do player.
 func _calculate_drop_impulse(player_rot: Vector3) -> Vector3:
@@ -620,6 +613,7 @@ func _calculate_drop_impulse(player_rot: Vector3) -> Vector3:
 
 	return impulse
 
+
 # ===== QUERIES — OBJETOS SPAWNADOS =====
 
 ## Retorna o nó de um objeto spawnado, ou null se não existir.
@@ -627,7 +621,6 @@ func get_object_node(round_id: int, object_id: int) -> Node:
 	if not object_exists(round_id, object_id):
 		return null
 	return spawned_objects[round_id][object_id]
-
 
 ## Retorna um dicionário com os dados do objeto spawnado, lidos diretamente do nó.
 func get_object_data(round_id: int, object_id: int) -> Dictionary:
@@ -642,20 +635,17 @@ func get_object_data(round_id: int, object_id: int) -> Dictionary:
 		"spawn_time": node.spawn_time,
 	}
 
-
 ## Retorna todos os nós de objetos spawnados em uma rodada.
 func get_round_objects(round_id: int) -> Array:
 	if not spawned_objects.has(round_id):
 		return []
 	return spawned_objects[round_id].values()
 
-
 ## Retorna a quantidade de objetos spawnados em uma rodada.
 func get_round_object_count(round_id: int) -> int:
 	if not spawned_objects.has(round_id):
 		return 0
 	return spawned_objects[round_id].size()
-
 
 ## Retorna os nós de objetos spawnados dentro de um raio a partir de uma posição.
 func get_objects_near_position(round_id: int, position: Vector3, radius: float) -> Array:
@@ -668,11 +658,9 @@ func get_objects_near_position(round_id: int, position: Vector3, radius: float) 
 			result.append(node)
 	return result
 
-
 ## Retorna true se o objeto estiver no estado spawnado.
 func object_exists(round_id: int, object_id: int) -> bool:
 	return spawned_objects.has(round_id) and spawned_objects[round_id].has(object_id)
-
 
 ## Retorna o UUID do dono do objeto spawnado, ou "" se não existir.
 func get_object_owner(round_id: int, object_id: int) -> String:
@@ -680,12 +668,12 @@ func get_object_owner(round_id: int, object_id: int) -> String:
 		return ""
 	return spawned_objects[round_id][object_id].owner_uuid
 
-
 ## Retorna o nome do item de um objeto spawnado, ou "" se não existir.
 func get_object_item_name(round_id: int, object_id: int) -> String:
 	if not object_exists(round_id, object_id):
 		return ""
 	return spawned_objects[round_id][object_id].item_name
+
 
 # ===== UTILITÁRIOS DE ESTADO =====
 
@@ -697,17 +685,16 @@ func get_object_state(round_id: int, object_id: int) -> String:
 		return "stored"
 	return "unknown"
 
-
 ## Retorna true se o objeto existir em qualquer estado (spawnado ou guardado).
 func object_exists_anywhere(round_id: int, object_id: int) -> bool:
 	return object_exists(round_id, object_id) or stored_object_exists(round_id, object_id)
-
 
 ## Gera e retorna o próximo object_id único.
 func _get_next_object_id() -> int:
 	var id = next_object_id
 	next_object_id += 1
 	return id
+
 
 # ===== ESTATÍSTICAS E DEBUG =====
 
@@ -718,14 +705,12 @@ func get_total_spawned_objects() -> int:
 		total += spawned_objects[round_id].size()
 	return total
 
-
 ## Retorna o total de objetos guardados em todas as rodadas.
 func get_total_stored_objects() -> int:
 	var total = 0
 	for round_id in stored_objects:
 		total += stored_objects[round_id].size()
 	return total
-
 
 ## Retorna um dicionário com estatísticas gerais do manager.
 func get_stats() -> Dictionary:
@@ -737,7 +722,6 @@ func get_stats() -> Dictionary:
 		"rounds_with_stored": stored_objects.size(),
 		"next_object_id":     next_object_id,
 	}
-
 
 ## Imprime no console os objetos de uma rodada (spawnados e guardados). Útil para debug.
 func print_round_objects(round_id: int):
@@ -770,7 +754,6 @@ func print_round_objects(round_id: int):
 			print("       Transfers: %d" % data["transfer_history"].size())
 
 	print("─────────────────────────────────────────\n")
-
 
 func _log_debug(message: String):
 	if not debug_mode:

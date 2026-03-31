@@ -77,8 +77,8 @@ var item_slots: Array[Panel] = [] # Referências aos 9 slots do quickbar
 
 var next_item_id: int = 0  # Contador para IDs únicos
 
+## Gera um ID único para cada instância de item.
 func _generate_item_id() -> String:
-	"""Gera um ID único para cada instância de item"""
 	next_item_id += 1
 	return "item_%d_%d" % [Time.get_ticks_msec(), next_item_id]
 
@@ -93,8 +93,9 @@ func _ready():
 	# TESTE: adicionar itens iniciais (remova em produção)
 	#add_test_items()
 
+
+## Configura estado inicial da interface.
 func _setup_initial_state():
-	"""Configura estado inicial da interface"""
 	if inventory_root:
 		inventory_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		inventory_root.hide()
@@ -102,8 +103,8 @@ func _setup_initial_state():
 	
 	item_slots_grid_on.show()
 
+## Define metadados para identificar cada slot.
 func _setup_slot_metadata():
-	"""Define metadados para identificar cada slot"""
 	# Slots de equipamento
 	helmet_slot.set_meta("slot_type", "head")
 	helmet_slot.set_meta("slot_id", "equipment_head")
@@ -128,8 +129,8 @@ func _setup_slot_metadata():
 		slot.set_meta("slot_id", "inventory_%d" % i)
 		slot.set_meta("is_equipment", false)
 
+## Coleta referências dos 9 slots do quickbar.
 func _setup_quickbar_slots():
-	"""Coleta referências dos 9 slots do quickbar"""
 	item_slots = []
 	for i in range(min(9, item_slots_grid_on.get_child_count())):
 		var child = item_slots_grid_on.get_child(i)
@@ -154,8 +155,8 @@ func setup_inventory_signals():
 # VISIBILIDADE DO INVENTÁRIO
 # =============================================================================
 
+## Abre o inventário (permite interação).
 func show_inventory():
-	"""Abre o inventário (permite interação)"""
 	if inventory_root:
 		inventory_root.mouse_filter = Control.MOUSE_FILTER_STOP
 		_set_mouse_filter_recursive(inventory_root, Control.MOUSE_FILTER_STOP)
@@ -170,8 +171,8 @@ func show_inventory():
 			_log_debug("✅ Área de drop ativada")
 		drop_area.mouse_filter = Control.MOUSE_FILTER_STOP
 
+## Fecha o inventário (bloqueia interação).
 func hide_inventory():
-	"""Fecha o inventário (bloqueia interação)"""
 	if inventory_root:
 		inventory_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_set_mouse_filter_recursive(inventory_root, Control.MOUSE_FILTER_IGNORE)
@@ -186,8 +187,8 @@ func hide_inventory():
 			_log_debug("🔒 Área de drop desativada")
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
+## Aplica mouse_filter recursivamente a todos os controles.
 func _set_mouse_filter_recursive(node: Node, filter: int):
-	"""Aplica mouse_filter recursivamente a todos os controles"""
 	if node is Control:
 		node.mouse_filter = filter
 	for child in node.get_children():
@@ -197,8 +198,8 @@ func _set_mouse_filter_recursive(node: Node, filter: int):
 # BARRAS DE VIDA E STAMINA
 # =============================================================================
 
+## Atualiza barras visuais de vida e stamina.
 func update_bars():
-	"""Atualiza barras visuais de vida e stamina"""
 	if health_bar:
 		health_bar.value = (current_health / max_health) * 100
 	if stamina_bar:
@@ -228,14 +229,14 @@ func restore_stamina(amount: float):
 # SISTEMA DE INPUT (DRAG & DROP + QUICKBAR)
 # =============================================================================
 
+## Limpa drag se inventário fechar durante arraste.
 func _process(_delta):
-	"""Limpa drag se inventário fechar durante arraste"""
 	if inventory_root and !inventory_root.visible:
 		if dragged_item or drag_preview:
 			cleanup_drag()
 
+## Processa input de mouse (drag) e teclado (quickbar).
 func _input(event):
-	"""Processa input de mouse (drag) e teclado (quickbar)"""
 	# =========================================================================
 	# INPUT DO QUICKBAR (funciona APENAS quando inventário fechado)
 	# =========================================================================
@@ -266,8 +267,8 @@ func _input(event):
 # DRAG & DROP: INÍCIO
 # =============================================================================
 
+## Inicia o arraste de um item.
 func try_start_drag(mouse_pos: Vector2):
-	"""Inicia o arraste de um item"""
 	var slot = find_slot_at_position(mouse_pos)
 	if not slot or not slot.visible:
 		return
@@ -288,8 +289,8 @@ func try_start_drag(mouse_pos: Vector2):
 	# Criar preview de arraste
 	_create_drag_preview(mouse_pos)
 
+## Cria o preview visual que segue o cursor.
 func _create_drag_preview(mouse_pos: Vector2):
-	"""Cria o preview visual que segue o cursor"""
 	drag_preview = Control.new()
 	drag_preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	drag_preview.z_index = 1000
@@ -313,8 +314,8 @@ func _create_drag_preview(mouse_pos: Vector2):
 	_update_drag_preview_position(mouse_pos)
 	drag_preview.visible = true
 
+## Atualiza posição do preview durante o arraste.
 func update_drag_preview(mouse_pos: Vector2):
-	"""Atualiza posição do preview durante o arraste"""
 	if drag_preview and drag_preview.visible:
 		_update_drag_preview_position(mouse_pos)
 	
@@ -339,8 +340,8 @@ func _update_drag_preview_position(mouse_pos: Vector2):
 # DRAG & DROP: FIM
 # =============================================================================
 
+## Finaliza o arraste e processa a ação.
 func try_end_drag(mouse_pos: Vector2):
-	"""Finaliza o arraste e processa a ação"""
 	if not dragged_item:
 		return
 	
@@ -369,8 +370,8 @@ func try_end_drag(mouse_pos: Vector2):
 	await get_tree().create_timer(0.05).timeout
 	_sync_quickbar()
 
+## Processa o drop de um item em um slot.
 func _handle_drop_in_slot(target_slot: Panel):
-	"""Processa o drop de um item em um slot"""
 	var target_slot_id = target_slot.get_meta("slot_id", "")
 	var target_is_equipment = target_slot.get_meta("is_equipment", false)
 	var target_slot_type = target_slot.get_meta("slot_type", "")
@@ -490,8 +491,8 @@ func _handle_drop_in_slot(target_slot: Panel):
 	_log_debug("❌ Nenhuma ação aplicável")
 	dragged_item.modulate.a = 1.0
 
+## Move item localmente (sem enviar ao servidor).
 func _local_move_item(item: Control, _from_slot: Panel, to_slot: Panel):
-	"""Move item localmente (sem enviar ao servidor)"""
 	item.get_parent().remove_child(item)
 	to_slot.add_child(item)
 	_position_item_in_slot(item, to_slot)
@@ -504,8 +505,8 @@ func _local_move_item(item: Control, _from_slot: Panel, to_slot: Panel):
 # DRAG & DROP: UTILIDADES
 # =============================================================================
 
+## Encontra o slot na posição do cursor.
 func find_slot_at_position(pos: Vector2) -> Panel:
-	"""Encontra o slot na posição do cursor"""
 	# Verificar slots de equipamento
 	var equipment_slots = [helmet_slot, cape_slot, right_hand_slot, left_hand_slot]
 	for slot in equipment_slots:
@@ -519,20 +520,20 @@ func find_slot_at_position(pos: Vector2) -> Panel:
 	
 	return null
 
+## Verifica se um ponto está dentro de um slot.
 func _is_point_in_slot(slot: Panel, pos: Vector2) -> bool:
-	"""Verifica se um ponto está dentro de um slot"""
 	var rect = Rect2(slot.global_position, slot.size)
 	return rect.has_point(pos)
 
+## Encontra o item dentro de um slot (ignora cópias do quickbar).
 func find_item_in_slot(slot: Panel) -> Control:
-	"""Encontra o item dentro de um slot (ignora cópias do quickbar)"""
 	for child in slot.get_children():
 		if child.has_meta("is_item") and !child.get_meta("is_quickbar_copy", false):
 			return child
 	return null
 
+## Verifica se o cursor está sobre a área de drop.
 func is_over_drop_area(pos: Vector2) -> bool:
-	"""Verifica se o cursor está sobre a área de drop"""
 	if not drop_area:
 		_log_debug("⚠️ drop_area não existe!")
 		return false
@@ -549,8 +550,8 @@ func is_over_drop_area(pos: Vector2) -> bool:
 	
 	return is_over
 
+## Limpa o estado de drag.
 func cleanup_drag():
-	"""Limpa o estado de drag"""
 	if drag_preview:
 		if drag_preview.get_parent():
 			drag_preview.get_parent().remove_child(drag_preview)
@@ -573,8 +574,8 @@ func cleanup_drag():
 # QUICKBAR: SELEÇÃO E USO
 # =============================================================================
 
+## Seleciona um slot do quickbar.
 func select_slot(index: int):
-	"""Seleciona um slot do quickbar"""
 	if index < 0 or index >= item_slots.size() or item_slots.size() == 0:
 		return
 	
@@ -596,8 +597,8 @@ func select_slot(index: int):
 	item_slots[index].add_theme_stylebox_override("panel", highlight_style)
 	selected_index = index
 
+## Dropa o item do slot selecionado no quickbar.
 func drop_selected_quickbar_item():
-	"""Dropa o item do slot selecionado no quickbar"""
 	if selected_index < 0 or selected_index >= item_slots.size():
 		return
 	
@@ -611,8 +612,8 @@ func drop_selected_quickbar_item():
 			_log_debug("🗑️ Dropando item do quickbar: %s" % item_id)
 			request_drop_item.emit(item_id)
 
+## Usa o item selecionado no quickbar (implementar lógica de uso).
 func use_selected_item():
-	"""Usa o item selecionado no quickbar (implementar lógica de uso)"""
 	_log_debug("🎯 Item usado no slot: %d" % selected_index)
 	# TODO: Implementar lógica de uso de itens
 	# Exemplo: consumir poção, ativar tocha, etc.
@@ -621,8 +622,8 @@ func use_selected_item():
 # FUNÇÕES CHAMADAS PELO SERVIDOR (ATUALIZAÇÃO VISUAL)
 # =============================================================================
 
+## Resposta do servidor: adiciona item visualmente.
 func on_server_item_added(item_id: String, item_name: String, item_type: String, icon_path: String):
-	"""Resposta do servidor: adiciona item visualmente"""
 	_log_debug("✅ Servidor confirmou adição: %s no primeiro slot vazio" % item_name)
 	
 	# Encontrar primeiro slot vazio
@@ -633,9 +634,9 @@ func on_server_item_added(item_id: String, item_name: String, item_type: String,
 			_create_item_in_slot(slot, item_scene, item_id, item_name, item_type)
 			_sync_quickbar()
 			break
-			
+
+## Resposta do servidor: remove item visualmente.
 func on_server_item_removed(item_id: String):
-	"""Resposta do servidor: remove item visualmente"""
 	_log_debug("🗑️ Servidor confirmou remoção: %s" % item_id)
 	
 	var item = _find_item_by_id(item_id)
@@ -644,8 +645,8 @@ func on_server_item_removed(item_id: String):
 		await get_tree().process_frame
 		_sync_quickbar()
 
+## Resposta do servidor: equipa item visualmente.
 func on_server_item_equipped(item_id: String, slot_type: String):
-	"""Resposta do servidor: equipa item visualmente"""
 	_log_debug("⚔️ Servidor confirmou equipamento: %s em %s" % [item_id, slot_type])
 	
 	var item = _find_item_by_id(item_id)
@@ -670,9 +671,8 @@ func on_server_item_equipped(item_id: String, slot_type: String):
 	
 	_log_debug("✅ Item equipado visualmente: %s" % item_id)
 
+## Resposta do servidor: desequipa item visualmente.
 func on_server_item_unequipped(item_id: String):
-	"""Resposta do servidor: desequipa item visualmente"""
-
 	_log_debug("🎒 Servidor confirmou desequipamento: %s" % item_id)
 	
 	var item = _find_item_by_id(item_id)
@@ -685,8 +685,8 @@ func on_server_item_unequipped(item_id: String):
 		item.modulate.a = 1.0
 		_sync_quickbar()
 
+## Resposta do servidor: troca dois itens visualmente - versão CORRIGIDA.
 func on_server_items_swapped(item_id_1: String, item_id_2: String):
-	"""Resposta do servidor: troca dois itens visualmente - versão CORRIGIDA"""
 	_log_debug("🔄 Servidor confirmou swap: %s <-> %s" % [item_id_1, item_id_2])
 	
 	var item1 = _find_item_by_id(item_id_1)
@@ -727,8 +727,8 @@ func on_server_items_swapped(item_id_1: String, item_id_2: String):
 # UTILITÁRIOS DE BUSCA
 # =============================================================================
 
+## Encontra um slot pelo seu ID.
 func _find_slot_by_id(slot_id: String) -> Panel:
-	"""Encontra um slot pelo seu ID"""
 	# Slots de inventário
 	for slot in item_slots_grid.get_children():
 		if slot.get_meta("slot_id", "") == slot_id:
@@ -742,8 +742,8 @@ func _find_slot_by_id(slot_id: String) -> Panel:
 	
 	return null
 
+## Encontra um item pelo seu ID único.
 func _find_item_by_id(item_id: String) -> Control:
-	"""Encontra um item pelo seu ID único"""
 	# Buscar no inventário
 	for slot in item_slots_grid.get_children():
 		var item = find_item_in_slot(slot)
@@ -760,8 +760,8 @@ func _find_item_by_id(item_id: String) -> Control:
 	
 	return null
 
+## Retorna o slot de equipamento pelo tipo.
 func _get_equipment_slot_by_type(slot_type: String) -> Panel:
-	"""Retorna o slot de equipamento pelo tipo"""
 	match slot_type:
 		"head": return helmet_slot
 		"back": return cape_slot
@@ -773,8 +773,8 @@ func _get_equipment_slot_by_type(slot_type: String) -> Panel:
 # SINCRONIZAÇÃO QUICKBAR
 # =============================================================================
 
+## Sincroniza o quickbar com o inventário principal.
 func _sync_quickbar():
-	"""Sincroniza o quickbar com o inventário principal"""
 	_log_debug("🔄 Sincronizando quickbar...")
 	
 	# Limpar todos os slots do quickbar
@@ -813,8 +813,8 @@ func _sync_quickbar():
 	
 	_log_debug("✅ Quickbar sincronizado: %d itens" % sync_count)
 
+## Cria uma cópia visual do item para o quickbar.
 func _create_quickbar_copy(original_item: Control) -> Control:
-	"""Cria uma cópia visual do item para o quickbar"""
 	if not original_item:
 		return null
 	
@@ -848,8 +848,8 @@ func _create_quickbar_copy(original_item: Control) -> Control:
 	
 	return copy
 
+## Busca recursivamente por um TextureRect dentro de um item.
 func _find_icon_in_item(item_node: Node) -> TextureRect:
-	"""Busca recursivamente por um TextureRect dentro de um item"""
 	if item_node is TextureRect:
 		return item_node
 	for child in item_node.get_children():
@@ -864,8 +864,8 @@ func _find_icon_in_item(item_node: Node) -> TextureRect:
 # CRIAÇÃO DE ITENS
 # =============================================================================
 
+## Cria uma instância de item em um slot.
 func _create_item_in_slot(slot: Panel, item_scene: PackedScene, item_id: String, item_name: String, item_type: String):
-	"""Cria uma instância de item em um slot"""
 	var item_instance = item_scene.instantiate()
 	
 	# Configurar metadados
@@ -901,8 +901,8 @@ func _create_item_in_slot(slot: Panel, item_scene: PackedScene, item_id: String,
 		slot.add_child(item_instance)
 		_position_item_in_slot(item_instance, slot)
 
+## Cria uma cena de item a partir de um ícone PNG.
 func create_item_scene(icon_path: String, size_: Vector2) -> PackedScene:
-	"""Cria uma cena de item a partir de um ícone PNG"""
 	var scene = PackedScene.new()
 	
 	var icon = TextureRect.new()
@@ -924,8 +924,8 @@ func create_item_scene(icon_path: String, size_: Vector2) -> PackedScene:
 	scene.pack(icon)
 	return scene
 
+## Cria uma textura de placeholder para itens faltantes.
 func _create_missing_texture(size_: Vector2) -> Texture2D:
-	"""Cria uma textura de placeholder para itens faltantes"""
 	var image = Image.create(int(size_.x), int(size_.y), false, Image.FORMAT_RGBA8)
 	image.fill(Color(0.6, 0.0, 0.0, 0.3))
 	
@@ -946,8 +946,8 @@ func _create_missing_texture(size_: Vector2) -> Texture2D:
 	
 	return ImageTexture.create_from_image(image)
 
+## Posiciona e redimensiona um item dentro de um slot.
 func _position_item_in_slot(item: Control, slot: Panel):
-	"""Posiciona e redimensiona um item dentro de um slot"""
 	if not item or not slot:
 		return
 	
@@ -974,8 +974,8 @@ func _position_item_in_slot(item: Control, slot: Panel):
 # FUNÇÕES DE TESTE (REMOVER EM PRODUÇÃO)
 # =============================================================================
 
+## Adiciona itens de teste ao inventário.
 func add_test_items():
-	"""Adiciona itens de teste ao inventário"""
 	var slot_size = Vector2(64, 64)
 	
 	# Adicionar itens com ícones PNG
@@ -1002,8 +1002,8 @@ func add_test_items():
 
 # UTILITÁRIO DE DEBUG
 
+# Imprime mensagem de debug.
 func _log_debug(message: String):
-	"""Imprime mensagem de debug"""
 	if not debug_mode:
 		return
 	

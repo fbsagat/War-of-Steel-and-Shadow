@@ -81,10 +81,11 @@ signal player_despawned_from_round(round_id: int, uuid_base: String)
 ##   "empty_since": null
 ## }
 
+
 # ===== INICIALIZAÇÃO =====
 
+## Inicializa o RoundRegistry (chamado apenas no servidor).
 func initialize():
-	"""Inicializa o RoundRegistry (chamado apenas no servidor)"""
 	if _initialized:
 		_log_debug("⚠ RoundRegistry já inicializado")
 		return
@@ -95,8 +96,8 @@ func initialize():
 	_initialized = true
 	_log_debug("▶️ RoundRegistry inicializado")
 
+## Reseta completamente o registro (usado ao desligar servidor).
 func reset():
-	"""Reseta completamente o registro (usado ao desligar servidor)"""
 	if disconnect_check_timer:
 		disconnect_check_timer.stop()
 		if disconnect_check_timer.is_inside_tree():
@@ -111,12 +112,13 @@ func reset():
 	_initialized = false
 	_log_debug("🔄 RoundRegistry resetado")
 
+
 # ===== GERENCIAMENTO DE RODADAS =====
 
+## Cria nova rodada (não inicia ainda).
+## players deve ser Array de {id: uuid_base, name: String}.
+## Retorna RoundData completo ou {} se falhar.
 func create_round(room_id: int, room_name: String, players: Array, settings: Dictionary) -> Dictionary:
-	"""Cria nova rodada (não inicia ainda).
-	players deve ser Array de {id: uuid_base, name: String}.
-	Retorna RoundData completo ou {} se falhar."""
 	var round_id = _get_next_round_id()
 
 	if not room_registry or not room_registry.room_exists(room_id):
@@ -170,8 +172,8 @@ func create_round(room_id: int, room_name: String, players: Array, settings: Dic
 
 	return round_data.duplicate(true)
 
+## Define o nó da cena para uma rodada existente.
 func set_round_node(round_id: int, node: Node):
-	"""Define o nó da cena para uma rodada existente."""
 	if not rounds.has(round_id):
 		push_error("RoundRegistry: Rodada %d não existe" % round_id)
 		return false
@@ -179,8 +181,8 @@ func set_round_node(round_id: int, node: Node):
 	_log_debug("Nó da rodada %d definido: %s" % [round_id, node.name])
 	return true
 
+## Define o nó da cena do mapa para uma rodada existente.
 func set_round_map_node(round_id: int, node: Node):
-	"""Define o nó da cena do mapa para uma rodada existente."""
 	if not rounds.has(round_id):
 		push_error("RoundRegistry: Rodada %d não existe" % round_id)
 		return false
@@ -188,9 +190,9 @@ func set_round_map_node(round_id: int, node: Node):
 	_log_debug("Nó do mapa da rodada %d definido: %s" % [round_id, node.name])
 	return true
 
+## Inicia rodada (muda estado para 'playing').
+## Chamado DEPOIS de spawnar todos os jogadores na cena.
 func start_round(round_id: int):
-	"""Inicia rodada (muda estado para 'playing').
-	Chamado DEPOIS de spawnar todos os jogadores na cena."""
 	if not rounds.has(round_id):
 		push_error("RoundRegistry: Rodada %d não existe" % round_id)
 		return
@@ -208,10 +210,10 @@ func start_round(round_id: int):
 	_add_event(round_id, "round_started", {})
 	round_started.emit(round_id)
 
+## Finaliza rodada (muda estado para 'ending').
+## winner_data deve conter {uuid_base, name, score}.
+## reason: 'completed', 'timeout', 'all_quitted'.
 func end_round(round_id: int, reason: String = "completed", winner_data: Dictionary = {}) -> Dictionary:
-	"""Finaliza rodada (muda estado para 'ending').
-	winner_data deve conter {uuid_base, name, score}.
-	reason: 'completed', 'timeout', 'all_quitted'."""
 	if not rounds.has(round_id):
 		_log_debug("⚠ Tentou finalizar rodada inexistente: %d" % round_id)
 		return {}
@@ -247,10 +249,10 @@ func end_round(round_id: int, reason: String = "completed", winner_data: Diction
 	round_ending.emit(round_id, reason)
 	return round_data.duplicate(true)
 
+## Completa finalização da rodada (muda estado para 'results').
+## Adiciona ao histórico da sala e limpa recursos.
+## Chamado DEPOIS de mostrar resultados na UI.
 func complete_round_end(round_id: int) -> Dictionary:
-	"""Completa finalização da rodada (muda estado para 'results').
-	Adiciona ao histórico da sala e limpa recursos.
-	Chamado DEPOIS de mostrar resultados na UI."""
 	if not rounds.has(round_id):
 		return {}
 
@@ -279,9 +281,8 @@ func complete_round_end(round_id: int) -> Dictionary:
 
 	return final_data
 
+## Limpa todos os recursos da rodada.
 func _cleanup_round(round_id: int):
-	"""Limpa todos os recursos da rodada."""
-
 	if not rounds.has(round_id):
 		return
 
@@ -308,9 +309,8 @@ func _cleanup_round(round_id: int):
 	if rounds.is_empty() and disconnect_check_timer:
 		disconnect_check_timer.stop()
 
+## Marca sala como vazia.
 func mark_empty_round(round_id):
-	"""Marca sala como vazia"""
-	
 	if not rounds.has(round_id):
 		_log_debug("⚠ Tentou marcar como vazia sala inexistente: %d" % round_id)
 		return false
@@ -318,8 +318,8 @@ func mark_empty_round(round_id):
 	var round_ = rounds[round_id]
 	round_["empty_since"] = Time.get_unix_time_from_system()
 	
+## Marca sala como não vazia.
 func unmark_empty_round(round_id):
-	"""Marca sala como não vazia"""
 	if not rounds.has(round_id):
 		_log_debug("⚠ Tentou marcar como preenchida sala inexistente: %d" % round_id)
 		return false
@@ -327,10 +327,11 @@ func unmark_empty_round(round_id):
 	var round_ = rounds[round_id]
 	round_["empty_since"] = null
 
+
 # ===== GERENCIAMENTO DE PLAYERS SPAWNADOS =====
 
+## Registra player que foi spawnado na cena da rodada.
 func register_spawned_player(round_id: int, uuid_base: String, player_node: Node):
-	"""Registra player que foi spawnado na cena da rodada."""
 	if not rounds.has(round_id):
 		push_error("RoundRegistry: Tentou registrar player em rodada inexistente: %d" % round_id)
 		return
@@ -340,8 +341,8 @@ func register_spawned_player(round_id: int, uuid_base: String, player_node: Node
 	_log_debug("✓ uuid=%s spawnado na rodada %d" % [uuid_base, round_id])
 	player_spawned_in_round.emit(round_id, uuid_base, player_node)
 
+## Remove registro de player spawnado e adiciona uuid em quitted_players.
 func unregister_spawned_player(round_id: int, uuid_base: String):
-	"""Remove registro de player spawnado e adiciona uuid em quitted_players"""
 	if not rounds.has(round_id):
 		return
 
@@ -354,8 +355,8 @@ func unregister_spawned_player(round_id: int, uuid_base: String):
 		
 		player_despawned_from_round.emit(round_id, uuid_base)
 
+## Marca player como desconectado durante a rodada (não remove da rodada).
 func _mark_player_disconnected(round_id: int, uuid_base: String):
-	"""Marca player como desconectado durante a rodada (não remove da rodada)."""
 	if not rounds.has(round_id):
 		return
 
@@ -374,9 +375,8 @@ func _mark_player_disconnected(round_id: int, uuid_base: String):
 	_log_debug("⚠ uuid=%s marcado como desconectado na rodada %d" % [uuid_base, round_id])
 	player_disconnected.emit(round_id, uuid_base)
 
+## Remove player da lista de desconectados da rodada.
 func _unmark_player_disconnected(round_id: int, uuid_base: String):
-	"""Remove player da lista de desconectados da rodada."""
-
 	if not rounds.has(round_id):
 		return
 
@@ -398,25 +398,25 @@ func _unmark_player_disconnected(round_id: int, uuid_base: String):
 	player_connected.emit(round_id, uuid_base)
 	_log_debug("✓ uuid=%s removido de disconnected_players na rodada %d" % [uuid_base, round_id])
 
+## Remove um player de um round.
 func remove_player(round_id: int, player_uuid: String):
-	"""Remove um player de um round"""
 	rounds[round_id]["players"] = rounds[round_id]["players"].filter(func(p):
 		return p["id"] != player_uuid)
 
+## Retorna node do player spawnado (ou null se não encontrado).
 func get_spawned_player(round_id: int, uuid_base: String) -> Node:
-	"""Retorna node do player spawnado (ou null se não encontrado)."""
 	if not rounds.has(round_id):
 		return null
 	return rounds[round_id]["spawned_players"].get(uuid_base, null)
 
+## Retorna array com todos os nodes de players spawnados.
 func get_all_spawned_players(round_id: int) -> Array:
-	"""Retorna array com todos os nodes de players spawnados."""
 	if not rounds.has(round_id):
 		return []
 	return rounds[round_id]["spawned_players"].values()
 
+## Retorna array com todos os nodes de players spawnados.
 func get_all_spawned_players_uuids(round_id: int) -> Array:
-	"""Retorna array com todos os nodes de players spawnados."""
 	if not rounds.has(round_id):
 		return []
 	
@@ -426,8 +426,8 @@ func get_all_spawned_players_uuids(round_id: int) -> Array:
 	
 	return spawned_players
 
+## Retorna players de um round filtrando/removendo os não spawnados.
 func get_round_players_spawned_filter(round_id: int) -> Array:
-	"""Retorna players de um round filtrando/removendo os não spawnados."""
 	# Filtrar players que ainda estão na partida (apenas spawned players)
 	var round_spawned = get_all_spawned_players_uuids(round_id)
 	var round_ = get_round(round_id)
@@ -437,8 +437,8 @@ func get_round_players_spawned_filter(round_id: int) -> Array:
 		return p["id"] in round_spawned)
 	return filtered_players
 
+# Retorna lista de PlayerData dos jogadores ATIVOS (não desconectados).
 func get_active_players(round_id: int) -> Array:
-	"""Retorna lista de PlayerData dos jogadores ATIVOS (não desconectados)."""
 	if not rounds.has(round_id):
 		return []
 
@@ -451,8 +451,8 @@ func get_active_players(round_id: int) -> Array:
 
 	return active
 
+## Retorna lista de uuid_bases dos jogadores ATIVOS (não desconectados).
 func get_active_players_ids(round_id: int) -> Array:
-	"""Retorna lista de uuid_bases dos jogadores ATIVOS (não desconectados)."""
 	if not rounds.has(round_id):
 		return []
 
@@ -465,11 +465,12 @@ func get_active_players_ids(round_id: int) -> Array:
 
 	return active
 
+## Retorna os players ativos no round
 func get_active_player_count(round_id: int) -> int:
 	return get_active_players(round_id).size()
 
+## Retorna lista de uuid_bases dos jogadores (ativos ou não).
 func get_all_players_ids(round_id: int) -> Array:
-	"""Retorna lista de uuid_bases dos jogadores (ativos ou não)."""
 	if not rounds.has(round_id):
 		return []
 
@@ -481,13 +482,14 @@ func get_all_players_ids(round_id: int) -> Array:
 
 	return all
 
+## Posiçoes de entrada no servidor. Ordenamento.
 func get_all_round_players_positions(round_id: int) -> Array:
-	"""Posiçoes de entrada no servidor. Ordenamento."""
 	var p_entrys: Array = []
 	for player in rounds[round_id]["players"]:
 		var entry = client_registry.get_player(player["id"])["entry_position"]
 		p_entrys.append(entry)
 	return p_entrys
+
 
 # ===== EVENTOS DA RODADA =====
 
@@ -516,17 +518,18 @@ func get_events_of_type(round_id: int, event_type: String) -> Array:
 			filtered.append(event)
 	return filtered
 
+
 # ===== PONTUAÇÃO (keyed by uuid_base) =====
 
+# Define pontuação de um jogador.
 func set_player_score(round_id: int, uuid_base: String, score: int):
-	"""Define pontuação de um jogador."""
 	if not rounds.has(round_id):
 		return
 	rounds[round_id]["scores"][uuid_base] = score
 	_add_event(round_id, "score_updated", {"uuid_base": uuid_base, "score": score})
 
+## Adiciona pontos à pontuação atual do jogador.
 func add_player_score(round_id: int, uuid_base: String, points: int):
-	"""Adiciona pontos à pontuação atual do jogador."""
 	if not rounds.has(round_id):
 		return
 	var current = rounds[round_id]["scores"].get(uuid_base, 0)
@@ -538,15 +541,15 @@ func get_player_score(round_id: int, uuid_base: String) -> int:
 		return 0
 	return rounds[round_id]["scores"].get(uuid_base, 0)
 
+## Retorna dicionário {uuid_base: score}.
 func get_all_scores(round_id: int) -> Dictionary:
-	"""Retorna dicionário {uuid_base: score}."""
 	if not rounds.has(round_id):
 		return {}
 	return rounds[round_id]["scores"].duplicate()
 
+## Retorna array ordenado por pontuação (maior primeiro).
+## Formato: [{uuid_base, name, score}, ...]
 func get_leaderboard(round_id: int) -> Array:
-	"""Retorna array ordenado por pontuação (maior primeiro).
-	Formato: [{uuid_base, name, score}, ...]"""
 	if not rounds.has(round_id):
 		return []
 
@@ -563,6 +566,7 @@ func get_leaderboard(round_id: int) -> Array:
 	leaderboard.sort_custom(func(a, b): return a["score"] > b["score"])
 	return leaderboard
 
+
 # ===== QUERIES DE ESTADO =====
 
 func is_round_active(round_id: int) -> bool:
@@ -578,9 +582,9 @@ func get_round(round_id: int) -> Dictionary:
 		return {}
 	return rounds[round_id].duplicate(true)
 
+## Retorna rodada em que o jogador está participando.
+## Substitui get_round_by_player_id() — agora usa uuid_base.
 func get_round_by_player_uuid(uuid_base: String) -> Dictionary:
-	"""Retorna rodada em que o jogador está participando.
-	Substitui get_round_by_player_id() — agora usa uuid_base."""
 	for round_id in rounds:
 		var round_data = rounds[round_id]
 		for player in round_data["players"]:
@@ -625,6 +629,7 @@ func get_all_rounds_keys() -> Array:
 
 func get_active_rounds_count() -> int:
 	return rounds.size()
+
 
 # ===== UTILITÁRIOS =====
 

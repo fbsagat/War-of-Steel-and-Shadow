@@ -95,12 +95,10 @@ func _ready():
 	add_to_group("item")
 	_setup_authority_settings()
 	
+## Configura RigidBody com base na autoridade:
+##  - Servidor: Física ativa
+##  - Cliente: Física congelada, apenas interpolação visual
 func _setup_authority_settings():
-	"""
-	Configura RigidBody com base na autoridade:
-	- Servidor: Física ativa
-	- Cliente: Física congelada, apenas interpolação visual
-	"""
 	if is_server:
 		# SERVIDOR: Física completa
 		gravity_scale = 1.0
