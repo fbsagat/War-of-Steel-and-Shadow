@@ -38,11 +38,11 @@ extends CharacterBody3D
 @export var update_interval: float = 0.5 # atualização a cada X segundos (0 = cada frame)
 
 @export_category("Network Sync")
-@export var sync_rate: float = 0.03 # 33 updates/segundo (melhor que 0.05)
+@export var sync_rate: float = 0.03 # 33 updates/segundo
 @export var interpolation_speed: float = 12.0 # Interpolação mais rápida
 @export var position_threshold: float = 0.01 # Distância mínima para sincronizar
 @export var rotation_threshold: float = 0.01 # Rotação mínima para sincronizar
-@export var anim_sync_rate: float = 0.1  # 10 updates/segundo (menos que posição)
+@export var anim_sync_rate: float = 0.1  # 10 updates/segundo
 @export var visual_rotation_y: float
 @export var initial_sync_duration: float = 3.0
 @export var initial_sync_elapsed: float = 0.0
