@@ -352,7 +352,7 @@ func connect_to_server():
 	
 	_log_debug("Cliente criado, aguardando conexão...")
 
-## Esse sinal é emitido quando o cliente consegue se conectar com sucesso ao servidor."""
+## Esse sinal é emitido quando o cliente consegue se conectar com sucesso ao servidor.
 ## Callback quando conecta com sucesso ao servidor.
 func _on_connected_to_server():
 	if not is_connecting:

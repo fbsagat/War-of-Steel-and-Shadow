@@ -736,9 +736,9 @@ func _execute_player_return_to_round(peer_id: int, player_uuid: String):
 		
 		# Prepara objetos da cena para atualização visual
 		var round_objects = object_manager.get_round_objects(round_["round_id"])
-		# round_objects: [Object_1_torch_1:<RigidBody3D#123765524253>, Object_2_torch_1:<RigidBody3D#123916521411>]"""
+		# round_objects: [Object_1_torch_1:<RigidBody3D#123765524253>, Object_2_torch_1:<RigidBody3D#123916521411>]
 		# executa no game manager: _spawn_on_client(object_id: int, round_id: int, 
-		# item_name: String, position: Vector3, rotation: Vector3, drop_velocity: Vector3, owner_uuid: String)"""
+		# item_name: String, position: Vector3, rotation: Vector3, drop_velocity: Vector3, owner_uuid: String)
 		var all_objects: Dictionary
 		for object in round_objects:
 			await get_tree().process_frame
@@ -1840,8 +1840,8 @@ func _apply_animation_state_on_server(p_id: int, speed: float, attacking: bool, 
 	if not (node and node.is_inside_tree()):
 		return
 		
-	if node and node.has_method("_client_receive_animation_state"):
-		node._client_receive_animation_state(speed, attacking, defending, jumping,
+	if node and node.has_method("_character_receive_animation_state"):
+		node._character_receive_animation_state(speed, attacking, defending, jumping,
 											   aiming, running, block_attacking, on_floor)
 
 ## Envia comando de despawn para clientes
@@ -2455,8 +2455,8 @@ func _server_player_action(p_id: int, action_type: String, item_equipado_nome, a
 	# Para defend_stop o servidor aplica sem verificações
 	# Aplica no nó do servidor
 	var player_node = client_registry.get_player_node(player_uuid)
-	if player_node and player_node.has_method("_client_receive_action"):
-		player_node._client_receive_action(action_type, item_equipado_nome, anim_name)
+	if player_node and player_node.has_method("_character_receive_action"):
+		player_node._character_receive_action(action_type, item_equipado_nome, anim_name)
 
 
 # ===== UTILITÁRIOS =====

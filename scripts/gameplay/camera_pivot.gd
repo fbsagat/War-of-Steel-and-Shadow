@@ -8,6 +8,7 @@ extends Node3D
 # TIPOS DE MODO DE CÂMERA
 enum CameraMode { FREE_LOOK, BEHIND_PLAYER }
 
+
 # ===== CONFIGURAÇÕES =====
 
 @export var debug: bool = false
@@ -55,6 +56,7 @@ enum CameraMode { FREE_LOOK, BEHIND_PLAYER }
 @export var instant_transition_on_activate: bool = false
 @export var instant_transition_on_release: bool = false
 
+
 # ===== VARIÁVEIS INTERNAS =====
 
 var current_mode: CameraMode = CameraMode.FREE_LOOK
@@ -72,6 +74,7 @@ var _current_distance: float = 0.0
 
 # Controle de entrada
 var _mouse_delta: Vector2 = Vector2.ZERO
+
 
 # INICIALIZAÇÃO
 
@@ -92,8 +95,8 @@ func _ready():
 	if debug:
 		print("[CameraController] Inicializado. Alvo:", target.name)
 
+## Define o alvo da câmera.
 func set_target(new_target: Node3D):
-	"""Define o alvo da câmera"""
 	target = new_target
 
 func set_as_active():
@@ -103,17 +106,17 @@ func set_as_active():
 	if debug:
 		print("[CameraController] Câmera ativada")
 
+## Inicializa a rotação com base no alvo.
 func _initialize_target_rotation():
-	"""Inicializa a rotação com base no alvo."""
 	if target:
 		_target_yaw = target.rotation.y
 		_current_yaw = _target_yaw
 		_target_pitch = 0.0
 		_current_pitch = 0.0
 
-# ==============================
-# ENTRADA DE USUÁRIO
-# ==============================
+
+# ===== ENTRADA DE USUÁRIO =====
+
 func _input(event):
 	if not is_active:
 		return
@@ -132,12 +135,11 @@ func _input(event):
 	if event is InputEventMouseMotion:
 		_mouse_delta += event.relative
 
-# ==============================
-# API PÚBLICA — CONTROLE DE MODO
-# ==============================
 
+# ===== API PÚBLICA — CONTROLE DE MODO =====
+
+## Força a câmera a entrar no modo travado atrás do jogador.
 func force_behind_player():
-	"""Força a câmera a entrar no modo travado atrás do jogador."""
 	var was_free_look = (current_mode == CameraMode.FREE_LOOK)
 	current_mode = CameraMode.BEHIND_PLAYER
 	
@@ -153,8 +155,8 @@ func force_behind_player():
 	if debug:
 		print("[CameraController] Modo travado ativado.")
 
+## Retorna a câmera ao modo livre com mouse.
 func release_to_free_look():
-	"""Retorna a câmera ao modo livre com mouse."""
 	var was_behind = (current_mode == CameraMode.BEHIND_PLAYER)
 	current_mode = CameraMode.FREE_LOOK
 	
@@ -173,11 +175,11 @@ func release_to_free_look():
 	if debug:
 		print("[CameraController] Modo livre reativado.")
 
-# ==============================
-# LÓGICA DE TRANSIÇÃO
-# ==============================
+
+# ===== LÓGICA DE TRANSIÇÃO =====
+
+## Calcula os valores alvo de altura e distância baseado no modo atual.
 func _calculate_target_values() -> Array:
-	"""Calcula os valores alvo de altura e distância baseado no modo atual"""
 	var target_height: float
 	var target_distance: float
 	
@@ -192,8 +194,8 @@ func _calculate_target_values() -> Array:
 	
 	return [target_height, target_distance]
 
+## Atualiza as transições suaves de altura e distância.
 func _update_transitions(delta: float) -> void:
-	"""Atualiza as transições suaves de altura e distância"""
 	if not use_smooth_transitions:
 		var values = _calculate_target_values()
 		_current_height = values[0]
@@ -212,9 +214,9 @@ func _update_transitions(delta: float) -> void:
 	_current_height = lerp(_current_height, target_height, height_speed * delta)
 	_current_distance = lerp(_current_distance, target_distance, distance_speed * delta)
 
-# ==============================
-# ATUALIZAÇÃO PRINCIPAL (PHYSICS)
-# ==============================
+
+# ===== ATUALIZAÇÃO PRINCIPAL (PHYSICS) =====
+
 func _physics_process(delta):
 	if not is_active or target == null:
 		return
@@ -235,8 +237,8 @@ func _physics_process(delta):
 	if debug:
 		_print_debug()
 
+## Atualiza os valores alvo de rotação com base no modo atual.
 func _update_rotation_targets(_delta: float) -> void:
-	"""Atualiza os valores alvo de rotação com base no modo atual"""
 	match current_mode:
 		CameraMode.FREE_LOOK:
 			# Processa input do mouse
@@ -256,15 +258,15 @@ func _update_rotation_targets(_delta: float) -> void:
 				_target_yaw = target.rotation.y
 			_target_pitch = deg_to_rad(behind_target_pitch_deg)
 
+## Interpola a rotação atual em direção aos alvos.
 func _interpolate_rotation(delta: float) -> void:
-	"""Interpola a rotação atual em direção aos alvos"""
 	var smoothness = behind_smoothness if current_mode == CameraMode.BEHIND_PLAYER else free_look_smoothness
 	
 	_current_yaw = lerp_angle(_current_yaw, _target_yaw, smoothness * delta)
 	_current_pitch = lerp_angle(_current_pitch, _target_pitch, smoothness * delta)
 
+## Aplica as transformações finais à câmera.
 func _apply_transforms() -> void:
-	"""Aplica as transformações finais à câmera"""
 	# Atualiza rotação
 	rotation.y = _current_yaw
 	rotation.x = _current_pitch
@@ -276,8 +278,8 @@ func _apply_transforms() -> void:
 	if spring_arm:
 		spring_arm.spring_length = _current_distance
 
+## Imprime informações de debug.
 func _print_debug() -> void:
-	"""Imprime informações de debug"""
 	var mode_name = "BEHIND" if current_mode == CameraMode.BEHIND_PLAYER else "FREE"
 	print("[CameraController] Modo: %s | Altura: %.2f | Distância: %.2f | Yaw: %.1f° | Pitch: %.1f°" % [
 		mode_name,

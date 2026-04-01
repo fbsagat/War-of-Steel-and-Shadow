@@ -433,14 +433,13 @@ func _client_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, r
 	var player = game_manager.players_node.get_node_or_null(str(p_id))
 	if not player:
 		return
-	if player.has_method("_client_receive_state"):
-		player._client_receive_state(pos, rot, vel, running, jumping)
+	if player.has_method("_character_receive_state"):
+		player._character_receive_state(pos, rot, vel, running, jumping)
 	else:
-		_log_debug("Erro! _client_player_state não encontrou método _client_receive_state em %s" % str(p_id))
+		_log_debug("Erro! _client_player_state não encontrou método _character_receive_state em %s" % str(p_id))
 
 func server_force_position(pos: Vector3):
 	game_manager.server_force_position(pos)
-
 
 # ===== SINCRONIZAÇÃO DE ANIMAÇÕES =====
 
@@ -459,20 +458,20 @@ func _client_player_animation_state(p_id: int, speed: float, attacking: bool, de
 		return
 		
 	var player = game_manager.players_node.get_node_or_null(str(p_id))
-	if player and player.has_method("_client_receive_animation_state"):
-		player._client_receive_animation_state(speed, attacking, defending, jumping,
+	if player and player.has_method("_character_receive_animation_state"):
+		player._character_receive_animation_state(speed, attacking, defending, jumping,
 											   aiming, running, block_attacking, on_floor)
 
 
 # ===== SYNC EM LOTE POR ROUND =====
 
+## Recebe o pacote em lote e atualiza os buffers de interpolação.
 func _rpc_client_batch_sync(
 	_round_id: int,
 	ids: PackedInt32Array,
 	positions: PackedVector3Array,
 	rotations: PackedVector3Array
 ) -> void:
-	"""Recebe o pacote em lote e atualiza os buffers de interpolação."""
 
 	var now := Time.get_unix_time_from_system()
 	for i in ids.size():
@@ -576,8 +575,8 @@ func _client_player_action(p_id: int, action_type: String, item_equipado_nome, a
 	
 	var player = game_manager.players_node.get_node_or_null(str(p_id))
 
-	if player and player.has_method("_client_receive_action"):
-		player._client_receive_action(action_type, item_equipado_nome, anim_name)
+	if player and player.has_method("_character_receive_action"):
+		player._character_receive_action(action_type, item_equipado_nome, anim_name)
 		_log_debug("Ação do player recebida!")
 
 func _client_receive_attack(victim_session_id):

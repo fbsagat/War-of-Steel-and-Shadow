@@ -47,6 +47,7 @@ extends CharacterBody3D
 @export var initial_sync_duration: float = 3.0
 @export var initial_sync_elapsed: float = 0.0
 
+
 # ===== REFERÊNCIAS INTERNAS =====
 
 @onready var animation_player: AnimationPlayer = $AnimationPlayer
@@ -54,6 +55,7 @@ extends CharacterBody3D
 @onready var attack_timer: Timer = $attack_timer
 @onready var name_label: Label3D = $NameLabel
 @onready var inventory_node : Control
+
 
 # ===== REGISTROS (Injetados pelo initializer.gd) =====
 
@@ -123,11 +125,69 @@ var nearest_enemy: CharacterBody3D = null
 var _detection_timer: Timer = null
 var actual_enabled_hitbox: Area3D = null
 
-# Ready
-func _ready():
-	pass
+
+# ===== INICIALIZAÇÃO =====
+
+## Inicializa o player com dados multiplayer.
+func initialize(p_name: String, p_color: Color, p_id: int, p_uuid: String, spawn_pos: Vector3):
+	player_name = p_name
+	player_id = p_id
+	player_uuid = p_uuid
 	
-# Física geral
+	# Nome do nó recebe ID do player
+	name = str(p_id)
+	
+	# Posiciona no spawn
+	global_position = spawn_pos
+	target_position = spawn_pos
+	
+	# Atualiza label de nome
+	if name_label:
+		var debug_enabled = server_manager.visual_debug if _is_server else game_manager.visual_debug
+		
+		name_label.text = (
+			"%s\n%s[...]%s\n%s" % [
+				p_name,
+				player_uuid.substr(0, 4),
+				player_uuid.substr(player_uuid.length() - 4, 4),
+				player_id
+			]
+		) if debug_enabled else p_name
+			
+		setup_name_label(p_color)
+		
+	# Configuração de processos
+	if not is_local_player:
+		# Remotos não processam input
+		set_process_input(false)
+		set_process_unhandled_input(false)
+		
+		floor_stop_on_slope = true
+		floor_max_angle = deg_to_rad(45)
+		floor_snap_length = 0.8  # Aumenta snap (ajuda a grudar no chão)
+		platform_floor_layers = 1  # Certifica que detecta layer do terreno
+		
+	# Define autoridade multiplayer
+	set_multiplayer_authority(player_id)
+	
+	# Ativa processos
+	set_physics_process(true)
+	set_process(true)
+	
+	# Preenche o atalho de nó do terreno
+	terrain = get_tree().get_root().get_node_or_null("Round/Terrain3D")
+	
+	# visibilidade inicial (modelo)
+	if hide_itens_on_start:
+		_hide_all_model_items()
+	
+	# Ativa hitboxes
+	if _is_server:
+		hitboxes_manager()
+
+
+# ===== FÍSICA GERAL =====
+
 func _physics_process(delta: float) -> void:
 	var move_dir: Vector3 = Vector3.ZERO
 
@@ -211,6 +271,9 @@ func _physics_process(delta: float) -> void:
 		inventory_node.set_stamina(stamina_level)
 	#_log_debug("Stamina: %s" % stamina_level)
 	
+	
+# ===== GERAL =====
+	
 func connect_inventory_signals():
 	inventory_node.request_drop_item.connect(action_drop_item_call)
 	inventory_node.request_equip_item.connect(action_equip_item_call)
@@ -230,21 +293,14 @@ func hitboxes_manager():
 			area.connect("body_entered", Callable(self, "_on_hitbox_body_entered").bind(area))
 			area.monitoring = false
 	
-# Retorna item mais próximos do player
-func get_nearby_items(
-	radius: float = pickup_radius,
-	_collision_mask: int = pickup_collision_mask,
-	max_results: int = max_pickup_results,
-	sort_by_distance: bool = true) -> Array:
-	"""
-	Retorna itens próximos do player usando PhysicsShapeQuery
-	
-	@param radius: Raio de detecção
-	@param _collision_mask: Máscara de colisão (default: layer 3)
-	@param max_results: Número máximo de itens
-	@param sort_by_distance: Ordenar do mais próximo ao mais distante
-	@return: Array de nodes (itens detectados)
-	"""
+## Retorna itens próximos do player usando PhysicsShapeQuery
+##  @param radius: Raio de detecção
+##  @param _collision_mask: Máscara de colisão (default: layer 3)
+##  @param max_results: Número máximo de itens
+##  @param sort_by_distance: Ordenar do mais próximo ao mais distante
+##  @return: Array de nodes (itens detectados)
+func get_nearby_items(radius: float = pickup_radius, _collision_mask: int = pickup_collision_mask,
+	 max_results: int = max_pickup_results, sort_by_distance: bool = true) -> Array:
 	
 	var space_state = get_world_3d().direct_space_state
 	
@@ -287,7 +343,7 @@ func get_nearby_items(
 	
 	return items
 
-# Configura timer para atualização periódica de inimigos próximos
+## Configura timer para atualização periódica de inimigos próximos.
 func enemy_detection_timer():
 	if update_interval > 0.0:
 		_detection_timer = Timer.new()
@@ -300,7 +356,7 @@ func enemy_detection_timer():
 		# Atualiza a cada frame via _process/_physics_process
 		pass
 
-# Detectar inimigo mais próximo
+## Detectar inimigo mais próximo.
 func get_nearest_enemy() -> CharacterBody3D:
 
 	var space_state = get_world_3d().direct_space_state
@@ -379,7 +435,7 @@ func _update_nearest_enemy() -> void:
 func _on_node_visibility_changed() -> void:
 	cair = true
 	
-# Gravidade
+## Gravidade.
 func _handle_gravity(delta: float) -> void:
 
 	if not is_on_floor():
@@ -390,10 +446,11 @@ func _handle_gravity(delta: float) -> void:
 		if is_jumping:
 			is_jumping = false
 			
-# Animações
-func _handle_animations(move_dir):
-	"""Atualiza animações (funciona para local e remotos)"""
+			
+# ===== ANIMAÇÕES =====
 
+## Atualiza animações (funciona para local e remotos).
+func _handle_animations(move_dir):
 	# Calcula velocidade para animação
 	var speed = Vector2(velocity.x, velocity.z).length()
 	
@@ -426,7 +483,7 @@ func _handle_animations(move_dir):
 		animation_tree["parameters/final_transt/transition_request"] = "jump_land"
 		animation_tree["parameters/final_transt/transition_request"] = "walking_e_blends"
 		
-# Funções da câmera livre
+## Funções da câmera livre.
 func _get_movement_direction_free_cam() -> Vector3:
 	var camera := camera_controller
 	if camera and camera.is_inside_tree():
@@ -450,7 +507,7 @@ func _get_movement_direction_free_cam() -> Vector3:
 	
 	return Vector3.ZERO
 	
-# Funções da câmera lockada
+## Funções da câmera lockada.
 func _get_movement_direction_locked() -> Vector3:
 	var input_vec := Input.get_vector("move_left", "move_right", "move_forward", "move_backward")
 	if input_vec.length() <= 0.01:  # ✅ Threshold consistente
@@ -466,7 +523,7 @@ func _get_movement_direction_locked() -> Vector3:
 	# Input: Y = frente/trás, X = strafe
 	return (forward * input_vec.y + right * input_vec.x).normalized()
 
-# Movimentos: Aplica conforme o modo ativado no momento: free_cam ou locked
+## Movimentos: Aplica conforme o modo ativado no momento: free_cam ou locked.
 func _handle_movement_input(delta: float) -> Vector3:
 	var move_dir := Vector3.ZERO
 	
@@ -480,7 +537,7 @@ func _handle_movement_input(delta: float) -> Vector3:
 	_apply_movement(move_dir, delta)
 	return move_dir
 	
-# Movimentos: Pulo e corrida
+## Movimentos: Pulo e corrida.
 func _apply_movement(move_dir: Vector3, delta: float) -> void:
 	# Pulo: Preserva velocidade horizontal EXATA do chão
 		
@@ -549,7 +606,7 @@ func _apply_movement(move_dir: Vector3, delta: float) -> void:
 		is_running = Input.is_action_pressed("run") and is_on_floor() and move_dir.length() > 0.1
 		is_walking = move_dir.length()
 	
-# Chama a câmera lockada e transiciona p/ movimentação strafe
+## Chama a câmera lockada e transiciona p/ movimentação strafe.
 func camera_strafe_mode(ativar: bool = true):
 	# Só o jogador local pode ativar/desativar modo de mira
 	if not is_local_player:
@@ -596,7 +653,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif event.is_action_pressed("repawn_player"):
 			handle_test_repawn_player_call()
 		
-# Visual
+		
+# ===== VISUAL =====
+
 func _hide_all_model_items():
 	var knight_items = item_database.query_items({"owner": "knight"})
 	for item in knight_items:
@@ -604,7 +663,7 @@ func _hide_all_model_items():
 			var target = get_node_or_null(item.model_node_link)
 			target.visible = false
 			
-# Executa uma animação one-shot e retorna sua duração
+## Executa uma animação one-shot e retorna sua duração.
 func _execute_animation(anim_name: String, anim_type: String, anim_param_path: String, oneshot_request_path: String = "") -> float:
 	# Verifica existência da animação no AnimationPlayer
 	
@@ -633,7 +692,7 @@ func _execute_animation(anim_name: String, anim_type: String, anim_param_path: S
 	
 	return anim_length
 	
-# Movimentos para a função de escoher o movimento da espada
+## Movimentos para a função de escoher o movimento da espada.
 func _get_current_direction() -> String:
 	var f = Input.is_action_pressed("move_forward")
 	var b = Input.is_action_pressed("move_backward")
@@ -651,7 +710,7 @@ func _get_current_direction() -> String:
 	if r: return "right"
 	return ""
 	
-# Movimentos da espada conforme com o input
+## Movimentos da espada conforme com o input.
 func _determine_attack_from_input() -> String:
 	var current_dir = _get_current_direction()
 	# 1. PRIORIDADE: inputs diagonais simultâneos
@@ -683,8 +742,8 @@ func _determine_attack_from_input() -> String:
 	# Fallback
 	return "1H_Melee_Attack_Slice_Horizontal"
 
-# Função acionada pelas animações(AnimationPlayer), habilita hitbox na hora
-# exata do golpe; Pega current_item_right_id para saber qual foi a espada usada
+## Função acionada pelas animações(AnimationPlayer), habilita hitbox na hora
+## exata do golpe; Pega current_item_right_id para saber qual foi a espada usada.
 func _enable_attack_area():
 	# Apenas o servidor faz verificação de hitbox
 	if not _is_server:
@@ -702,7 +761,7 @@ func _enable_attack_area():
 	else:
 		_log_debug("_enable_attack_area: Não encontrado node de hitbox")
 			
-# Para o contato das hitboxes das espadas(no momento ativo) com inimigos (área3D)
+## Para o contato das hitboxes das espadas(no momento ativo) com inimigos (área3D).
 func _on_hitbox_body_entered(body: Node, hitbox_area: Area3D) -> void:
 	# Só o nó dos players no servidor processam hitboxes
 	if not _is_server:
@@ -734,8 +793,8 @@ func _on_hitbox_body_entered(body: Node, hitbox_area: Area3D) -> void:
 		if server_manager and server_manager.has_method("attack_validation"):
 			server_manager.attack_validation(group, player_id, actual_weapon.name, body.player_id)
 
+## Jogador local ou remoto recebe dano de golpe, animção, sons e etc.
 func take_damage():
-	"""Jogador local ou remoto recebe dano de golpe, animção, sons e etc"""
 	# Animação de hit
 	var random_hit = ["parameters/Hit_B/request", "parameters/Hit_A/request"].pick_random()
 	animation_tree.set(random_hit, AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
@@ -768,8 +827,8 @@ func _on_impact_detected(impulse: float):
 	var random_hit = ["parameters/Hit_B/request", "parameters/Hit_A/request"].pick_random()
 	animation_tree.set(random_hit, AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 
-# Quando terminar o ataque desativar hitbox da espada, is_attacking false e 
-# timer para impedir repetição de golpe antes do final
+## Quando terminar o ataque desativar hitbox da espada, is_attacking false e 
+## timer para impedir repetição de golpe antes do final.
 func _disable_attack_hitbox():
 	
 	# Apenas para o nó do servidor (que é o único que ativa hitbox)
@@ -783,9 +842,10 @@ func _disable_attack_hitbox():
 	else:
 		_log_debug("_on_attack_timer_timeout: Não encontrado node de hitbox")
 		
+		
 # ===== FUNÇÕES DE REDE ====================
-# ===== ENVIO DE ESTADO PARA SERVIDOR (APENAS LOCAL) =====
 
+## Envio de estado para servidor (Apenas local)
 func _send_state_to_server(delta: float):
 	sync_timer += delta
 	initial_sync_elapsed += delta  # acumula tempo desde o início
@@ -831,11 +891,8 @@ func _send_state_to_server(delta: float):
 					is_jumping,
 				)
 				
-# ===== ENVIO DE ANIMAÇÕES (MENOS FREQUENTE) =====
-
+## Envio estado de animações para o servidor (Menos frequente que de send state)
 func _send_animation_state(delta: float):
-	"""Envia estado das animações para a rede"""
-	
 	anim_sync_timer += delta
 	
 	# ✅ Taxa dinâmica: mais frequente quando há ação
@@ -874,9 +931,9 @@ func _send_animation_state(delta: float):
 					current_state["is_block_attacking"],
 					current_state["is_on_floor"]
 				)
-				
+
+## Verifica se o estado de animação mudou significativamente.
 func _animation_state_changed(new_state: Dictionary) -> bool:
-	"""Verifica se o estado de animação mudou significativamente"""
 	if last_anim_state.is_empty():
 		return true
 	
@@ -891,12 +948,9 @@ func _animation_state_changed(new_state: Dictionary) -> bool:
 		return true
 	
 	return false
-	
-# ===== INTERPOLAÇÃO DE JOGADORES REMOTOS =====
 
+## Versão melhorada com fallback para raycast.
 func _get_terrain_height(x: float, z: float) -> float:
-	"""Versão melhorada com fallback para raycast"""
-	
 	# MÉTODO 1: Terrain3D direto
 	if terrain_ and terrain_.data:
 		var h = terrain_.data.get_height(Vector3(x, 0, z))
@@ -920,10 +974,9 @@ func _get_terrain_height(x: float, z: float) -> float:
 	# MÉTODO 3: Usa Y atual do player como fallback final
 	return global_position.y
 
+## Interpola suavemente a posição de jogadores remotos SEM correção de terreno (confia na posição do servidor).
 func _interpolate_remote_player(delta: float):
-	"""Interpola suavemente a posição de jogadores remotos SEM correção de terreno (confia na posição do servidor)"""
-	
-	# ===== CALCULA DISTÂNCIA ATÉ O JOGADOR LOCAL =====
+	# CALCULA DISTÂNCIA ATÉ O JOGADOR LOCAL
 	var local_player = get_tree().get_first_node_in_group("local_player")
 	var distance_to_local = 9999.0
 	
@@ -932,7 +985,7 @@ func _interpolate_remote_player(delta: float):
 	
 	var is_distant = distance_to_local > disable_physics_distance
 	
-	# ===== INTERPOLAÇÃO SUAVE =====
+	# INTERPOLAÇÃO SUAVE
 	if is_distant:
 		# DISTANTE: Interpolação direta SEM física nem correção de terreno
 		var y_interp_speed = interpolation_speed * 0.3
@@ -962,16 +1015,13 @@ func _interpolate_remote_player(delta: float):
 		
 		remote_is_on_floor = is_on_floor()
 	
-	# ===== INTERPOLAÇÃO DE ROTAÇÃO =====
+	# INTERPOLAÇÃO DE ROTAÇÃO
 	visual_rotation_y = lerp_angle(visual_rotation_y, target_rotation_y, interpolation_speed * delta)
 	rotation.y = visual_rotation_y
 	
-# ===== RECEPÇÃO DE ESTADO (REMOTOS) =====
-
-@rpc("authority", "call_remote", "unreliable")
-func _client_receive_state(pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
-	"""Recebe estado de outros jogadores e define alvos para interpolação"""
 	
+## Recebe e aplica estado de outros jogadores(Para os remotos deles aqui).
+func _character_receive_state(pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
 	if is_local_player:
 		return  # Ignora para si mesmo
 	
@@ -979,17 +1029,14 @@ func _client_receive_state(pos: Vector3, rot: Vector3, vel: Vector3, running: bo
 	target_position = pos
 	target_rotation_y = rot.y
 	
-	# Atualiza estados para animações (opcional: pode vir de _client_receive_animation_state)
+	# Atualiza estados para animações (opcional: pode vir de _character_receive_animation_state)
 	is_running = running
 	is_jumping = jumping
 	velocity = vel  # Para gravidade
 
-# ===== RECEPÇÃO DE ANIMAÇÕES (REMOTOS) =====
-
-@rpc("authority", "call_remote", "unreliable")
-func _client_receive_animation_state(speed: float, attacking: bool, defending: bool,
+## Recebe e aplica estado de animação de outros jogadores(Para os remotos deles aqui).
+func _character_receive_animation_state(speed: float, attacking: bool, defending: bool,
  jumping: bool, aiming: bool, _running: bool, block_attacking: bool, on_floor: bool):
-	"""Recebe e aplica estado de animação de outros jogadores"""
 	
 	if is_local_player:
 		return
@@ -1028,12 +1075,11 @@ func _client_receive_animation_state(speed: float, attacking: bool, defending: b
 		else:
 			animation_tree["parameters/bobbing/add_amount"] = 0
 			
+			
 # ===== RECEPÇÃO DE AÇÕES (ATAQUES, DEFESA) =====
 
-@rpc("authority", "call_remote", "reliable")
-func _client_receive_action(action_type: String, item_equipado_nome, anim_name: String):
-	"""Recebe e executa ações de outros jogadores (ataques, defesa, etc)"""
-	
+## Recebe e executa ações de outros jogadores (ataques, defesa, etc).
+func _character_receive_action(action_type: String, item_equipado_nome, anim_name: String):
 	if is_local_player:
 		return
 	
@@ -1070,11 +1116,11 @@ func _client_receive_action(action_type: String, item_equipado_nome, anim_name: 
 		"defend_stop":
 			animation_tree.set("parameters/Blocking/blend_amount", 0.0)
 			
+			
 # ===== AÇÕES DO JOGADOR =====
 
+## Executa e sincroniza ataque.
 func action_sword_attack_call():
-	"""Executa e sincroniza ataque"""
-	
 	# Apenas jogador local pede para atacar
 	if not is_local_player:
 		return
@@ -1116,9 +1162,8 @@ func action_sword_attack_call():
 			# Só local aqui: Pode atacar novamente só depois que acaba o tempo do ataque atual
 			_on_attack_timer_timeout(anim_length)
 
+## Executa e sincroniza ataque com escudo.
 func action_block_attack_call():
-	"""Executa e sincroniza ataque com escudo"""
-	
 	# Apenas jogador local pede para atacar com escudo
 	if not is_local_player:
 		return
@@ -1147,9 +1192,8 @@ func action_block_attack_call():
 			if network_manager and network_manager.is_connected:
 				network_manager.send_player_action(player_id, "block_attack", item_equipado["name"], "Block_Attack")
 
+## Executa e sincroniza defesa.
 func action_lock_call():
-	"""Executa e sincroniza defesa"""
-	
 	# Apenas jogador local pede para defender
 	if not is_local_player:
 		return
@@ -1178,9 +1222,8 @@ func action_lock_call():
 		if network_manager and network_manager.is_connected:
 			network_manager.send_player_action(player_id, "defend_start", "", "")
 
+## Executa e sincroniza fim da defesa.
 func action_stop_locking_call():
-	"""Executa e sincroniza fim da defesa"""
-	
 	# Apenas jogador local
 	if not is_local_player:
 		return
@@ -1215,11 +1258,12 @@ func action_stop_locking_call():
 	# Sincroniza fim da defesa (Reliable)
 	if network_manager and network_manager.is_connected:
 		network_manager.send_player_action(player_id, "defend_stop", "", "")
-
+		
+		
 # ===== INICIALIZAÇÃO MULTIPLAYER =====
 
+## Configura este player como o jogador local.
 func set_as_local_player():
-	"""Configura este player como o jogador local"""
 	is_local_player = true
 	
 	# APENAS JOGADOR LOCAL PROCESSA INPUT
@@ -1233,67 +1277,11 @@ func set_as_local_player():
 	enemy_detection_timer()
 	
 	add_to_group("player")
-
-func initialize(p_name: String, p_color: Color, p_id: int, p_uuid: String, spawn_pos: Vector3):
-	"""Inicializa o player com dados multiplayer"""
-	player_name = p_name
-	player_id = p_id
-	player_uuid = p_uuid
 	
-	# Nome do nó recebe ID do player
-	name = str(p_id)
-	
-	# Posiciona no spawn
-	global_position = spawn_pos
-	target_position = spawn_pos
-	
-	# Atualiza label de nome
-	if name_label:
-		var debug_enabled = server_manager.visual_debug if _is_server else game_manager.visual_debug
-		
-		name_label.text = (
-			"%s\n%s[...]%s\n%s" % [
-				p_name,
-				player_uuid.substr(0, 4),
-				player_uuid.substr(player_uuid.length() - 4, 4),
-				player_id
-			]
-		) if debug_enabled else p_name
-			
-		setup_name_label(p_color)
-		
-	# Configuração de processos
-	if not is_local_player:
-		# Remotos não processam input
-		set_process_input(false)
-		set_process_unhandled_input(false)
-		
-		floor_stop_on_slope = true
-		floor_max_angle = deg_to_rad(45)
-		floor_snap_length = 0.8  # Aumenta snap (ajuda a grudar no chão)
-		platform_floor_layers = 1  # Certifica que detecta layer do terreno
-		
-	# Define autoridade multiplayer
-	set_multiplayer_authority(player_id)
-	
-	# Ativa processos
-	set_physics_process(true)
-	set_process(true)
-	
-	# Preenche o atalho de nó do terreno
-	terrain = get_tree().get_root().get_node_or_null("Round/Terrain3D")
-	
-	# visibilidade inicial (modelo)
-	if hide_itens_on_start:
-		_hide_all_model_items()
-	
-	# Ativa hitboxes
-	if _is_server:
-		hitboxes_manager()
 	
 # ===== FUNÇÕES DE ITENS ===============
 
-# Função para equipar itens magicamente (Trainer de testes / Remover em produção)
+## Função para equipar itens magicamente (Trainer de testes / Remover em produção).
 func handle_test_equip_inputs_call():
 
 	if not stop_movment:
@@ -1318,7 +1306,7 @@ func handle_test_equip_inputs_call():
 			if network_manager and network_manager.is_connected:
 				network_manager.request_trainer_spawn_item(player_id, mapped_id)
 				
-# Ações do player (Dropar item)
+## Ações de chamada do player (Dropar item).
 func handle_test_drop_item_call() -> void:
 	if not is_local_player:
 		return
@@ -1326,7 +1314,7 @@ func handle_test_drop_item_call() -> void:
 	if network_manager and network_manager.is_connected:
 		network_manager.request_trainer_drop_item(player_id)
 
-# Ações do player (Respawnar novamente)
+## Ações de chamada do player (Respawnar novamente).
 func handle_test_repawn_player_call():
 	if not is_local_player:
 		return
@@ -1334,13 +1322,12 @@ func handle_test_repawn_player_call():
 	if network_manager and network_manager.is_connected:
 		network_manager.request_trainer_respawn_player(player_id)
 	
-# Executa quando o player equipa algum item / muda visual do modelo
+## Executa quando o player equipa algum item / muda visual do modelo.
+## Aplica mudança visual em itens equipéveis que estão como filhos no nó do player.
+##  item_mapped_id: Id do item, não do objeto, para obtenção de item_node_link.
+##  unnequip: Comando para esconder visualmente este item e todos os seus outros irmãos manter escondidos.
+##  from_inv_men: Se vier como comando de inventory_menu.
 func apply_visual_equip_on_player_node(item_mapped_id, unnequip = false, from_inv_men = false):
-	"""Aplica mudança visual em itens equipéveis que estão como filhos no nó do player
-	item_mapped_id: Id do item, não do objeto, para obtenção de item_node_link.
-	unnequip: Comando para esconder visualmente este item e todos os seus outros irmãos manter escondidos.
-	from_inv_men: Se vier como comando de inventory_menu"""
-
 	if from_inv_men:
 		_execute_animation("Interact", "Common", "parameters/Interact/transition_request", "parameters/Interact_shot/request")
 	
@@ -1348,11 +1335,10 @@ func apply_visual_equip_on_player_node(item_mapped_id, unnequip = false, from_in
 	
 	_item_model_change_visibility(self, item_node_link, unnequip)
 
-# Ações do player (Pegar item)
+## Ações de chamada do player (Pegar item).
+## Servidor não pede, só local pede, servidor recebe pedido e processa usando
+## node do player remoto do servidor.
 func action_pick_up_item_call():
-	# Servidor não pede, só local pede, servidor recebe pedido e processa usando
-	# node do player remoto do servidor
-
 	if not is_local_player:
 		return
 		
@@ -1365,29 +1351,33 @@ func action_pick_up_item_call():
 	_log_debug("Player %s pediu para pegar o item %d" % [player_name, object.object_id])
 	if network_manager and network_manager.is_connected and object:
 		network_manager.request_pick_up_item(player_id, object.object_id)
-		
+
+## Ações de execução do personagem (Pegar item).
 func action_pick_up_item():
 	#_execute_animation("Interact", "Common", "parameters/Interact/transition_request", "parameters/Interact_shot/request")
 	_execute_animation("PickUp", "Common", "parameters/PickUp/transition_request", "parameters/Pickup_shot/request")
 	
 	#animation_tree.set("PickUp", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 
-# Ações do player (Dropar item)
+## Ação de chamada do player (Dropar item).
 func action_drop_item_call(obj_id) -> void:
 	if not is_local_player:
 		return
 		
 	if network_manager and network_manager.is_connected:
 		network_manager.request_drop_item(player_id, int(obj_id))
-		
+
+## Ação de execução do personagem (Dropar item).
 func execute_item_drop():
 	# Animação de drop
 	_execute_animation("Interact", "Common", "parameters/Interact/transition_request", "parameters/Interact_shot/request")
 
+## Ação de execução do personagem (Trocar item).
 func execute_item_swap():
 	# Animação de swap
 	_execute_animation("Interact", "Common", "parameters/Interact/transition_request", "parameters/Interact_shot/request")
 
+## Ação de chamada do player (Equipar item).
 func action_equip_item_call(item_id, slot_type):
 	if not is_local_player:
 		return
@@ -1395,6 +1385,7 @@ func action_equip_item_call(item_id, slot_type):
 	if network_manager and network_manager.is_connected:
 		network_manager.request_equip_item(player_id, int(item_id), slot_type)
 
+## Ação de chamada do player (Desequipar item).
 func action_unequip_item_call(slot_type):
 	if not is_local_player:
 		return
@@ -1402,6 +1393,7 @@ func action_unequip_item_call(slot_type):
 	if network_manager and network_manager.is_connected:
 		network_manager.request_unequip_item(player_id, slot_type)
 
+## Ação de chamada do player (Trocar item).
 func action_swap_items_call(item_id_1: String, item_id_2: String):
 	if not is_local_player:
 		return
@@ -1409,26 +1401,20 @@ func action_swap_items_call(item_id_1: String, item_id_2: String):
 	if network_manager and network_manager.is_connected:
 		network_manager.request_swap_items(item_id_1, item_id_2)
 
-# Modifica a visibilidade do item na mão do modelo
+## Modifica a visibilidade do item na mão do modelo.
+## Aplica visibilidade em um item específico através do node_link.
+## Se visible = true, ESCONDE todos os outros itens no mesmo slot.
+## Args:
+##   node: O nó do player (CharacterBody3D).
+##   item: Dicionário com dados do item (deve ter 'node_link').
+##   visible: true para mostrar (e esconder outros), false para esconder.
+## Returns:
+##   bool: true se conseguiu aplicar, false se falhou.
+## Exemplo:
+##   node_link: "Knight/Rig/Skeleton3D/handslot_l/shield_2"
+##   Se visible=true, TODOS os filhos de "handslot_l" serão escondidos,
+##   EXCETO "shield_2" que será mostrado.
 func _item_model_change_visibility(player_node, node_link: String, unnequip = false):
-	"""
-	Aplica visibilidade em um item específico através do node_link
-	Se visible = true, ESCONDE todos os outros itens no mesmo slot
-	
-	Args:
-		node: O nó do player (CharacterBody3D)
-		item: Dicionário com dados do item (deve ter 'node_link')
-		visible: true para mostrar (e esconder outros), false para esconder
-	
-	Returns:
-		bool: true se conseguiu aplicar, false se falhou
-	
-	Exemplo:
-		node_link: "Knight/Rig/Skeleton3D/handslot_l/shield_2"
-		Se visible=true, TODOS os filhos de "handslot_l" serão escondidos,
-		EXCETO "shield_2" que será mostrado
-		"""
-
 	# VALIDAÇÃO: Verifica se node é válido
 	if not player_node or not is_instance_valid(player_node):
 		push_error("apply_item_visibility: node inválido ou null")
@@ -1493,13 +1479,15 @@ func _item_model_change_visibility(player_node, node_link: String, unnequip = fa
 			
 	_log_debug("🚫_item_model_change_visibility: Monstrando: %s" % item_node.name)
 	
+	
 # ===== UTILS =====
 
 func _respawn_player(_position : Vector3):
 	global_position = _position
+	_log_debug("Respawn do player em: %s" % _position)
 
+## Configura o label de nome do personagem em cima da cabeça dele.
 func setup_name_label(color: Color):
-	"""Configura label de nome para multiplayer"""
 	if not name_label:
 		return
 	
@@ -1516,9 +1504,9 @@ func setup_name_label(color: Color):
 		name_label.visible = false
 	else:
 		name_label.visible = true
-		
+
+## Imprime mensagem de debug se habilitado
 func _log_debug(message: String):
-	"""Imprime mensagem de debug se habilitado"""
 	if not debug:
 		return
 	
@@ -1534,3 +1522,4 @@ func verificar_rede():
 	if peer != null and peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED:
 		return true
 	return false
+	

@@ -916,16 +916,16 @@ func _on_quit_pressed():
 func _on_round_return_menu_back_pressed():
 	show_main_menu()
 
+## Cliente sinalizou que quer retornar à partida em que estava (personagem aguardando reconexão).
 func _on_round_return_menu_continue_pressed():
-	"""Cliente sinalizou que quer retornar à partida em que estava (personagem aguardando reconexão)"""
 	if current_menu_visible == round_return_menu:
 		game_manager._request_return_to_round()
 		if disable_protection:
 			round_return_continue_button.disabled = true
 	
+## Cliente sinalizou que não quer mais retornar à partida em que estava (personagem sai da 
+## partida pra sempre.
 func _on_round_return_menu_exit_pressed():
-	"""Cliente sinalizou que não quer mais retornar à partida em que estava (personagem sai da 
-	partida pra sempre"""
 	if disable_protection:
 		round_return_menu_exit_button.disabled = true
 	if current_menu_visible == round_return_menu:
@@ -1350,8 +1350,8 @@ func _load_ui_from_settings():
 	if invert_y_check:
 		invert_y_check.button_pressed = current_settings["controls"]["invert_y"]
 
+## Aplica configurações de vídeo.
 func _apply_video_settings():
-	"""Aplica configurações de vídeo de forma robusta"""
 	# Valida se as configurações existem
 	if not current_settings.has("video"):
 		push_error("Configurações de vídeo não encontradas")
@@ -1434,8 +1434,8 @@ func _apply_video_settings():
 	
 	_log_debug("Configurações de vídeo aplicadas com sucesso")
 	
+## Centraliza a janela no monitor atual.
 func _center_window():
-	"""Centraliza a janela no monitor atual"""
 	await get_tree().process_frame
 	
 	var window = get_window()
@@ -1462,8 +1462,8 @@ func _center_window():
 	# Aguarda aplicação
 	await get_tree().process_frame
 	
+## Move a janela para o monitor principal.
 func _move_to_primary_screen():
-	"""Move a janela para o monitor principal"""
 	var window = get_window()
 	if not window:
 		return
@@ -1480,9 +1480,8 @@ func _move_to_primary_screen():
 	
 	_log_debug("Janela movida para o monitor principal")
 	
-# FUNÇÃO AUXILIAR: Retorna lista de resoluções disponíveis para o monitor atual
+## Retorna resoluções comuns que cabem no monitor atual.
 func get_available_resolutions() -> Array[Vector2i]:
-	"""Retorna resoluções comuns que cabem no monitor atual"""
 	var current_screen = DisplayServer.window_get_current_screen()
 	var screen_size = DisplayServer.screen_get_size(current_screen)
 	
@@ -1506,6 +1505,7 @@ func _apply_audio_settings():
 	_apply_volume_realtime("Master", current_settings["audio"]["master_volume"])
 	_apply_volume_realtime("Music", current_settings["audio"]["music_volume"])
 	_apply_volume_realtime("SFX", current_settings["audio"]["sfx_volume"])
+	
 	
 # ===== CALLBACKS DO MENU DE SALA (LOBBY) =====
 
@@ -1551,6 +1551,7 @@ func _on_room_kick_player_pressed():
 		_show_error_("Nenhum player selecionado", room_error_label, "Red")
 		return
 	game_manager.kick_player_from_room(selected_player_id)
+
 
 # ===== ATUALIZAÇÃO DO MENU DE SALA =====
 
@@ -1626,6 +1627,7 @@ func update_name_e_connected(server_name: String, player_name: String):
 		if connect_name_label:
 			connect_name_label.text = '🌐🔗 Conectado em "%s" como %s' % [server_name, player_name]
 		
+		
 # ===== FUNÇÕES DE MENSAGENS DE ERRO =====
 
 func _show_error_(message: String, label: Label, color: String = "green"):
@@ -1661,20 +1663,22 @@ func _timeout_quando_terminar():
 	current_label.text = ""
 	ml_error_messages.clear()
 
+
 # ===== FUNÇÕES DE CONTROLE DE CARREGAMENTO =====
 
+## Atualiza o progresso do carregamento (0.0 a 1.0 ou 0 a 100).
 func update_loading_progress(progress: float):
-	"""Atualiza o progresso do carregamento (0.0 a 1.0 ou 0 a 100)"""
 	if loading_progress:
 		if progress <= 1.0:
 			loading_progress.value = progress * 100.0
 		else:
 			loading_progress.value = progress
 
+## Atualiza a mensagem de carregamento.
 func update_loading_message(message: String):
-	"""Atualiza a mensagem de carregamento"""
 	if loading_label:
 		loading_label.text = message
+
 
 # ===== CALLBACKS DO GAMEMANAGER =====
 
@@ -1721,8 +1725,8 @@ func _on_game_manager_room_updated(room_data: Dictionary):
 
 func _on_game_manager_match_started():
 	_log_debug("Partida iniciada!")
-	# A troca de cena é feita pelo GameManager
-	# Aqui você pode mostrar uma tela de transição se quiser
+	# Ps: A troca de cena é feita pelo GameManager
+
 
 # ===== CALLBACKS DE VÍDEO =====
 
@@ -1740,6 +1744,7 @@ func _on_window_mode_selected(index: int):
 
 func _on_fps_limit_selected(index: int):
 	current_settings["video"]["fps_limit"] = index
+
 
 # ===== CALLBACKS DE ÁUDIO =====
 
@@ -1771,6 +1776,7 @@ func _apply_volume_realtime(bus_name: String, value: float):
 			var volume_db = linear_to_db(value / 100.0)
 			AudioServer.set_bus_volume_db(bus_idx, volume_db)
 
+
 # ===== CALLBACKS DE CONTROLES =====
 
 func _on_mouse_sensitivity_changed(value: float):
@@ -1781,6 +1787,7 @@ func _on_mouse_sensitivity_changed(value: float):
 func _on_invert_y_toggled(enabled: bool):
 	current_settings["controls"]["invert_y"] = enabled
 
+
 # ===== BOTÃO RESET =====
 
 func _on_reset_pressed():
@@ -1788,10 +1795,11 @@ func _on_reset_pressed():
 	_reset_to_default()
 	_load_ui_from_settings()
 	
+	
 # ===== UTILITÁRIOS =====
 
+## Imprime mensagem de debug se habilitado.
 func _log_debug(message: String):
-	"""Imprime mensagem de debug se habilitado"""
 	if not debug_mode:
 		return
 		

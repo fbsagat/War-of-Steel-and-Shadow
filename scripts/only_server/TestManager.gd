@@ -45,8 +45,8 @@ var dummy_camera: Camera3D
 
 # ===== INICIALIZAÇÃO =====
 
+## Inicializa o TestManager (chamado pelo ServerManager).
 func initialize():
-	"""Inicializa o TestManager (chamado pelo ServerManager)"""
 	if _initialized:
 		_log_debug("⚠ TestManager já inicializado")
 		return

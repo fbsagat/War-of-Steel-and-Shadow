@@ -330,8 +330,8 @@ func update_drag_preview(mouse_pos: Vector2):
 			if drop_area.modulate != Color(1.0, 1.0, 1.0, 1.0):
 				drop_area.modulate = Color(1.0, 1.0, 1.0, 1.0)
 
+## Centraliza o preview no cursor.
 func _update_drag_preview_position(mouse_pos: Vector2):
-	"""Centraliza o preview no cursor"""
 	if drag_preview:
 		var center_offset = drag_preview.size / 2
 		drag_preview.global_position = mouse_pos - center_offset
