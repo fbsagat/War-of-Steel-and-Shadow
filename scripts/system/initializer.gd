@@ -18,11 +18,11 @@ extends Node
 
 # Instruções para debug
 ## Executa _log_debug apenas nos itens selecionados
-var activate_only_selected: bool = false
+var activate_only_selected: bool = true
 # Disponíveis: "Server", "NetworkManager", "TestManager", "GameManager", "RoomRegistry"
 # "RoundRegistry", "ClientRegistry", "Player_node", "ObjectManager", "MapManager", "MainMenu"
 # "ItemDatabase", "InventoryMenu", "DroppedItem"
-var selected: Array = ["ObjectManager", "DroppedItem", "GameManager", "Player_node"]
+var selected: Array = []
 
 # Referências
 ## Manager de rede, gerencia comunicação entre servidor e clientes
@@ -316,4 +316,36 @@ func _init_client(id_file_):
 	network_manager.initialize()
 	item_database.load_database()
 	game_manager.initialize()
+
+# ============== FUNÇÕES AUXILIARES GLOBAIS ==============
+
+func pretty_print_dict(data, indent: int = 0) -> void:
+	var spacing = "  ".repeat(indent)
 	
+	if typeof(data) == TYPE_DICTIONARY:
+		for key in data.keys():
+			var value = data[key]
+			
+			if typeof(value) == TYPE_DICTIONARY:
+				print("[pp]  %s%s: {" % [spacing, str(key)])
+				pretty_print_dict(value, indent + 1)
+				print("[pp]  %s}" % spacing)
+			
+			elif typeof(value) == TYPE_ARRAY:
+				print("[pp]  %s%s: [" % [spacing, str(key)])
+				pretty_print_dict(value, indent + 1)
+				print("[pp]  %s]" % spacing)
+			
+			else:
+				print("[pp]  %s%s: %s" % [spacing, str(key), str(value)])
+	
+	elif typeof(data) == TYPE_ARRAY:
+		for i in data.size():
+			var value = data[i]
+			
+			if typeof(value) == TYPE_DICTIONARY or typeof(value) == TYPE_ARRAY:
+				print("[pp]  %s[%d]: {" % [spacing, i])
+				pretty_print_dict(value, indent + 1)
+				print("[pp]  %s}" % spacing)
+			else:
+				print("[pp]  %s[%d]: %s" % [spacing, i, str(value)])

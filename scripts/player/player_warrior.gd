@@ -1327,11 +1327,12 @@ func handle_test_repawn_player_call():
 ##  item_mapped_id: Id do item, não do objeto, para obtenção de item_node_link.
 ##  unnequip: Comando para esconder visualmente este item e todos os seus outros irmãos manter escondidos.
 ##  from_inv_men: Se vier como comando de inventory_menu.
-func apply_visual_equip_on_player_node(item_mapped_id, unnequip = false, from_inv_men = false):
+func apply_visual_equip_on_player_node(item_mapped_id: int, unnequip = false, from_inv_men = false):
+	print("[111]apply_visual_equip_on_player_node: ", item_mapped_id)
 	if from_inv_men:
 		_execute_animation("Interact", "Common", "parameters/Interact/transition_request", "parameters/Interact_shot/request")
 	
-	var item_node_link = item_database.get_item_by_id(int(item_mapped_id)).model_node_link
+	var item_node_link = item_database.get_item_by_id(item_mapped_id).model_node_link
 	
 	_item_model_change_visibility(self, item_node_link, unnequip)
 

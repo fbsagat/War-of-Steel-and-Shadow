@@ -1102,16 +1102,6 @@ func start_round(round_settings: Dictionary = {}):
 	_log_debug("Solicitando início da rodada...")
 	is_loading = true
 	network_manager._server_request_start_round(round_settings)
-	
-## Callback quando a rodada inicia.
-func _client_round_started(server_id: String, match_data: Dictionary):
-	_log_debug("Rodada iniciada pelo servidor!")
-	_start_round_locally(server_id, match_data)
-
-## Callback quando o jogador retorna à rodada
-func _client_round_return(server_id: String, match_data: Dictionary):
-	_log_debug("retornando à rodada")
-	_return_round_locally(server_id, match_data)
 
 ## Callback quando a rodada termina.
 func _client_round_ended(end_data: Dictionary):
@@ -1141,203 +1131,163 @@ func _client_round_ended(end_data: Dictionary):
 	# Limpa objetos locais
 	_cleanup_local_round()
 
-## Inicia a rodada localmente no cliente.
-func _start_round_locally(server_id: String, match_data: Dictionary):
+## Callback quando a rodada inicia pela primeira vez.
+func _client_round_started(server_id: String, match_data: Dictionary) -> void:
+	_log_debug("Rodada iniciada pelo servidor!")
+	#print("[pp]  -------------------- _client_round_started --------------------")
+	#initializer.pretty_print_dict(match_data)
+	#print("[pp]  -------------------- pp End --------------------")
+	await _load_round(server_id, match_data, false)
+
+## Callback quando o jogador retorna a uma rodada em andamento.
+func _client_round_return(server_id: String, match_data: Dictionary) -> void:
+	_log_debug("Retornando à rodada.")
+	#print("[pp]  -------------------- _client_round_return --------------------")
+	#initializer.pretty_print_dict(match_data)
+	#print("[pp]  -------------------- pp End --------------------")
+	await _load_round(server_id, match_data, true)
+
+## Carrega a rodada localmente no cliente.
+## [param server_id] ID do servidor que originou a rodada.
+## [param match_data] Dados da partida recebidos do servidor, mantidos intactos.
+## [param is_return] Se [code]true[/code], restaura estado de uma rodada em andamento.
+func _load_round(server_id: String, match_data: Dictionary, is_return: bool) -> void:
 	_log_debug("========================================")
-	_log_debug("INICIANDO RODADA")
+	_log_debug("RETORNANDO À RODADA" if is_return else "INICIANDO RODADA")
 	_log_debug("Sala: ID %d" % match_data["room_id"])
 	_log_debug("Rodada: ID %d" % match_data["round_id"])
 	_log_debug("Mapa: %s" % match_data["map_scene"])
 	_log_debug("Jogadores participantes:")
-	
-	for player in match_data["players"]:
-		var is_host = " [HOST]" if player["is_host"] else ""
-		var is_me = " [GUEST]" if player["id"] == uuid_base else ""
+
+	for player: Dictionary in match_data["players"]:
+		var is_host: String  = " [HOST]"  if player["is_host"]      else ""
+		var is_me: String    = " [ME]"    if player["id"] == uuid_base else ""
 		_log_debug("- %s (ID: %s)%s%s" % [player["name"], player["id"], is_host, is_me])
-	
+
 	_log_debug("========================================")
-	
+
 	is_in_round = true
-		
+
 	await get_tree().process_frame
-	
-	# Criar cena de organização do round
+
+	# Cria o nó organizador da rodada
 	round_node = preload("res://scripts/utils/round_node.gd").new()
-	round_node.name = "Round"
-	round_node.round_id = match_data["round_id"]
-	round_node.room_id = match_data["room_id"]
+	round_node.name      = "Round"
+	round_node.round_id  = match_data["round_id"]
+	round_node.room_id   = match_data["room_id"]
 	round_node.server_id = server_id
-		
-	await get_tree().process_frame
-	
-	# Adiciona à raiz
+
 	get_tree().root.add_child(round_node)
-	
-	# Cria nós organizacionais
-	players_node = Node.new()
-	players_node.name = "Players"
+
+	await get_tree().process_frame
+
+	# Cria nós organizacionais filhos do round
+	players_node        = Node.new()
+	players_node.name   = "Players"
 	round_node.add_child(players_node)
 
-	objects_node = Node.new()
-	objects_node.name = "Objects"
+	objects_node        = Node.new()
+	objects_node.name   = "Objects"
 	round_node.add_child(objects_node)
-		
+
 	await get_tree().process_frame
-	
-	# Carrega a cena da câmera
-	camera_scene = preload(camera_controller)
+
+	# Instancia e adiciona a câmera à cena
+	camera_scene    = preload(camera_controller)
 	camera_instance = camera_scene.instantiate()
-	# Adiciona câmera à cena
 	players_node.add_child(camera_instance)
-	
+
 	await get_tree().process_frame
-	
-	# Carrega o mapa
+
+	# Carrega o mapa e aplica suas configurações
 	await map_manager.load_map(match_data["map_scene"], round_node, camera_instance.camera)
 	await map_manager.apply_map_configs(match_data["settings"])
 
-	# Spawna todos os jogadores
-	for player_data in match_data["players"]:
-		var is_local = player_data["id"] == uuid_base
+	# Spawna todos os jogadores da partida
+	for player_data: Dictionary in match_data["players"]:
+		var is_local: bool = player_data["id"] == uuid_base
 		_spawn_player(player_data, is_local, match_data)
-		
+
 	await get_tree().process_frame
-	
-	# Esconde o menu
+
+	# Etapas exclusivas do retorno: restaura estado da rodada em andamento
+	if is_return:
+		await _restore_round_state(match_data)
+
+	# Esconde o menu principal
 	if main_menu_node:
 		main_menu_node.hide_main_menu()
-		
+
 	round_started.emit()
-	
-	# Filtrar uns itens e deixar numa variável(current_round) para uso durante a partida
-	# Modifique em filtrar_dict_invertido a lista de itens que devem retornar do dicionário match_data
-	var filtered_round_data = filtrar_dict_invertido(match_data)
+
+	# Filtra e armazena os dados relevantes da rodada atual
+	var filtered_round_data: Dictionary = filtrar_dict_invertido(match_data)
 	current_round = filtered_round_data
-	
+
+	# Sinaliza ao servidor que o jogador reconectou (apenas no retorno)
+	if is_return:
+		_unmark_player_disconnected()
+
 	finish_loading()
 	await get_tree().process_frame
-	_log_debug("Rodada carregada no cliente")
+	_log_debug("Rodada %s no cliente." % ("recarregada" if is_return else "carregada"))
 
-## Retorna à rodada localmente no cliente.
-func _return_round_locally(server_id: String, match_data: Dictionary):
-	_log_debug("========================================")
-	_log_debug("RETORNANDO À RODADA")
-	_log_debug("Sala: ID %d" % match_data["room_id"])
-	_log_debug("Rodada: ID %d" % match_data["round_id"])
-	_log_debug("Mapa: %s" % match_data["map_scene"])
-	_log_debug("Jogadores participantes:")
+## Restaura o estado da rodada ao reconectar: equipamentos, inventário e objetos no mapa.
+## [param match_data] Dados completos da partida recebidos do servidor.
+func _restore_round_state(match_data: Dictionary) -> void:
+	# Restaura visuais de equipamentos para cada jogador
 	
-	for player in match_data["players"]:
-		var is_host = " [HOST]" if player["is_host"] else ""
-		var is_me = " [GUEST]" if player["id"] == uuid_base else ""
-		_log_debug("- %s (ID: %s)%s%s" % [player["name"], player["id"], is_host, is_me])
-	
-	_log_debug("========================================")
-	
-	is_in_round = true
+	for player_node in players_node.get_children():
+		var peer_id = player_node.name
+		if peer_id == "CameraController":
+			continue
+		peer_id = str(peer_id)
 		
-	await get_tree().process_frame
-	
-	# Criar cena de organização do round
-	round_node = preload("res://scripts/utils/round_node.gd").new()
-	round_node.name = "Round"
-	round_node.round_id = match_data["round_id"]
-	round_node.room_id = match_data["room_id"]
-	round_node.server_id = server_id
-	
-	# Adiciona à raiz
-	get_tree().root.add_child(round_node)
-		
-	await get_tree().process_frame
-	
-	# Cria nós organizacionais
-	players_node = Node.new()
-	players_node.name = "Players"
-	round_node.add_child(players_node)
+		for session_id in match_data["equipped_items"]:
+			var slots: Dictionary = match_data["equipped_items"][session_id]
+			
+			print("Player:", session_id)
+			
+			for slot_name in slots:
+				var item: Dictionary = slots[slot_name]
+				
+				if item.is_empty():
+					continue
+				
+				var item_id = int(item.get("item_id"))
+				var object_id = item.get("object_id")
+				
+				print("  Slot:", slot_name, "| item_id:", item_id, "| object_id:", object_id)
 
-	objects_node = Node.new()
-	objects_node.name = "Objects"
-	round_node.add_child(objects_node)
-		
-	await get_tree().process_frame
-	
-	# Carrega a cena da câmera
-	camera_scene = preload(camera_controller)
-	camera_instance = camera_scene.instantiate()
-	# Adiciona câmera à cena
-	players_node.add_child(camera_instance)
-	
-	# Carrega o mapa
-	await map_manager.load_map(match_data["map_scene"], round_node, camera_instance.camera)
-	await map_manager.apply_map_configs(match_data["settings"])
-	
-	await get_tree().process_frame
-	
-	# Spawna todos os jogadores
-	for player_data in match_data["players"]:
-		# \/ Se for igual, retorna true
-		var is_local = player_data["id"] == uuid_base
-		_spawn_player(player_data, is_local, match_data)
-	
-	# Atualiza visual de equipamentos para cada personagem, incluindo local
-	# (local deve usar funções do game manager add_item_to_inventory e equip_item antes de 
-	# apply_visual_equip_on_player_node no nó do personagem)
-		
-	await get_tree().process_frame
-	
-	for player_uuid in match_data["equipped_items"]:
-		var slots = match_data["equipped_items"][player_uuid]
-		for slot_name in slots:
-			var item = slots[slot_name]
-			if item.is_empty():
-				continue
-			var item_id = item.get("item_id")
-			var object_id = item.get("object_id")
-			var node = players_node.get_node_or_null(str(player_uuid))
-			if player_uuid == multiplayer.get_unique_id():
-				var item_name = item_database.get_item_by_id(int(item_id))["name"]
-				add_item_to_inventory(item_id, object_id)
-				equip_item(object_id, "", item_name)
-				node.apply_visual_equip_on_player_node(item_id)
-			else:
-				node.apply_visual_equip_on_player_node(item_id)
-	
-	# Atualiza visual de itens no inventário do player local
-	for item in match_data["player_items"]:
+				# Jogador local: registra no inventário e equipa o item
+				if session_id == local_peer_id:
+					var item_name: String = item_database.get_item_by_id(int(item_id))["name"]
+					add_item_to_inventory(str(item_id), object_id)
+					equip_item(object_id, "", item_name)
+
+				# Todos aplicam o visual no nó do personagem (local e remoto)
+				player_node.apply_visual_equip_on_player_node(item_id)
+
+	# Restaura itens no inventário do jogador local que não estão equipados
+	for item: Dictionary in match_data["player_items"]:
 		add_item_to_inventory(item["item_id"], item["object_id"])
-		
+
 	await get_tree().process_frame
-	
-	# Spawna objetos com localização(e outros atributos) atual na partida
-	for object_id in match_data["round_objects"]:
-		var item = match_data["round_objects"][object_id]
-		var round_id = item["round_id"]
-		var name_ = item["item_name"]
-		var position = item["position"]
-		var rotation = item["rotation"]
-		var velocity = item["drop_velocity"]
-		var owner_ = item["owner_uuid"]
-		_spawn_on_client(object_id, round_id, name_, position, rotation, velocity, owner_)
-		
+
+	# Spawna os objetos presentes na rodada com suas posições e atributos atuais
+	for object_id: Variant in match_data["round_objects"]:
+		var item: Dictionary = match_data["round_objects"][object_id]
+		_spawn_on_client(
+			object_id,
+			item["round_id"],
+			item["item_name"],
+			item["position"],
+			item["rotation"],
+			item["drop_velocity"],
+			item["owner_uuid"]
+		)
+
 	await get_tree().process_frame
-	
-	# Esconde o menu
-	if main_menu_node:
-		main_menu_node.hide_main_menu()
-	
-	round_started.emit()
-	
-	# Filtrar uns itens e deixar numa variável(current_round) para uso durante a partida
-	# Modifique em filtrar_dict_invertido a lista de itens que devem retornar do dicionário match_data
-	var filtered_round_data = filtrar_dict_invertido(match_data)
-	current_round = filtered_round_data
-	
-	# Sinalizar pra o servidor que está reconectado na rodada
-	_unmark_player_disconnected()
-	
-	finish_loading()
-	await get_tree().process_frame
-	_log_debug("Rodada recarregada no cliente")
 
 ## Spawna players para cada cliente.
 ## Cada cliente recebe X execuções: a do seu jogador local e a do(s) jogador(es) remoto(s).
@@ -1353,6 +1303,7 @@ func _spawn_player(player_data: Dictionary, is_local: bool, _match_data: Diction
 		push_error("GameManager: _match_data sem spawn_points válidos")
 		return
 	
+	# Atualiza game manager com novos dados recebidos
 	var player_name_ = str(player_data["id"])
 	var camera_name = player_name_ + "_Camera"
 	var session_id = player_data["session_id"]
@@ -1409,7 +1360,6 @@ func _spawn_player(player_data: Dictionary, is_local: bool, _match_data: Diction
 	_log_debug("🌳 [Spawn] Adicionando player à cena...")
 	
 	players_node.add_child(player_instance)
-	
 	# Aguarda o player estar na árvore com timeout
 	var tree_timeout = 60  # ~1 segundo
 	var tree_waited = 0

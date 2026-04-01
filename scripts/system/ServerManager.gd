@@ -1947,7 +1947,7 @@ func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 	
 	# Aplica visual tbm na cena do servidor
 	if player_node and player_node.has_method("apply_visual_equip_on_player_node"):
-		player_node.apply_visual_equip_on_player_node(str(item["id"]))
+		player_node.apply_visual_equip_on_player_node(item["id"])
 
 ## Servidor recebe pedido de equipar item, valida e redistribui
 func _server_validate_equip_item(requesting_player_id: int, object_id: int, _target_slot_type):
@@ -2224,7 +2224,7 @@ func _server_validate_drop_item(requesting_player_id: int, obj_id: int):
 		# Aplica no nó do servidor
 		var player_node = client_registry.get_player_node(player_uuid)
 		if player_node and player_node.has_method("apply_visual_equip_on_player_node"):
-			player_node.apply_visual_equip_on_player_node(int(item_id), true)
+			player_node.apply_visual_equip_on_player_node(item_id, true)
 		
 		# Aplicar nos players remotos dos clientes
 		var filtered_ = round_registry.get_round_players_spawned_filter(round_["round_id"])

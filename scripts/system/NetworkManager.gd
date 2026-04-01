@@ -249,6 +249,10 @@ func _server_swap_items(_item_id_1, _item_id_2):
 func _server_trainer_spawn_item(_requesting_player_id: int, _item_id: int):
 	pass
 
+@rpc("any_peer", "call_remote", "reliable")
+func _server_trainer_drop_item(_player_id):
+	pass
+
 @rpc("any_peer", "call_remote", "unreliable")
 func _server_trainer_respawn_player(_player_id):
 	pass

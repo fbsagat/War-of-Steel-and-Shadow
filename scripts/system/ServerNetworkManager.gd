@@ -363,6 +363,8 @@ func _server_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, r
 	for peer_id in players_round:
 		if peer_id != sender_uuid:
 			var session_id = client_registry.get_peer_id_by_uuid(peer_id)
+			if not _is_peer_connected(session_id):
+				return
 			rpc_id(session_id, "_client_player_state", p_id, pos, rot, vel, running, jumping)
 
 func _server_player_animation_state(p_id: int, speed: float, attacking: bool, defending: bool,
@@ -383,6 +385,8 @@ func _server_player_animation_state(p_id: int, speed: float, attacking: bool, de
 	for peer_id in players_round:
 		if peer_id != player_uuid:
 			var session_id = client_registry.get_peer_id_by_uuid(peer_id)
+			if not _is_peer_connected(session_id):
+				return
 			rpc_id(session_id, "_client_player_animation_state", int(p_id), speed, attacking,
 				   defending, jumping, aiming, running, block_attacking, on_floor)
 				
@@ -415,6 +419,8 @@ func stop_peer_sync(peer_id: int) -> void:
 
 ## Remove a exclusão (reconexão ou troca de round).
 func resume_peer_sync(peer_id: int) -> void:
+	if not _is_peer_connected(peer_id):
+		return
 	_excluded_peers.erase(peer_id)
 
 func _server_update_batch(delta: float) -> void:
@@ -470,6 +476,8 @@ func _send_batch_for_round(round_id: int) -> void:
 			#[ep_, ep_.get_state() if ep_ else "NULL", ENetPacketPeer.STATE_CONNECTED])
 			if not ep_ or ep_.get_state() != ENetPacketPeer.STATE_CONNECTED:
 				continue
+		if not _is_peer_connected(peer_id):
+			return
 		_rpc_client_batch_sync.rpc_id(peer_id, round_id, ids, positions, rotations)
 
 func _get_round_peers(round_id: int) -> Array:
@@ -510,6 +518,14 @@ func _drain_pending_peers(delta: float) -> void:
 
 # ===== UTILITÁRIOS =====
 
+## Verifica se um peer ainda está conectado
+func _is_peer_connected(peer_id: int) -> bool:
+	if not multiplayer.has_multiplayer_peer():
+		return false
+	
+	var connected_peers = multiplayer.get_peers()
+	return peer_id in connected_peers
+	
 func _safe_disconnect(peer_id: int):
 	if not multiplayer.has_multiplayer_peer():
 		return
