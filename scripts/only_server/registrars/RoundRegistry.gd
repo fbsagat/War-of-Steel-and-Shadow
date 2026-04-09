@@ -14,7 +14,7 @@ class_name RoundRegistry
 ##
 ## IDENTIFICAÇÃO:
 ## - Jogadores são identificados por uuid_base (String) em todos os métodos
-## - player["id"], spawned_players, disconnected_players e scores usam uuid_base
+## - player["uuid_base"], spawned_players, disconnected_players e scores usam uuid_base
 ## - Para RPCs use client_registry.get_peer_id_by_uuid(uuid_base)
 
 # ===== CONFIGURAÇÕES =====
@@ -31,7 +31,7 @@ var client_registry = null
 var room_registry = null
 var object_manager = null
 var debug_overlay = null
-var initializer = null
+var initializer: Initializer = null
 
 # ===== VARIÁVEIS INTERNAS =====
 
@@ -58,7 +58,7 @@ signal player_despawned_from_round(round_id: int, uuid_base: String)
 
 ## RoundData:
 ## {
-##   "round_id": int,
+##   "id": int,
 ##   "room_id": int,
 ##   "room_name": String,
 ##   "players": Array[PlayerInRound],  # [{id: uuid_base, name}]
@@ -130,7 +130,7 @@ func create_round(room_id: int, room_name: String, players: Array, settings: Dic
 		return {}
 
 	var round_data = {
-		"round_id": round_id,
+		"id": round_id,
 		"room_id": room_id,
 		"room_name": room_name,
 		"players": players.duplicate(true),
@@ -154,7 +154,7 @@ func create_round(room_id: int, room_name: String, players: Array, settings: Dic
 
 	# Inicializa scores zerados (chave = uuid_base)
 	for player in players:
-		round_data["scores"][player["id"]] = 0
+		round_data["scores"][player["uuid_base"]] = 0
 
 	# Gerar configurações do Sky3D
 	round_data["settings"]["sky_rand_configs"] = sky3d_config_generator()
@@ -164,7 +164,7 @@ func create_round(room_id: int, room_name: String, players: Array, settings: Dic
 	# Registra jogadores na rodada (ClientRegistry)
 	if client_registry:
 		for player in players:
-			client_registry.join_round(player["id"], round_id)
+			client_registry.join_round(player["uuid_base"], round_id)
 
 	_log_debug("✓ Rodada criada: ID %d, Sala '%s', %d players" % [round_id, room_name, players.size()])
 	_add_event(round_id, "round_created", {"room_id": room_id})
@@ -269,7 +269,7 @@ func complete_round_end(round_id: int) -> Dictionary:
 
 	if client_registry:
 		for player in round_data["players"]:
-			var uuid_base = player["id"]
+			var uuid_base = player["uuid_base"]
 			client_registry.leave_round(uuid_base)
 			client_registry.clear_player_inventory(round_id, uuid_base)
 
@@ -401,7 +401,7 @@ func _unmark_player_disconnected(round_id: int, uuid_base: String):
 ## Remove um player de um round.
 func remove_player(round_id: int, player_uuid: String):
 	rounds[round_id]["players"] = rounds[round_id]["players"].filter(func(p):
-		return p["id"] != player_uuid)
+		return p["uuid_base"] != player_uuid)
 
 ## Retorna node do player spawnado (ou null se não encontrado).
 func get_spawned_player(round_id: int, uuid_base: String) -> Node:
@@ -434,7 +434,7 @@ func get_round_players_spawned_filter(round_id: int) -> Array:
 	var all_players = round_["players"]
 
 	var filtered_players = all_players.filter(func(p):
-		return p["id"] in round_spawned)
+		return p["uuid_base"] in round_spawned)
 	return filtered_players
 
 # Retorna lista de PlayerData dos jogadores ATIVOS (não desconectados).
@@ -446,7 +446,7 @@ func get_active_players(round_id: int) -> Array:
 	var active = []
 
 	for player_data in round_data["players"]:
-		if player_data["id"] not in round_data["disconnected_players"]:
+		if player_data["uuid_base"] not in round_data["disconnected_players"]:
 			active.append(player_data)
 
 	return active
@@ -460,8 +460,8 @@ func get_active_players_ids(round_id: int) -> Array:
 	var active = []
 
 	for player_data in round_data["players"]:
-		if player_data["id"] not in round_data["disconnected_players"]:
-			active.append(player_data["id"])
+		if player_data["uuid_base"] not in round_data["disconnected_players"]:
+			active.append(player_data["uuid_base"])
 
 	return active
 
@@ -478,7 +478,7 @@ func get_all_players_ids(round_id: int) -> Array:
 	var all = []
 
 	for player_data in round_data["players"]:
-		all.append(player_data["id"])
+		all.append(player_data["uuid_base"])
 
 	return all
 
@@ -486,7 +486,7 @@ func get_all_players_ids(round_id: int) -> Array:
 func get_all_round_players_positions(round_id: int) -> Array:
 	var p_entrys: Array = []
 	for player in rounds[round_id]["players"]:
-		var entry = client_registry.get_player(player["id"])["entry_position"]
+		var entry = client_registry.get_player(player["uuid_base"])["entry_position"]
 		p_entrys.append(entry)
 	return p_entrys
 
@@ -558,9 +558,9 @@ func get_leaderboard(round_id: int) -> Array:
 
 	for player in round_data["players"]:
 		leaderboard.append({
-			"uuid_base": player["id"],
+			"uuid_base": player["uuid_base"],
 			"name": player["name"],
-			"score": round_data["scores"].get(player["id"], 0)
+			"score": round_data["scores"].get(player["uuid_base"], 0)
 		})
 
 	leaderboard.sort_custom(func(a, b): return a["score"] > b["score"])
@@ -588,7 +588,7 @@ func get_round_by_player_uuid(uuid_base: String) -> Dictionary:
 	for round_id in rounds:
 		var round_data = rounds[round_id]
 		for player in round_data["players"]:
-			if player["id"] == uuid_base:
+			if player["uuid_base"] == uuid_base:
 				return round_data.duplicate(true)
 	return {}
 
@@ -617,8 +617,8 @@ func get_all_rounds() -> Dictionary:
 func get_all_rounds_ids() -> Array:
 	var ids: Array = []
 	for round_ in rounds.values():
-		if round_.has("round_id"):
-			ids.append(round_["round_id"])
+		if round_.has("id"):
+			ids.append(round_["id"])
 	return ids
 
 func get_all_rounds_keys() -> Array:
@@ -759,7 +759,7 @@ func _gerar_paletas_cores() -> Array:
 func _on_peer_id_updated(uuid_base: String, new_peer_id: int):
 	for round_id in rounds:
 		for player in rounds[round_id]["players"]:
-			if player["id"] == uuid_base:
+			if player["uuid_base"] == uuid_base:
 				player["session_id"] = new_peer_id
 				_log_debug("✓ session_id atualizado para uuid=%s na rodada %d" % [uuid_base, round_id])
 				return

@@ -53,7 +53,7 @@ const MAX_SAVED_TOKENS: int = 50
 var item_database: ItemDatabase = null
 var network_manager: NetworkManager = null
 var map_manager: Node = null
-var initializer = null
+var initializer: Initializer = null
 
 # ===== VARIÁVEIS INTERNAS =====
 
@@ -68,6 +68,8 @@ var player_name: String = ""
 var configs: Dictionary = {} # Configurações do servidor
 var current_room: Dictionary = {}
 var current_round: Dictionary = {}
+var player_nodes_by_uuid := {}   # uuid -> Node
+var session_to_uuid := {}        # session_id -> uuid
 var connection_start_time: float = 0.0
 var cached_unique_id: int = 0
 ## Objetos spawnados organizados por rodada
@@ -976,7 +978,7 @@ func kick_player_from_room(_selected_player_id: String):
 		return
 	
 	# Verificação local se é o host (add redundancia)
-	var host_id = -1
+	var host_uuid = -1
 	var _player_name: String
 	
 	for player in current_room["players"]:
@@ -985,8 +987,8 @@ func kick_player_from_room(_selected_player_id: String):
 	
 	for player in current_room["players"]:
 		if player.get("is_host", false):
-			host_id = player["id"]
-	if host_id == uuid_base:
+			host_uuid = player["uuid_base"]
+	if host_uuid == uuid_base:
 		network_manager.kick_player_from_room(_selected_player_id)
 		_log_debug("Pedido para expulsar player, id: %s feito ao servidor" % _selected_player_id)
 
@@ -1025,7 +1027,7 @@ func close_room():
 		_log_debug("Não está em nenhuma sala")
 		return
 	
-	if current_room["host_id"] != uuid_base:
+	if current_room["host_uuid"] != uuid_base:
 		return
 	
 	_log_debug("Fechando sala: %s" % current_room["name"])
@@ -1071,8 +1073,8 @@ func client_update_match_settings(changed_settings: Dictionary) -> void:
 		room_settings[key] = changed_settings[key]
 	
 	# Verificar se é host; se sim, atualizar o botão de 
-	var host_id = current_room.get("host_id", -1)
-	if host_id == uuid_base:
+	var host_uuid = current_room.get("host_uuid", -1)
+	if host_uuid == uuid_base:
 		if room_settings["locked"] == true:
 			main_menu_node.room_lock_button.text = "Liberar Sala"
 			main_menu_node._show_error_("Sala trancada, ninguém entra!", main_menu_node.room_error_label, "Yellow")
@@ -1092,7 +1094,7 @@ func start_round(round_settings: Dictionary = {}):
 		_log_debug("Não está em nenhuma sala")
 		return
 	
-	if current_room["host_id"] != uuid_base:
+	if current_room["host_uuid"] != uuid_base:
 		return
 	
 	if current_room.players.size() < configs.min_players_to_start:
@@ -1161,12 +1163,10 @@ func _load_round(server_id: String, match_data: Dictionary, is_return: bool) -> 
 
 	for player: Dictionary in match_data["players"]:
 		var is_host: String  = " [HOST]"  if player["is_host"]      else ""
-		var is_me: String    = " [ME]"    if player["id"] == uuid_base else ""
-		_log_debug("- %s (ID: %s)%s%s" % [player["name"], player["id"], is_host, is_me])
+		var is_me: String    = " [ME]"    if player["uuid_base"] == uuid_base else ""
+		_log_debug("- %s (ID: %s)%s%s" % [player["name"], player["uuid_base"], is_host, is_me])
 
 	_log_debug("========================================")
-
-	is_in_round = true
 
 	await get_tree().process_frame
 
@@ -1191,7 +1191,56 @@ func _load_round(server_id: String, match_data: Dictionary, is_return: bool) -> 
 	round_node.add_child(objects_node)
 
 	await get_tree().process_frame
-
+	
+	# Inicializa inventário do player local
+	init_player_inventory()
+	
+	# ===== CARREGAMENTO ASSÍNCRONO DO INVENTÁRIO =====
+	_log_debug("📦 [LOCAL] Carregando cena do inventário...")
+	
+	var inventory_scene: PackedScene = load("res://scenes/ui/inventory_menu.tscn")
+	if not inventory_scene:
+		push_error("[LOCAL] Falha ao carregar inventory_menu.tscn")
+		return
+	
+	var inventory_node_: Node = inventory_scene.instantiate()
+	if not inventory_node_:
+		push_error("[LOCAL] Falha ao instanciar inventory_menu.tscn")
+		return
+	
+	# Adiciona à cena
+	round_node.add_child(inventory_node_)
+	
+	# Aguarda estar na árvore
+	var tree_timeout = 60
+	var tree_waited = 0
+	while not inventory_node_.is_inside_tree() and tree_waited < tree_timeout:
+		await get_tree().process_frame
+		tree_waited += 1
+	
+	if not inventory_node_.is_inside_tree():
+		push_error("[LOCAL] Inventory node não foi adicionado à árvore!")
+		inventory_node_.queue_free()
+		return
+	
+	inventory_node = inventory_node_
+	inventory_node.game_manager = self
+	inventory_node.initializer = initializer
+	
+	# Aguarda ready do inventário
+	if inventory_node.has_method("_ready"):
+		var ready_timeout = 60
+		var ready_waited = 0
+		while not inventory_node.is_node_ready() and ready_waited < ready_timeout:
+			await get_tree().process_frame
+			ready_waited += 1
+		
+		if ready_waited >= ready_timeout:
+			push_warning("[LOCAL] Timeout aguardando _ready() do inventário")
+	
+	# Configura sinais
+	inventory_node.setup_inventory_signals()
+	
 	# Instancia e adiciona a câmera à cena
 	camera_scene    = preload(camera_controller)
 	camera_instance = camera_scene.instantiate()
@@ -1202,11 +1251,15 @@ func _load_round(server_id: String, match_data: Dictionary, is_return: bool) -> 
 	# Carrega o mapa e aplica suas configurações
 	await map_manager.load_map(match_data["map_scene"], round_node, camera_instance.camera)
 	await map_manager.apply_map_configs(match_data["settings"])
-
+	
+	# Filtra e armazena os dados relevantes da rodada atual
+	var filtered_match_data: Dictionary = filter_match_data(match_data)
+	current_round = filtered_match_data
+	
 	# Spawna todos os jogadores da partida
 	for player_data: Dictionary in match_data["players"]:
-		var is_local: bool = player_data["id"] == uuid_base
-		_spawn_player(player_data, is_local, match_data)
+		var is_local: bool = player_data["uuid_base"] == uuid_base
+		await _spawn_player(player_data, is_local, match_data)
 
 	await get_tree().process_frame
 
@@ -1218,35 +1271,26 @@ func _load_round(server_id: String, match_data: Dictionary, is_return: bool) -> 
 	if main_menu_node:
 		main_menu_node.hide_main_menu()
 
-	round_started.emit()
-
-	# Filtra e armazena os dados relevantes da rodada atual
-	var filtered_round_data: Dictionary = filtrar_dict_invertido(match_data)
-	current_round = filtered_round_data
-
 	# Sinaliza ao servidor que o jogador reconectou (apenas no retorno)
 	if is_return:
 		_unmark_player_disconnected()
 
 	finish_loading()
 	await get_tree().process_frame
+	
+	round_started.emit()
+	is_in_round = true
 	_log_debug("Rodada %s no cliente." % ("recarregada" if is_return else "carregada"))
 
 ## Restaura o estado da rodada ao reconectar: equipamentos, inventário e objetos no mapa.
 ## [param match_data] Dados completos da partida recebidos do servidor.
 func _restore_round_state(match_data: Dictionary) -> void:
 	# Restaura visuais de equipamentos para cada jogador
-	
-	for player_node in players_node.get_children():
-		var peer_id = player_node.name
-		if peer_id == "CameraController":
-			continue
-		peer_id = str(peer_id)
+	for uuid in player_nodes_by_uuid.keys():
+		var player_node = player_nodes_by_uuid.get(uuid)
 		
-		for session_id in match_data["equipped_items"]:
-			var slots: Dictionary = match_data["equipped_items"][session_id]
-			
-			print("Player:", session_id)
+		for player_uuid in match_data["equipped_items"]:
+			var slots: Dictionary = match_data["equipped_items"][uuid]
 			
 			for slot_name in slots:
 				var item: Dictionary = slots[slot_name]
@@ -1256,17 +1300,16 @@ func _restore_round_state(match_data: Dictionary) -> void:
 				
 				var item_id = int(item.get("item_id"))
 				var object_id = item.get("object_id")
-				
-				print("  Slot:", slot_name, "| item_id:", item_id, "| object_id:", object_id)
 
 				# Jogador local: registra no inventário e equipa o item
-				if session_id == local_peer_id:
+				if player_uuid == uuid_base:
 					var item_name: String = item_database.get_item_by_id(int(item_id))["name"]
 					add_item_to_inventory(str(item_id), object_id)
 					equip_item(object_id, "", item_name)
 
 				# Todos aplicam o visual no nó do personagem (local e remoto)
-				player_node.apply_visual_equip_on_player_node(item_id)
+				if player_node.has_method("apply_visual_equip_on_player_node"):
+					player_node.apply_visual_equip_on_player_node(item_id)
 
 	# Restaura itens no inventário do jogador local que não estão equipados
 	for item: Dictionary in match_data["player_items"]:
@@ -1295,7 +1338,7 @@ func _restore_round_state(match_data: Dictionary) -> void:
 func _spawn_player(player_data: Dictionary, is_local: bool, _match_data: Dictionary):
 	
 	# VALIDAÇÕES INICIAIS
-	if not player_data.has("id") or not player_data.has("name") or not player_data.has("session_id"):
+	if not player_data.has("uuid_base") or not player_data.has("name") or not player_data.has("session_id"):
 		push_error("GameManager: player_data inválido: faltam campos obrigatórios")
 		return
 	
@@ -1303,11 +1346,10 @@ func _spawn_player(player_data: Dictionary, is_local: bool, _match_data: Diction
 		push_error("GameManager: _match_data sem spawn_points válidos")
 		return
 	
-	# Atualiza game manager com novos dados recebidos
-	var player_name_ = str(player_data["id"])
+	var player_name_ = player_data["uuid_base"]
 	var camera_name = player_name_ + "_Camera"
 	var session_id = player_data["session_id"]
-	var player_uuid = player_data["id"]
+	var player_uuid = player_data["uuid_base"]
 	var player_display_name = player_data["name"]
 	
 	_log_debug("🔄 [Spawn] Iniciando spawn: %s (Session: %s, Local: %s)" % [
@@ -1364,6 +1406,10 @@ func _spawn_player(player_data: Dictionary, is_local: bool, _match_data: Diction
 	var tree_timeout = 60  # ~1 segundo
 	var tree_waited = 0
 	
+	# Adiciona nó no cachê de personagens para fácil acesso
+	player_nodes_by_uuid[player_name_] = player_instance
+	session_to_uuid[session_id] = player_name_
+	
 	while not player_instance.is_inside_tree() and tree_waited < tree_timeout:
 		await get_tree().process_frame
 		tree_waited += 1
@@ -1398,31 +1444,31 @@ func _spawn_player(player_data: Dictionary, is_local: bool, _match_data: Diction
 	# INICIALIZAÇÃO DO JOGADOR
 	_log_debug("🔧 [Spawn] Inicializando dados do player...")
 	
-	var player_pos = _match_data["settings"]["spawn_points"][session_id]
-	if not player_pos:
-		push_error("GameManager: Spawn point não encontrado para session_id: %s" % session_id)
-		player_pos = {"position": Vector3.ZERO, "rotation": Vector3.ZERO}
-	
 	var color: Color = Color(0.0, 0.0, 0.0, 1.0)
 	var final_color = player_data["character"]["color"] if player_data["character"]["color"] else color
-	
+
 	player_instance.initialize(
+		false, # is_server
+		is_local,
 		player_data["name"], 
 		final_color, 
 		session_id, 
-		player_uuid, 
-		player_pos["position"]
+		player_uuid,
 	)
-
-	player_instance.rotation = player_pos["rotation"]
-	player_instance.visual_rotation_y = player_instance.rotation.y
-	player_instance.target_rotation_y = player_instance.rotation.y
+	
+	# Posiciona
+	var player_pos = _match_data["settings"]["spawn_points"][player_data["uuid_base"]]
+	if not player_pos:
+		push_error("GameManager: Spawn point não encontrado para player: %s" % uuid_base)
+		player_pos = {"position": Vector3.ZERO, "rotation": Vector3.ZERO}
+	player_instance.positionate(player_pos["position"], player_pos["rotation"])
+	
 	# Aguarda processamento da inicialização
 	await get_tree().process_frame
 	
 	# CONFIGURAÇÃO ESPECÍFICA POR TIPO DE JOGADOR
 	if is_local:
-		await _setup_local_player(player_instance, camera_name, player_pos)
+		_setup_local_player(player_instance, camera_name, player_pos)
 	else:
 		_setup_remote_player(player_instance, player_name_, player_pos)
 	
@@ -1444,58 +1490,12 @@ func _setup_local_player(player_instance: Node, camera_name: String, player_pos:
 		_log_debug("  - Câmera configurada: %s" % camera_name)
 	else:
 		push_error("[LOCAL] camera_instance é null!")
-	
-	# Inicializa inventário do player local
-	init_player_inventory()
+
 	_log_debug("  - Inventário inicializado")
 	
-	# ===== CARREGAMENTO ASSÍNCRONO DO INVENTÁRIO =====
-	_log_debug("📦 [LOCAL] Carregando cena do inventário...")
-	
-	var inventory_scene: PackedScene = load("res://scenes/ui/inventory_menu.tscn")
-	if not inventory_scene:
-		push_error("[LOCAL] Falha ao carregar inventory_menu.tscn")
-		return
-	
-	var inventory_node_: Node = inventory_scene.instantiate()
-	if not inventory_node_:
-		push_error("[LOCAL] Falha ao instanciar inventory_menu.tscn")
-		return
-	
-	# Adiciona à cena
-	round_node.add_child(inventory_node_)
-	
-	# Aguarda estar na árvore
-	var tree_timeout = 60
-	var tree_waited = 0
-	while not inventory_node_.is_inside_tree() and tree_waited < tree_timeout:
-		await get_tree().process_frame
-		tree_waited += 1
-	
-	if not inventory_node_.is_inside_tree():
-		push_error("[LOCAL] Inventory node não foi adicionado à árvore!")
-		inventory_node_.queue_free()
-		return
-	
-	inventory_node = inventory_node_
-	inventory_node.game_manager = self
-	inventory_node.initializer = initializer
-	
-	# Aguarda ready do inventário
-	if inventory_node.has_method("_ready"):
-		var ready_timeout = 60
-		var ready_waited = 0
-		while not inventory_node.is_node_ready() and ready_waited < ready_timeout:
-			await get_tree().process_frame
-			ready_waited += 1
-		
-		if ready_waited >= ready_timeout:
-			push_warning("[LOCAL] Timeout aguardando _ready() do inventário")
-	
-	# Configura sinais e referências
+	# Configura sinais e referências do inventário
 	inventory_node.player_node = player_instance
 	player_instance.inventory_node = inventory_node
-	inventory_node.setup_inventory_signals()
 	player_instance.connect_inventory_signals()
 	
 	_log_debug("  - Inventário configurado e sinais conectados")
@@ -1520,12 +1520,6 @@ func _setup_local_player(player_instance: Node, camera_name: String, player_pos:
 		player_instance.player_name,player_pos["position"]
 	])
 
-## Recebe comando do servidor para teleportar para um local determinado.
-func server_force_position(pos: Vector3):
-	if local_player_node and is_in_round:
-		local_player_node._respawn_player(pos)
-		_log_debug("Jogador local teleportado pelo servidor para a posição: %s" % pos)
-
 ## Configurações específicas para jogador REMOTO.
 func _setup_remote_player(player_instance: Node, player_name_: String, player_pos: Dictionary) -> void:
 	_log_debug("🌐 [REMOTO] Configurando jogador remoto...")
@@ -1541,6 +1535,12 @@ func _setup_remote_player(player_instance: Node, player_name_: String, player_po
 		player_name_,
 		player_pos["position"]
 	])
+
+## Recebe comando do servidor para teleportar para um local determinado.
+func server_force_position(pos: Vector3):
+	if local_player_node and is_in_round:
+		local_player_node._respawn_player(pos)
+		_log_debug("Jogador local teleportado pelo servidor para a posição: %s" % pos)
 
 ## Callback quando deve retornar à sala.
 func _client_return_to_room(room_data: Dictionary):
@@ -1581,23 +1581,34 @@ func _client_update_character_peer_id(_uuid_base: String, _new_peer_id: int):
 	# Se não ter um round carregado ignora, vai receber atualizado quando carregar com _client_round_return
 	if not players_node:
 		return
-		
-	for child in players_node.get_children():
-		if child is CharacterBody3D and child.player_uuid == _uuid_base:
-			child.name = str(_new_peer_id)
-			child.player_id = _new_peer_id
-			
-			# Atualiza no debug overlay também
-			if debug_overlay_node:
-				debug_overlay_node.peer_id = _new_peer_id
-			
-			if visual_debug:
-				var start = _uuid_base.substr(0, 4)
-				var end = _uuid_base.substr(_uuid_base.length() - 4, 4)
-				child.name_label.text = "%s\n%s[...]%s\n%s" % [player_name, start, end, _new_peer_id]
-			
-			child.set_multiplayer_authority(_new_peer_id)
-			_log_debug("👤 Session id de remoto atualizado com sucesso para %s" % _new_peer_id)
+	
+	# limpa session antiga (se existir)
+	for s_id in session_to_uuid.keys():
+		if session_to_uuid[s_id] == _uuid_base:
+			session_to_uuid.erase(s_id)
+			break
+	
+	# registra nova sessão
+	session_to_uuid[_new_peer_id] = _uuid_base
+	
+	# recupera node existente
+	var node = player_nodes_by_uuid.get(_uuid_base)
+	
+	# Muda session id do nó
+	node.session_id = _new_peer_id
+	
+	# Atualiza novo session id no debug overlay
+	if debug_overlay_node:
+		debug_overlay_node.peer_id = _new_peer_id
+	
+	# Atualiza o nome de debug (que exibe o id de sessão atual)
+	if visual_debug:
+		var ziped_uuid: String = initializer._zip_uuid(uuid_base)
+		node.name_label.text = "%s\n%s\n%s" % [player_name, ziped_uuid, _new_peer_id]
+	
+	# Pega o node e muda a autoridade multiplayer
+	node.set_multiplayer_authority(_new_peer_id)
+	_log_debug("👤 Session id de remoto atualizado com sucesso para %s" % _new_peer_id)
 
 ## Limpa todos os objetos da rodada no cliente.
 func _cleanup_local_round():
@@ -1607,6 +1618,10 @@ func _cleanup_local_round():
 	is_in_round = false
 	inventory_menu = false
 	gameplay_menu = false
+	
+	# Limpa cachê de nodes de personagens da partida
+	player_nodes_by_uuid.clear()
+	session_to_uuid.clear()
 	
 	# Limpa objetos spawnados
 	for obj in spawned_objects.keys():
@@ -1656,7 +1671,6 @@ func init_player_inventory() -> bool:
 
 ## Adiciona item ao inventário do jogador
 func add_item_to_inventory(item_id: String, object_id: int) -> bool:
-	
 	if local_inventory["inventory"].size() >= 9:
 		_log_debug("⚠ Inventário deste player cheio")
 		return false
@@ -1855,7 +1869,7 @@ func clear_player_inventory():
 
 ## Spawna objeto no cliente (chamado via RPC).
 func _spawn_on_client(object_id: int, round_id: int, item_name: String, position: Vector3, rotation: Vector3, drop_velocity: Vector3, owner_uuid: String):
-	if not is_in_round:
+	if not round_node:
 		return
 	
 	# Valida ItemDatabase
@@ -1869,21 +1883,21 @@ func _spawn_on_client(object_id: int, round_id: int, item_name: String, position
 	if scene_path.is_empty():
 		push_error("GameManager[Cliente]: Scene path vazio para '%s'" % item_name)
 		return
-	
+
 	# Carrega cena
 	var item_scene = load(scene_path)
 	
 	if not item_scene:
 		push_error("GameManager[Cliente]: Falha ao carregar: %s" % scene_path)
 		return
-	
+
 	# Instancia
 	var item_node = item_scene.instantiate()
 	
 	if not item_node:
 		push_error("GameManager[Cliente]: Falha ao instanciar")
 		return
-	
+
 	# Nome consistente com servidor
 	item_node.name = "Object_%d_%s_%d" % [object_id, item_name, round_id]
 	item_node.is_server = false
@@ -1892,7 +1906,7 @@ func _spawn_on_client(object_id: int, round_id: int, item_name: String, position
 	# Injeta dependências
 	item_node.network_manager = network_manager
 	item_node.initializer = initializer
-	
+
 	# Adiciona à árvore
 	var round_scene = get_tree().root.get_node_or_null("Round")
 	if round_scene:
@@ -1905,12 +1919,12 @@ func _spawn_on_client(object_id: int, round_id: int, item_name: String, position
 		_log_debug("Round node not found!")
 	
 	await get_tree().process_frame
-	
+
 	# Configura transformação
 	if item_node is Node3D:
 		item_node.global_position = position
 		item_node.global_rotation = rotation
-	
+
 	# Inicializa item
 	if item_node.has_method("initialize"):
 		var item_full_data = item_database.get_item_full_info(item_name)
@@ -1918,14 +1932,14 @@ func _spawn_on_client(object_id: int, round_id: int, item_name: String, position
 	# ✅ CORRIGIDO: Registra com estrutura correta
 	if not spawned_objects.has(round_id):
 		spawned_objects[round_id] = {}
-	
+
 	spawned_objects[round_id][object_id] = {
 		"node": item_node,
 		"item_name": item_name,
 		"owner_uuid": owner_uuid,
 		"spawn_time": Time.get_unix_time_from_system()
 	}
-	
+
 	# ✅ REGISTRA NO NETWORKMANAGER (cliente-side)
 	if item_node.has_method("get_sync_config") and item_node.sync_enabled:
 		network_manager.register_syncable_object(
@@ -1933,7 +1947,7 @@ func _spawn_on_client(object_id: int, round_id: int, item_name: String, position
 			item_node,
 			item_node.get_sync_config()
 		)
-	
+
 	# Armazena localmente (se necessário)
 	if not spawned_objects.has(round_id):
 		spawned_objects[round_id] = {}
@@ -1941,7 +1955,7 @@ func _spawn_on_client(object_id: int, round_id: int, item_name: String, position
 	
 	_log_debug("✓ Objeto spawnado no cliente: Obj_ID=%d, Item=%s" % [object_id, item_name])
 
-## Despawna objeto no cliente. Chamado via RPC pelo servidor.
+## Remove um objeto do cliente. Este método é invocado via RPC quando o servidor solicita o despawn.
 func _despawn_on_client(object_id: int, round_id: int):
 	_log_debug("🗑️  Despawnando objeto: ID=%d, Round=%d" % [object_id, round_id])
 	
@@ -1973,7 +1987,7 @@ func _despawn_on_client(object_id: int, round_id: int):
 
 # ===== TRATAMENTO DE ERROS =====
 
-## Trata erro de conexão.
+## Trata erros de conexão, exibindo menus de erro e notificando falha na conexão.
 func _handle_connection_error(message: String):
 	if main_menu_node:
 		main_menu_node.show_connecting_menu()
@@ -1981,12 +1995,12 @@ func _handle_connection_error(message: String):
 	
 	connection_failed.emit(message)
 
-## Callback quando recebe erro do servidor.
+## Recebe e processa mensagens de erro enviadas pelo servidor para o cliente.
 func _server_to_client_error(error_message: String):
 	_show_error(error_message)
 
-## Callback quando recebe mensagem do servidor durante um round.
-## tipos: info, success, warning e error.
+## Callback executado ao receber mensagens de informação do servidor.
+## Suporta os tipos: 'info', 'success', 'warning' e 'error'.
 func _server_to_client_message(text: String, duration: float = 3.0, type: String = "info"):
 	_log_debug("Mensagem recebida do servidor: " + text)
 	if warning_overlay_node:
@@ -1994,7 +2008,7 @@ func _server_to_client_message(text: String, duration: float = 3.0, type: String
 	else:
 		push_error("Warning_overlay_node não existe no game manager")
 
-## Mostra erro na UI apropriada.
+## Localiza o menu atual e exibe uma mensagem de erro visualmente destacada para o jogador.
 func _show_error(message: String, color= "Red"):
 	var current = main_menu_node.current_menu_visible
 	_log_debug("ERRO (Em: %s): %s" % [current.name, message])
@@ -2015,18 +2029,21 @@ func _show_error(message: String, color= "Red"):
 
 # ===== UTILITÁRIOS =====
 
-func filtrar_dict_invertido(original: Dictionary) -> Dictionary:
+## Retorna uma cópia do dicionário contendo apenas as chaves permitidas (round_id, room_id, etc).
+func filter_match_data(original: Dictionary) -> Dictionary:
 	var comando: Array = ["round_id", "room_id", "room_name", "players"]
 	var copia := original.duplicate(true)  # cópia profunda
 	for chave in copia.keys():
 		if not comando.has(chave):
 			copia.erase(chave)
 	return copia
-	
+
+## Verifica se o peer multiplayer está ativo e com status de conexão estabelecida.
 func verificar_rede() -> bool:
 	var peer_ = multiplayer.multiplayer_peer
 	return peer_ != null and peer_.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED and multiplayer != null and multiplayer.has_multiplayer_peer()
 
+## Registra mensagens no console de debug, incluindo o ID único do cliente para facilitar o rastreamento.
 func _log_debug(message: String):
 	if not debug_mode:
 		return

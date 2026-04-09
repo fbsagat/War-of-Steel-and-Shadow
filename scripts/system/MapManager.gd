@@ -26,7 +26,7 @@ class_name MapManager
 
 # ===== REGISTROS (Injetados pelo initializer.gd) =====
 
-var initializer = null
+var initializer: Initializer = null
 
 # ===== FILA ESTÁTICA COMPARTILHADA =====
 ## Compartilhada entre TODAS as instâncias de MapManager.
@@ -357,8 +357,8 @@ func _create_spawn_points(players: Array) -> Dictionary:
 			"position": spawn_center + Vector3(0, spawn_height, spawn_radius),
 			"rotation": Vector3(0, PI, 0)
 		}
-		var peer_id: int = players[0]["session_id"]
-		spawn_points[peer_id] = spawn
+		var p_uuid: String = players[0]["uuid_base"]
+		spawn_points[p_uuid] = spawn
 		_log_debug("✓ Spawn point único criado no centro")
 		return spawn_points
 
@@ -386,8 +386,8 @@ func _create_spawn_points(players: Array) -> Dictionary:
 			"rotation": Vector3(0, rotation_y, 0)
 		}
 
-		var peer_id: int = players[i]["session_id"]
-		spawn_points[peer_id] = spawn
+		var p_uuid: String = players[i]["uuid_base"]
+		spawn_points[p_uuid] = spawn
 
 	_log_debug("✓ Spawn points criados: %d jogadores em círculo (raio: %.1f)" % [spawn_points.size(), spawn_radius])
 	return spawn_points

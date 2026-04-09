@@ -46,7 +46,7 @@ class_name ItemDatabase
 
 # ===== REGISTROS (Injetados pelo initializer.gd) =====
 
-var initializer = null
+var initializer: Initializer = null
 
 # ===== VARIÁVEIS INTERNAS =====
 

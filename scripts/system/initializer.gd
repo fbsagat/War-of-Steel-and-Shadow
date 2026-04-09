@@ -1,4 +1,5 @@
 extends Node
+class_name Initializer
 
 # Configurações
 ## [TESTES] Usa o TestManager para iniciar uma partida logo na execução (localhost)
@@ -22,7 +23,7 @@ var activate_only_selected: bool = true
 # Disponíveis: "Server", "NetworkManager", "TestManager", "GameManager", "RoomRegistry"
 # "RoundRegistry", "ClientRegistry", "Player_node", "ObjectManager", "MapManager", "MainMenu"
 # "ItemDatabase", "InventoryMenu", "DroppedItem"
-var selected: Array = []
+var selected: Array = ["Server", "RoomRegistry", "NetworkManager", "TestManager", "GameManager"]
 
 # Referências
 ## Manager de rede, gerencia comunicação entre servidor e clientes
@@ -170,6 +171,9 @@ func _init_server(is_headless):
 	# ItemDatabase precisa de:
 	item_database.initializer = self
 	
+	# Server debug overlay precisa de:
+	debug_overlay.initializer = self
+	
 	# ObjectManager precisa de:
 	object_manager.server_manager = server_manager
 	object_manager.network_manager = network_manager
@@ -278,6 +282,10 @@ func _init_client(id_file_):
 	main_menu.server_list_manager = server_list_manager
 	main_menu.initializer = self
 	
+	# Client debug overlay precisa de:
+	debug_overlay.initializer = self
+	debug_overlay.game_manager = game_manager
+		
 	# MapManager precisa de:
 	map_manager.initializer = self
 	
@@ -302,7 +310,6 @@ func _init_client(id_file_):
 	if visual_debug:
 		game_manager.debug_overlay_node = debug_overlay
 		game_manager.debug_menu_visible = true
-		debug_overlay.game_manager = game_manager
 		
 	game_manager.visual_debug = visual_debug
 	main_menu.disable_protection = disable_protection
@@ -318,6 +325,14 @@ func _init_client(id_file_):
 	game_manager.initialize()
 
 # ============== FUNÇÕES AUXILIARES GLOBAIS ==============
+
+func _zip_uuid(client_uuid) -> String:
+	var uuid_minor: String = ""
+	if client_uuid != "": 
+		var dif1 = client_uuid.substr(0, 4)
+		var dif2 = client_uuid.substr(client_uuid.length() - 4, 4)
+		uuid_minor = "%s[...]%s" % [dif1, dif2]
+	return uuid_minor
 
 func pretty_print_dict(data, indent: int = 0) -> void:
 	var spacing = "  ".repeat(indent)

@@ -3,6 +3,7 @@ extends CanvasLayer
 # ===== REGISTROS (Injetados pelo initializer.gd) =====
 
 var game_manager: GameManager = null
+var initializer: Initializer = null
 
 @onready var label: Label = $Panel/Label
 
@@ -22,20 +23,12 @@ var ping_history: Array[int] = []
 func _ready() -> void:
 	visible = false
 
-func _zip_uuid() -> String:
-	var uuid_minor: String = ""
-	if client_uuid != "": 
-		var dif1 = client_uuid.substr(0, 4)
-		var dif2 = client_uuid.substr(client_uuid.length() - 4, 4)
-		uuid_minor = "%s[...]%s" % [dif1, dif2]
-	return uuid_minor
-
 func _process(_delta: float) -> void:
 	if not visible:
 		return
 	
 	if not is_connected:
-		label.text = "Status: ⚪ DESCONECTADO\nPing: -- ms\nPing médio: -- ms\nSem resposta: -- s\n UUID: %s\n Peer id: %d" % [_zip_uuid(), peer_id]
+		label.text = "Status: ⚪ DESCONECTADO\nPing: -- ms\nPing médio: -- ms\nSem resposta: -- s\n UUID: %s\n Peer id: %d" % [initializer._zip_uuid(client_uuid), peer_id]
 		return
 
 	var now := Time.get_ticks_msec()
@@ -52,7 +45,7 @@ func _process(_delta: float) -> void:
 		ping,
 		ping_avg,
 		time_since_last / 1000.0,
-		_zip_uuid(),
+		initializer._zip_uuid(client_uuid),
 		peer_id,
 		game_manager.is_loading
 	]

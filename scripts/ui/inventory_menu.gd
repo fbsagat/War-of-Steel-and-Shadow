@@ -11,7 +11,7 @@ extends Control
 
 var game_manager: GameManager = null
 var player_node: CharacterBody3D = null
-var initializer = null
+var initializer: Initializer = null
 
 # ===== SINAIS =====
 

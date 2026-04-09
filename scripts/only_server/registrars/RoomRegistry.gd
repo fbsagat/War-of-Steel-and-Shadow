@@ -12,7 +12,7 @@ class_name RoomRegistry
 ##
 ## IDENTIFICAÇÃO:
 ## - Jogadores são identificados por uuid_base (String) em todos os métodos
-## - host_id e player["id"] armazenam uuid_base
+## - host_uuid e player["uuid_base"] armazenam uuid_base
 
 # ===== CONFIGURAÇÕES =====
 
@@ -25,7 +25,7 @@ var client_registry: ClientRegistry = null
 var round_registry: RoundRegistry = null
 var object_manager: ObjectManager = null
 var debug_overlay = null
-var initializer = null
+var initializer: Initializer = null
 
 # ===== VARIÁVEIS INTERNAS =====
 
@@ -53,7 +53,7 @@ signal room_state_changed(room_id: int, in_game: bool)
 ##   "name": String,
 ##   "password": String,
 ##   "has_password": bool,
-##   "host_id": String,           # uuid_base do host
+##   "host_uuid": String,           # uuid_base do host
 ##   "players": Array[PlayerInRoom],  # [{id: uuid_base, name, is_host, is_offline}]
 ##   "kicked_players": Array,     # [{uuid_base, time}]
 ##   "min_players": int,
@@ -111,7 +111,7 @@ func create_room(room_name: String, password: String, host_uuid: String, min_pla
 		"name": room_name,
 		"password": password,
 		"has_password": not password.is_empty(),
-		"host_id": host_uuid,
+		"host_uuid": host_uuid,
 		"players": [],
 		"kicked_players": [],
 		"min_players": min_players,
@@ -147,7 +147,7 @@ func remove_room(room_id: int) -> bool:
 
 	var players_copy = room["players"].duplicate()
 	for player_data in players_copy:
-		remove_player_from_room(room_id, player_data["id"])
+		remove_player_from_room(room_id, player_data["uuid_base"])
 
 	rooms.erase(room_id)
 
@@ -162,31 +162,75 @@ func get_room(room_id: int) -> Dictionary:
 		return {}
 	return rooms[room_id].duplicate(true)
 
+## Retorna salas fora de jogo com dados normalizados para o menu.
+func get_room_filtered(room_id: int) -> Dictionary:
+	if not rooms.has(room_id):
+		return {}
+		
+	var room = rooms[room_id].duplicate(true)
+
+	var players_array = room.get("players", [])
+	var players_count: int = players_array.size() if players_array is Array else 0
+	var locked = room["settings"].get("locked", false)
+
+	var min_raw = room.get("min_players", 0)
+	var min_players: int = (
+		min_raw if min_raw is int
+		else int(min_raw) if min_raw is float
+		else min_raw.to_int() if min_raw is String and min_raw.is_valid_integer()
+		else 0
+	)
+
+	var max_raw = room.get("max_players", 0)
+	var max_players: int = (
+		max_raw if max_raw is int
+		else int(max_raw) if max_raw is float
+		else max_raw.to_int() if max_raw is String and max_raw.is_valid_integer()
+		else 0
+	)
+
+	room.erase("settings")
+	room.erase("password")
+	room.erase("kicked_players")
+	room.erase("rounds_history")
+	room.erase("total_rounds_played")
+	room.erase("total_playtime")
+	room.erase("available_colors")
+	room.erase("last_hue")
+	
+	room["players"] = players_array
+	room["players_count"] = players_count
+	room["min_players"] = min_players
+	room["max_players"] = max_players
+	room["locked"] = locked
+
+	return room
+
 func get_all_rooms() -> Array:
 	return rooms.values().duplicate()
 
 func get_all_rooms_ids() -> Array:
 	var ids: Array = []
 	for room in rooms.values():
-		if room.has("id"):
+		if room.has("uuid_base"):
 			ids.append(room["id"])
 	return ids
 
 func get_all_room_players_uuids(room_id: int) -> Array:
 	var p_ids: Array = []
 	for room in rooms.values():
-		if room.has("id"):
+		if room.has("uuid_base"):
 			for player in rooms[room_id]["players"]:
-				p_ids.append(player["id"])
+				p_ids.append(player["uuid_base"])
 	return p_ids
 
 ## Posiçoes de entrada no servidor. Ordenamento.
 func get_all_room_players_positions(room_id: int) -> Array:
 	var p_entrys: Array = []
 	for room in rooms.values():
-		if room.has("id"):
+		if room.has("uuid_base"):
 			for player in rooms[room_id]["players"]:
-				var entry = client_registry.get_player(player["id"])["entry_position"]
+				var entry = client_registry.get_player(player["uuid_base"])["entry_position"]
 				p_entrys.append(entry)
 	return p_entrys
 
@@ -256,7 +300,7 @@ func get_rooms_in_lobby_clean_to_menu() -> Array:
 			else 0
 		)
 
-		room.erase("host_id")
+		room.erase("host_uuid")
 		room.erase("players")
 		room.erase("in_game")
 		room.erase("created_at")
@@ -296,7 +340,7 @@ func add_player_to_room(room_id: int, uuid_base: String) -> bool:
 
 	# Verifica se já está na sala
 	for player in room["players"]:
-		if player["id"] == uuid_base:
+		if player["uuid_base"] == uuid_base:
 			_log_debug("⚠ uuid=%s já está na sala %d" % [uuid_base, room_id])
 			return true
 
@@ -315,10 +359,10 @@ func add_player_to_room(room_id: int, uuid_base: String) -> bool:
 	var player_name = client_registry.get_player_name(uuid_base)
 	var player_id = client_registry.get_peer_id_by_uuid(uuid_base)
 
-	var is_host = room["players"].is_empty() or uuid_base == room["host_id"]
+	var is_host = room["players"].is_empty() or uuid_base == room["host_uuid"]
 
 	room["players"].append({
-		"id": uuid_base,
+		"uuid_base": uuid_base,
 		"session_id": player_id,
 		"name": player_name,
 		"is_host": is_host,
@@ -434,7 +478,7 @@ func remove_player_from_room(room_id: int, uuid_base: String) -> String:
 	var player_index = -1
 
 	for i in range(room["players"].size()):
-		if room["players"][i]["id"] == uuid_base:
+		if room["players"][i]["uuid_base"] == uuid_base:
 			player_index = i
 			break
 
@@ -455,10 +499,10 @@ func remove_player_from_room(room_id: int, uuid_base: String) -> String:
 
 	if was_host and not room["players"].is_empty():
 		room["players"][0]["is_host"] = true
-		room["host_id"] = room["players"][0]["id"]
-		_log_debug("✓ Novo host da sala '%s': uuid=%s" % [room["name"], room["host_id"]])
-		host_changed.emit(room_id, room["host_id"])
-		return room["host_id"]
+		room["host_uuid"] = room["players"][0]["uuid_base"]
+		_log_debug("✓ Novo host da sala '%s': uuid=%s" % [room["name"], room["host_uuid"]])
+		host_changed.emit(room_id, room["host_uuid"])
+		return room["host_uuid"]
 
 	if room["players"].is_empty():
 		remove_room(room_id)
@@ -470,7 +514,7 @@ func remove_player_from_room(room_id: int, uuid_base: String) -> String:
 func get_player_room(uuid_base: String) -> Dictionary:
 	for room_id in rooms:
 		for player in rooms[room_id]["players"]:
-			if player["id"] == uuid_base:
+			if player["uuid_base"] == uuid_base:
 				return rooms[room_id].duplicate(true)
 	return {}
 
@@ -479,7 +523,7 @@ func is_player_in_room(uuid_base: String, room_id: int) -> bool:
 	if not rooms.has(room_id):
 		return false
 	for player in rooms[room_id]["players"]:
-		if player["id"] == uuid_base:
+		if player["uuid_base"] == uuid_base:
 			return true
 	return false
 
@@ -487,7 +531,7 @@ func is_player_in_room(uuid_base: String, room_id: int) -> bool:
 func is_player_host(uuid_base: String, room_id: int) -> bool:
 	if not rooms.has(room_id):
 		return false
-	return rooms[room_id]["host_id"] == uuid_base
+	return rooms[room_id]["host_uuid"] == uuid_base
 
 func get_player_count_in_room(room_id: int) -> int:
 	if not rooms.has(room_id):
@@ -550,7 +594,7 @@ func _set_disconnected_peer(peer_id: int, room_id: int):
 		return
 		
 	for player in rooms[room_id].get("players", []):
-		if player["id"] == uuid_base:
+		if player["uuid_base"] == uuid_base:
 			player["is_offline"] = true
 			_log_debug("⚠ uuid=%s marcado como desconectado na sala %s" % [uuid_base, rooms[room_id]["id"]])
 
@@ -566,7 +610,7 @@ func _set_connected_peer(peer_id: int, room_id: int):
 		return
 		
 	for player in rooms[room_id].get("players", []):
-		if player["id"] == uuid_base:
+		if player["uuid_base"] == uuid_base:
 			player["is_offline"] = false
 			_log_debug("⚠ uuid=%s marcado como conectado na sala %s" % [uuid_base, rooms[room_id]["id"]])
 
@@ -593,7 +637,7 @@ func add_round_to_history(room_id: int, round_data: Dictionary) -> bool:
 		room["total_playtime"] += clean_round["duration"]
 
 	_log_debug("✓ Rodada %d adicionada ao histórico da sala '%s' (Total: %d rodadas, %.1fs)" % [
-		clean_round["round_id"],
+		clean_round["id"],
 		room["name"],
 		room["total_rounds_played"],
 		room["total_playtime"]
@@ -647,7 +691,7 @@ func get_room_statistics(room_id: int) -> Dictionary:
 
 	for round_data in room["rounds_history"]:
 		for player in round_data.get("players", []):
-			var p_uuid = player["id"]  # uuid_base
+			var p_uuid = player["uuid_base"]  # uuid_base
 
 			if not stats["players_participated"].has(p_uuid):
 				stats["players_participated"][p_uuid] = {
@@ -701,7 +745,7 @@ func get_player_stats_in_room(room_id: int, uuid_base: String) -> Dictionary:
 	for round_data in room["rounds_history"]:
 		var participated = false
 		for player in round_data.get("players", []):
-			if player["id"] == uuid_base:
+			if player["uuid_base"] == uuid_base:
 				participated = true
 				break
 
@@ -732,7 +776,7 @@ func can_start_match(room_id: int, uuid_base: String) -> Array:
 
 	var players_uuids: Array = []
 	for player: Dictionary in room["players"]:
-		players_uuids.append(player["id"])
+		players_uuids.append(player["uuid_base"])
 
 	if not uuid_base in players_uuids:
 		return [false, "Você não está na sala"]
@@ -749,7 +793,7 @@ func can_start_match(room_id: int, uuid_base: String) -> Array:
 	if room["players"].size() > room["max_players"]:
 		return [false, "A sala não preenche o máximo de players"]
 
-	if room["host_id"] != uuid_base:
+	if room["host_uuid"] != uuid_base:
 		return [false, "Apenas o host pode iniciar a rodada"]
 
 	if is_room_in_game(room["id"]):
@@ -796,7 +840,7 @@ func update_room_setting(room_id: int, key: String, value):
 func _on_peer_id_updated(uuid_base: String, new_peer_id: int):
 	for room_id in rooms:
 		for player in rooms[room_id]["players"]:
-			if player["id"] == uuid_base:
+			if player["uuid_base"] == uuid_base:
 				player["session_id"] = new_peer_id
 				_log_debug("✓ session_id atualizado para uuid=%s na sala %d" % [uuid_base, room_id])
 				return
@@ -844,7 +888,7 @@ func debug_print_all_rooms():
 	for room_id in rooms:
 		var r = rooms[room_id]
 		print("\n[Sala %d: %s]" % [room_id, r["name"]])
-		print("  Host: uuid=%s" % r["host_id"])
+		print("  Host: uuid=%s" % r["host_uuid"])
 		print("  Jogadores: %d/%d (mín: %d)" % [r["players"].size(), r["max_players"], r["min_players"]])
 		print("  Em jogo: %s" % r["in_game"])
 		print("  Senha: %s" % ("SIM" if r["has_password"] else "NÃO"))
@@ -854,7 +898,7 @@ func debug_print_all_rooms():
 		print("  Players:")
 		for player in r["players"]:
 			var host_marker = " (HOST)" if player["is_host"] else ""
-			print("    - %s [uuid=%s]%s" % [player["name"], player["id"], host_marker])
+			print("    - %s [uuid=%s]%s" % [player["name"], player["uuid_base"], host_marker])
 
 	print("\n===================================\n")
 

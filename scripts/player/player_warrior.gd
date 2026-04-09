@@ -63,10 +63,10 @@ var network_manager: NetworkManager = null
 var item_database: ItemDatabase = null
 var server_manager: ServerManager = null
 var game_manager: GameManager = null
-var initializer = null
+var initializer: Initializer = null
 
 # Identificação multiplayer
-var player_id: int = 0
+var session_id: int = 0
 var player_uuid: String = ""
 var player_name: String = ""
 var is_local_player: bool = false
@@ -129,28 +129,23 @@ var actual_enabled_hitbox: Area3D = null
 # ===== INICIALIZAÇÃO =====
 
 ## Inicializa o player com dados multiplayer.
-func initialize(p_name: String, p_color: Color, p_id: int, p_uuid: String, spawn_pos: Vector3):
+func initialize(is_server: bool, local_player: bool, p_name: String, p_color: Color, s_id: int, p_uuid: String):
 	player_name = p_name
-	player_id = p_id
+	session_id = s_id
 	player_uuid = p_uuid
-	
-	# Nome do nó recebe ID do player
-	name = str(p_id)
-	
-	# Posiciona no spawn
-	global_position = spawn_pos
-	target_position = spawn_pos
+	is_local_player = local_player
+	name = p_uuid
+	_is_server = is_server
 	
 	# Atualiza label de nome
 	if name_label:
 		var debug_enabled = server_manager.visual_debug if _is_server else game_manager.visual_debug
-		
+		var ziped_uuid: String = initializer._zip_uuid(player_uuid)
 		name_label.text = (
-			"%s\n%s[...]%s\n%s" % [
+			"%s\n%s\n%s" % [
 				p_name,
-				player_uuid.substr(0, 4),
-				player_uuid.substr(player_uuid.length() - 4, 4),
-				player_id
+				ziped_uuid,
+				session_id
 			]
 		) if debug_enabled else p_name
 			
@@ -168,7 +163,7 @@ func initialize(p_name: String, p_color: Color, p_id: int, p_uuid: String, spawn
 		platform_floor_layers = 1  # Certifica que detecta layer do terreno
 		
 	# Define autoridade multiplayer
-	set_multiplayer_authority(player_id)
+	set_multiplayer_authority(session_id)
 	
 	# Ativa processos
 	set_physics_process(true)
@@ -185,6 +180,15 @@ func initialize(p_name: String, p_color: Color, p_id: int, p_uuid: String, spawn
 	if _is_server:
 		hitboxes_manager()
 
+func positionate(spawn_pos: Vector3 = Vector3.ZERO, spawn_rot: Vector3 = Vector3.ZERO):
+	# Posiciona no spawn
+	global_position = spawn_pos
+	target_position = spawn_pos
+	
+	rotation = spawn_rot
+	visual_rotation_y = spawn_rot.y
+	target_rotation_y = spawn_rot.y
+	
 
 # ===== FÍSICA GERAL =====
 
@@ -768,7 +772,7 @@ func _on_hitbox_body_entered(body: Node, hitbox_area: Area3D) -> void:
 		return
 
 	# Não acerta a sí próprio
-	if body.name == str(player_id):
+	if body.name == str(session_id):
 		return
 
 	# Se for inimigo ou outro player
@@ -791,7 +795,7 @@ func _on_hitbox_body_entered(body: Node, hitbox_area: Area3D) -> void:
 			_log_debug("%s foi acertado em %s" % [body.name, hitbox_area.get_parent().name])
 		
 		if server_manager and server_manager.has_method("attack_validation"):
-			server_manager.attack_validation(group, player_id, actual_weapon.name, body.player_id)
+			server_manager.attack_validation(group, session_id, actual_weapon.name, body.session_id)
 
 ## Jogador local ou remoto recebe dano de golpe, animção, sons e etc.
 func take_damage():
@@ -847,6 +851,10 @@ func _disable_attack_hitbox():
 
 ## Envio de estado para servidor (Apenas local)
 func _send_state_to_server(delta: float):
+	# Só depois de iniciar a partida
+	if not game_manager.is_in_round:
+		return
+	
 	sync_timer += delta
 	initial_sync_elapsed += delta  # acumula tempo desde o início
 
@@ -883,7 +891,7 @@ func _send_state_to_server(delta: float):
 							_log_debug("📡 Enviando Y do terreno: %.2f (dist: %.2f)" % [sync_pos.y, dist_to_camera])
 
 				network_manager.send_player_state(
-					player_id,
+					session_id,
 					sync_pos,
 					rotation,
 					velocity,
@@ -893,6 +901,10 @@ func _send_state_to_server(delta: float):
 				
 ## Envio estado de animações para o servidor (Menos frequente que de send state)
 func _send_animation_state(delta: float):
+	# Só depois de iniciar a partida
+	if not game_manager.is_in_round:
+		return
+		
 	anim_sync_timer += delta
 	
 	# ✅ Taxa dinâmica: mais frequente quando há ação
@@ -921,7 +933,7 @@ func _send_animation_state(delta: float):
 			
 			if network_manager and network_manager.is_connected:
 				network_manager.send_player_animation_state(
-					player_id,
+					session_id,
 					current_state["speed"],
 					current_state["is_attacking"],
 					current_state["is_defending"],
@@ -1121,6 +1133,10 @@ func _character_receive_action(action_type: String, item_equipado_nome, anim_nam
 
 ## Executa e sincroniza ataque.
 func action_sword_attack_call():
+	# Só depois de iniciar a partida
+	if not game_manager.is_in_round:
+		return
+	
 	# Apenas jogador local pede para atacar
 	if not is_local_player:
 		return
@@ -1153,7 +1169,7 @@ func action_sword_attack_call():
 		if network_manager and network_manager.is_connected:
 			var anim_name = _determine_attack_from_input()
 			
-			network_manager.send_player_action(player_id, "attack", item_equipado["name"], anim_name)
+			network_manager.send_player_action(session_id, "attack", item_equipado["name"], anim_name)
 			
 			# executa animação localmente
 			var anim_length = _execute_animation(anim_name, "Attack", "parameters/sword_attacks/transition_request",
@@ -1164,6 +1180,10 @@ func action_sword_attack_call():
 
 ## Executa e sincroniza ataque com escudo.
 func action_block_attack_call():
+	# Só depois de iniciar a partida
+	if not game_manager.is_in_round:
+		return
+		
 	# Apenas jogador local pede para atacar com escudo
 	if not is_local_player:
 		return
@@ -1190,10 +1210,14 @@ func action_block_attack_call():
 		
 			# Sincroniza defesa (Reliable)
 			if network_manager and network_manager.is_connected:
-				network_manager.send_player_action(player_id, "block_attack", item_equipado["name"], "Block_Attack")
+				network_manager.send_player_action(session_id, "block_attack", item_equipado["name"], "Block_Attack")
 
 ## Executa e sincroniza defesa.
 func action_lock_call():
+	# Só depois de iniciar a partida
+	if not game_manager.is_in_round:
+		return
+		
 	# Apenas jogador local pede para defender
 	if not is_local_player:
 		return
@@ -1220,10 +1244,14 @@ func action_lock_call():
 		
 		# Sincroniza defesa (Reliable)
 		if network_manager and network_manager.is_connected:
-			network_manager.send_player_action(player_id, "defend_start", "", "")
+			network_manager.send_player_action(session_id, "defend_start", "", "")
 
 ## Executa e sincroniza fim da defesa.
 func action_stop_locking_call():
+	# Só depois de iniciar a partida
+	if not game_manager.is_in_round:
+		return
+	
 	# Apenas jogador local
 	if not is_local_player:
 		return
@@ -1257,7 +1285,7 @@ func action_stop_locking_call():
 		
 	# Sincroniza fim da defesa (Reliable)
 	if network_manager and network_manager.is_connected:
-		network_manager.send_player_action(player_id, "defend_stop", "", "")
+		network_manager.send_player_action(session_id, "defend_stop", "", "")
 		
 		
 # ===== INICIALIZAÇÃO MULTIPLAYER =====
@@ -1283,6 +1311,9 @@ func set_as_local_player():
 
 ## Função para equipar itens magicamente (Trainer de testes / Remover em produção).
 func handle_test_equip_inputs_call():
+	# Só depois de iniciar a partida
+	if not game_manager.is_in_round:
+		return
 
 	if not stop_movment:
 		var mapped_id: int
@@ -1304,23 +1335,31 @@ func handle_test_equip_inputs_call():
 		if mapped_id >= 1 and mapped_id <= 9:
 			# envia para o servidor (se conectado)
 			if network_manager and network_manager.is_connected:
-				network_manager.request_trainer_spawn_item(player_id, mapped_id)
+				network_manager.request_trainer_spawn_item(session_id, mapped_id)
 				
 ## Ações de chamada do player (Dropar item).
 func handle_test_drop_item_call() -> void:
+	# Só depois de iniciar a partida
+	if not game_manager.is_in_round:
+		return
+		
 	if not is_local_player:
 		return
 		
 	if network_manager and network_manager.is_connected:
-		network_manager.request_trainer_drop_item(player_id)
+		network_manager.request_trainer_drop_item(session_id)
 
 ## Ações de chamada do player (Respawnar novamente).
 func handle_test_repawn_player_call():
+	# Só depois de iniciar a partida
+	if not game_manager.is_in_round:
+		return
+		
 	if not is_local_player:
 		return
 	
 	if network_manager and network_manager.is_connected:
-		network_manager.request_trainer_respawn_player(player_id)
+		network_manager.request_trainer_respawn_player(session_id)
 	
 ## Executa quando o player equipa algum item / muda visual do modelo.
 ## Aplica mudança visual em itens equipéveis que estão como filhos no nó do player.
@@ -1328,7 +1367,6 @@ func handle_test_repawn_player_call():
 ##  unnequip: Comando para esconder visualmente este item e todos os seus outros irmãos manter escondidos.
 ##  from_inv_men: Se vier como comando de inventory_menu.
 func apply_visual_equip_on_player_node(item_mapped_id: int, unnequip = false, from_inv_men = false):
-	print("[111]apply_visual_equip_on_player_node: ", item_mapped_id)
 	if from_inv_men:
 		_execute_animation("Interact", "Common", "parameters/Interact/transition_request", "parameters/Interact_shot/request")
 	
@@ -1340,6 +1378,10 @@ func apply_visual_equip_on_player_node(item_mapped_id: int, unnequip = false, fr
 ## Servidor não pede, só local pede, servidor recebe pedido e processa usando
 ## node do player remoto do servidor.
 func action_pick_up_item_call():
+	# Só depois de iniciar a partida
+	if not game_manager.is_in_round:
+		return
+		
 	if not is_local_player:
 		return
 		
@@ -1351,7 +1393,7 @@ func action_pick_up_item_call():
 	var object = found[0]
 	_log_debug("Player %s pediu para pegar o item %d" % [player_name, object.object_id])
 	if network_manager and network_manager.is_connected and object:
-		network_manager.request_pick_up_item(player_id, object.object_id)
+		network_manager.request_pick_up_item(session_id, object.object_id)
 
 ## Ações de execução do personagem (Pegar item).
 func action_pick_up_item():
@@ -1362,11 +1404,15 @@ func action_pick_up_item():
 
 ## Ação de chamada do player (Dropar item).
 func action_drop_item_call(obj_id) -> void:
+	# Só depois de iniciar a partida
+	if not game_manager.is_in_round:
+		return
+	
 	if not is_local_player:
 		return
 		
 	if network_manager and network_manager.is_connected:
-		network_manager.request_drop_item(player_id, int(obj_id))
+		network_manager.request_drop_item(session_id, int(obj_id))
 
 ## Ação de execução do personagem (Dropar item).
 func execute_item_drop():
@@ -1380,22 +1426,34 @@ func execute_item_swap():
 
 ## Ação de chamada do player (Equipar item).
 func action_equip_item_call(item_id, slot_type):
+	# Só depois de iniciar a partida
+	if not game_manager.is_in_round:
+		return
+	
 	if not is_local_player:
 		return
 		
 	if network_manager and network_manager.is_connected:
-		network_manager.request_equip_item(player_id, int(item_id), slot_type)
+		network_manager.request_equip_item(session_id, int(item_id), slot_type)
 
 ## Ação de chamada do player (Desequipar item).
 func action_unequip_item_call(slot_type):
+	# Só depois de iniciar a partida
+	if not game_manager.is_in_round:
+		return
+		
 	if not is_local_player:
 		return
 		
 	if network_manager and network_manager.is_connected:
-		network_manager.request_unequip_item(player_id, slot_type)
+		network_manager.request_unequip_item(session_id, slot_type)
 
 ## Ação de chamada do player (Trocar item).
 func action_swap_items_call(item_id_1: String, item_id_2: String):
+	# Só depois de iniciar a partida
+	if not game_manager.is_in_round:
+		return
+		
 	if not is_local_player:
 		return
 		
@@ -1516,7 +1574,7 @@ func _log_debug(message: String):
 		return
 	
 	var prefix = "[SERVER]" if _is_server else "[CLIENT]"
-	print("%s[PlayerNode][S_ID: %d][Nome: %s]: %s" % [prefix, player_id, player_name, message])
+	print("%s[PlayerNode][S_ID: %d][Nome: %s]: %s" % [prefix, session_id, player_name, message])
 		
 func verificar_rede():
 	var peer = multiplayer.multiplayer_peer

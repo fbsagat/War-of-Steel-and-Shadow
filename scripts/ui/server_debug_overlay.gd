@@ -93,6 +93,9 @@ var server_manager: ServerManager = null
 ## Referência ao NetworkManager - Injetado via initializer
 var network_manager: NetworkManager = null
 
+## Referência ao NetworkManager - Injetado via initializer
+var initializer: Initializer = null
+
 # ─────────────────────────────────────────────────────────────────────────────
 # ESTADO INTERNO
 # ─────────────────────────────────────────────────────────────────────────────
@@ -350,13 +353,13 @@ func _rebuild_clients(list: VBoxContainer) -> void:
 	for client_uuid in client_registry.get_all_players_uuid():
 		var c = client_registry.get_player(client_uuid)
 		var state_name = client_registry.get_player_state_name(client_uuid)
-		var short_uuid = client_registry.get_short_uuid(client_uuid)
+		var ziped_uuid: String = initializer._zip_uuid(client_uuid)
 		var _refs: Dictionary = _add_row(list, [
 			_col(str(c["entry_position"]),                   "",       60),
 			_col(str("🟢" if c["connected"] else "🔴"),     "",        30),
 			_col(state_name,                                 "state",   80),
 			_col(c["name"],                                  "",        100),
-			_col(short_uuid,                                 "",        120),
+			_col(ziped_uuid,                                 "",        120),
 			_col(str(c["peer_id"]),                          "",        90),
 			_col(str(c["room_id"]),                          "",        50),
 			_col(str(c["round_id"]),                         "",        50),
@@ -400,7 +403,7 @@ func _rebuild_rooms(list: VBoxContainer) -> void:
 
 	for room_id in room_registry.get_all_rooms_ids():
 		var r = room_registry.get_room(room_id)
-		var host_ = client_registry.get_player(r["host_id"])
+		var host_ = client_registry.get_player(r["host_uuid"])
 		var players_pos = room_registry.get_all_room_players_positions(room_id)
 		var kicked = room_registry.get_all_kicked_players(room_id, true)
 		var _refs: Dictionary = _add_row(list, [
@@ -442,9 +445,9 @@ func _rebuild_matches(list: VBoxContainer) -> void:
 
 	for round_id in round_registry.get_all_rounds_ids():
 		var m = round_registry.get_round(round_id)
-		var players_pos = round_registry.get_all_round_players_positions(m["round_id"])
+		var players_pos = round_registry.get_all_round_players_positions(m["id"])
 		var _refs: Dictionary = _add_row(list, [
-			_col(str(m["round_id"]),                                    "",           40),
+			_col(str(m["id"]),                                    "",                 40),
 			_col(str(m["room_name"]),                                   "",           110),
 			_col(str(m["room_id"]),                                     "",           60),
 			_col(str(players_pos),                                      "",           100),

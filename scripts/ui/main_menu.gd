@@ -4,7 +4,7 @@ extends Control
 
 var game_manager: GameManager = null
 var server_list_manager: ServerListManager = null
-var initializer = null
+var initializer: Initializer = null
 
 # ===== SINAIS =====
 
@@ -1539,7 +1539,7 @@ func _on_player_list_player_selected(index: int) -> void:
 		return
 
 	var selected_player = current_players[index]
-	selected_player_id = selected_player["id"]
+	selected_player_id = selected_player["uuid_base"]
 
 	var is_host_selected: bool = selected_player.get("is_host", false)
 
@@ -1598,8 +1598,8 @@ func _update_room_display(room_data: Dictionary):
 		room_status_label.text = "Jogadores: %d/%d" % [_player_count, max_players]
 	
 	# 🔑 Detecta se O JOGADOR LOCAL é o host
-	var host_id = room_data.get("host_id", -1)
-	var is_host = (game_manager.uuid_base == host_id)
+	var host_uuid = room_data.get("host_uuid", -1)
+	var is_host = (game_manager.uuid_base == host_uuid)
 	
 	# Controla visibilidade dos botões baseado se é host
 	if room_start_button:

@@ -29,7 +29,7 @@ var round_registry: RoundRegistry = null
 var object_manager: ObjectManager = null
 var item_database: ItemDatabase = null
 var debug_overlay = null
-var initializer = null
+var initializer: Initializer = null
 
 # ===== VARIÁVEIS INTERNAS =====
 
@@ -220,15 +220,14 @@ func update_peer_id(uuid_base: String, new_peer_id: int):
 	var node = get_player_node(uuid_base)
 	if node:
 		node.name = str(new_peer_id)
-		node.player_id = new_peer_id
+		node.session_id = new_peer_id
 		
 		# Se visual_debug true, atualiza name_label poir mudou o id de sessão (peer_id)
 		# Se visual_debug false, não precisa atualizar pois o nome não muda na reconexão
 		if server_manager.visual_debug:
-			var start = uuid_base.substr(0, 4)
-			var end = uuid_base.substr(uuid_base.length() - 4, 4)
+			var ziped_uuid: String = initializer._zip_uuid(uuid_base)
 			var player_name = get_player_name(uuid_base)
-			node.name_label.text = "%s\n%s[...]%s\n%s" % [player_name, start, end, new_peer_id]
+			node.name_label.text = "%s\n%s\n%s" % [player_name, ziped_uuid, new_peer_id]
 		
 		# Atualizar o node path
 		# pega o path do parent
@@ -398,7 +397,7 @@ func _leave_room_internal(uuid_base: String):
 		return
 	
 	# Tira do round tbm
-	if player["round_id"] != -1:
+	if player["room_id"] != -1:
 		_leave_round_internal(uuid_base)
 
 	player["room_id"] = -1
@@ -532,16 +531,6 @@ func get_player_name(uuid_base: String) -> String:
 	if not players.has(uuid_base):
 		return ""
 	return players[uuid_base]["name"]
-
-func get_short_uuid(uuid_base: String) -> String:
-	if not players.has(uuid_base):
-		return ""
-	var player_uuid = players[uuid_base]["uuid_base"]
-	var short: String = (
-			"%s[...]%s" % [
-				player_uuid.substr(0, 4),
-				player_uuid.substr(player_uuid.length() - 4, 4)])
-	return short
 
 func is_player_registered(uuid_base: String) -> bool:
 	if not players.has(uuid_base):

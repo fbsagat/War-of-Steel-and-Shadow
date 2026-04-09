@@ -22,7 +22,7 @@ var _player_rpc_timestamps = {}
 ## Atenção! A informação em client_latency_map é uma informação não confiável q vem do cliente
 var client_latency_map: Dictionary = {}
 var last_ping_from_client : Dictionary = {} # peer_id -> timestamp
-var timeout_limit := 8000 # ms
+var timeout_limit := 4000 # ms
 
 ## Sincronização de objetos
 var _pending_peers: Dictionary = {}
@@ -357,7 +357,7 @@ func _server_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, r
 	if not round_:
 		return
 		
-	var round_id = round_["round_id"]
+	var round_id = round_["id"]
 	var players_round = round_registry.get_active_players_ids(round_id)
 	
 	for peer_id in players_round:
@@ -381,7 +381,7 @@ func _server_player_animation_state(p_id: int, speed: float, attacking: bool, de
 	var round_ = round_registry.get_round_by_player_uuid(player_uuid)
 	if not round_:
 		return
-	var players_round = round_registry.get_active_players_ids(round_["round_id"])
+	var players_round = round_registry.get_active_players_ids(round_["id"])
 	for peer_id in players_round:
 		if peer_id != player_uuid:
 			var session_id = client_registry.get_peer_id_by_uuid(peer_id)

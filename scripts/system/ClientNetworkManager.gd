@@ -359,7 +359,14 @@ func _client_apply_pick_up(player_id):
 	if not game_manager.players_node:
 		return
 	
-	var player_node = game_manager.players_node.get_node_or_null(str(player_id))
+	# Pegar o node do personagem pelo session id "p_id" no cachê de personagens da partida
+	# Verifica se já existe primeiro
+	if not game_manager.session_to_uuid.has(player_id):
+		return
+		
+	var uuid = game_manager.session_to_uuid[player_id]
+	var player_node = game_manager.player_nodes_by_uuid.get(uuid)
+	
 	if player_node and player_node.has_method("action_pick_up_item"):
 		player_node.action_pick_up_item()
 
@@ -368,7 +375,13 @@ func _client_apply_respawn(player_id, position: Vector3):
 	if not game_manager.players_node:
 		return
 		
-	var player_node = game_manager.players_node.get_node_or_null(str(player_id))
+	# Pegar o node do personagem pelo session id "p_id" no cachê de personagens da partida
+	# Verifica se já existe primeiro
+	if not game_manager.session_to_uuid.has(player_id):
+		return
+		
+	var uuid = game_manager.session_to_uuid[player_id]
+	var player_node = game_manager.player_nodes_by_uuid.get(uuid)
 	if player_node and player_node.has_method("_respawn_player"):
 		player_node._respawn_player(position)
 
@@ -377,7 +390,13 @@ func _client_apply_equip(player_id: int, item_id: int, unequip: bool = false, fr
 	if not game_manager.players_node:
 		return
 		
-	var player_node = game_manager.players_node.get_node_or_null(str(player_id))
+	# Pegar o node do personagem pelo session id "p_id" no cachê de personagens da partida
+	# Verifica se já existe primeiro
+	if not game_manager.session_to_uuid.has(player_id):
+		return
+		
+	var uuid = game_manager.session_to_uuid[player_id]
+	var player_node = game_manager.player_nodes_by_uuid.get(uuid)
 	if player_node and player_node.has_method("apply_visual_equip_on_player_node"):
 		player_node.apply_visual_equip_on_player_node(item_id, unequip, from_inv_men)
 	if player_node and player_node.has_method("execute_item_swap") and is_swap:
@@ -389,7 +408,13 @@ func _client_apply_drop(player_id: int, item_name: String):
 	if not game_manager.players_node:
 		return
 	
-	var player_node = game_manager.players_node.get_node_or_null(str(player_id))
+	# Pegar o node do personagem pelo session id "p_id" no cachê de personagens da partida
+	# Verifica se já existe primeiro
+	if not game_manager.session_to_uuid.has(player_id):
+		return
+		
+	var uuid = game_manager.session_to_uuid[player_id]
+	var player_node = game_manager.player_nodes_by_uuid.get(uuid)
 	if player_node and player_node.has_method("execute_item_drop"):
 		player_node.execute_item_drop()
 
@@ -430,7 +455,14 @@ func _client_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, r
 	if not game_manager.players_node:
 		return
 	
-	var player = game_manager.players_node.get_node_or_null(str(p_id))
+	# Pegar o node do personagem pelo session id "p_id" no cachê de personagens da partida
+	# Verifica se já existe primeiro
+	if not game_manager.session_to_uuid.has(p_id):
+		return
+		
+	var uuid = game_manager.session_to_uuid[p_id]
+	var player = game_manager.player_nodes_by_uuid.get(uuid)
+	
 	if not player:
 		return
 	if player.has_method("_character_receive_state"):
@@ -457,9 +489,15 @@ func _client_player_animation_state(p_id: int, speed: float, attacking: bool, de
 	if not game_manager.players_node:
 		return
 		
-	var player = game_manager.players_node.get_node_or_null(str(p_id))
-	if player and player.has_method("_character_receive_animation_state"):
-		player._character_receive_animation_state(speed, attacking, defending, jumping,
+	# Pegar o node do personagem pelo session id "p_id" no cachê de personagens da partida
+	# Verifica se já existe primeiro
+	if not game_manager.session_to_uuid.has(p_id):
+		return
+		
+	var uuid = game_manager.session_to_uuid[p_id]
+	var player_node = game_manager.player_nodes_by_uuid.get(uuid)
+	if player_node and player_node.has_method("_character_receive_animation_state"):
+		player_node._character_receive_animation_state(speed, attacking, defending, jumping,
 											   aiming, running, block_attacking, on_floor)
 
 
@@ -573,10 +611,16 @@ func _client_player_action(p_id: int, action_type: String, item_equipado_nome, a
 	if not game_manager.players_node:
 		return
 	
-	var player = game_manager.players_node.get_node_or_null(str(p_id))
+	# Pegar o node do personagem pelo session id "p_id" no cachê de personagens da partida
+	# Verifica se já existe primeiro
+	if not game_manager.session_to_uuid.has(p_id):
+		return
+		
+	var uuid = game_manager.session_to_uuid[p_id]
+	var player_node = game_manager.player_nodes_by_uuid.get(uuid)
 
-	if player and player.has_method("_character_receive_action"):
-		player._character_receive_action(action_type, item_equipado_nome, anim_name)
+	if player_node and player_node.has_method("_character_receive_action"):
+		player_node._character_receive_action(action_type, item_equipado_nome, anim_name)
 		_log_debug("Ação do player recebida!")
 
 func _client_receive_attack(victim_session_id):
@@ -585,10 +629,16 @@ func _client_receive_attack(victim_session_id):
 	if not game_manager.players_node:
 		return
 	
-	var player = game_manager.players_node.get_node_or_null(str(victim_session_id))
+	# Pegar o node do personagem pelo session id "p_id" no cachê de personagens da partida
+	# Verifica se já existe primeiro
+	if not game_manager.session_to_uuid.has(victim_session_id):
+		return
+		
+	var uuid = game_manager.session_to_uuid[victim_session_id]
+	var player_node = game_manager.player_nodes_by_uuid.get(uuid)
 
-	if player and player.has_method("take_damage"):
-		player.take_damage()
+	if player_node and player_node.has_method("take_damage"):
+		player_node.take_damage()
 
 func _client_receive_message(text: String, duration: float, type: String):
 	_log_debug("Mensagem recebida do servidor: " + text)
