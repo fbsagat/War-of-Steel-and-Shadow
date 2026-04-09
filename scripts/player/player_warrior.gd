@@ -1557,12 +1557,6 @@ func setup_name_label(color: Color):
 	# CONFIGURAÇÃO DE BILLBOARD
 	name_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	name_label.pixel_size = 0.01
-	
-	# ESCONDE NOME DO JOGADOR LOCAL (OPCIONAL)
-	if is_local_player:
-		name_label.visible = false
-	else:
-		name_label.visible = true
 
 ## Imprime mensagem de debug se habilitado
 func _log_debug(message: String):

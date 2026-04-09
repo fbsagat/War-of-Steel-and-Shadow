@@ -1302,7 +1302,7 @@ func _restore_round_state(match_data: Dictionary) -> void:
 				var object_id = item.get("object_id")
 
 				# Jogador local: registra no inventário e equipa o item
-				if player_uuid == uuid_base:
+				if uuid == uuid_base:
 					var item_name: String = item_database.get_item_by_id(int(item_id))["name"]
 					add_item_to_inventory(str(item_id), object_id)
 					equip_item(object_id, "", item_name)
