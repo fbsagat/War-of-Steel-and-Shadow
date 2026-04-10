@@ -547,8 +547,12 @@ func get_all_scores(round_id: int) -> Dictionary:
 		return {}
 	return rounds[round_id]["scores"].duplicate()
 
-## Retorna array ordenado por pontuação (maior primeiro).
-## Formato: [{uuid_base, name, score}, ...]
+## Retorna um ranking (leaderboard) da rodada específica, ordenado de forma decrescente.
+## @param round_id O identificador único da rodada a ser consultada.
+## @return Um Array de Dicionários contendo os dados dos jogadores:
+## - `uuid_base` (String): Identificador único do jogador.
+## - `name` (String): Nome de exibição do jogador.
+## - `score` (int): Pontuação atual acumulada na rodada.
 func get_leaderboard(round_id: int) -> Array:
 	if not rounds.has(round_id):
 		return []

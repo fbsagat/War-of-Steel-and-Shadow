@@ -431,8 +431,9 @@ func add_player_to_kicked(room_id: int, uuid_base: String) -> bool:
 	_log_debug("✓ Player '%s' (uuid=%s) adicionado como expulso da sala '%s'" % [player_["name"], uuid_base, room["name"]])
 	return true
 
-## Retorna UUIDs de todos od jogadores expulsos da partida.
-## Entry: Retorna entry_position ao invés dos UUIDs.
+## Retorna uma lista de dados dos jogadores que foram expulsos/banidos da sala.
+## [br]O parâmetro [param entry] define se deve retornar o UUID ou a posição de entrada.
+## @return Array contendo os identificadores dos jogadores banidos.
 func get_all_kicked_players(room_id: int, entry: bool = false) -> Array:
 	var kicked: Array = []
 	for player in rooms[room_id]["kicked_players"]:
@@ -441,9 +442,9 @@ func get_all_kicked_players(room_id: int, entry: bool = false) -> Array:
 		kicked.append(client["uuid_base" if not entry else "entry_position"])
 	return kicked
 
-## Verifica se o jogador ainda está banido.
-## Se o tempo ultrapassou time_limit, remove da lista.
-## Retorna true se ainda estiver banido.
+## Verifica se um jogador ainda deve permanecer na lista de banidos.
+## Se o tempo limite ([param time_limit]) tiver passado, o jogador é removido da lista.
+## @return [bool] true se o jogador ainda estiver banido; false se o banimento expirou ou não existe.
 func check_kicked_timeout(room_id: int, uuid_base: String, time_limit: float) -> bool:
 	if not rooms.has(room_id):
 		return false
@@ -467,8 +468,10 @@ func check_kicked_timeout(room_id: int, uuid_base: String, time_limit: float) ->
 
 	return false
 
-## Remove jogador da sala. Transfere host se necessário. Remove sala se ficar vazia.
-## retorna "" se não mudar de host, retorna a uuid do host quando novo host selecionado
+## Remove um jogador da sala e gerencia a lógica de sucessão de host.
+## Se o jogador removido for o host, o próximo jogador na lista será promovido. 
+## Se a sala ficar vazia, a sala é deletada do registro.
+## @return [String] O UUID do novo host (se houver mudança) ou uma string vazia se não houver mudança ou erro.
 func remove_player_from_room(room_id: int, uuid_base: String) -> String:
 	if not rooms.has(room_id):
 		return ""
@@ -509,7 +512,8 @@ func remove_player_from_room(room_id: int, uuid_base: String) -> String:
 	player_left_room.emit(room_id, uuid_base)
 	return ""
 
-## Retorna sala em que o jogador está (ou {} se não estiver em nenhuma).
+## Localiza a sala onde o jogador está presente.
+## @return [Dictionary] Uma cópia dos dados da sala. Retorna um dicionário vazio {} se o jogador não estiver em nenhuma sala.
 func get_player_room(uuid_base: String) -> Dictionary:
 	for room_id in rooms:
 		for player in rooms[room_id]["players"]:
@@ -669,7 +673,9 @@ func clear_rounds_history(room_id: int):
 
 # ===== ESTATÍSTICAS ACUMULADAS =====
 
-## Retorna estatísticas gerais da sala (jogadores identificados por uuid_base).
+## Calcula e retorna as estatísticas acumuladas de toda a história da sala.
+## Inclui dados sobre tempo total de jogo, duração média e ranking de jogadores (mais ativos e maiores pontuadores).
+## @return [Dictionary] Contém as chaves: 'total_rounds', 'total_playtime', 'average_round_duration', 'players_participated', etc.
 func get_room_statistics(room_id: int) -> Dictionary:
 	if not rooms.has(room_id):
 		return {}
@@ -766,7 +772,10 @@ func get_player_stats_in_room(room_id: int, uuid_base: String) -> Dictionary:
 
 # ===== VALIDAÇÕES PARA INICIAR PARTIDA =====
 
-## Verifica se sala pode iniciar partida.
+## Verifica se um jogador possui os requisitos mínimos para iniciar uma partida na sala.
+## Valida: existência da sala, presença do jogador na sala, status da sala (não pode estar em jogo), 
+## quantidade mínima/máxima de jogadores e permissão de host.
+## @return [Array] Um array contendo [bool, String], onde o primeiro elemento é o sucesso e o segundo a mensagem de erro.
 func can_start_match(room_id: int, uuid_base: String) -> Array:
 	if not rooms.has(room_id):
 		return [false, "A sala não existe"]
