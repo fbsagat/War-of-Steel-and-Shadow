@@ -1567,11 +1567,12 @@ func _client_return_to_room(room_data: Dictionary):
 
 ## Limpa o nó do cliente que se desconectou, esta função é para os outros 
 ## que estão conectados
-func _client_remove_player(peer_id : int):
-	if peer_id and players_node and local_peer_id != peer_id:
-		var player_node = players_node.get_node_or_null(str(peer_id))
+func _client_remove_player(peer_uuid : String):
+	if peer_uuid and players_node and uuid_base != peer_uuid:
+		var player_node = player_nodes_by_uuid.get(peer_uuid)
 		if player_node:
 			player_node.queue_free()
+			player_nodes_by_uuid.erase(peer_uuid)
 
 ## Atualiza o id de sessão do cliente reconectado no round para manutenção de sincronia, 
 ## isso acontece nos clientes que ainda estão no round

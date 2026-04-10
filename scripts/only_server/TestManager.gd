@@ -81,7 +81,7 @@ func create_test_round(nome_sala_: String = "Sala de Teste"):
 	_log_debug("========================================")
 	_log_debug("🎮 CRIANDO PARTIDA DE TESTE")
 	_log_debug("Sala: '%s'" % nome_sala_)
-	_log_debug("Jogadores: %d" % all_peers.size())
+	_log_debug("Jogadores: %d" % server_manager.simulador_players_qtd)
 	_log_debug("========================================")
 	print("")
 	await get_tree().process_frame
@@ -91,7 +91,7 @@ func create_test_round(nome_sala_: String = "Sala de Teste"):
 	var host_uuid = client_registry.get_uuid_by_peer_id(host_peer_id)
 
 	var players: Array = []
-	for i in range(all_peers.size()):
+	for i in range(server_manager.simulador_players_qtd):
 		var peer_id = all_peers[i]
 		var _uuid_base = client_registry.get_uuid_by_peer_id(peer_id)
 		
@@ -130,7 +130,7 @@ func create_test_round(nome_sala_: String = "Sala de Teste"):
 	var room_data = room_registry.get_room(host["room_id"])
 	
 	# For para entrarem na sala
-	for i in range(connected_peers.size()):
+	for i in range(server_manager.simulador_players_qtd - 1):
 		var peer_id = connected_peers[i]
 		var _uuid_base = client_registry.get_uuid_by_peer_id(peer_id)
 		server_manager._handle_join_room(peer_id, host["room_id"], "")

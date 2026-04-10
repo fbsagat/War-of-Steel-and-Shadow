@@ -82,6 +82,7 @@ var object_manager: ObjectManager = null
 var test_manager: TestManager = null
 var map_manager: Node = null
 var debug_overlay = null
+var warning_overlay = null
 
 # ===== REFERÊNCIAS INTERNAS =====
 
@@ -234,8 +235,10 @@ func _unhandled_input(event: InputEvent) -> void:
 func _input(event: InputEvent) -> void:
 	if is_headless:
 		return
-		
-	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_TAB:
+	
+	var showing_message = warning_overlay.is_showing
+	var rounds_size = round_registry.get_active_rounds_count()
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_TAB and not showing_message and rounds_size > 1:
 		_find_a_next_round_to_camera()
 	
 	if event.is_action_pressed("ui_cancel") and debug_overlay._active_tab == -1:
@@ -250,6 +253,7 @@ func _input(event: InputEvent) -> void:
 
 ## Encontra um round ativo corretamente para mudar a câmera para este round
 func _find_a_next_round_to_camera(round_id: int = -1):
+	
 	# Se receber id, envia para o round deste id, se não receber, envia para o próximo a partir de
 	# current_cam_round_index e o salva como o novo current_cam_round_index
 	
@@ -265,6 +269,7 @@ func _find_a_next_round_to_camera(round_id: int = -1):
 		if all_running_rounds_ids.is_empty():
 			current_cam_round_index = -1
 			_log_debug("[Camera] Não tem round para mandar a câmera")
+			warning_overlay.show_message("Não tem round para mandar a câmera")
 			#current_active_viewport = null
 			viewport_display.visible = false
 			return
@@ -295,6 +300,7 @@ func _find_a_next_round_to_camera(round_id: int = -1):
 			current_cam_round_index = all_running_rounds_ids[(index + 1) % all_running_rounds_ids.size()]
 
 	_log_debug("[Camera] Câmera indo para o round: %s" % current_cam_round_index)
+	warning_overlay.show_message("[Camera] Câmera indo para o round: %s" % current_cam_round_index)
 	_switch_camera_to_round(current_cam_round_index)
 
 ## Ativa a câmera de um round específico e atualiza o display
@@ -793,7 +799,7 @@ func _player_exit_from_round(player_room_id: int, peer_id: int, player_uuid: Str
 		# Eviar comando para os outros clientes removerem também node da cena
 		for player in p_round["players"]:
 			if player["session_id"] != peer_id and _is_peer_connected(player["session_id"]):
-				network_manager.rpc_id(player["session_id"], "_client_remove_player", peer_id)
+				network_manager.rpc_id(player["session_id"], "_client_remove_player", player_uuid)
 			
 		await get_tree().process_frame
 	
@@ -1296,7 +1302,7 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary, is_test: bool
 		actual_camera.name = "DummyCamera"
 		round_node.add_child(actual_camera)
 		actual_camera.global_position = Vector3(0, 100, 0)
-		actual_camera.current = false
+		actual_camera.current = true
 	
 	await get_tree().process_frame
 	

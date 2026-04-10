@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://cbo3vpkueds00"]
 
-[ext_resource type="Script" uid="uid://dyis5lw4fe1rw" path="res://scripts/ui/warning_overlay.gd" id="1_lpbxh"]
+[ext_resource type="Script" uid="uid://gv0qk87utc84" path="res://scripts/ui/warning_overlay.gd" id="1_lpbxh"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_lpbxh"]
 bg_color = Color(0, 0, 0, 0.77254903)

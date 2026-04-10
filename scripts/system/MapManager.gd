@@ -301,7 +301,7 @@ func _execute_load_map(map_scene_path: String, round_node: Node, actual_camera: 
 	_log_debug("Verificando nós filhos do mapa...")
 	for child in current_map.get_children():
 		_log_debug("  - Filho: %s (%s)" % [child.name, child.get_class()])
-
+	
 	current_map.set_physics_process(false)
 	current_map.set_camera(actual_camera)
 	current_map.set_physics_process(true)

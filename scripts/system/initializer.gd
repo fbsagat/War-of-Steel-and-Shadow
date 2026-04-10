@@ -80,7 +80,6 @@ func _init_server(is_headless):
 	# Instancia managers e registros
 	var network_manager_scene: PackedScene = preload("res://scenes/system/server_network_manager.tscn")
 	var server_manager_scene: PackedScene = preload("res://scenes/system/server_manager.tscn")
-	var server_debug_overlay_scene: PackedScene = preload("res://scenes/ui/server_debug_overlay.tscn")
 	client_registry = preload("res://scripts/only_server/registrars/ClientRegistry.gd").new()
 	room_registry = preload("res://scripts/only_server/registrars/RoomRegistry.gd").new()
 	round_registry = preload("res://scripts/only_server/registrars/RoundRegistry.gd").new()
@@ -89,15 +88,12 @@ func _init_server(is_headless):
 	object_manager = preload("res://scripts/only_server/ObjectManager.gd").new()
 	test_manager = preload("res://scripts/only_server/TestManager.gd").new()
 	
-	
 	network_manager = network_manager_scene.instantiate()
 	server_manager = server_manager_scene.instantiate()
-	debug_overlay = server_debug_overlay_scene.instantiate()
 
 	# Nomeia para facilitar visualização
 	network_manager.name = "NetworkManager"
 	server_manager.name = "ServerManager"
-	debug_overlay.name = "ServerDebugOverlay"
 	client_registry.name = "ClientRegistry"
 	room_registry.name = "RoomRegistry"
 	round_registry.name = "RoundRegistry"
@@ -109,7 +105,6 @@ func _init_server(is_headless):
 	# Adiciona à árvore
 	get_tree().root.add_child.call_deferred(network_manager)
 	get_tree().root.add_child.call_deferred(server_manager)
-	get_tree().root.add_child.call_deferred(debug_overlay)
 	get_tree().root.add_child.call_deferred(client_registry)
 	get_tree().root.add_child.call_deferred(room_registry)
 	get_tree().root.add_child.call_deferred(round_registry)
@@ -147,7 +142,6 @@ func _init_server(is_headless):
 	client_registry.round_registry = round_registry
 	client_registry.object_manager = object_manager
 	client_registry.item_database = item_database
-	client_registry.debug_overlay = debug_overlay
 	client_registry.initializer = self
 	
 	# RoomRegistry precisa de:
@@ -155,14 +149,12 @@ func _init_server(is_headless):
 	room_registry.client_registry = client_registry
 	room_registry.round_registry = round_registry
 	room_registry.object_manager = object_manager
-	room_registry.debug_overlay = debug_overlay
 	room_registry.initializer = self
 	
 	# RoundRegistry precisa de:
 	round_registry.client_registry = client_registry
 	round_registry.room_registry = room_registry
 	round_registry.object_manager = object_manager
-	round_registry.debug_overlay = debug_overlay
 	round_registry.initializer = self
 	
 	# MapManager precisa de:
@@ -170,9 +162,6 @@ func _init_server(is_headless):
 	
 	# ItemDatabase precisa de:
 	item_database.initializer = self
-	
-	# Server debug overlay precisa de:
-	debug_overlay.initializer = self
 	
 	# ObjectManager precisa de:
 	object_manager.server_manager = server_manager
@@ -193,6 +182,35 @@ func _init_server(is_headless):
 	test_manager.map_manager = map_manager
 	test_manager.initializer = self
 	
+	# Carregar nós que serão usados apenas se não headless
+	if not is_headless:
+		var server_debug_overlay_scene: PackedScene = preload("res://scenes/ui/server_debug_overlay.tscn")
+		var warning_overlay_scene: PackedScene = preload("res://scenes/ui/warning_overlay.tscn")
+		
+		debug_overlay = server_debug_overlay_scene.instantiate()
+		warning_overlay = warning_overlay_scene.instantiate()
+		
+		debug_overlay.name = "ServerDebugOverlay"
+		warning_overlay.name = "WarningOverlay"
+		
+		get_tree().root.add_child.call_deferred(debug_overlay)
+		get_tree().root.add_child.call_deferred(warning_overlay)
+		
+		# Injeta dependências cruzadas:
+		server_manager.warning_overlay = warning_overlay
+		debug_overlay.initializer = self
+		client_registry.debug_overlay = debug_overlay
+		room_registry.debug_overlay = debug_overlay
+		round_registry.debug_overlay = debug_overlay
+		
+		# Configurações
+		server_manager.visual_debug = visual_debug
+		debug_overlay.server_manager = server_manager
+		server_manager.debug_overlay = debug_overlay
+		debug_overlay.network_manager = network_manager
+		debug_overlay.setup(client_registry, room_registry, round_registry, object_manager)
+		debug_overlay._connect_signals()
+	
 	# configurações
 	server_manager.is_headless = is_headless
 	map_manager.is_server = true
@@ -203,13 +221,6 @@ func _init_server(is_headless):
 		server_manager.fast_round = true
 		server_manager.simulador_players_qtd = simulador_players_qtd
 	server_manager.test_trainer = trainer
-	server_manager.visual_debug = visual_debug
-	
-	debug_overlay.server_manager = server_manager
-	server_manager.debug_overlay = debug_overlay
-	debug_overlay.network_manager = network_manager
-	debug_overlay.setup(client_registry, room_registry, round_registry, object_manager)
-	debug_overlay._connect_signals()
 	
 	# Aguarda até que os nós tenham sido adicionados à árvore
 	await get_tree().process_frame

@@ -264,9 +264,9 @@ func _client_return_to_room(room_data: Dictionary):
 	_log_debug("↩️ Voltando para sala")
 	game_manager._client_return_to_room(room_data)
 
-func _client_remove_player(peer_id: int):
-	_log_debug("👤 Removendo player: %d" % peer_id)
-	game_manager._client_remove_player(peer_id)
+func _client_remove_player(peer_uuid: String):
+	_log_debug("👤 Removendo player: %s" % peer_uuid)
+	game_manager._client_remove_player(peer_uuid)
 
 func _client_update_character_peer_id(_uuid_base: String, _new_peer_id: int):
 	_log_debug("👤 Atualizando session id de remoto: %s para %d" % [_uuid_base, _new_peer_id])

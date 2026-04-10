@@ -206,7 +206,7 @@ func _client_return_to_room(_room_data: Dictionary):
 	pass
 
 @rpc("authority", "call_remote", "reliable")
-func _client_remove_player(_peer_id: int):
+func _client_remove_player(_peer_uuid: String):
 	pass
 
 @rpc("authority", "call_remote", "reliable")

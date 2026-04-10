@@ -394,7 +394,7 @@ func _update_clients_realtime() -> void:
 func _rebuild_rooms(list: VBoxContainer) -> void:
 	_room_rows.clear()
 	var col_names: Array[String] = ["ID", "Nome", "Host", "Jogad.", "Kicked", "InGame", "TT de part.", "TT playt.", "", ""]
-	var col_sizes: Array[int] = [     60,   100,   100,     100,      100,       75,         85,            75,     75, 75]
+	var col_sizes: Array[int] = [     60,   120,   100,     100,      100,       75,         85,            75,     75, 75]
 	_add_header(list, col_names, col_sizes)
 
 	if room_registry == null:
@@ -408,7 +408,7 @@ func _rebuild_rooms(list: VBoxContainer) -> void:
 		var kicked = room_registry.get_all_kicked_players(room_id, true)
 		var _refs: Dictionary = _add_row(list, [
 			_col(str(r["id"]),                                    "",    60),
-			_col(r["name"],                                       "",    100),
+			_col(r["name"],                                       "",    120),
 			_col(str(host_["name"]),                              "",    100),
 			_col(str(players_pos),                                "",    100),
 			_col(str(kicked),                                     "",    100),

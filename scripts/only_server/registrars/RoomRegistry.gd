@@ -212,8 +212,7 @@ func get_all_rooms() -> Array:
 func get_all_rooms_ids() -> Array:
 	var ids: Array = []
 	for room in rooms.values():
-		if room.has("uuid_base"):
-			ids.append(room["id"])
+		ids.append(room["id"])
 	return ids
 
 func get_all_room_players_uuids(room_id: int) -> Array:
