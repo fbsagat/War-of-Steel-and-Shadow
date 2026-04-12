@@ -201,11 +201,11 @@ func update_peer_id(uuid_base: String, new_peer_id: int):
 	
 	# Se o cliente ter um personagem ativo em um round, atualizar seu novo id para os outros clientes no round
 	# Apenas os que estão conectados
-	var round_id = in_round(uuid_base)
-	if round_id:
+	var round_id = players[uuid_base]["round_id"]
+	if round_id > 0:
 		var round_ = get_players_in_round(round_id)
 		for player_uuid in round_:
-			# Se estiver conectado e não for o próprio,
+			# Se estiver conectado e não for o próprio \/
 			# _handle_request_return_or_exit já vai criar como novo session id.
 			if players[player_uuid]["connected"] == true and player_uuid != uuid_base:
 				var peer_id = get_peer_id_by_uuid(player_uuid)

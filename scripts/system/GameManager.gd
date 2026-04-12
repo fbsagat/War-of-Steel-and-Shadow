@@ -1574,10 +1574,10 @@ func _client_remove_player(peer_uuid : String):
 			player_node.queue_free()
 			player_nodes_by_uuid.erase(peer_uuid)
 
-## Atualiza o id de sessão do cliente reconectado no round para manutenção de sincronia, 
-## isso acontece nos clientes que ainda estão no round
-func _client_update_character_peer_id(_uuid_base: String, _new_peer_id: int):
-	_log_debug("👤 Atualizando session id de remoto: %s para %d" % [_uuid_base, _new_peer_id])
+## Atualiza o id de sessão do cliente remoto reconectado no round para manutenção de sincronia, 
+## isso acontece nos clientes que ainda estão no round e é executado apenas para remotos de outros players
+func _client_update_character_peer_id(remote_uuid_base: String, remote_new_peer_id: int):
+	_log_debug("👤 Atualizando session id de remoto: %s para %d" % [remote_uuid_base, remote_new_peer_id])
 	
 	# Se não ter um round carregado ignora, vai receber atualizado quando carregar com _client_round_return
 	if not players_node:
@@ -1585,31 +1585,31 @@ func _client_update_character_peer_id(_uuid_base: String, _new_peer_id: int):
 	
 	# limpa session antiga (se existir)
 	for s_id in session_to_uuid.keys():
-		if session_to_uuid[s_id] == _uuid_base:
+		if session_to_uuid[s_id] == remote_uuid_base:
 			session_to_uuid.erase(s_id)
 			break
 	
 	# registra nova sessão
-	session_to_uuid[_new_peer_id] = _uuid_base
+	session_to_uuid[remote_new_peer_id] = remote_uuid_base
 	
 	# recupera node existente
-	var node = player_nodes_by_uuid.get(_uuid_base)
+	var node = player_nodes_by_uuid.get(remote_uuid_base)
 	
 	# Muda session id do nó
-	node.session_id = _new_peer_id
+	node.session_id = remote_new_peer_id
 	
 	# Atualiza novo session id no debug overlay
-	if debug_overlay_node:
-		debug_overlay_node.peer_id = _new_peer_id
+	#if debug_overlay_node:
+		#debug_overlay_node.peer_id = _new_peer_id
 	
 	# Atualiza o nome de debug (que exibe o id de sessão atual)
 	if visual_debug:
-		var ziped_uuid: String = initializer._zip_uuid(uuid_base)
-		node.name_label.text = "%s\n%s\n%s" % [player_name, ziped_uuid, _new_peer_id]
+		var ziped_uuid: String = initializer._zip_uuid(remote_uuid_base)
+		node.name_label.text = "%s\n%s\n%s" % [node.player_name, ziped_uuid, remote_new_peer_id]
 	
 	# Pega o node e muda a autoridade multiplayer
-	node.set_multiplayer_authority(_new_peer_id)
-	_log_debug("👤 Session id de remoto atualizado com sucesso para %s" % _new_peer_id)
+	node.set_multiplayer_authority(remote_new_peer_id)
+	_log_debug("👤 Session id de remoto atualizado com sucesso para %s" % remote_new_peer_id)
 
 ## Limpa todos os objetos da rodada no cliente.
 func _cleanup_local_round():

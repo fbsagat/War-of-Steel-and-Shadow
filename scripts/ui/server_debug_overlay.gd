@@ -166,6 +166,7 @@ func _ready() -> void:
 func _connect_signals():
 	client_registry.peer_connected.connect(notify_structure_changed)
 	client_registry.peer_disconnected.connect(notify_structure_changed)
+	client_registry.player_name_registered.connect(notify_structure_changed)
 	client_registry.player_joined_room.connect(notify_structure_changed)
 	client_registry.player_left_room.connect(notify_structure_changed)
 	client_registry.peer_state_changed.connect(notify_structure_changed)
