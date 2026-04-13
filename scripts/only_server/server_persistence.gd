@@ -225,23 +225,44 @@ func remove_player(uuid: String) -> void:
 # 📂 CARREGAMENTO DE JOGADORES
 # =========================================================
 
-## Retorna os dados de jogadores e cache atualmente persistidos.
+## Retorna os dados de jogadores com tipagem estrita e validação de campos.
 ##
 ## [return] [Dictionary] com estrutura:
 ## [codeblock]
 ## {
-##     "players": Dictionary,      # { uuid: player_data }
-##     "players_cache": Dictionary # { uuid: node_path }
+##     "players": Dictionary[String, Dictionary],
+##     "players_cache": Dictionary[String, String]
 ## }
 ## [/codeblock]
-## Se as chaves não existirem, retorna dicionários vazios.
 ##
-## [b]Nota:[/b] O retorno contém cópias profundas para evitar modificações
-## acidentais no cache interno. Para leitura frequente, considere manter
-## uma referência local ao invés de chamar este método repetidamente.
+## Cada campo do jogador é explicitamente convertido para seu tipo correto
+## (int, float, bool, String), evitando erros de runtime comuns após
+## deserialização JSON. Campos ausentes recebem valores padrão seguros.
 func load_players() -> Dictionary:
+	var typed_players: Dictionary[String, Dictionary] = {}
+	var raw_players: Dictionary = _cached_data.get("players", {})
+
+	for uuid: String in raw_players:
+		var raw: Dictionary = raw_players[uuid]
+		# Conversão explícita e segura de cada campo conforme sua estrutura
+		typed_players[uuid] = {
+			"peer_id": int(raw.get("peer_id", 0)),
+			"uuid_base": str(raw.get("uuid_base", uuid)),
+			"entry_position": int(raw.get("entry_position", 0)),
+			"name": str(raw.get("name", "")),
+			"registered": bool(raw.get("registered", false)),
+			"connected": bool(raw.get("connected", false)),
+			"disconnected_at": float(raw.get("disconnected_at", 0.0)),
+			"created_at": float(raw.get("created_at", 0.0)),
+			"room_id": int(raw.get("room_id", 0)),
+			"round_id": int(raw.get("round_id", 0)),
+			"node_path": str(raw.get("node_path", "")),
+			# Suporta both "ClientState" (JSON original) e "client_state" (convenção GDScript)
+			"ClientState": int(raw.get("ClientState", raw.get("client_state", 0)))
+		}
+
 	return {
-		"players": _cached_data.get("players", {}).duplicate(true),
+		"players": typed_players,
 		"players_cache": _cached_data.get("players_cache", {}).duplicate(true)
 	}
 
