@@ -400,7 +400,6 @@ func _mark_player_disconnected(round_id: int, uuid_base: String):
 
 ## Remove player da lista de desconectados da rodada.
 func _unmark_player_disconnected(round_id: int, uuid_base: String):
-	print("[111] _unmark_player_disconnected executado!")
 	if not rounds.has(round_id):
 		return
 

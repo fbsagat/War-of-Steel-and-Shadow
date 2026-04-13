@@ -794,9 +794,6 @@ func _execute_player_return_to_round(peer_id: int, player_uuid: String):
 		# Define o player como conectado de novo na sala
 		room_registry._set_connected_peer(peer_id, round_["room_id"])
 		
-		# Define o player como conectado de novo no round
-		round_registry._unmark_player_disconnected(round_["id"], player_uuid)
-		
 		# muda estado do jogador
 		client_registry.set_player_state(player_uuid, client_registry.ClientState.LOADING)
 		
