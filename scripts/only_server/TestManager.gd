@@ -123,6 +123,10 @@ func create_test_round(nome_sala_: String = "Sala de Teste"):
 	
 	await get_tree().process_frame
 	
+	# Remove jogadores de qualquer round ou partida que possam estar
+	#for i in range(server_manager.simulador_players_qtd - 1):
+		#client_registry.
+	
 	# Cria sala no RoomRegistry
 	server_manager._handle_create_room(host_peer_id, "Sala de testes", "")
 	

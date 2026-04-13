@@ -344,7 +344,7 @@ func _update_realtime() -> void:
 func _rebuild_clients(list: VBoxContainer) -> void:
 	_client_rows.clear()
 	var col_names: Array[String] = ["Pos.", "On", "Estado", "Nome", "UUID", "Session", "Sala", "Round", "Ping", "Tempo", "", ""]
-	var column_sizes: Array[int] = [  60,    30,      80,    100,    120,      90,       50,     50,      80,      80,   75, 75]
+	var column_sizes: Array[int] = [  60,    30,      90,    100,    120,      90,       50,     50,      80,      80,   75, 75]
 	_add_header(list, col_names, column_sizes)
 
 	if client_registry == null:
@@ -358,7 +358,7 @@ func _rebuild_clients(list: VBoxContainer) -> void:
 		var _refs: Dictionary = _add_row(list, [
 			_col(str(c["entry_position"]),                   "",       60),
 			_col(str("🟢" if c["connected"] else "🔴"),     "",        30),
-			_col(state_name,                                 "state",   80),
+			_col(state_name,                                 "state",   90),
 			_col(c["name"],                                  "",        100),
 			_col(ziped_uuid,                                 "",        120),
 			_col(str(c["peer_id"]),                          "",        90),
@@ -368,7 +368,7 @@ func _rebuild_clients(list: VBoxContainer) -> void:
 			_col("...",                                      "time",    80),
 			
 			_col_btn("Kick",  func(): server_manager._kick_player_from_round(c["peer_id"], "O servidor quis"), 75),
-			_col_btn("Print",  func(): print(c), 75)
+			_col_btn("Print",  func(): print(c), 75),
 		])
 		_client_rows[client_uuid] = _refs
 	

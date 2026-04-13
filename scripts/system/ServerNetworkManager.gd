@@ -157,7 +157,7 @@ func _server_receive_hello(payload: Dictionary):
 		return
 	var peer_id = multiplayer.get_remote_sender_id()
 	var response = server_manager.process_client_hello(payload, peer_id)
-	# RENOMEADO DESTINO: "client_receive_auth_result" → "_client_receive_auth_result"
+	# Destino: game_manager.handle_server_response
 	rpc_id(peer_id, "_client_receive_auth_result", response)
 
 # ===== REGISTRO DE JOGADOR =====

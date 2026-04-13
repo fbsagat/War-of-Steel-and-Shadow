@@ -5,16 +5,16 @@ class_name Initializer
 ## [TESTES] Usa o TestManager para iniciar uma partida logo na execução (localhost)
 ## (configura server e clients / server cria round e inicia partida com primeiros clientes /
 ##  clientes recebem localhost_auto_connect = true pr conectr autom.)
-@export var test_mode: bool = false
+@export var test_mode: bool = true
 ## [TESTES] Define a quantidade de instâcias de clientes conectadas para executar fast_round
-@export var simulador_players_qtd: int = 2
+@export var simulador_players_qtd: int = 3
 ## [TESTES] Dropa itens perto dos players e ativa o trainer de cada player
 @export var trainer: bool = true
 ## [TESTES] Ativa/desativa proteção dos botões dos menus (desativar para testes de multiplos RPCs)
 @export var disable_protection: bool = false
 ## [TESTES] Ativa/desativa o debug visual na gameplay
 @export var visual_debug: bool = true
-## Iniciar com o mouse destrancado (Cliente / apenas no modo de testes)
+## [TESTES] [Clientes] Iniciar com o mouse destrancado
 @export var start_unlocked_mouse: bool = true
 
 # Instruções para debug
@@ -23,7 +23,7 @@ var activate_only_selected: bool = true
 # Disponíveis: "Server", "NetworkManager", "TestManager", "GameManager", "RoomRegistry"
 # "RoundRegistry", "ClientRegistry", "Player_node", "ObjectManager", "MapManager", "MainMenu"
 # "ItemDatabase", "InventoryMenu", "DroppedItem"
-var selected: Array = ["Server", "RoomRegistry", "NetworkManager", "TestManager", "GameManager"]
+var selected: Array = ["Server", "RoomRegistry", "NetworkManager", "TestManager", "GameManager", "MainMenu"]
 
 # Referências
 ## Manager de rede, gerencia comunicação entre servidor e clientes
@@ -153,6 +153,8 @@ func _init_server(is_headless):
 	
 	# RoundRegistry precisa de:
 	round_registry.client_registry = client_registry
+	round_registry.server_manager = server_manager
+	round_registry.network_manager = network_manager
 	round_registry.room_registry = room_registry
 	round_registry.object_manager = object_manager
 	round_registry.initializer = self
@@ -231,9 +233,9 @@ func _init_server(is_headless):
 	client_registry.initialize()
 	room_registry.initialize()
 	round_registry.initialize()
-	test_manager.initialize()
 	item_database.load_database()
 	object_manager.initialize()
+	test_manager.initialize()
 
 func _init_client(id_file_):
 	# Instancia managers e registros
@@ -317,11 +319,11 @@ func _init_client(id_file_):
 	if test_mode:
 		game_manager.localhost_auto_connect = true
 		game_manager.is_loading = true
-		main_menu.start_unlocked_mouse = start_unlocked_mouse
 	if visual_debug:
 		game_manager.debug_overlay_node = debug_overlay
 		game_manager.debug_menu_visible = true
 		
+	main_menu.start_unlocked_mouse = start_unlocked_mouse
 	game_manager.visual_debug = visual_debug
 	main_menu.disable_protection = disable_protection
 		

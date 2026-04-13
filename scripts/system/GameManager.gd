@@ -670,37 +670,45 @@ func _save_tokens() -> void:
 ## Processa resposta do servidor.
 ## Salva novo token se necessário.
 func handle_server_response(response: Dictionary) -> void:
-	if response["status"] == "new_token":
-		var sid = response["server_id"]
-		server_tokens[sid] = response["token"]
-		_save_tokens()
-			
-		if main_menu_node:
-			main_menu_node.show_name_input_menu(true)
+	var status = response["status"]
 
-	elif response["status"] == "ok":
-		_log_debug("Autenticado com sucesso")
-		
-		has_timed_out = false
-		player_name = response["player_name"]
-		
-		if is_in_round:
-			# Atualiza o node para o novo session id
-			_client_update_character_peer_id(uuid_base, local_peer_id)
-			
+	match status:
+		"new_token":
+			var sid = response["server_id"]
+			server_tokens[sid] = response["token"]
+			_save_tokens()
 			if main_menu_node:
-				main_menu_node.hide_main_menu()
-		else:
+				main_menu_node.show_name_input_menu(true)
+
+		"ok", "ok_in_round":
+			has_timed_out = false
+			player_name = response["player_name"]
+
+			var in_round = status == "ok_in_round"
+			_log_debug(
+				"Autenticado com sucesso e retornando ao round"
+				if in_round
+				else "Autenticado com sucesso, server reiniciou, retornando ao menu"
+			)
+
+			if in_round and is_in_round:
+				_client_update_character_peer_id(uuid_base, local_peer_id)
+				if main_menu_node:
+					main_menu_node.hide_main_menu()
+				return
+			
+			# Se a response for "ok"
+			_cleanup_local_round()
 			if main_menu_node:
 				if player_name == "":
 					main_menu_node.show_name_input_menu(true)
 				else:
-					main_menu_node.update_name_e_connected(configs["server_name"], response["player_name"])
+					main_menu_node.update_name_e_connected(configs["server_name"], player_name)
 					main_menu_node.show_main_menu()
 
-	elif response["status"] == "reject":
-		_log_debug("Conexão rejeitada: %s" % response.get("reason",""))
-		_disconnect_from_server()
+		"reject":
+			_log_debug("Conexão rejeitada: %s" % response.get("reason",""))
+			_disconnect_from_server()
 
 
 # ===== EXECUÇÃO DE BOTÕES DE CONEXÃO =====

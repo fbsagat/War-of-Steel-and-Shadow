@@ -24,7 +24,7 @@ var server_manager: ServerManager = null
 var client_registry: ClientRegistry = null
 var round_registry: RoundRegistry = null
 var object_manager: ObjectManager = null
-var debug_overlay = null
+var debug_overlay: DebugOverlay = null
 var initializer: Initializer = null
 
 # ===== VARIÁVEIS INTERNAS =====
@@ -471,6 +471,7 @@ func check_kicked_timeout(room_id: int, uuid_base: String, time_limit: float) ->
 ## Remove um jogador da sala e gerencia a lógica de sucessão de host.
 ## Se o jogador removido for o host, o próximo jogador na lista será promovido. 
 ## Se a sala ficar vazia, a sala é deletada do registro.
+## Já remove automaticamente do round. (Impossível estar em um round sem estar em uma sala)
 ## @return [String] O UUID do novo host (se houver mudança) ou uma string vazia se não houver mudança ou erro.
 func remove_player_from_room(room_id: int, uuid_base: String) -> String:
 	if not rooms.has(room_id):
@@ -492,12 +493,18 @@ func remove_player_from_room(room_id: int, uuid_base: String) -> String:
 	var was_host = room["players"][player_index]["is_host"]
 
 	_return_color_to_pool(room_id, room["players"][player_index]["character"]["color"])
+	
+	# Se estiver em um round, remove dele antes de remover da sala
+	var player = client_registry.get_player(uuid_base)
+	if player and player["round_id"] > 0:
+		round_registry.remove_player(player["round_id"], uuid_base)
+	
+	# Remove player da sala
 	room["players"].remove_at(player_index)
+
 
 	if client_registry:
 		client_registry.leave_room(uuid_base)
-	
-	_log_debug("✓ Player '%s' (uuid=%s) saiu da sala '%s'" % [player_name, uuid_base, room["name"]])
 
 	if was_host and not room["players"].is_empty():
 		room["players"][0]["is_host"] = true
@@ -505,10 +512,11 @@ func remove_player_from_room(room_id: int, uuid_base: String) -> String:
 		_log_debug("✓ Novo host da sala '%s': uuid=%s" % [room["name"], room["host_uuid"]])
 		host_changed.emit(room_id, room["host_uuid"])
 		return room["host_uuid"]
-
+	
 	if room["players"].is_empty():
 		remove_room(room_id)
-		
+	
+	_log_debug("✓ Player '%s' (uuid=%s) saiu da sala '%s'" % [player_name, uuid_base, room["name"]])
 	player_left_room.emit(room_id, uuid_base)
 	return ""
 
