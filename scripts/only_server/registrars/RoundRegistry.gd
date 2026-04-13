@@ -793,8 +793,8 @@ func _on_peer_id_updated(uuid_base: String, new_peer_id: int):
 	for round_id in rounds:
 		for player in rounds[round_id]["players"]:
 			if player["uuid_base"] == uuid_base:
-				player["session_id"] = new_peer_id
-				_log_debug("✓ session_id atualizado para uuid=%s na rodada %d" % [uuid_base, round_id])
+				player["peer_id"] = new_peer_id
+				_log_debug("✓ peer_id atualizado para uuid=%s na rodada %d" % [uuid_base, round_id])
 				return
 
 func _log_debug(message: String):

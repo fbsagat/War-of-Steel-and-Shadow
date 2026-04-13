@@ -256,6 +256,8 @@ func _server_player_ready():
 		
 	await get_tree().process_frame
 	
+	resume_peer_sync(peer_id)
+	
 	client_registry.set_player_state(player_uuid, client_registry.ClientState.IN_GAME)
 
 

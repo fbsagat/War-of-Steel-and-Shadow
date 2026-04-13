@@ -209,7 +209,7 @@ func _send_spawn_to_clients(round_id: int, object_id: int, item_name: String, po
 		if not player_node or not is_instance_valid(player_node):
 			continue
 
-		var player_id = player_node.session_id
+		var player_id = player_node.peer_id
 
 		if player_id == 1 or not _is_peer_connected(player_id):
 			continue
@@ -293,7 +293,7 @@ func _send_despawn_to_clients(round_id: int, object_id: int):
 		if not player_node or not is_instance_valid(player_node):
 			continue
 
-		var player_id = player_node.session_id
+		var player_id = player_node.peer_id
 
 		if player_id == 1 or not _is_peer_connected(player_id):
 			continue

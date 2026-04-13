@@ -1346,7 +1346,7 @@ func _restore_round_state(match_data: Dictionary) -> void:
 func _spawn_player(player_data: Dictionary, is_local: bool, _match_data: Dictionary):
 	
 	# VALIDAÇÕES INICIAIS
-	if not player_data.has("uuid_base") or not player_data.has("name") or not player_data.has("session_id"):
+	if not player_data.has("uuid_base") or not player_data.has("name") or not player_data.has("peer_id"):
 		push_error("GameManager: player_data inválido: faltam campos obrigatórios")
 		return
 	
@@ -1356,12 +1356,12 @@ func _spawn_player(player_data: Dictionary, is_local: bool, _match_data: Diction
 	
 	var player_name_ = player_data["uuid_base"]
 	var camera_name = player_name_ + "_Camera"
-	var session_id = player_data["session_id"]
+	var peer_id = player_data["peer_id"]
 	var player_uuid = player_data["uuid_base"]
 	var player_display_name = player_data["name"]
 	
 	_log_debug("🔄 [Spawn] Iniciando spawn: %s (Session: %s, Local: %s)" % [
-		player_display_name, session_id, "SIM" if is_local else "NÃO"
+		player_display_name, peer_id, "SIM" if is_local else "NÃO"
 	])
 	
 	# VERIFICA DUPLICAÇÃO
@@ -1416,7 +1416,7 @@ func _spawn_player(player_data: Dictionary, is_local: bool, _match_data: Diction
 	
 	# Adiciona nó no cachê de personagens para fácil acesso
 	player_nodes_by_uuid[player_name_] = player_instance
-	session_to_uuid[session_id] = player_name_
+	session_to_uuid[peer_id] = player_name_
 	
 	while not player_instance.is_inside_tree() and tree_waited < tree_timeout:
 		await get_tree().process_frame
@@ -1460,7 +1460,7 @@ func _spawn_player(player_data: Dictionary, is_local: bool, _match_data: Diction
 		is_local,
 		player_data["name"], 
 		final_color, 
-		session_id, 
+		peer_id, 
 		player_uuid,
 	)
 	
@@ -1604,7 +1604,7 @@ func _client_update_character_peer_id(remote_uuid_base: String, remote_new_peer_
 	var node = player_nodes_by_uuid.get(remote_uuid_base)
 	
 	# Muda session id do nó
-	node.session_id = remote_new_peer_id
+	node.peer_id = remote_new_peer_id
 	
 	# Atualiza novo session id no debug overlay
 	#if debug_overlay_node:

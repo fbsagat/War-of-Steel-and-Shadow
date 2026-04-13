@@ -237,7 +237,7 @@ func update_peer_id(uuid_base: String, new_peer_id: int):
 	var node = get_player_node(uuid_base)
 	if node:
 		node.name = str(new_peer_id)
-		node.session_id = new_peer_id
+		node.peer_id = new_peer_id
 		
 		# Se visual_debug true, atualiza name_label poir mudou o id de sessão (peer_id)
 		# Se visual_debug false, não precisa atualizar pois o nome não muda na reconexão
@@ -249,7 +249,7 @@ func update_peer_id(uuid_base: String, new_peer_id: int):
 		# Atualizar o node path
 		# pega o path do parent
 		var parent_path := str(node.get_parent().get_path())
-		# cria novo path com session_id no final
+		# cria novo path com peer_id no final
 		var new_path := parent_path + "/" + str(new_peer_id)
 		players[uuid_base]["node_path"] = new_path
 		players_cache[uuid_base] = new_path

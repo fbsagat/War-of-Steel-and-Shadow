@@ -362,7 +362,7 @@ func add_player_to_room(room_id: int, uuid_base: String) -> bool:
 
 	room["players"].append({
 		"uuid_base": uuid_base,
-		"session_id": player_id,
+		"peer_id": player_id,
 		"name": player_name,
 		"is_host": is_host,
 		"is_offline": false,
@@ -857,8 +857,8 @@ func _on_peer_id_updated(uuid_base: String, new_peer_id: int):
 	for room_id in rooms:
 		for player in rooms[room_id]["players"]:
 			if player["uuid_base"] == uuid_base:
-				player["session_id"] = new_peer_id
-				_log_debug("✓ session_id atualizado para uuid=%s na sala %d" % [uuid_base, room_id])
+				player["peer_id"] = new_peer_id
+				_log_debug("✓ peer_id atualizado para uuid=%s na sala %d" % [uuid_base, room_id])
 				return
 
 func get_room_count() -> int:
