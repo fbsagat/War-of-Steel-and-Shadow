@@ -772,7 +772,7 @@ func _on_hitbox_body_entered(body: Node, hitbox_area: Area3D) -> void:
 		return
 
 	# Não acerta a sí próprio
-	if body.name == str(session_id):
+	if body.player_uuid == player_uuid:
 		return
 
 	# Se for inimigo ou outro player
@@ -786,13 +786,13 @@ func _on_hitbox_body_entered(body: Node, hitbox_area: Area3D) -> void:
 			hit_targets.append(body)
 			body.take_damage(10)
 			group = "enemy"
-			_log_debug("%s foi acertado por %s" % [body.name, hitbox_area.get_parent().name])
+			_log_debug("%s foi acertado por %s" % [body.player_name, hitbox_area.get_parent().name])
 		
 		# apenas outros players
 		if body.is_in_group("remote_player"):
 			hit_targets.append(body)
 			group = "remote_player"
-			_log_debug("%s foi acertado em %s" % [body.name, hitbox_area.get_parent().name])
+			_log_debug("%s foi acertado em %s" % [body.player_name, hitbox_area.get_parent().name])
 		
 		if server_manager and server_manager.has_method("attack_validation"):
 			server_manager.attack_validation(group, session_id, actual_weapon.name, body.session_id)

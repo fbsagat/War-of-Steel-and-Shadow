@@ -2008,7 +2008,6 @@ func _server_validate_equip_item(requesting_player_id: int, object_id: int, _tar
 	var player = client_registry.get_player(player_uuid)
 	var round_ = round_registry.get_round_by_player_uuid(player_uuid)
 	var item_id = item_database.get_item(object_manager.get_stored_object_item_name(round_["id"] ,object_id))["id"]
-	var players_node = round_["round_node"].get_node_or_null("Players")
 	var item = item_database.get_item_by_id(item_id)
 	#var item_slot = item.get_slot()
 	
@@ -2048,7 +2047,7 @@ func _server_validate_equip_item(requesting_player_id: int, object_id: int, _tar
 	await get_tree().process_frame
 	
 	# Aplica visual tbm na cena do servidor
-	var player_node = players_node.get_node_or_null(str(requesting_player_id))
+	var player_node = client_registry.get_player_node(player_uuid)
 	if player_node and player_node.has_method("apply_visual_equip_on_player_node"):
 			player_node.apply_visual_equip_on_player_node(item_id, false, true)
 			
@@ -2063,7 +2062,6 @@ func _server_validate_unequip_item(requesting_player_id: int, slot_type: String)
 		return
 		
 	var item_id = item_["item_id"]
-	var players_node = round_["round_node"].get_node_or_null("Players")
 	var item = item_database.get_item_by_id(int(item_id))
 	var item_slot = item.get_slot()
 	
@@ -2094,7 +2092,7 @@ func _server_validate_unequip_item(requesting_player_id: int, slot_type: String)
 	await get_tree().process_frame
 	
 	# Aplica na cena do servidor (atualizar visual)
-	var player_node = players_node.get_node_or_null(str(requesting_player_id))
+	var player_node = client_registry.get_player_node(player_uuid)
 	if player_node and player_node.has_method("apply_visual_equip_on_player_node"):
 			player_node.apply_visual_equip_on_player_node(item_id, true, true)
 
@@ -2190,7 +2188,7 @@ func _server_validate_swap_items(dragged_item_id: String, target_item_id: String
 	
 	# Servidor:
 	# Mudança de visual sincronizada para os remotes e clientes
-	var player_node = players_node.get_node_or_null(str(player_id))
+	var player_node = client_registry.get_player_node(player_uuid)
 	if player_node and player_node.has_method("apply_visual_equip_on_player_node"):
 		player_node.apply_visual_equip_on_player_node(item_data["id"])
 	# Ações diversas relacionadas a swap de itens sincronizadas para os remotes e clientes
@@ -2412,7 +2410,7 @@ func _server_trainer_repawn_player(player_id, player_uuid):
 	
 	
 	# Aplica na cena de player do servidor
-	var player_node = players_node.get_node_or_null(str(player_id))
+	var player_node = client_registry.get_player_node(player_uuid)
 	if player_node and player_node.has_method("_respawn_player"):
 		player_node._respawn_player(map_manager.spawn_center)
 		
