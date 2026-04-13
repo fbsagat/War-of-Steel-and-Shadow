@@ -835,9 +835,7 @@ func _player_exit_from_round(peer_id: int, player_uuid: String):
 		for r_player in p_round["players"]:
 			if r_player["peer_id"] != peer_id and _is_peer_connected(r_player["peer_id"]):
 				# Tem que estar fora das listas disconnected e quitted e não ser o próprio
-				if not (r_player["uuid_base"] in p_round["disconnected_players"]) \
-				and not (r_player["uuid_base"] in p_round["quitted_players"]) \
-				and not r_player["uuid_base"] == player_uuid:
+				if r_player["uuid_base"] in round_registry.connected_clients and not r_player["uuid_base"] == player_uuid:
 					
 					# Envia aviso para os outros de que este jogador saiu permanentemente
 					var r_player_tt = client_registry.get_player(r_player["uuid_base"])

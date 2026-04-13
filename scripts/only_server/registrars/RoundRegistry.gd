@@ -40,6 +40,9 @@ var initializer: Initializer = null
 ## Dicionário de todas as rodadas ativas: {round_id: RoundData}
 var rounds: Dictionary = {}
 
+## Clientes verdadeiramente conectados em um round (tem que estar conectado na rede e jogando em um round)
+var connected_clients: Array = []
+
 var disconnect_check_timer: Timer = null
 var _initialized: bool = false
 var max_id: int = 0
@@ -157,6 +160,7 @@ func create_round(room_id: int, room_name: String, players: Array, settings: Dic
 	# Inicializa scores zerados (chave = uuid_base)
 	for player in players:
 		round_data["scores"][player["uuid_base"]] = 0
+		connected_clients.append(player["uuid_base"])
 
 	# Gerar configurações do Sky3D
 	round_data["settings"]["sky_rand_configs"] = sky3d_config_generator()
@@ -289,7 +293,10 @@ func _cleanup_round(round_id: int):
 		return
 
 	var round_data = rounds[round_id]
-
+	
+	for player in round_data["players"]:
+		connected_clients.erase(player["uuid_base"])
+	
 	if round_data["round_timer"] and is_instance_valid(round_data["round_timer"]):
 		round_data["round_timer"].stop()
 		if round_data["round_timer"].is_inside_tree():
@@ -354,6 +361,7 @@ func unregister_spawned_player(round_id: int, uuid_base: String):
 		
 		# Adiciona em quitted_players
 		rounds[round_id]["quitted_players"].append(uuid_base)
+		connected_clients.erase(uuid_base)
 		
 		player_despawned_from_round.emit(round_id, uuid_base)
 
@@ -363,7 +371,9 @@ func _mark_player_disconnected(round_id: int, uuid_base: String):
 		return
 
 	var round_data = rounds[round_id]
-
+	
+	connected_clients.erase(uuid_base)
+	
 	if uuid_base in round_data["disconnected_players"]:
 		return
 	
@@ -375,9 +385,7 @@ func _mark_player_disconnected(round_id: int, uuid_base: String):
 	var text = "Jogador %s está desconectado da partida" % disconnected_player["name"]
 	for round_player in round_data["players"]:
 		# Tem que estar fora das listas disconnected e quitted e não ser o próprio
-		if not (round_player["uuid_base"] in round_data["disconnected_players"]) \
-		and not (round_player["uuid_base"] in round_data["quitted_players"]) \
-		and not round_player["uuid_base"] == uuid_base:
+		if round_player["uuid_base"] in connected_clients and not round_player["uuid_base"] == uuid_base:
 			var r_player_tt = client_registry.get_player(round_player["uuid_base"])
 			if not network_manager._is_peer_connected(r_player_tt["peer_id"]):
 				continue
@@ -392,12 +400,16 @@ func _mark_player_disconnected(round_id: int, uuid_base: String):
 
 ## Remove player da lista de desconectados da rodada.
 func _unmark_player_disconnected(round_id: int, uuid_base: String):
+	print("[111] _unmark_player_disconnected executado!")
 	if not rounds.has(round_id):
 		return
 
 	var round_data = rounds[round_id]
 	var disconnected: Array = round_data["disconnected_players"]
-
+	
+	if uuid_base not in connected_clients:
+		connected_clients.append(uuid_base)
+	
 	var index := disconnected.find(uuid_base)
 	if index == -1:
 		return
@@ -411,9 +423,7 @@ func _unmark_player_disconnected(round_id: int, uuid_base: String):
 	var text = "Jogador %s reconectou na partida" % disconnected_player["name"]
 	for round_player in round_data["players"]:
 		# Tem que estar fora das listas disconnected e quitted e não ser o próprio
-		if not (round_player["uuid_base"] in round_data["disconnected_players"]) \
-		and not (round_player["uuid_base"] in round_data["quitted_players"]) \
-		and not round_player["uuid_base"] == uuid_base:
+		if round_player["uuid_base"] in connected_clients and not round_player["uuid_base"] == uuid_base:
 			var r_player_tt = client_registry.get_player(round_player["uuid_base"])
 			if not network_manager._is_peer_connected(r_player_tt["peer_id"]):
 				continue
