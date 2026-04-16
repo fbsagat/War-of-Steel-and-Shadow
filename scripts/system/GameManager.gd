@@ -122,6 +122,11 @@ func _process(_delta):
 	_ping_pong(_delta)
 
 func initialize():
+	
+	connect_inventory_signals()
+	connect_muiltiplayer_signals()
+	setup_reconection_timer()
+	
 	if main_menu_node:
 		main_menu_node.show_main_menu()
 	
@@ -138,10 +143,6 @@ func initialize():
 		debug_overlay_node.client_uuid = uuid_base
 		
 	server_tokens = _load_tokens()
-	
-	connect_inventory_signals()
-	connect_muiltiplayer_signals()
-	setup_reconection_timer()
 	
 	_log_debug("▶️ GameManager inicializado com sucesso!")
 
