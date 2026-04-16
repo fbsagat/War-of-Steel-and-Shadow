@@ -105,7 +105,7 @@ signal player_left_round(uuid_base: String, round_id: int)
 
 ## InventoryData:
 ## {
-##   "inventory": Array[Dictionary],  # Lista de {item_id: String, object_id: int}
+##   "inventory": Array[Dictionary],  # Lista de {item_id: int, object_id: int}
 ##   "equipped": {
 ##     "hand-right": Dictionary,
 ##     "hand-left": Dictionary,
@@ -627,7 +627,7 @@ func init_player_inventory(round_id: int, uuid_base: String) -> bool:
 	return true
 
 ## Adiciona item ao inventário do jogador.
-func add_item_to_inventory(round_id: int, uuid_base: String, item_id: String, object_id: int) -> bool:
+func add_item_to_inventory(round_id: int, uuid_base: String, item_id: int, object_id: int) -> bool:
 	var inventory = _get_player_inventory(round_id, uuid_base)
 	if inventory.is_empty():
 		push_error("ClientRegistry: Inventário não encontrado: uuid=%s, rodada=%d" % [uuid_base, round_id])
@@ -637,11 +637,11 @@ func add_item_to_inventory(round_id: int, uuid_base: String, item_id: String, ob
 		_log_debug("⚠ Inventário cheio: %s" % uuid_base)
 		return false
 
-	if item_database and not item_database.item_exists_by_id(int(item_id)):
+	if item_database and not item_database.item_exists_by_id(item_id):
 		push_error("ClientRegistry: Item inválido: %s" % item_id)
 		return false
 
-	var item_name = item_database.get_item_by_id(int(item_id)).to_dictionary()['name']
+	var item_name = item_database.get_item_by_id(item_id).to_dictionary()['name']
 	inventory["inventory"].append({
 		"item_id": item_id,
 		"object_id": object_id
@@ -659,15 +659,15 @@ func remove_item_from_inventory(round_id: int, uuid_base: String, object_id: int
 	if inventory.is_empty():
 		return false
 
-	var idj = inventory["inventory"].find_custom(object_id)
-	print("[111] idj: ", idj)
+	#var idj = inventory["inventory"].find_custom(object_id)
+	#print("[111] idj: ", idj)
 	var idx = -1
 	for i in range(inventory["inventory"].size()):
 		if inventory["inventory"][i]["object_id"] == object_id:
 			idx = i
 			break
 
-	print("[111] idx: ", idx)
+	#print("[111] idx: ", idx)
 	if idx == -1:
 		_log_debug("⚠ Item com object_id %d não encontrado no inventário de %s" % [object_id, uuid_base])
 		return false

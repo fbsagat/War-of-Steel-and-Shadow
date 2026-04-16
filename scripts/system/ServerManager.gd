@@ -1959,7 +1959,7 @@ func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 		
 	await get_tree().process_frame
 	
-	client_registry.add_item_to_inventory(round_["id"], player_uuid, str(item["id"]), object_id)
+	client_registry.add_item_to_inventory(round_["id"], player_uuid, item["id"], object_id)
 	
 	# Despawn do objeto no mapa dos clientes
 	_rpc_despawn_on_clients(round_players, round_["id"], object_id)

@@ -1290,13 +1290,13 @@ func _restore_round_state(match_data: Dictionary) -> void:
 				if item.is_empty():
 					continue
 				
-				var item_id = int(item.get("item_id"))
+				var item_id = item.get("item_id")
 				var object_id = item.get("object_id")
 
 				# Jogador local: registra no inventário e equipa o item
 				if uuid == uuid_base:
 					var item_name: String = item_database.get_item_by_id(int(item_id))["name"]
-					add_item_to_inventory(str(item_id), object_id)
+					add_item_to_inventory(item_id, object_id)
 					equip_item(object_id, "", item_name)
 
 				# Todos aplicam o visual no nó do personagem (local e remoto)
@@ -1664,17 +1664,17 @@ func init_player_inventory() -> bool:
 	return true
 
 ## Adiciona item ao inventário do jogador
-func add_item_to_inventory(item_id: String, object_id: int) -> bool:
+func add_item_to_inventory(item_id: int, object_id: int) -> bool:
 	if local_inventory["inventory"].size() >= 9:
 		_log_debug("⚠ Inventário deste player cheio")
 		return false
 	
 	# Valida item no ItemDatabase se disponível
-	if item_database and not item_database.item_exists_by_id(int(item_id)):
+	if item_database and not item_database.item_exists_by_id(item_id):
 		push_error("ClientRegistry: Item inválido: %s" % item_id)
 		return false
 	
-	var item_name = item_database.get_item_by_id(int(item_id))["name"]
+	var item_name = item_database.get_item_by_id(item_id)["name"]
 	var item_data = {
 		"item_id": item_id,
 		"object_id": object_id

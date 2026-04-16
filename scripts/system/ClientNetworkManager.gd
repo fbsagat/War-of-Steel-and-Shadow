@@ -421,7 +421,7 @@ func _client_apply_drop(player_id: int, item_name: String):
 
 # ===== ITENS — ATUALIZAÇÃO DE INVENTÁRIO NO CLIENTE =====
 
-func _client_add_item_to_inventory(item_id, object_id):
+func _client_add_item_to_inventory(item_id: int, object_id: int):
 	if game_manager and game_manager.has_method("add_item_to_inventory"):
 		game_manager.add_item_to_inventory(item_id, object_id)
 
