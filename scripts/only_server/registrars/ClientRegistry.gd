@@ -659,15 +659,8 @@ func remove_item_from_inventory(round_id: int, uuid_base: String, object_id: int
 	if inventory.is_empty():
 		return false
 
-	#var idj = inventory["inventory"].find_custom(object_id)
-	#print("[111] idj: ", idj)
-	var idx = -1
-	for i in range(inventory["inventory"].size()):
-		if inventory["inventory"][i]["object_id"] == object_id:
-			idx = i
-			break
-
-	#print("[111] idx: ", idx)
+	var idx = inventory["inventory"].find_custom(func(item): return item["object_id"] == object_id)
+	
 	if idx == -1:
 		_log_debug("⚠ Item com object_id %d não encontrado no inventário de %s" % [object_id, uuid_base])
 		return false
@@ -690,13 +683,9 @@ func equip_item(round_id: int, uuid_base: String, item_name: String, object_id, 
 		return false
 
 	var item_data: Dictionary = {}
-	var item_idx = -1
-	for i in range(inventory["inventory"].size()):
-		if inventory["inventory"][i]["object_id"] == int(object_id):
-			item_data = inventory["inventory"][i]
-			item_idx = i
-			break
-
+	var item_idx = inventory["inventory"].find_custom(func(item): return item["object_id"] == object_id)
+	item_data = inventory["inventory"][item_idx]
+	
 	if item_data.is_empty():
 		_log_debug("⚠ Item não está no inventário: %s" % item_name)
 		return false
@@ -773,9 +762,9 @@ func swap_equipped_item(round_id: int, uuid_base: String, new_item_name: String,
 		push_error("ClientRegistry: Nenhum item equipado no slot %s para trocar" % target_slot)
 		return false
 
-	var new_item_idx = -1
+	var new_item_idx = inventory["inventory"].find_custom(func(item): return item["object_id"] == inventory_item["object_id"])
 	for i in range(inventory["inventory"].size()):
-		if inventory["inventory"][i]["object_id"] == int(inventory_item["object_id"]):
+		if inventory["inventory"][i]["object_id"] == inventory_item["object_id"]:
 			new_item_idx = i
 			break
 

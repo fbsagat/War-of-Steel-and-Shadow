@@ -2107,7 +2107,7 @@ func _server_validate_unequip_item(requesting_player_id: int, slot_type: String)
 ##  - O item EQUIPADO como segundo item (será substituído)
 ## Para isso, inverte os IDs se necessário, garantindo que a lógica do servidor
 ## sempre receba os parâmetros na ordem correta.
-func _server_validate_swap_items(dragged_item_id: String, target_item_id: String):
+func _server_validate_swap_items(dragged_item_id: int, target_item_id: int):
 	var player_id: int = multiplayer.get_remote_sender_id()
 	var player_uuid = client_registry.get_uuid_by_peer_id(player_id)
 	#var player = client_registry.get_player(player_uuid)
@@ -2117,8 +2117,8 @@ func _server_validate_swap_items(dragged_item_id: String, target_item_id: String
 	await get_tree().process_frame
 	
 	# Verifica se o player tem pelo menos um destes itens equipado
-	var dragged_equipped := client_registry.is_item_equipped(round_id, player_uuid, int(dragged_item_id))
-	var target_equipped := client_registry.is_item_equipped(round_id, player_uuid, int(target_item_id))
+	var dragged_equipped := client_registry.is_item_equipped(round_id, player_uuid, dragged_item_id)
+	var target_equipped := client_registry.is_item_equipped(round_id, player_uuid, target_item_id)
 	
 	await get_tree().process_frame
 	
@@ -2140,8 +2140,8 @@ func _server_validate_swap_items(dragged_item_id: String, target_item_id: String
 	var is_dragged_equipped: bool = client_registry.is_item_equipped(round_id, player_uuid, int(dragged_item_id))
 	
 	# Determina qual ID representa o item do inventário (será o novo equipado)
-	var inventory_item_id: String
-	var equipped_item_id: String
+	var inventory_item_id: int
+	var equipped_item_id: int
 	
 	if is_dragged_equipped:
 		# Item arrastado está equipado → então o ALVO está no inventário
@@ -2178,7 +2178,7 @@ func _server_validate_swap_items(dragged_item_id: String, target_item_id: String
 		player_uuid,
 		item_name,                # Nome do item do inventário
 		inventory_item_dict,      # Dados do item do inventário
-		int(equipped_item_id),    # ID do item equipado (será substituído)
+		equipped_item_id,    # ID do item equipado (será substituído)
 		item_data["type"]         # Tipo do slot (ex: "hand-left", "head") - MANTENHA "type"
 	)
 	
@@ -2210,7 +2210,7 @@ func _server_validate_swap_items(dragged_item_id: String, target_item_id: String
 			network_manager.rpc_id(player_peer_id, "_client_apply_equip", player_id, item_data["id"], false, false, true)
 	
 ## Servidor recebe pedido de spawnar item na frente do player para testes
-func _server_trainer_spawn_item(requesting_player_id: int, item_id: int):
+func _server_trainer_spawn_item(requesting_peer_id: int, item_id: int):
 	if not test_trainer:
 		return
 	
@@ -2218,7 +2218,7 @@ func _server_trainer_spawn_item(requesting_player_id: int, item_id: int):
 	if item_id == 9:
 		item_id = 10
 	
-	var player_uuid = client_registry.get_uuid_by_peer_id(requesting_player_id)
+	var player_uuid = client_registry.get_uuid_by_peer_id(requesting_peer_id)
 	var player = client_registry.get_player(player_uuid)
 	var round_ = round_registry.get_round_by_player_uuid(player_uuid)
 	_log_debug("[ITEM]📦 Player %s: Trainer pediu para spawnar item %d na sua frente, no round %d" % [player["name"], item_id, round_["id"]])
@@ -2353,14 +2353,14 @@ func _server_validate_drop_item(requesting_player_id: int, obj_id: int):
 # ===== TRAINER DE TESTE =====
 
 ## Servidor recebe pedido de dropar item do inventário(apenas do inventário) na frente do player para testes
-func _server_trainer_drop_item(player_id):
+func _server_trainer_drop_item(peer_id):
 	
 	if not test_trainer:
 		return
 		
 	_log_debug('Cliente pediu pra dropar um item usando o trainer. test_trainer: %s' % test_trainer)
 	
-	var player_uuid = client_registry.get_uuid_by_peer_id(player_id)
+	var player_uuid = client_registry.get_uuid_by_peer_id(peer_id)
 	var round_ = round_registry.get_round_by_player_uuid(player_uuid)
 	
 	# Se o player não tiver nenhum item no inventário para dropar, não faz nada
@@ -2394,7 +2394,7 @@ func _server_trainer_drop_item(player_id):
 		client_registry.remove_item_from_inventory(round_["id"], player_uuid, obj_id)
 		
 ## Servidor recebe pedido de respawnar player para testes
-func _server_trainer_repawn_player(player_id, player_uuid):
+func _server_trainer_repawn_player(peer_id, player_uuid):
 	
 	# Só passar se estiver com trainer ligado
 	if not test_trainer:
@@ -2433,26 +2433,26 @@ func _server_trainer_repawn_player(player_id, player_uuid):
 	# Aplica nas cenas do players remotos
 	var filtered_ = round_registry.get_round_players_spawned_filter(round_["id"])
 	for f_player in filtered_:
-		var peer_id = client_registry.get_peer_id_by_uuid(f_player["uuid_base"])
+		var f_peer_id = client_registry.get_peer_id_by_uuid(f_player["uuid_base"])
 		if _is_peer_connected(peer_id):
-			network_manager.rpc_id(peer_id, "_client_apply_respawn", player_id, map_manager.spawn_center)
+			network_manager.rpc_id(f_peer_id, "_client_apply_respawn", peer_id, map_manager.spawn_center)
 			
 			
 # ===== VALIDAÇÕES DE AÇÕES DO PLAYER =====
 
 # Validações e execução de ataque do personagem
-func attack_validation(target_group: String, player_id: int, actual_weapon: String, victim_peer_id: int):
+func attack_validation(target_group: String, peer_id: int, actual_weapon: String, victim_peer_id: int):
 	# Se alvo for um player remoto
 	if target_group == "remote_player":
-		var player_uuid = client_registry.get_uuid_by_peer_id(player_id)
+		var player_uuid = client_registry.get_uuid_by_peer_id(peer_id)
 		var player = client_registry.get_player(player_uuid)
 		var round_ = round_registry.get_round_by_player_uuid(player_uuid)
 		var round_players = client_registry.get_players_in_round(round_["id"])
 		var victim_uuid = client_registry.get_uuid_by_peer_id(victim_peer_id)
 		
 		for peer_uuid in round_players:
-			var peer_id = client_registry.get_peer_id_by_uuid(peer_uuid)
-			network_manager._client_receive_attack.rpc_id(peer_id, victim_peer_id)
+			var r_peer_id = client_registry.get_peer_id_by_uuid(peer_uuid)
+			network_manager._client_receive_attack.rpc_id(r_peer_id, victim_peer_id)
 			
 		await get_tree().process_frame
 	
@@ -2465,15 +2465,15 @@ func attack_validation(target_group: String, player_id: int, actual_weapon: Stri
 
 ## RPC: Servidor recebe ação do jogador e redistribui para os remotos do mesmo round e remoto 
 ## corresondente no servidor também
-func _server_player_action(p_id: int, action_type: String, item_equipado_nome, anim_name: String):
-	var player_uuid = client_registry.get_uuid_by_peer_id(p_id)
+func _server_player_action(peer_id: int, action_type: String, item_equipado_nome, anim_name: String):
+	var player_uuid = client_registry.get_uuid_by_peer_id(peer_id)
 	var player = client_registry.get_player(player_uuid)
 	var round_ = round_registry.get_round_by_player_uuid(player_uuid)
 	var players_round = round_registry.get_active_players_ids(round_["id"])
 	
 	# Ignora o próprio player
 	var sender_id = multiplayer.get_remote_sender_id()
-	if sender_id != p_id:
+	if sender_id != peer_id:
 		return
 	
 	var has_weapon = client_registry.has_weapon_equipped(round_["id"], player_uuid)
@@ -2500,8 +2500,8 @@ func _server_player_action(p_id: int, action_type: String, item_equipado_nome, a
 	# Propaga pra todos os outros clientes (Reliable = Garantido)
 	for peer_uuid in players_round:
 		if peer_uuid != player_uuid:
-			var peer_id = client_registry.get_peer_id_by_uuid(peer_uuid)
-			network_manager._client_player_action.rpc_id(peer_id, p_id, action_type, item_equipado_nome, anim_name)
+			var r_peer_id = client_registry.get_peer_id_by_uuid(peer_uuid)
+			network_manager._client_player_action.rpc_id(r_peer_id, peer_id, action_type, item_equipado_nome, anim_name)
 
 			# Dica: Outra forma de chamar rpc(quando está inacessível p o server mas existe no pc remoto):
 			# if has_method("_client_player_action"):

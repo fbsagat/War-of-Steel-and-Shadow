@@ -15,10 +15,10 @@ var initializer: Initializer = null
 
 # ===== SINAIS =====
 
-signal request_drop_item(item_id: String)
-signal request_equip_item(item_id: String, slot_type: String)
+signal request_drop_item(item_id: int)
+signal request_equip_item(item_id: int, slot_type: String)
 signal request_unequip_item(slot_type: String)
-signal request_swap_items(item_id_1: String, item_id_2: String)
+signal request_swap_items(item_id_1: int, item_id_2: int)
 #signal request_move_item(item_id: String, from_slot: String, to_slot: String)
 
 # ===== REFERÊNCIAS INTERNAS =====
@@ -348,7 +348,7 @@ func try_end_drag(mouse_pos: Vector2):
 	# CASO 1: Dropou na área de lixeira
 	if is_over_drop_area(mouse_pos):
 		_log_debug("🗑️ Item dropado na área de lixeira: %s" % dragged_item_id)
-		request_drop_item.emit(dragged_item_id)
+		request_drop_item.emit(int(dragged_item_id))
 		cleanup_drag()
 		# ✅ Sincronizar após drop
 		await get_tree().create_timer(0.05).timeout
@@ -414,7 +414,7 @@ func _handle_drop_in_slot(target_slot: Panel):
 		
 		if original_is_equipment or target_is_equipment:
 			# Pelo menos um item está equipado → solicita swap ao servidor
-			request_swap_items.emit(dragged_item_id, existing_item_id)
+			request_swap_items.emit(int(dragged_item_id), int(existing_item_id))
 			return  # Mantém o comportamento original: return após RPC
 		else:
 			# Ambos os itens estão no inventário → swap visual local
@@ -441,7 +441,7 @@ func _handle_drop_in_slot(target_slot: Panel):
 	# =========================================================================
 	if target_is_equipment and !original_is_equipment:
 		_log_debug("⚔️ Equipando: %s → %s" % [dragged_item_id, target_slot_type])
-		request_equip_item.emit(dragged_item_id, target_slot_type)
+		request_equip_item.emit(int(dragged_item_id), target_slot_type)
 		return
 	
 	# =========================================================================
@@ -484,7 +484,7 @@ func _handle_drop_in_slot(target_slot: Panel):
 		request_unequip_item.emit(original_eq_type)
 		# Aguardar um frame e então equipar no novo slot
 		await get_tree().process_frame
-		request_equip_item.emit(dragged_item_id, target_slot_type)
+		request_equip_item.emit(int(dragged_item_id), target_slot_type)
 		return
 	
 	# Caso nenhuma ação seja aplicável, cancela
@@ -610,7 +610,7 @@ func drop_selected_quickbar_item():
 		var item_id = item.get_meta("item_id", "")
 		if item_id != "":
 			_log_debug("🗑️ Dropando item do quickbar: %s" % item_id)
-			request_drop_item.emit(item_id)
+			request_drop_item.emit(int(item_id))
 
 ## Usa o item selecionado no quickbar (implementar lógica de uso).
 func use_selected_item():

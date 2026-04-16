@@ -154,11 +154,11 @@ func leave_room():
 	_log_debug("📤 Saindo da sala")
 	rpc_id(1, "_server_leave_room")
 
-func kick_player_from_room(selected_player_id: String):
+func kick_player_from_room(_selected_player_uuid: String):
 	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
-	rpc_id(1, "_server_kick_player", selected_player_id)
+	rpc_id(1, "_server_kick_player", _selected_player_uuid)
 
 func close_room():
 	if not is_connected_:
@@ -321,7 +321,7 @@ func request_unequip_item(player_id: int, slot_type: String) -> void:
 		return
 	rpc_id(1, "_server_unequip_item", player_id, slot_type)
 
-func request_swap_items(item_id_1, item_id_2):
+func request_swap_items(item_id_1: int, item_id_2: int):
 	rpc_id(1, "_server_swap_items", item_id_1, item_id_2)
 	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
@@ -345,7 +345,7 @@ func request_trainer_respawn_player(player_id: int):
 		return
 	rpc_id(1, "_server_trainer_respawn_player", player_id)
 
-func request_drop_item(player_id, obj_id):
+func request_drop_item(player_id: int, obj_id):
 	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
@@ -385,35 +385,35 @@ func _client_apply_respawn(player_id, position: Vector3):
 	if player_node and player_node.has_method("_respawn_player"):
 		player_node._respawn_player(position)
 
-func _client_apply_equip(player_id: int, item_id: int, unequip: bool = false, from_inv_men = false, is_swap = false):
+func _client_apply_equip(peer_id: int, item_id: int, unequip: bool = false, from_inv_men = false, is_swap = false):
 
 	if not game_manager.players_node:
 		return
 		
 	# Pegar o node do personagem pelo session id "p_id" no cachê de personagens da partida
 	# Verifica se já existe primeiro
-	if not game_manager.session_to_uuid.has(player_id):
+	if not game_manager.session_to_uuid.has(peer_id):
 		return
 		
-	var uuid = game_manager.session_to_uuid[player_id]
+	var uuid = game_manager.session_to_uuid[peer_id]
 	var player_node = game_manager.player_nodes_by_uuid.get(uuid)
 	if player_node and player_node.has_method("apply_visual_equip_on_player_node"):
 		player_node.apply_visual_equip_on_player_node(item_id, unequip, from_inv_men)
 	if player_node and player_node.has_method("execute_item_swap") and is_swap:
 		player_node.execute_item_swap()
 
-func _client_apply_drop(player_id: int, item_name: String):
-	_log_debug("📥 Dropando equipamento: Player %d, Item %s" % [player_id, item_name])
+func _client_apply_drop(peer_id: int, item_name: String):
+	_log_debug("📥 Dropando equipamento: Player %d, Item %s" % [peer_id, item_name])
 	
 	if not game_manager.players_node:
 		return
 	
 	# Pegar o node do personagem pelo session id "p_id" no cachê de personagens da partida
 	# Verifica se já existe primeiro
-	if not game_manager.session_to_uuid.has(player_id):
+	if not game_manager.session_to_uuid.has(peer_id):
 		return
 		
-	var uuid = game_manager.session_to_uuid[player_id]
+	var uuid = game_manager.session_to_uuid[peer_id]
 	var player_node = game_manager.player_nodes_by_uuid.get(uuid)
 	if player_node and player_node.has_method("execute_item_drop"):
 		player_node.execute_item_drop()
@@ -425,15 +425,15 @@ func _client_add_item_to_inventory(item_id: int, object_id: int):
 	if game_manager and game_manager.has_method("add_item_to_inventory"):
 		game_manager.add_item_to_inventory(item_id, object_id)
 
-func _client_remove_item_from_inventory(object_id):
+func _client_remove_item_from_inventory(object_id: int):
 	if game_manager and game_manager.has_method("remove_item_from_inventory"):
 		game_manager.remove_item_from_inventory(object_id)
 
-func _client_equip_item(item_name, object_id, slot):
+func _client_equip_item(item_name: String, object_id: int, slot):
 	if game_manager and game_manager.has_method("equip_item"):
 		game_manager.equip_item(object_id, slot, item_name)
 
-func _client_unequip_item(item_id, slot, verify):
+func _client_unequip_item(item_id: int, slot, verify: bool):
 	if game_manager and game_manager.has_method("unequip_item"):
 		game_manager.unequip_item(int(item_id), slot, verify)
 
@@ -445,22 +445,22 @@ func _client_swap_equipped_item(new_item_name: String, dragged_item: Dictionary,
 # ===== SINCRONIZAÇÃO DE ESTADO DE JOGADORES =====
 
 ## Helper local: envia estado do jogador ao servidor.
-func send_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
+func send_player_state(peer_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
 	if not is_connected_:
 		return
-	rpc_id(1, "_server_player_state", p_id, pos, rot, vel, running, jumping)
+	rpc_id(1, "_server_player_state", peer_id, pos, rot, vel, running, jumping)
 
-func _client_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
+func _client_player_state(peer_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
 	
 	if not game_manager.players_node:
 		return
 	
-	# Pegar o node do personagem pelo session id "p_id" no cachê de personagens da partida
+	# Pegar o node do personagem pelo session id "peer_id" no cachê de personagens da partida
 	# Verifica se já existe primeiro
-	if not game_manager.session_to_uuid.has(p_id):
+	if not game_manager.session_to_uuid.has(peer_id):
 		return
 		
-	var uuid = game_manager.session_to_uuid[p_id]
+	var uuid = game_manager.session_to_uuid[peer_id]
 	var player = game_manager.player_nodes_by_uuid.get(uuid)
 	
 	if not player:
@@ -468,7 +468,7 @@ func _client_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, r
 	if player.has_method("_character_receive_state"):
 		player._character_receive_state(pos, rot, vel, running, jumping)
 	else:
-		_log_debug("Erro! _client_player_state não encontrou método _character_receive_state em %s" % str(p_id))
+		_log_debug("Erro! _client_player_state não encontrou método _character_receive_state em %d" % peer_id)
 
 func server_force_position(pos: Vector3):
 	game_manager.server_force_position(pos)
@@ -476,14 +476,14 @@ func server_force_position(pos: Vector3):
 # ===== SINCRONIZAÇÃO DE ANIMAÇÕES =====
 
 ## Helper local: envia estado de animação ao servidor.
-func send_player_animation_state(p_id: int, speed: float, attacking: bool, defending: bool,
+func send_player_animation_state(peer_id: int, speed: float, attacking: bool, defending: bool,
 	jumping: bool, aiming: bool, running: bool, block_attacking: bool, on_floor: bool):
 	if not is_connected_:
 		return
-	rpc_id(1, "_server_player_animation_state", p_id, speed, attacking, defending,
+	rpc_id(1, "_server_player_animation_state", peer_id, speed, attacking, defending,
 		   jumping, aiming, running, block_attacking, on_floor)
 
-func _client_player_animation_state(p_id: int, speed: float, attacking: bool, defending: bool,
+func _client_player_animation_state(peer_id: int, speed: float, attacking: bool, defending: bool,
 									jumping: bool, aiming: bool, running: bool, block_attacking: bool, on_floor: bool):
 										
 	if not game_manager.players_node:
@@ -491,10 +491,10 @@ func _client_player_animation_state(p_id: int, speed: float, attacking: bool, de
 		
 	# Pegar o node do personagem pelo session id "p_id" no cachê de personagens da partida
 	# Verifica se já existe primeiro
-	if not game_manager.session_to_uuid.has(p_id):
+	if not game_manager.session_to_uuid.has(peer_id):
 		return
 		
-	var uuid = game_manager.session_to_uuid[p_id]
+	var uuid = game_manager.session_to_uuid[peer_id]
 	var player_node = game_manager.player_nodes_by_uuid.get(uuid)
 	if player_node and player_node.has_method("_character_receive_animation_state"):
 		player_node._character_receive_animation_state(speed, attacking, defending, jumping,

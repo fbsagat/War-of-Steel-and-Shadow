@@ -5,9 +5,9 @@ class_name Initializer
 ## [TESTES] Usa o TestManager para iniciar uma partida logo na execução (localhost)
 ## (configura server e clients / server cria round e inicia partida com primeiros clientes /
 ##  clientes recebem localhost_auto_connect = true pr conectr autom.)
-@export var test_mode: bool = false
+@export var test_mode: bool = true
 ## [TESTES] Define a quantidade de instâcias de clientes conectadas para executar fast_round
-@export var simulador_players_qtd: int = 2
+@export var simulador_players_qtd: int = 1
 ## [TESTES] Dropa itens perto dos players e ativa o trainer de cada player
 @export var trainer: bool = true
 ## [TESTES] Ativa/desativa proteção dos botões dos menus (desativar para testes de multiplos RPCs)

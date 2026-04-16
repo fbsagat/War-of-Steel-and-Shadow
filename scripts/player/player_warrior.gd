@@ -1449,7 +1449,7 @@ func action_unequip_item_call(slot_type):
 		network_manager.request_unequip_item(peer_id, slot_type)
 
 ## Ação de chamada do player (Trocar item).
-func action_swap_items_call(item_id_1: String, item_id_2: String):
+func action_swap_items_call(item_id_1: int, item_id_2: int):
 	# Só depois de iniciar a partida
 	if not game_manager.is_in_round:
 		return

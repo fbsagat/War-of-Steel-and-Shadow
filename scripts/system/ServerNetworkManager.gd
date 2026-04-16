@@ -286,71 +286,71 @@ func _mark_player_disconnected(_chosen: bool):
 	
 # ===== ITENS — RECEBIMENTOS DO CLIENTE =====
 
-func _server_pick_up_item(player_id, object_id):
+func _server_pick_up_item(peer_id, object_id):
 	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
 		return
-	server_manager._server_validate_pick_up_item(player_id, object_id)
+	server_manager._server_validate_pick_up_item(peer_id, object_id)
 
-func _server_equip_item(player_id, item_id, slot_type):
+func _server_equip_item(peer_id, item_id, slot_type):
 	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
 		return
-	server_manager._server_validate_equip_item(player_id, item_id, slot_type)
+	server_manager._server_validate_equip_item(peer_id, item_id, slot_type)
 
-func _server_unequip_item(player_id, item_id):
+func _server_unequip_item(peer_id, item_id):
 	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
 		return
-	server_manager._server_validate_unequip_item(player_id, item_id)
+	server_manager._server_validate_unequip_item(peer_id, item_id)
 
-func _server_swap_items(item_id_1, item_id_2):
+func _server_swap_items(item_id_1: int, item_id_2: int):
 	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
 		return
 	server_manager._server_validate_swap_items(item_id_1, item_id_2)
 
-func _server_trainer_spawn_item(player_id, item_id):
+func _server_trainer_spawn_item(peer_id: int, item_id: int):
 	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
 		return
-	server_manager._server_trainer_spawn_item(player_id, item_id)
+	server_manager._server_trainer_spawn_item(peer_id, item_id)
 
-func _server_trainer_drop_item(player_id):
+func _server_trainer_drop_item(peer_id: int):
 	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
 		return
-	server_manager._server_trainer_drop_item(player_id)
+	server_manager._server_trainer_drop_item(peer_id)
 
-func _server_trainer_respawn_player(player_id):
+func _server_trainer_respawn_player(peer_id: int):
 	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
 		return
-	var player_uuid = client_registry.get_uuid_by_peer_id(player_id)
-	server_manager._server_trainer_repawn_player(player_id, player_uuid)
+	var player_uuid: String = client_registry.get_uuid_by_peer_id(peer_id)
+	server_manager._server_trainer_repawn_player(peer_id, player_uuid)
 
-func _server_drop_item(player_id, obj_id):
+func _server_drop_item(peer_id: int, obj_id: int):
 	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
 		return
-	server_manager._server_validate_drop_item(player_id, obj_id)
+	server_manager._server_validate_drop_item(peer_id, obj_id)
 
-func _server_player_action(p_id: int, action_type: String, item_equipado_nome, anim_name: String):
-	server_manager._server_player_action(p_id, action_type, item_equipado_nome, anim_name)
+func _server_player_action(peer_id: int, action_type: String, item_equipado_nome, anim_name: String):
+	server_manager._server_player_action(peer_id, action_type, item_equipado_nome, anim_name)
 
 
 # ===== SINCRONIZAÇÃO DE ESTADO DE JOGADORES =====
 
-func _server_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
+func _server_player_state(peer_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
 	if multiplayer.multiplayer_peer == null:
 		return
 	
 	var peers = multiplayer.get_peers()
 	
-	if p_id not in peers:
+	if peer_id not in peers:
 		return
 
 	var sender_id = multiplayer.get_remote_sender_id()
-	if sender_id != p_id:
-		push_warning("⚠️ Jogador %d tentou enviar estado do jogador %d" % [sender_id, p_id])
+	if sender_id != peer_id:
+		push_warning("⚠️ Jogador %d tentou enviar estado do jogador %d" % [sender_id, peer_id])
 		return
 	
 	# Aplica no nó do servidor
-	server_manager._apply_player_state_on_server(p_id, pos, rot, vel, running, jumping)
+	server_manager._apply_player_state_on_server(peer_id, pos, rot, vel, running, jumping)
 	
-	var sender_uuid = client_registry.get_uuid_by_peer_id(p_id)
+	var sender_uuid = client_registry.get_uuid_by_peer_id(peer_id)
 	var round_ = round_registry.get_round_by_player_uuid(sender_uuid)
 	
 	if not round_:
@@ -359,34 +359,34 @@ func _server_player_state(p_id: int, pos: Vector3, rot: Vector3, vel: Vector3, r
 	var round_id = round_["id"]
 	var players_round = round_registry.get_active_players_ids(round_id)
 	
-	for peer_id in players_round:
-		if peer_id != sender_uuid:
-			var session_id = client_registry.get_peer_id_by_uuid(peer_id)
+	for r_peer_uuid in players_round:
+		if r_peer_uuid != sender_uuid:
+			var session_id = client_registry.get_peer_id_by_uuid(r_peer_uuid)
 			if not _is_peer_connected(session_id):
 				return
-			rpc_id(session_id, "_client_player_state", p_id, pos, rot, vel, running, jumping)
+			rpc_id(session_id, "_client_player_state", r_peer_uuid, pos, rot, vel, running, jumping)
 
-func _server_player_animation_state(p_id: int, speed: float, attacking: bool, defending: bool,
+func _server_player_animation_state(peer_id: int, speed: float, attacking: bool, defending: bool,
 									jumping: bool, aiming: bool, running: bool, block_attacking: bool, on_floor: bool):
 
 	var sender_id = multiplayer.get_remote_sender_id()
-	if sender_id != p_id:
+	if sender_id != peer_id:
 		return
 	
 	# Aplica no nó do servidor
-	server_manager._apply_animation_state_on_server(p_id, speed, attacking, defending, jumping, aiming, running, block_attacking, on_floor)
+	server_manager._apply_animation_state_on_server(peer_id, speed, attacking, defending, jumping, aiming, running, block_attacking, on_floor)
 
-	var player_uuid = client_registry.get_uuid_by_peer_id(p_id)
+	var player_uuid = client_registry.get_uuid_by_peer_id(peer_id)
 	var round_ = round_registry.get_round_by_player_uuid(player_uuid)
 	if not round_:
 		return
 	var players_round = round_registry.get_active_players_ids(round_["id"])
-	for peer_id in players_round:
-		if peer_id != player_uuid:
-			var session_id = client_registry.get_peer_id_by_uuid(peer_id)
+	for r_peer_id in players_round:
+		if r_peer_id != player_uuid:
+			var session_id = client_registry.get_peer_id_by_uuid(r_peer_id)
 			if not _is_peer_connected(session_id):
 				return
-			rpc_id(session_id, "_client_player_animation_state", int(p_id), speed, attacking,
+			rpc_id(session_id, "_client_player_animation_state", peer_id, speed, attacking,
 				   defending, jumping, aiming, running, block_attacking, on_floor)
 				
 func _correct_player_position(peer_id: int, correct_position: Vector3):

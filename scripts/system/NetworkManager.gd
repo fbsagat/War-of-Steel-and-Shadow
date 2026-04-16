@@ -160,7 +160,7 @@ func _server_close_room():
 	pass
 
 @rpc("any_peer", "call_remote", "reliable")
-func _server_kick_player(_selected_player_id: String):
+func _server_kick_player(_selected_player_uuid: String):
 	pass
 
 @rpc("authority", "call_remote", "reliable")
@@ -230,53 +230,53 @@ func _client_clear_all_objects():
 # ===== ITENS — REQUISIÇÕES DO CLIENTE AO SERVIDOR =====
 
 @rpc("any_peer", "call_remote", "unreliable")
-func _server_pick_up_item(_player_id, _object_id):
+func _server_pick_up_item(_peer_id, _object_id):
 	pass
 
 @rpc("any_peer", "call_remote", "unreliable")
-func _server_equip_item(_player_id, _item_id, _slot_type):
+func _server_equip_item(_peer_id, _item_id, _slot_type):
 	pass
 
 @rpc("any_peer", "call_remote", "unreliable")
-func _server_unequip_item(_player_id, _item_id):
+func _server_unequip_item(_peer_id, _item_id):
 	pass
 
 @rpc("any_peer", "call_remote", "unreliable")
-func _server_swap_items(_item_id_1, _item_id_2):
+func _server_swap_items(_item_id_1: int, _item_id_2: int):
 	pass
 
 @rpc("any_peer", "call_remote", "reliable")
-func _server_trainer_spawn_item(_requesting_player_id: int, _item_id: int):
+func _server_trainer_spawn_item(_requesting_peer_id: int, _item_id: int):
 	pass
 
 @rpc("any_peer", "call_remote", "reliable")
-func _server_trainer_drop_item(_player_id):
+func _server_trainer_drop_item(_peer_id):
 	pass
 
 @rpc("any_peer", "call_remote", "unreliable")
-func _server_trainer_respawn_player(_player_id):
+func _server_trainer_respawn_player(_peer_id):
 	pass
 
 @rpc("any_peer", "call_remote", "unreliable")
-func _server_drop_item(_player_id, _obj_id):
+func _server_drop_item(_peer_id, _obj_id):
 	pass
 
 # ===== ITENS — APLICAÇÃO VISUAL NO CLIENTE (chamados pelo servidor) =====
 
 @rpc("authority", "call_remote", "reliable")
-func _client_apply_pick_up(_player_id):
+func _client_apply_pick_up(_peer_id):
 	pass
 
 @rpc("authority", "call_remote", "reliable")
-func _client_apply_respawn(_player_id, _position: Vector3):
+func _client_apply_respawn(_peer_id, _position: Vector3):
 	pass
 
 @rpc("authority", "call_remote", "reliable")
-func _client_apply_equip(_player_id: int, _item_id: int, _unequip: bool = false, _from_inv_men = false, _is_swap = false):
+func _client_apply_equip(_peer_id: int, _item_id: int, _unequip: bool = false, _from_inv_men = false, _is_swap = false):
 	pass
 
 @rpc("authority", "call_remote", "reliable")
-func _client_apply_drop(_player_id: int, _item_name: String):
+func _client_apply_drop(_peer_id: int, _item_name: String):
 	pass
 
 # ===== ITENS — ATUALIZAÇÃO DE INVENTÁRIO NO CLIENTE =====

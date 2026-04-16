@@ -106,11 +106,11 @@ signal room_updated(room_data: Dictionary)
 signal round_started()
 signal round_ended(end_data: Dictionary)
 signal returned_to_room(room_data: Dictionary)
-signal item_added(object_id: String, item_name: String, item_type: String, slot_id: String, icon_path: String)
-signal item_removed(object_id: String)
-signal item_equipped(object_id: String, slot_type: String)
-signal item_unequipped(object_id: String)
-signal items_swapped(item_id_1: String, item_id_2: String)
+signal item_added(object_id: int, item_name: String, item_type: String, slot_id: int, icon_path: String)
+signal item_removed(object_id: int)
+signal item_equipped(object_id: int, slot_type: String)
+signal item_unequipped(object_id: int)
+signal items_swapped(item_id_1: int, item_id_2: int)
 
 
 # ===== FUNÇÕES DE INICIALIZAÇÃO =====
@@ -1699,11 +1699,7 @@ func remove_item_from_inventory(object_id: int) -> bool:
 	if local_inventory["inventory"].is_empty():
 		return false
 	
-	var idx = -1
-	for i in range(local_inventory["inventory"].size()):
-		if local_inventory["inventory"][i]["object_id"] == object_id:
-			idx = i
-			break
+	var idx = local_inventory["inventory"].find_custom(func(item): return item["object_id"] == object_id)
 	
 	if idx == -1:
 		_log_debug("⚠ Item com object_id %d não encontrado no inventário" % object_id)
@@ -1721,18 +1717,14 @@ func remove_item_from_inventory(object_id: int) -> bool:
 
 ## Equipa item em um slot (detecta automaticamente se não especificado)
 ## Slots válidos: hand-right, hand-left, head, body, back
-func equip_item(object_id, item_slot: String = "", item_name: String = "") -> bool:
+func equip_item(object_id: int, item_slot: String = "", item_name: String = "") -> bool:
 	if local_inventory["inventory"].is_empty():
 		return false
 	
 	# Procura o item no inventário
 	var item_data: Dictionary = {}
-	var item_idx = -1
-	for i in range(local_inventory["inventory"].size()):
-		if local_inventory["inventory"][i]["object_id"] == int(object_id):
-			item_data = local_inventory["inventory"][i]
-			item_idx = i
-			break
+	var item_idx = local_inventory["inventory"].find_custom(func(item): return item["object_id"] == object_id)
+	item_data = local_inventory["inventory"][item_idx]
 	
 	if item_data.is_empty():
 		_log_debug("⚠ Item não está no inventário: %s" % item_name)
@@ -1824,11 +1816,7 @@ func swap_equipped_item(new_item_name: String, dragged_item: Dictionary, existin
 		return false
 	
 	# Verifica se o dragged_item realmente está no inventário
-	var new_item_idx = -1
-	for i in range(local_inventory["inventory"].size()):
-		if local_inventory["inventory"][i]["object_id"] == int(dragged_item["object_id"]):
-			new_item_idx = i
-			break
+	var new_item_idx = local_inventory["inventory"].find_custom(func(item): return item["object_id"] == dragged_item["object_id"])
 	
 	if new_item_idx == -1:
 		push_error("ClientRegistry: Item arrastado não encontrado no inventário")
@@ -1850,7 +1838,7 @@ func swap_equipped_item(new_item_name: String, dragged_item: Dictionary, existin
 	_log_debug("🔄 Item trocado diretamente: %s <-> %s em %s" % [
 		old_item_name, new_item_name, target_slot])
 	
-	items_swapped.emit(dragged_item["object_id"], str(existing_item_id))
+	items_swapped.emit(str(dragged_item["object_id"]), str(existing_item_id))
 	
 	return true
 
