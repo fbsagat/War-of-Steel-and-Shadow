@@ -21,6 +21,8 @@ class_name ServerManager
 @export var visual_debug: bool = false
 ## Timer para imprimir estados periodicamente
 @export var debug_timer: bool = false
+## Ativa/desativa persistência do servidor (para server_id, server_secret e dados de clientes)
+@export var is_persistent: bool = false
 ## [TESTES] Usa o TestManager para iniciar logo uma partida na execução (initializer sobrepõe)
 @export var fast_round: bool = false
 ## [TESTES] Define a quantidade de instnacias de clientes para executar fast_round (initializer sobrepõe)
@@ -139,25 +141,29 @@ func initialize():
 	all_rounds_node.name = "All_Rounds"
 	
 	# Persistência: Gera ou carrega id único do servidor
-	server_persistence.init()
+	server_persistence.init(is_persistent)
 	server_id = server_persistence.server_id
 	server_secret = server_persistence.server_secret
 	
-	# Persistência: Carrega jogadores salvos
-	var loaded = server_persistence.load_players()
-	client_registry.players = loaded["players"]
-	client_registry.players_cache = loaded["players_cache"]
-	
-	# Verifica se jogadores carregados estão conectados e atualiza
-	for player_uuid in client_registry.players.keys():
-		var player = client_registry.get_player(player_uuid)
-		if not _is_peer_connected(player["peer_id"]):
-			client_registry.set_disconnected_peer(player["peer_id"])
-			
-			# Na inicialização, não existe salas e rounds, portanto, remover do registro
-			# Removendo da sala, automaticamente já remove do round.
-			if player["room_id"] > 0:
-				client_registry.reset_player_room_round(player_uuid)
+	# Se persistência estiver ativada
+	if is_persistent:
+		# Persistência: Carrega jogadores salvos
+		var loaded = server_persistence.load_players()
+		client_registry.players = loaded["players"]
+		client_registry.players_cache = loaded["players_cache"]
+		
+		# Verifica se jogadores carregados estão conectados e atualiza
+		for player_uuid in client_registry.players.keys():
+			var player = client_registry.get_player(player_uuid)
+			if not _is_peer_connected(player["peer_id"]):
+				# Atualiza estado conectado
+				client_registry.set_disconnected_peer(player["peer_id"])
+				
+				# Atualiza sala/round
+				# Na inicialização, não existe salas e rounds, portanto, remover do registro
+				# Removendo da sala, automaticamente já remove do round.
+				if player["room_id"] > 0:
+					client_registry.reset_player_room_round(player_uuid)
 	
 	# Inicializa servidor
 	_start_server()
@@ -505,8 +511,8 @@ func process_client_hello(payload: Dictionary, peer_id: int) -> Dictionary:
 			# Se sim, envia 'ok_in_round', se não, envia apenas 'ok'
 			var player_round = round_registry.get_round_by_player_uuid(uuid_base)
 			
+			# Se não tem, muda estado do jogador para LOBBY
 			if not player_round:
-				# Muda estado do jogador para LOBBY
 				var client_uuid = client_registry.get_uuid_by_peer_id(peer_id)
 				var client = client_registry.get_player(client_uuid)
 				if client and client["round_id"] == -1:
@@ -514,6 +520,10 @@ func process_client_hello(payload: Dictionary, peer_id: int) -> Dictionary:
 				
 				return {"status": "ok", "server_id": server_id, "player_name": player["name"]}
 			else:
+				# Retorna o sync de objetos para este player
+				network_manager.resume_peer_sync(peer_id)
+				# Marca player como conectado no round
+				round_registry._unmark_player_disconnected(player_round["id"], uuid_base)
 				return {"status": "ok_in_round", "server_id": server_id, "player_name": player["name"]}
 				
 
@@ -601,7 +611,7 @@ func _on_peer_disconnected(peer_id: int):
 				else:
 					_log_debug("Sala foi deletada (ficou vazia)")
 					_send_rooms_list_to_all()
-		
+	
 	# Define cliente como desconectado
 	client_registry.set_disconnected_peer(peer_id)
 	_log_debug("❌ Cliente desconectado: Peer ID %d" % peer_id)
@@ -899,13 +909,12 @@ func _mark_player_disconnected(peer_id: int, _chosen: bool):
 		return
 	
 	if _chosen:
+		# Marca player como desconectado no round
 		round_registry._mark_player_disconnected(_round["id"], player_uuid)
-		
-		# Para o sync de objetos pra este peer:
-		network_manager.stop_peer_sync(peer_id)
 		
 		_log_debug("⚠ %s marcado como desconectado na rodada %d" % [player["name"], _round["id"]])
 	else:
+		# Marca player como conectado no round
 		round_registry._unmark_player_disconnected(_round["id"], player_uuid)
 		
 		# Retoma o sync de objetos pra este peer:
@@ -1384,7 +1393,8 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary, is_test: bool
 	for room_player in room["players"]:
 		var player_sesion_id = client_registry.get_peer_id_by_uuid(room_player["uuid_base"])
 		client_registry.set_player_state(room_player["uuid_base"], client_registry.ClientState.LOADING)
-		network_manager.rpc_id(player_sesion_id, "_client_round_started",server_id , match_data)
+		if _is_peer_connected(player_sesion_id):
+			network_manager.rpc_id(player_sesion_id, "_client_round_started",server_id , match_data)
 		
 	await get_tree().process_frame
 	
@@ -2592,7 +2602,7 @@ func _kick_player_from_round(peer_id: int, reason: String):
 func _send_error_to_client(peer_id: int, message: String):
 	var client_uuid = client_registry.get_uuid_by_peer_id(peer_id)
 	var client = client_registry.get_player(client_uuid)
-	_log_debug("❌ Enviando erro para cliente %d: %s" % [client["name"], message])
+	_log_debug("❌ Enviando erro para cliente %s: %s" % [client["name"], message])
 	if _is_peer_connected(peer_id):
 		network_manager.rpc_id(peer_id, "_client_receive_error", message)
 

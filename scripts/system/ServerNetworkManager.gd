@@ -124,9 +124,6 @@ func _on_peer_disconnected(peer_id: int):
 		_player_rpc_timestamps.erase(peer_id)
 	if not _player_rpc_timestamps.has(peer_id):
 		_player_rpc_timestamps[peer_id] = []
-		
-	# Para o sync de objetos pra este peer:
-	stop_peer_sync(peer_id)
 
 func is_rpc_allowed(peer_id: int) -> bool:
 	var now := Time.get_ticks_msec()
@@ -408,13 +405,13 @@ func start_round_sync(round_id: int, sync_rate: float = 0.04) -> void:
 	_log_debug("[ObjSync]▶ Sync iniciado — round %d (rate: %.3fs)" % [round_id, sync_rate])
 
 ## Para o sync de um round inteiro (fim de round).
-## Chame também quando o último jogador de um round desconectar.
+## Chamar também quando o último jogador de um round desconectar.
 func stop_round_sync(round_id: int) -> void:
 	_round_sync.erase(round_id)
 	_log_debug("[ObjSync]⏹ Sync parado — round %d" % round_id)
 
 ## Exclui imediatamente um peer de todos os envios futuros.
-## Chame ao detectar desconexão, antes que o registry seja limpo.
+## Chamar ao detectar desconexão, antes que o registry seja limpo.
 func stop_peer_sync(peer_id: int) -> void:
 	_excluded_peers[peer_id] = true
 	_log_debug("[ObjSync]🚫 Peer %d excluído do sync" % peer_id)
@@ -424,6 +421,12 @@ func resume_peer_sync(peer_id: int) -> void:
 	if not _is_peer_connected(peer_id):
 		return
 	_excluded_peers.erase(peer_id)
+
+## quando o id é obsoleto, remove da lista
+func remove_old_ids(old_peer_id):
+	if _excluded_peers.has(old_peer_id):
+		_log_debug("[ObjSync]Removendo %d de _excluded_peers" % old_peer_id)
+		_excluded_peers.erase(old_peer_id)
 
 func _server_update_batch(delta: float) -> void:
 	for round_id in _round_sync.keys():
@@ -542,6 +545,8 @@ func _safe_disconnect(peer_id: int):
 	
 	# Checa se o peer ainda existe
 	if peer_id in multiplayer.get_peers():
+		# Para o sync de objetos pra este peer:
+		stop_peer_sync(peer_id)
 		peer.disconnect_peer(peer_id)
 	else:
 		_log_debug("⚠️ Peer já desconectado: %d" % peer_id)

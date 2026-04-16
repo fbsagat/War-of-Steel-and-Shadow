@@ -48,7 +48,11 @@ var _is_dirty: bool = false
 ##
 ## [b]Nota:[/b] O retorno é uma cópia profunda ([method Dictionary.duplicate] com [code]true[/code])
 ## para evitar modificações acidentais no cache interno.
-func init() -> Dictionary:
+func init(is_persistent: bool):
+	if not is_persistent:
+		_generate_server_identity()
+		return
+	
 	_cached_data = _load_file()
 
 	# Valida e carrega identidade existente
@@ -60,8 +64,7 @@ func init() -> Dictionary:
 		print("ServerPersistence: Gerando nova identidade do servidor...")
 		_generate_server_identity()
 		_save_identity()
-
-	return _cached_data.duplicate(true)
+	#return _cached_data.duplicate(true)
 
 
 # =========================================================

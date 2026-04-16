@@ -20,10 +20,12 @@ class_name Initializer
 # Instruções para debug
 ## Executa _log_debug apenas nos itens selecionados
 var activate_only_selected: bool = true
+var activate_only_selected: bool = false
 # Disponíveis: "Server", "NetworkManager", "TestManager", "GameManager", "RoomRegistry"
 # "RoundRegistry", "ClientRegistry", "Player_node", "ObjectManager", "MapManager", "MainMenu"
 # "ItemDatabase", "InventoryMenu", "DroppedItem"
 var selected: Array = ["Server", "RoomRegistry", "NetworkManager", "TestManager", "GameManager", "MainMenu"]
+var selected: Array = ["Server", "ClientRegistry", "RoomRegistry", "NetworkManager", "TestManager", "GameManager", "MainMenu"]
 
 # Referências
 ## Manager de rede, gerencia comunicação entre servidor e clientes
@@ -314,6 +316,9 @@ func _init_client(id_file_):
 		var TOKEN_string = "user://server_tokens_%s.json" % id_file_
 		game_manager.UUID_FILE = UUID_string
 		game_manager.TOKEN_FILE = TOKEN_string
+		# Altera o primeiro jogador para o localhost (desenvolvimento)
+		if test_mode and id_file_ == "1":
+			game_manager.server_address = "127.0.0.1"
 		
 	# Configurar modo de testes
 	if test_mode:

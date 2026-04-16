@@ -115,8 +115,15 @@ func reset():
 
 # ===== SPAWN =====
 
-## Spawna um item no servidor e replica para todos os clientes ativos na rodada.
-## Retorna o object_id único gerado, ou -1 em caso de falha.
+## Spawna um item no servidor e replica para todos os clientes.
+## @param objects_node O nó pai onde o objeto será instanciado.
+## @param round_id ID da rodada atual.
+## @param item_name Nome do item definido no ItemDatabase.
+## @param position Posição inicial no mundo 3D.
+## @param rotation Rotação inicial (Euler).
+## @param velocity Velocidade inicial aplicada ao spawn.
+## @param owner_uuid UUID do jogador que é o dono (se houver).
+## @return O ID único gerado para o objeto, ou -1 em caso de falidade.
 func spawn_item(objects_node, round_id: int, item_name: String, position: Vector3, rotation: Vector3 = Vector3.ZERO, velocity: Vector3 = Vector3.ZERO, owner_uuid: String = "") -> int:
 	if not _initialized:
 		push_error("ObjectManager: Não inicializado")

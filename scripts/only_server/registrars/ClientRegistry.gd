@@ -227,11 +227,10 @@ func update_peer_id(uuid_base: String, new_peer_id: int):
 			if players[player_uuid]["connected"] == true and player_uuid != uuid_base:
 				var peer_id = get_peer_id_by_uuid(player_uuid)
 				network_manager.rpc_id(peer_id, "_client_update_character_peer_id", uuid_base, new_peer_id)
-				_log_debug("Enviando comando para cliente %s para atualizar session id de remoto de uuid: %s para este novo: %d" % [player_uuid, uuid_base, new_peer_id])
+				_log_debug("Enviando comando para cliente %s para atualizar session id de: %d para este novo: %d" % [players[uuid_base]["name"], old_peer_id, new_peer_id])
 	
 	# Remove de _excluded_peers no network manager (não será mais necessário lá)
-	if network_manager._excluded_peers.has(old_peer_id):
-		network_manager._excluded_peers.erase(old_peer_id)
+	network_manager.remove_old_ids(old_peer_id)
 	
 	# Atualizar também no round do servidor
 	var node = get_player_node(uuid_base)
@@ -675,12 +674,15 @@ func remove_item_from_inventory(round_id: int, uuid_base: String, object_id: int
 	if inventory.is_empty():
 		return false
 
+	var idj = inventory["inventory"].find_custom(object_id)
+	print("[111] idj: ", idj)
 	var idx = -1
 	for i in range(inventory["inventory"].size()):
 		if inventory["inventory"][i]["object_id"] == object_id:
 			idx = i
 			break
 
+	print("[111] idx: ", idx)
 	if idx == -1:
 		_log_debug("⚠ Item com object_id %d não encontrado no inventário de %s" % [object_id, uuid_base])
 		return false

@@ -205,7 +205,6 @@ func _client_receive_pong(received_timestamp: int):
 
 func _ping_pong(_delta):
 	# Se estiver carregando algo, não detecta perda de conexão (falsa detecção)
-	
 	if is_loading:
 		return
 	
@@ -1544,7 +1543,8 @@ func _setup_remote_player(player_instance: Node, player_name_: String, player_po
 		player_pos["position"]
 	])
 
-## Recebe comando do servidor para teleportar para um local determinado.
+## Teleporta o jogador local para uma posição específica definida pelo servidor.
+## @param pos: Vector3 contendo a nova coordenada global de destino.
 func server_force_position(pos: Vector3):
 	if local_player_node and is_in_round:
 		local_player_node._respawn_player(pos)
