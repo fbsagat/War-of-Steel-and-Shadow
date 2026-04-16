@@ -7,7 +7,7 @@ class_name Initializer
 ##  clientes recebem localhost_auto_connect = true pr conectr autom.)
 @export var test_mode: bool = true
 ## [TESTES] Define a quantidade de instâcias de clientes conectadas para executar fast_round
-@export var simulador_players_qtd: int = 3
+@export var simulador_players_qtd: int = 2
 ## [TESTES] Dropa itens perto dos players e ativa o trainer de cada player
 @export var trainer: bool = true
 ## [TESTES] Ativa/desativa proteção dos botões dos menus (desativar para testes de multiplos RPCs)
@@ -19,12 +19,10 @@ class_name Initializer
 
 # Instruções para debug
 ## Executa _log_debug apenas nos itens selecionados
-var activate_only_selected: bool = true
 var activate_only_selected: bool = false
 # Disponíveis: "Server", "NetworkManager", "TestManager", "GameManager", "RoomRegistry"
 # "RoundRegistry", "ClientRegistry", "Player_node", "ObjectManager", "MapManager", "MainMenu"
 # "ItemDatabase", "InventoryMenu", "DroppedItem"
-var selected: Array = ["Server", "RoomRegistry", "NetworkManager", "TestManager", "GameManager", "MainMenu"]
 var selected: Array = ["Server", "ClientRegistry", "RoomRegistry", "NetworkManager", "TestManager", "GameManager", "MainMenu"]
 
 # Referências

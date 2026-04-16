@@ -858,7 +858,7 @@ func _on_peer_id_updated(uuid_base: String, new_peer_id: int):
 		for player in rooms[room_id]["players"]:
 			if player["uuid_base"] == uuid_base:
 				player["peer_id"] = new_peer_id
-				_log_debug("✓ peer_id atualizado para uuid=%s na sala %d" % [uuid_base, room_id])
+				_log_debug("✓ Peer id de %s atualizado para %d no registro da sala %d" % [uuid_base, new_peer_id, room_id])
 				return
 
 func get_room_count() -> int:
