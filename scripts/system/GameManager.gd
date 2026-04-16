@@ -324,35 +324,6 @@ func _toggle_gameplay_menu(hide: bool = false) -> void:
 
 # ===== FUNÇÕES DE CONEXÃO COM O SERVIDOR =====
 
-## Conecta ao servidor dedicado.
-func connect_to_server():
-	if is_connected_to_server:
-		_log_debug("Já conectado ao servidor")
-		return
-	
-	if is_connecting:
-		_log_debug("Já está tentando conectar")
-		return
-	
-	_log_debug("Tentando conectar ao servidor: %s:%d" % [server_address, server_port])
-	
-	if main_menu_node:
-		main_menu_node.show_loading_menu("Conectando ao servidor...")
-	
-	peer = ENetMultiplayerPeer.new()
-	var error = peer.create_client(server_address, server_port)
-	
-	if error != OK:
-		_log_debug("Erro ao criar cliente: " + str(error))
-		_handle_connection_error("Falha ao criar conexão com o servidor")
-		return
-	
-	multiplayer.multiplayer_peer = peer
-	is_connecting = true
-	connection_start_time = Time.get_ticks_msec() / 1000.0
-	
-	_log_debug("Cliente criado, aguardando conexão...")
-
 ## Esse sinal é emitido quando o cliente consegue se conectar com sucesso ao servidor.
 ## Callback quando conecta com sucesso ao servidor.
 func _on_connected_to_server():
@@ -432,9 +403,9 @@ func _on_server_disconnected():
 		main_menu_node.show_connecting_menu()
 		main_menu_node.show_error_connecting("Conexão perdida. Tentando reconectar...")
 	
-	start_reconnect(server_address, server_port)
+	start_connection_attempts(server_address, server_port)
 
-func start_reconnect(address: String, port: int) -> void:
+func start_connection_attempts(address: String, port: int) -> void:
 	server_address = address
 	server_port = port
 	reconnect_attempts = 0
@@ -560,7 +531,21 @@ func join_server_by_ip(received_ip: String, received_port: String) -> bool:
 		server_port = port_number
 	
 	_log_debug("Conectando manualmente no servidor: " + server_address + ":" + str(server_port))
-	connect_to_server()
+	
+	if is_connected_to_server:
+		_log_debug("Já conectado ao servidor")
+		return false
+	
+	if is_connecting:
+		_log_debug("Já está tentando conectar")
+		return false
+	
+	_log_debug("Tentando conectar ao servidor: %s:%d" % [server_address, server_port])
+	
+	if main_menu_node:
+		main_menu_node.show_loading_menu("Conectando ao servidor...")
+		
+	start_connection_attempts(server_address, server_port)
 	return true
 
 ## Validar localhost
