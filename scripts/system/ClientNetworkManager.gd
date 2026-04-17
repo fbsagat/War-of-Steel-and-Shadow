@@ -501,18 +501,39 @@ func _client_player_animation_state(peer_id: int, speed: float, attacking: bool,
 											   aiming, running, block_attacking, on_floor)
 
 
-# ===== SYNC EM LOTE POR ROUND =====
+# ===== REGISTRO DE OBJETOS (cliente) =====
 
-## Recebe o pacote em lote e atualiza os buffers de interpolação.
+func register_syncable_object(object_id: int, node: Node, config: Dictionary) -> void:
+	if syncable_objects.has(object_id):
+		return
+	syncable_objects[object_id] = { "node": node, "config": config }
+	client_sync_buffer[object_id] = {
+		"last_update": 0.0,
+		"target_pos":  (node as Node3D).global_position,
+		"target_rot":  (node as Node3D).global_rotation,
+		"has_first":   false,
+	}
+	_log_debug("[ObjSync] ✅ Cliente registrou objeto: %d" % object_id)
+
+func unregister_syncable_object(object_id: int) -> void:
+	syncable_objects.erase(object_id)
+	client_sync_buffer.erase(object_id)
+	_log_debug("[ObjSync] 🗑️ Cliente removeu objeto: %d" % object_id)
+
+
+# ===== SYNC =====
+
+# RPC — RECEBE BATCH DO SERVIDOR
+@rpc("authority", "call_remote", "unreliable_ordered")
 func _rpc_client_batch_sync(
-	_round_id: int,
-	ids: PackedInt32Array,
-	positions: PackedVector3Array,
-	rotations: PackedVector3Array
+		_round_id: int,
+		ids:       PackedInt32Array,
+		positions: PackedVector3Array,
+		rotations: PackedVector3Array
 ) -> void:
+	var now: float = Time.get_unix_time_from_system()
 
-	var now := Time.get_unix_time_from_system()
-	for i in ids.size():
+	for i: int in ids.size():
 		var oid: int = ids[i]
 		var buf: Dictionary = client_sync_buffer.get(oid, {})
 		if buf.is_empty():
@@ -522,78 +543,64 @@ func _rpc_client_batch_sync(
 		buf["target_pos"]  = positions[i]
 		buf["target_rot"]  = rotations[i]
 
-		# Primeiro pacote: teletransporta direto, sem lerp
-		if !buf["has_first"]:
+		# Primeiro pacote recebido: teleporta direto, sem lerp
+		if not (buf["has_first"] as bool):
 			buf["has_first"] = true
-			var entry = syncable_objects.get(oid)
-			if entry and is_instance_valid(entry.node):
-				entry.node.global_position = positions[i]
-				if entry.config.get("sync_rotation", true):
-					entry.node.global_rotation = rotations[i]
+			var entry: Dictionary = syncable_objects.get(oid, {})
+			if entry.is_empty():
+				continue
+			var node: Node = entry["node"]
+			if not is_instance_valid(node):
+				continue
+			(node as Node3D).global_position = positions[i]
+			if (entry["config"] as Dictionary).get("sync_rotation", true):
+				(node as Node3D).global_rotation = rotations[i]
 
-## Interpola todos os objetos registrados — chame em _process.
+# INTERPOLAÇÃO
 func _client_interpolate_all(delta: float) -> void:
-	var now := Time.get_unix_time_from_system()
-	var stale: Array = []
+	var now: float    = Time.get_unix_time_from_system()
+	var stale: Array[int] = []
 
-	for oid in client_sync_buffer.keys():
+	for oid: int in client_sync_buffer.keys():
 		var buf: Dictionary = client_sync_buffer[oid]
-		if !buf["has_first"]:
+
+		if not (buf["has_first"] as bool):
 			continue
 
-		var entry = syncable_objects.get(oid)
-		if !entry:
+		var entry: Dictionary = syncable_objects.get(oid, {})
+		if entry.is_empty():
 			stale.append(oid)
 			continue
 
-		var node = entry.node
-		if !is_instance_valid(node):
+		var node: Node = entry["node"]
+		if not is_instance_valid(node):
 			stale.append(oid)
 			continue
 
 		# Para de interpolar se o servidor ficou mudo por >1s
-		if now - buf["last_update"] > 1.0:
+		if now - (buf["last_update"] as float) > 1.0:
 			continue
 
-		var cfg: Dictionary       = entry.config
-		var threshold: float      = cfg.get("teleport_threshold", 0.5)
-		var speed: float          = cfg.get("interpolation_speed", 50.0)
-		var sync_rot: bool        = cfg.get("sync_rotation", true)
-		var target_pos: Vector3   = buf["target_pos"]
-		var target_rot: Vector3   = buf["target_rot"]
-		var dist: float           = node.global_position.distance_to(target_pos)
+		var cfg: Dictionary    = entry["config"]
+		var threshold: float   = cfg.get("teleport_threshold", 0.5)
+		var speed: float       = cfg.get("interpolation_speed", 50.0)
+		var sync_rot: bool     = cfg.get("sync_rotation", true)
+		var target_pos: Vector3 = buf["target_pos"]
+		var target_rot: Vector3 = buf["target_rot"]
+		var n3d: Node3D        = node as Node3D
+		var dist: float        = n3d.global_position.distance_to(target_pos)
 
 		if dist > threshold:
-			# Diferença grande demais → teletransporta
-			node.global_position = target_pos
+			n3d.global_position = target_pos
 			if sync_rot:
-				node.global_rotation = target_rot
+				n3d.global_rotation = target_rot
 		elif dist > 0.005:
-			# Interpolação suave
-			node.global_position = node.global_position.lerp(target_pos, speed * delta)
+			n3d.global_position = n3d.global_position.lerp(target_pos, speed * delta)
 			if sync_rot:
-				node.global_rotation = node.global_rotation.slerp(target_rot, speed * delta)
+				n3d.global_rotation = n3d.global_rotation.slerp(target_rot, speed * delta)
 
-	for oid in stale:
+	for oid: int in stale:
 		unregister_syncable_object(oid)
-
-## Cliente registra objeto (criado pelo spawn handler)
-func register_syncable_object(object_id: int, node: Node, config: Dictionary) -> void:
-	if syncable_objects.has(object_id):
-		return
-	syncable_objects[object_id] = { "node": node, "config": config }
-	client_sync_buffer[object_id] = {
-		"last_update": 0.0,
-		"target_pos": node.global_position,
-		"target_rot": node.global_rotation,
-		"has_first": false
-	}
-	_log_debug("[ObjSync]✅ Cliente registrou objeto: %d" % object_id)
-
-func unregister_syncable_object(object_id: int) -> void:
-	_log_debug("Removendo objeto %d do registro de sync" % object_id)
-	syncable_objects.erase(object_id)
-	client_sync_buffer.erase(object_id)
 
 
 # ===== AÇÕES (ATAQUES, DEFESA) =====

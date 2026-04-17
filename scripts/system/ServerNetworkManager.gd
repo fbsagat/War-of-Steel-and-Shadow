@@ -25,13 +25,28 @@ var last_ping_from_client : Dictionary = {} # peer_id -> timestamp
 var timeout_limit := 4000 # ms
 
 ## Sincronização de objetos
-var _pending_peers: Dictionary = {}
 const _PEER_READY_DELAY := 0.15  # segundos de carência pós-conexão
-# round_id → { "timer": float, "rate": float }
-var _round_sync: Dictionary = {}
-# peer_ids explicitamente excluídos do sync (desconexão imediata)
-var _excluded_peers: Dictionary = {}  # peer_id → true
 
+# ===== VARIÁVEIS DE SYNC (servidor) =====
+
+## { round_id: int → { "timer": float, "rate": float } }
+var _round_sync: Dictionary = {}
+
+## { peer_id: int → countdown: float }
+var _pending_peers: Dictionary = {}
+
+## { peer_id: int → true }
+var _excluded_peers: Dictionary = {}
+
+## Último estado enviado por objeto — base da delta compression
+## { object_id: int → { "pos": Vector3, "rot": Vector3 } }
+var _last_sent_state: Dictionary = {}
+
+## Threshold de posição para considerar mudança (metros)
+@export var pos_change_threshold: float = 0.005
+
+## Threshold de rotação para considerar mudança (radianos)
+@export var rot_change_threshold: float = 0.005
 
 # ===== INICIALIZAÇÃO =====
 
@@ -420,8 +435,9 @@ func _correct_player_position(peer_id: int, correct_position: Vector3):
 	rpc_id(peer_id, "server_force_position", correct_position)
 
 
-# ===== SYNC EM LOTE POR ROUND =====
+# ===== SYNC =====
 
+# SYNC EM LOTE POR ROUND
 ## Inicia o loop de sincronização em lote para um round.
 ## Chame quando o round realmente começar.
 func start_round_sync(round_id: int, sync_rate: float = 0.04) -> void:
@@ -429,94 +445,140 @@ func start_round_sync(round_id: int, sync_rate: float = 0.04) -> void:
 		push_warning("[ObjSync] Round %d já está em sync." % round_id)
 		return
 	_round_sync[round_id] = { "timer": 0.0, "rate": sync_rate }
-	_log_debug("[ObjSync]▶ Sync iniciado — round %d (rate: %.3fs)" % [round_id, sync_rate])
+	_log_debug("[ObjSync] ▶ Sync iniciado — round %d (rate: %.3fs)" % [round_id, sync_rate])
 
 ## Para o sync de um round inteiro (fim de round).
-## Chamar também quando o último jogador de um round desconectar.
+## Chame também quando o último jogador de um round desconectar.
 func stop_round_sync(round_id: int) -> void:
 	_round_sync.erase(round_id)
-	_log_debug("[ObjSync]⏹ Sync parado — round %d" % round_id)
+	_log_debug("[ObjSync] ⏹ Sync parado — round %d" % round_id)
 
 ## Exclui imediatamente um peer de todos os envios futuros.
-## Chamar ao detectar desconexão, antes que o registry seja limpo.
+## Chame ao detectar desconexão, antes que o registry seja limpo.
 func stop_peer_sync(peer_id: int) -> void:
 	_excluded_peers[peer_id] = true
-	_log_debug("[ObjSync]🚫 Peer %d excluído do sync" % peer_id)
+	_log_debug("[ObjSync] 🚫 Peer %d excluído do sync" % peer_id)
 
-## Remove a exclusão (reconexão ou troca de round).
+## Remove a exclusão de um peer (reconexão ou troca de round).
 func resume_peer_sync(peer_id: int) -> void:
 	if not _is_peer_connected(peer_id):
 		return
 	_excluded_peers.erase(peer_id)
+	_log_debug("[ObjSync] ✅ Peer %d retomou sync" % peer_id)
 
-## quando o id é obsoleto, remove da lista
-func remove_old_ids(old_peer_id):
+## Remove peer_ids obsoletos das listas internas.
+func remove_old_peer_id(old_peer_id: int) -> void:
 	if _excluded_peers.has(old_peer_id):
-		_log_debug("[ObjSync]Removendo %d de _excluded_peers" % old_peer_id)
 		_excluded_peers.erase(old_peer_id)
+		_log_debug("[ObjSync] Removido %d de _excluded_peers" % old_peer_id)
+	if _pending_peers.has(old_peer_id):
+		_pending_peers.erase(old_peer_id)
+		_log_debug("[ObjSync] Removido %d de _pending_peers" % old_peer_id)
+
+# LOOP PRINCIPAL (servidor)
 
 func _server_update_batch(delta: float) -> void:
-	for round_id in _round_sync.keys():
+	_drain_pending_peers(delta)
+	for round_id: int in _round_sync.keys():
 		var state: Dictionary = _round_sync[round_id]
-		state["timer"] += delta
-		if state["timer"] >= state["rate"]:
+		state["timer"] = (state["timer"] as float) + delta
+		if (state["timer"] as float) >= (state["rate"] as float):
 			state["timer"] = 0.0
 			_send_batch_for_round(round_id)
 
-func _send_batch_for_round(round_id: int) -> void:
-	# 1. Coleta todos os objetos vivos deste round
-	var ids      := PackedInt32Array()
-	var positions := PackedVector3Array()
-	var rotations := PackedVector3Array()
+func _drain_pending_peers(delta: float) -> void:
+	var ready: Array[int] = []
+	for peer_id: int in _pending_peers.keys():
+		_pending_peers[peer_id] = (_pending_peers[peer_id] as float) - delta
+		if (_pending_peers[peer_id] as float) <= 0.0:
+			ready.append(peer_id)
+	for peer_id: int in ready:
+		_pending_peers.erase(peer_id)
+		_log_debug("[ObjSync] ✅ Peer %d saiu da quarentena" % peer_id)
 
-	for object_id in syncable_objects.keys():
+# ENVIO EM LOTE COM DELTA COMPRESSION
+func _send_batch_for_round(round_id: int) -> void:
+	# 1. Coleta apenas objetos que mudaram desde o último envio
+	var ids:       PackedInt32Array   = PackedInt32Array()
+	var positions: PackedVector3Array = PackedVector3Array()
+	var rotations: PackedVector3Array = PackedVector3Array()
+
+	for object_id: int in syncable_objects.keys():
 		var entry: Dictionary = syncable_objects[object_id]
-		if entry.config.get("round_id", -1) != round_id:
+
+		if (entry["config"] as Dictionary).get("round_id", -1) != round_id:
 			continue
-		var node = entry.node
-		if !is_instance_valid(node) or !node.is_inside_tree():
+
+		var node: Node = entry["node"]
+		if not is_instance_valid(node) or not node.is_inside_tree():
 			continue
+
+		var pos: Vector3 = (node as Node3D).global_position
+		var rot: Vector3 = (node as Node3D).global_rotation \
+		if (entry["config"] as Dictionary).get("sync_rotation", true) \
+		else Vector3.ZERO
+
+		if not _has_state_changed(object_id, pos, rot):
+			continue
+
 		ids.append(object_id)
-		positions.append(node.global_position)
-		rotations.append(
-			node.global_rotation if entry.config.get("sync_rotation", true)
-			else Vector3.ZERO
-		)
+		positions.append(pos)
+		rotations.append(rot)
+		_last_sent_state[object_id] = { "pos": pos, "rot": rot }
 
 	if ids.is_empty():
 		return
 
-	# 2. Resolve peers do round
-	var target_peers: Array = _get_round_peers(round_id)
+	# 2. Resolve peers válidos do round
+	var target_peers: Array[int] = _get_round_peers(round_id)
 	if target_peers.is_empty():
 		return
 
-	# 3. Envia — um único RPC para cada peer válido do round
-	var enet_mp := multiplayer.multiplayer_peer as ENetMultiplayerPeer
-	for peer_id in target_peers:
-		#_log_debug("[ObjSync] peer=%d  pending=%s  excluded=%s  pending_timer=%.2f" % [
-			#peer_id,
-			#_pending_peers.has(peer_id),
-			#_excluded_peers.has(peer_id),
-			#_pending_peers.get(peer_id, -1.0)
-		#])
+	# 3. Envia um único RPC por peer válido
+	var enet_mp: ENetMultiplayerPeer = multiplayer.multiplayer_peer as ENetMultiplayerPeer
+
+	for peer_id: int in target_peers:
 		if _pending_peers.has(peer_id) or _excluded_peers.has(peer_id):
 			continue
+
 		if enet_mp:
-			var ep_: ENetPacketPeer = enet_mp.get_peer(peer_id)
-			#_log_debug("[ObjSync] ep=%s  state=%s  STATE_CONNECTED=%s" % 
-			#[ep_, ep_.get_state() if ep_ else "NULL", ENetPacketPeer.STATE_CONNECTED])
-			if not ep_ or ep_.get_state() != ENetPacketPeer.STATE_CONNECTED:
+			var ep: ENetPacketPeer = enet_mp.get_peer(peer_id)
+			if not ep or ep.get_state() != ENetPacketPeer.STATE_CONNECTED:
+				if ep and ep.get_state() == ENetPacketPeer.STATE_CONNECTING:
+					if not _pending_peers.has(peer_id):
+						_pending_peers[peer_id] = 1.0
 				continue
+
 		if not _is_peer_connected(peer_id):
-			return
+			continue
+
 		_rpc_client_batch_sync.rpc_id(peer_id, round_id, ids, positions, rotations)
 
-func _get_round_peers(round_id: int) -> Array:
-	if !round_registry:
-		return []
-	var peers: Array = []
-	for uuid in round_registry.get_active_players_uuids(round_id):
+## Retorna true se pos ou rot diferirem do último estado enviado além do threshold.
+func _has_state_changed(object_id: int, pos: Vector3, rot: Vector3) -> bool:
+	if not _last_sent_state.has(object_id):
+		return true  # Nunca enviado — força envio completo
+
+	var last: Dictionary = _last_sent_state[object_id]
+	var last_pos: Vector3 = last["pos"]
+	var last_rot: Vector3 = last["rot"]
+
+	# distance_squared evita raiz quadrada no hot path
+	if last_pos.distance_squared_to(pos) > pos_change_threshold * pos_change_threshold:
+		return true
+
+	# Rotação componente a componente (distância euclidiana entre ângulos não tem sentido físico)
+	if absf(last_rot.x - rot.x) > rot_change_threshold: return true
+	if absf(last_rot.y - rot.y) > rot_change_threshold: return true
+	if absf(last_rot.z - rot.z) > rot_change_threshold: return true
+
+	return false
+
+func _get_round_peers(round_id: int) -> Array[int]:
+	var peers: Array[int] = []
+	if not round_registry:
+		return peers
+	for uuid: String in round_registry.get_active_players_uuids(round_id):
 		var pid: int = client_registry.get_peer_id_by_uuid(uuid)
 		if pid > 0:
 			peers.append(pid)
@@ -527,25 +589,17 @@ func register_syncable_object(object_id: int, node: Node, config: Dictionary) ->
 	if syncable_objects.has(object_id):
 		push_warning("[ObjSync] Objeto duplicado: %d" % object_id)
 		return
-	if !node.is_inside_tree():
+	if not node.is_inside_tree():
 		push_error("[ObjSync] Nó fora da árvore: %d" % object_id)
 		return
 	syncable_objects[object_id] = { "node": node, "config": config }
-	_log_debug("[ObjSync]✅ Objeto registrado: %d (round %d)" % [object_id, config.get("round_id", -1)])
+	# Sem entrada em _last_sent_state → força envio completo na primeira vez
+	_log_debug("[ObjSync] ✅ Objeto registrado: %d (round %d)" % [object_id, config.get("round_id", -1)])
 
 func unregister_syncable_object(object_id: int) -> void:
 	syncable_objects.erase(object_id)
-	_log_debug("[ObjSync]🗑️ Objeto removido do sync: %d" % object_id)
-
-func _drain_pending_peers(delta: float) -> void:
-	var is_ready: Array = []
-	for peer_id in _pending_peers.keys():
-		_pending_peers[peer_id] -= delta
-		if _pending_peers[peer_id] <= 0.0:
-			is_ready.append(peer_id)
-	for peer_id in is_ready:
-		_pending_peers.erase(peer_id)
-		_log_debug("✅ Peer %d saiu da quarentena" % peer_id)
+	_last_sent_state.erase(object_id)
+	_log_debug("[ObjSync] 🗑️ Objeto removido do sync: %d" % object_id)
 
 
 # ===== UTILITÁRIOS =====
