@@ -235,7 +235,9 @@ func _server_close_room():
 	var peer_id = multiplayer.get_remote_sender_id()
 	server_manager._handle_close_room(peer_id)
 
-func _server_player_ready():
+## Cliente avisa servidor que concluiu o carregamento de seu round e envia check_this_ para
+## checagem de integridade.
+func _server_player_ready(check_this_: Dictionary):
 	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
 		return
 	var peer_id = multiplayer.get_remote_sender_id()
@@ -256,6 +258,31 @@ func _server_player_ready():
 	resume_peer_sync(peer_id)
 	
 	client_registry.set_player_state(player_uuid, client_registry.ClientState.IN_GAME)
+	
+	# Checagens pós load:
+	# Checa se 'players' no round recém carregado no cliente está atualizado, se não, atualizar.
+	var r_players = check_this_["current_round"]["players"]
+	var check_this_host_uuid = null
+	for r_player in r_players:
+		var r_uuid = r_player["uuid_base"]
+		var r_name = r_player["name"]
+		if r_player["is_host"]:
+			check_this_host_uuid = r_player["uuid_base"]
+		
+		if r_uuid not in round_registry.get_active_players_uuids(check_this_["current_round"]["round_id"]):
+			# Verificar se jogador ainda está na partida, se não, remover remoto dele no cliente
+			if _is_peer_connected(peer_id):
+				var text = "Jogador %s desistiu da partida" % r_name
+				_client_receive_message.rpc_id(peer_id, text, 6, "info")
+				rpc_id(peer_id, "_client_remove_player", r_uuid)
+
+	# Checa se o host da sala deste round mudou para notificar isto
+	var p_room_id = client_registry.get_player_room(player_uuid)
+	var room = room_registry.get_room(p_room_id)
+	# Só notifica se mudar e se for o próprio host
+	if check_this_host_uuid != room["host_uuid"] and check_this_host_uuid == player_uuid:
+		var text = "Agora você é o host dessa sala: %s" % room["name"]
+		_client_receive_message.rpc_id(peer_id, text, 6, "info")
 
 
 # ===== RODADAS =====
@@ -357,7 +384,7 @@ func _server_player_state(peer_id: int, pos: Vector3, rot: Vector3, vel: Vector3
 		return
 		
 	var round_id = round_["id"]
-	var players_round = round_registry.get_active_players_ids(round_id)
+	var players_round = round_registry.get_active_players_uuids(round_id)
 	
 	for r_peer_uuid in players_round:
 		if r_peer_uuid != sender_uuid:
@@ -380,7 +407,7 @@ func _server_player_animation_state(peer_id: int, speed: float, attacking: bool,
 	var round_ = round_registry.get_round_by_player_uuid(player_uuid)
 	if not round_:
 		return
-	var players_round = round_registry.get_active_players_ids(round_["id"])
+	var players_round = round_registry.get_active_players_uuids(round_["id"])
 	for r_peer_id in players_round:
 		if r_peer_id != player_uuid:
 			var session_id = client_registry.get_peer_id_by_uuid(r_peer_id)
@@ -489,7 +516,7 @@ func _get_round_peers(round_id: int) -> Array:
 	if !round_registry:
 		return []
 	var peers: Array = []
-	for uuid in round_registry.get_active_players_ids(round_id):
+	for uuid in round_registry.get_active_players_uuids(round_id):
 		var pid: int = client_registry.get_peer_id_by_uuid(uuid)
 		if pid > 0:
 			peers.append(pid)

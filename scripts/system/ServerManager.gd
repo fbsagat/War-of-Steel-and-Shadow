@@ -589,11 +589,7 @@ func _on_peer_disconnected(peer_id: int):
 				var room_id = room["id"]
 				
 				# Remove da sala (pode deletá-la se ficar vazia)
-				var new_host = room_registry.remove_player_from_room(room_id, player_uuid)
-				var host_peer_id: int = -1
-				if new_host != "":
-					# notificar novo host
-					host_peer_id = client_registry.get_peer_id_by_uuid(new_host)
+				room_registry.remove_player_from_room(room_id, player_uuid)
 				_log_debug("%s Removido da sala: %s" % [player_data["name"], room["name"]])
 				
 				# Verifica se sala ainda existe antes de notificar
@@ -606,8 +602,6 @@ func _on_peer_disconnected(peer_id: int):
 					for player in updated_room["players"]:
 						if player["peer_id"] != peer_id and _is_peer_connected(player["peer_id"]):
 							network_manager.rpc_id(player["peer_id"], "_client_remove_player", peer_id)
-					if host_peer_id >= 0:
-						_send_error_to_client(host_peer_id, "Você é o novo host dessa sala")
 				else:
 					_log_debug("Sala foi deletada (ficou vazia)")
 					_send_rooms_list_to_all()
@@ -1659,7 +1653,7 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, pl
 
 func _on_host_changed(room_id: int, new_host_uuid: String):
 	var room = room_registry.get_room(room_id)
-	var text = "Agora você é o caralhudo do host dessa sala: %s" % room["name"]
+	var text = "Agora você é o host dessa sala: %s" % room["name"]
 	var player_ = client_registry.get_player_by_uuid(new_host_uuid)
 	
 	if not _is_peer_connected(player_["peer_id"]):
@@ -1931,7 +1925,7 @@ func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 	var player = client_registry.get_player(player_uuid)
 	var round_ = round_registry.get_round_by_player_uuid(player_uuid)
 	var item = item_database.get_item(object["item_name"]).to_dictionary()
-	var round_players = round_registry.get_active_players_ids(round_["id"])
+	var round_players = round_registry.get_active_players_uuids(round_["id"])
 	
 	_log_debug("[ITEM] Player %s pediu para pegar item %d(%s), no round %d" % [player["name"], object_id, object["item_name"], round_["id"]])
 	
@@ -2469,7 +2463,7 @@ func _server_player_action(peer_id: int, action_type: String, item_equipado_nome
 	var player_uuid = client_registry.get_uuid_by_peer_id(peer_id)
 	var player = client_registry.get_player(player_uuid)
 	var round_ = round_registry.get_round_by_player_uuid(player_uuid)
-	var players_round = round_registry.get_active_players_ids(round_["id"])
+	var players_round = round_registry.get_active_players_uuids(round_["id"])
 	
 	# Ignora o próprio player
 	var sender_id = multiplayer.get_remote_sender_id()

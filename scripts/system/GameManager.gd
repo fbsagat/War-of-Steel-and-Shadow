@@ -226,7 +226,9 @@ func finish_loading():
 	last_pong_time = Time.get_ticks_msec() + post_loading_tolerance
 	has_timed_out = false
 	
-	network_manager._server_player_ready()
+	# Envia resultados de carregamento para o servidor checar integridade
+	var check_this = {"current_round": current_round}
+	network_manager._server_player_ready(check_this)
 
 
 # ===== FUNÇÕES DE MENU e INPUT =====
@@ -439,7 +441,9 @@ func _try_reconnect() -> void:
 	_log_debug("Conseguiu reconectar, novo peer id: %s" % peer.get_unique_id())
 	
 	if is_in_round or round_node:
-		network_manager._server_player_ready()
+		# Envia resultados de carregamento para o servidor checar integridade
+		var check_this = {"current_round": current_round}
+		network_manager._server_player_ready(check_this)
 
 	# Se o servidor estiver offline, o resultado real virá por signal
 	# Este timer serve como fallback caso a rede demore demais

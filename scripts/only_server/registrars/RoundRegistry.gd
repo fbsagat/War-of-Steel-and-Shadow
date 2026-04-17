@@ -490,7 +490,7 @@ func get_active_players(round_id: int) -> Array:
 	return active
 
 ## Retorna lista de uuid_bases dos jogadores ATIVOS (não desconectados).
-func get_active_players_ids(round_id: int) -> Array:
+func get_active_players_uuids(round_id: int) -> Array:
 	if not rounds.has(round_id):
 		return []
 

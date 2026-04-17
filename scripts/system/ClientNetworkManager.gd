@@ -217,12 +217,12 @@ func _client_kicked_from_room():
 	_log_debug("Foi expulso da sala")
 	game_manager._client_kicked_from_room()
 
-func _server_player_ready():
+func _server_player_ready(check_this: Dictionary):
 	_log_debug("Cliente já carregou o seu round")
 	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
-	rpc_id(1, "_server_player_ready")
+	rpc_id(1, "_server_player_ready", check_this)
 
 
 # ===== RODADAS — HELPERS LOCAIS =====
