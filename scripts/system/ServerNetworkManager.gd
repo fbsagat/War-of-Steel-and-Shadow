@@ -364,7 +364,7 @@ func _server_player_state(peer_id: int, pos: Vector3, rot: Vector3, vel: Vector3
 			var session_id = client_registry.get_peer_id_by_uuid(r_peer_uuid)
 			if not _is_peer_connected(session_id):
 				return
-			rpc_id(session_id, "_client_player_state", r_peer_uuid, pos, rot, vel, running, jumping)
+			rpc_id(session_id, "_client_player_state", peer_id, pos, rot, vel, running, jumping)
 
 func _server_player_animation_state(peer_id: int, speed: float, attacking: bool, defending: bool,
 									jumping: bool, aiming: bool, running: bool, block_attacking: bool, on_floor: bool):
