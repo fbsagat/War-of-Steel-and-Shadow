@@ -120,6 +120,8 @@ signal gameplay_menu_give_up_game_pressed()
 @onready var loading_label: Label
 @onready var loading_progress: ProgressBar
 @onready var loading_icon: TextureRect
+@onready var loading_button: Button
+
 
 # Menu de opções
 @onready var vsync_check: CheckBox
@@ -382,6 +384,7 @@ func _setup_element_references():
 	loading_label = loading_menu.find_child("LoadingLabel", true, false)
 	loading_progress = loading_menu.find_child("LoadingProgress", true, false)
 	loading_icon = loading_menu.find_child("LoadingIcon", true, false)
+	loading_button = loading_menu.find_child("CancelButton", true, false)
 	
 	# Confirmação de saída
 	exit_confirm_label = exit_confirm_menu.find_child("ExitConfirmLabel", true, false)
@@ -796,19 +799,28 @@ func show_room_menu(room_data: Dictionary):
 	room_start_button.disabled = false
 	_update_room_display(room_data)
 
-func show_loading_menu(message: String = "Carregando..."):
+func show_loading_menu(message: String = "Carregando...", can_cancel: bool = true, progress: bool = false):
 	canvas_layer.show()
 	previous_menu = get_current_visible_menu()
 	hide_all_menus()
 	loading_menu.visible = true
+	loading_button.visible = true
+	loading_progress.visible = false
 	
 	is_loading = true
 	if loading_label:
 		loading_label.text = message
+	
+	if progress:
+		loading_progress.visible = true
 	if loading_progress:
 		loading_progress.value = 0
 	if loading_icon:
 		loading_icon.rotation = 0
+		
+	if not can_cancel:
+		loading_button.visible = false
+		
 
 func hide_loading_menu(return_to_previous: bool = false):
 	loading_menu.visible = false

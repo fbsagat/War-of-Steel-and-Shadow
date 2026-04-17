@@ -122,9 +122,10 @@ func _process(_delta):
 	_ping_pong(_delta)
 
 func initialize():
-	
 	connect_inventory_signals()
 	connect_muiltiplayer_signals()
+	connect_other_signals()
+	
 	setup_reconection_timer()
 	
 	if main_menu_node:
@@ -162,7 +163,9 @@ func connect_muiltiplayer_signals():
 	multiplayer.connection_failed.connect(_on_connection_failed)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
 
-
+func connect_other_signals():
+	map_manager.map_load_progress.connect(_map_progress_update)
+	
 # ===== HEARTBEAT =====
 
 func start_heartbeat():
@@ -461,8 +464,10 @@ func _on_reconnect_gave_up() -> void:
 ## possibilidade de o cliente retornar ao round em que estava
 ## notify = avisa o servidor.
 func _disconnect_from_server(notify_server: bool = false):
-	_log_debug("Cliente desconectado intencionalmente do servidor, resetando estado do cliente e voltando ao menu principal")
-	
+	# Não executa enquanto está carregando rodada
+	if is_loading:
+		return
+		
 	if notify_server:
 		_log_debug("Avisando servidor")
 		# Fazer a função
@@ -505,6 +510,7 @@ func _disconnect_from_server(notify_server: bool = false):
 		debug_overlay_node.visible = false
 		debug_menu_visible = false
 	
+	_log_debug("Cliente desconectado intencionalmente do servidor, resetando estado do cliente e voltando ao menu principal")
 	# Emite sinal
 	disconnected_from_server.emit()
 
@@ -861,6 +867,7 @@ func _client_receive_round_return_request(_room_name: String):
 ## Cliente envia resposta dizendo que quer voltar à partida em que estava
 func _request_return_to_round():
 	is_loading = true
+		
 	network_manager._server_request_return_or_exit(true)
 
 ## Cliente envia resposta dizendo que quer abandonar a partida em que estava
@@ -1100,6 +1107,7 @@ func start_round(round_settings: Dictionary = {}):
 	
 	_log_debug("Solicitando início da rodada...")
 	is_loading = true
+		
 	network_manager._server_request_start_round(round_settings)
 
 ## Callback quando a rodada termina.
@@ -1136,6 +1144,10 @@ func _client_round_started(server_id: String, match_data: Dictionary) -> void:
 	#print("[pp]  -------------------- _client_round_started --------------------")
 	#initializer.pretty_print_dict(match_data)
 	#print("[pp]  -------------------- pp End --------------------")
+		
+	if main_menu_node:
+		main_menu_node.show_loading_menu("Carregando partida...", false, true)
+	
 	await _load_round(server_id, match_data, false)
 
 ## Callback quando o jogador retorna a uma rodada em andamento.
@@ -1144,6 +1156,10 @@ func _client_round_return(server_id: String, match_data: Dictionary) -> void:
 	#print("[pp]  -------------------- _client_round_return --------------------")
 	#initializer.pretty_print_dict(match_data)
 	#print("[pp]  -------------------- pp End --------------------")
+	
+	if main_menu_node:
+		main_menu_node.show_loading_menu("Carregando partida...", false, true)
+		
 	await _load_round(server_id, match_data, true)
 
 ## Carrega a rodada localmente no cliente.
@@ -2024,6 +2040,11 @@ func filter_match_data(original: Dictionary) -> Dictionary:
 		if not comando.has(chave):
 			copia.erase(chave)
 	return copia
+
+## Vem do signal de progresso de atualização do map manager
+func _map_progress_update(progress):
+	if main_menu_node:
+		main_menu_node.update_loading_progress(progress)
 
 ## Verifica se o peer multiplayer está ativo e com status de conexão estabelecida.
 func verificar_rede() -> bool:

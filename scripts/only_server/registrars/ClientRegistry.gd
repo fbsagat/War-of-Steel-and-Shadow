@@ -230,7 +230,7 @@ func update_peer_id(uuid_base: String, new_peer_id: int):
 				_log_debug("Enviando comando para cliente %s para atualizar session id de: %d para este novo: %d" % [players[uuid_base]["name"], old_peer_id, new_peer_id])
 	
 	# Remove de _excluded_peers no network manager (não será mais necessário lá)
-	network_manager.remove_old_ids(old_peer_id)
+	network_manager.remove_old_peer_id(old_peer_id)
 	
 	# Atualizar também no round do servidor
 	var node = get_player_node(uuid_base)

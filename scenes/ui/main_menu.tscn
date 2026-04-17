@@ -1288,11 +1288,14 @@ layout_mode = 2
 text = "Confirmar"
 
 [node name="LoadingMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=756344685]
-visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_left = -37.0
+offset_top = 47.0
+offset_right = 36.0
+offset_bottom = -225.0
 grow_horizontal = 2
 grow_vertical = 2
 
@@ -1328,6 +1331,7 @@ layout_mode = 2
 text = "Cancelar"
 
 [node name="GameplayMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=1821625676]
+visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
