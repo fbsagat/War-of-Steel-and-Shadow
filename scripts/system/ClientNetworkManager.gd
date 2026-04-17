@@ -549,16 +549,19 @@ func _rpc_client_batch_sync(
 			var entry: Dictionary = syncable_objects.get(oid, {})
 			if entry.is_empty():
 				continue
-			var node: Node = entry["node"]
-			if not is_instance_valid(node):
+			var raw = entry["node"]
+			if not is_instance_valid(raw):
 				continue
-			(node as Node3D).global_position = positions[i]
+			var node: Node3D = raw as Node3D
+			if node == null:
+				continue
+			node.global_position = positions[i]
 			if (entry["config"] as Dictionary).get("sync_rotation", true):
-				(node as Node3D).global_rotation = rotations[i]
+				node.global_rotation = rotations[i]
 
 # INTERPOLAÇÃO
 func _client_interpolate_all(delta: float) -> void:
-	var now: float    = Time.get_unix_time_from_system()
+	var now: float = Time.get_unix_time_from_system()
 	var stale: Array[int] = []
 
 	for oid: int in client_sync_buffer.keys():
@@ -572,23 +575,32 @@ func _client_interpolate_all(delta: float) -> void:
 			stale.append(oid)
 			continue
 
-		var node: Node = entry["node"]
-		if not is_instance_valid(node):
+		# Valida o Variant ANTES de fazer o cast para Node
+		var raw = entry["node"]
+		if not is_instance_valid(raw):
 			stale.append(oid)
 			continue
 
-		# Para de interpolar se o servidor ficou mudo por >1s
+		var node: Node = raw as Node
+		if node == null:
+			stale.append(oid)
+			continue
+
 		if now - (buf["last_update"] as float) > 1.0:
 			continue
 
-		var cfg: Dictionary    = entry["config"]
-		var threshold: float   = cfg.get("teleport_threshold", 0.5)
-		var speed: float       = cfg.get("interpolation_speed", 50.0)
-		var sync_rot: bool     = cfg.get("sync_rotation", true)
+		var cfg: Dictionary     = entry["config"]
+		var threshold: float    = cfg.get("teleport_threshold", 0.5)
+		var speed: float        = cfg.get("interpolation_speed", 50.0)
+		var sync_rot: bool      = cfg.get("sync_rotation", true)
 		var target_pos: Vector3 = buf["target_pos"]
 		var target_rot: Vector3 = buf["target_rot"]
-		var n3d: Node3D        = node as Node3D
-		var dist: float        = n3d.global_position.distance_to(target_pos)
+		var n3d: Node3D         = node as Node3D
+		if n3d == null:
+			stale.append(oid)
+			continue
+
+		var dist: float = n3d.global_position.distance_to(target_pos)
 
 		if dist > threshold:
 			n3d.global_position = target_pos
