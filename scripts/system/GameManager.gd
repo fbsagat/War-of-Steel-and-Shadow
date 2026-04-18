@@ -436,11 +436,6 @@ func _try_reconnect() -> void:
 	multiplayer.multiplayer_peer = peer
 	local_peer_id = peer.get_unique_id()
 	_log_debug("Conseguiu reconectar, novo peer id: %s" % peer.get_unique_id())
-	
-	if is_in_round or round_node:
-		# Envia resultados de carregamento para o servidor checar integridade
-		var check_this = {"current_round": current_round}
-		network_manager._server_player_ready(check_this)
 
 	# Se o servidor estiver offline, o resultado real virá por signal
 	# Este timer serve como fallback caso a rede demore demais
@@ -693,8 +688,12 @@ func handle_server_response(response: Dictionary) -> void:
 
 			if in_round and is_in_round:
 				_client_update_character_peer_id(uuid_base, local_peer_id)
+				# Envia resultados de carregamento para o servidor checar integridade
+				var check_this = {"current_round": current_round}
+				network_manager._server_player_ready(check_this)
 				if main_menu_node:
 					main_menu_node.hide_main_menu()
+
 				return
 			
 			# Se a response for "ok"

@@ -267,13 +267,11 @@ func _server_player_ready(check_this_: Dictionary):
 	
 	# Sistema para impedir execução múltipla
 	# Só aceita se estava carregando
-	var state = client_registry.get_player_state(player_uuid)
-	var state_list = [client_registry.ClientState.LOADING]
-	if state not in state_list:
-		_log_debug("Estado (Atual: %s) de jogador %d não está entre: %s" % [state, peer_id, state_list])
-		return
-		
-	await get_tree().process_frame
+	#var state = client_registry.get_player_state(player_uuid)
+	#var state_list = [client_registry.ClientState.LOADING]
+	#if state not in state_list:
+		#_log_debug("Estado (Atual: %s) de jogador %d não está entre: %s" % [state, peer_id, state_list])
+		#return
 	
 	client_registry.set_player_state(player_uuid, client_registry.ClientState.IN_GAME)
 	
@@ -332,12 +330,6 @@ func _mark_player_disconnected(_chosen: bool):
 	# Sistema para impedir execução errada
 	# Só aceita se não estiver carregando partida
 	var peer_id = multiplayer.get_remote_sender_id()
-	var player_uuid = client_registry.get_uuid_by_peer_id(peer_id)
-	var state = client_registry.get_player_state(player_uuid)
-	var state_list = [client_registry.ClientState.LOADING]
-	if state in state_list:
-		_log_debug("Jogador %s pediu para desconectar durante o carregmento de partida, não aceitar" % player_uuid)
-		return
 	server_manager._mark_player_disconnected(peer_id, _chosen)
 	
 	
@@ -410,18 +402,12 @@ func _server_player_state(pos: Vector3, rot: Vector3, vel: Vector3, running: boo
 	
 	if multiplayer.multiplayer_peer == null:
 		return
-	
+
 	var peers = multiplayer.get_peers()
-	
 	if peer_id not in peers:
 		return
-	
+		
 	if not _in_game_peers.has(peer_id):
-		return
-	
-	var sender_id = multiplayer.get_remote_sender_id()
-	if sender_id != peer_id:
-		push_warning("⚠️ Jogador %d tentou enviar estado do jogador %d" % [sender_id, peer_id])
 		return
 	
 	# Aplica no nó do servidor
@@ -429,20 +415,17 @@ func _server_player_state(pos: Vector3, rot: Vector3, vel: Vector3, running: boo
 	
 	var sender_uuid = client_registry.get_uuid_by_peer_id(peer_id)
 	var round_ = round_registry.get_round_by_player_uuid(sender_uuid)
-	
 	if not round_:
 		return
-		
 	var round_id = round_["id"]
 	var players_round = round_registry.get_active_players_uuids(round_id)
-	
 	for r_peer_uuid in players_round:
 		if r_peer_uuid != sender_uuid:
-			var session_id = client_registry.get_peer_id_by_uuid(r_peer_uuid)
-			if not _is_peer_connected(session_id):
+			var r_peer_id = client_registry.get_peer_id_by_uuid(r_peer_uuid)
+			if not _is_peer_connected(r_peer_id):
 				return
 			_log_debug("_client_player_state", true)
-			rpc_id(session_id, "_client_player_state", peer_id, pos, rot, vel, running, jumping)
+			rpc_id(r_peer_id, "_client_player_state", peer_id, pos, rot, vel, running, jumping)
 
 func _server_player_animation_state(speed: float, attacking: bool, defending: bool,
 									jumping: bool, aiming: bool, running: bool, block_attacking: bool, on_floor: bool):
