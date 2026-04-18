@@ -10,22 +10,20 @@ layer = 60
 script = ExtResource("1_lpbxh")
 
 [node name="Panel" type="Panel" parent="." unique_id=1108596932]
-anchors_preset = 1
-anchor_left = 1.0
+anchors_preset = -1
 anchor_right = 1.0
-offset_left = -1288.0
-offset_top = 7.0
-offset_right = 8.0
-offset_bottom = 48.0
-grow_horizontal = 0
+anchor_bottom = 0.054
+offset_bottom = 2.119999
+grow_horizontal = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_lpbxh")
 
 [node name="Label" type="Label" parent="Panel" unique_id=190315180]
-layout_mode = 0
-offset_left = 8.0
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 1.0
+anchor_bottom = 1.077
 offset_top = 1.0
-offset_right = 1287.0
-offset_bottom = 42.0
-text = "sdffdsfffdfs"
+offset_right = -1.0
+offset_bottom = -0.0030021667
 horizontal_alignment = 1
 vertical_alignment = 1

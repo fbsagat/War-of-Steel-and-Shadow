@@ -281,55 +281,42 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_BACKSPACE:
 		_log_debug("Backspace!!! Coloque algo aqui...")
 
-## Encontra um round ativo corretamente para mudar a câmera para este round
+## Decide e muda a câmera para o próximo round válido
 func _find_a_next_round_to_camera(round_id: int = -1):
-	
-	# Se receber id, envia para o round deste id, se não receber, envia para o próximo a partir de
-	# current_cam_round_index e o salva como o novo current_cam_round_index
-	
-	if round_id != -1:
-		_log_debug("[Camera] Movendo câmera do servidor para o round: %s" % round_id)
-		current_cam_round_index = round_id
-	else:
-		_log_debug("[Camera] Movendo câmera do servidor para o próximo round encontrado")
-		
-		var all_running_rounds_ids = round_registry.get_all_rounds_keys()
-		
-		# Se estiver vazio pega -1 novamente
-		if all_running_rounds_ids.is_empty():
-			current_cam_round_index = -1
-			_log_debug("[Camera] Não tem round para mandar a câmera")
-			warning_overlay.show_message("Não tem round para mandar a câmera")
-			#current_active_viewport = null
-			viewport_display.visible = false
-			return
-			
-		# Garante ordem
-		all_running_rounds_ids.sort()
-		
-		var index = all_running_rounds_ids.find(current_cam_round_index)
-		# Se não encontrar
-		if index == -1:
-			# Pega o próximo maior
-			var next = null
-			
-			for n in all_running_rounds_ids:
-				if n > current_cam_round_index:
-					if next == null or n < next:
-						next = n
-			
-			if next != null:
-				current_cam_round_index = next
-			else:
-				# Se não tem maior, volta pro primeiro
-				current_cam_round_index = all_running_rounds_ids[0]
-				
-		# Se encontrar
-		else:
-			# Fluxo circular normal
-			current_cam_round_index = all_running_rounds_ids[(index + 1) % all_running_rounds_ids.size()]
 
+	var all_rounds := round_registry.get_all_rounds_keys()
+	all_rounds.sort()
+
+	# 🔴 1. Se não há rounds
+	if all_rounds.is_empty():
+		current_cam_round_index = -1
+		_log_debug("[Camera] Não há rounds ativos")
+		warning_overlay.show_message("Não há rounds ativos")
+		viewport_display.visible = false
+		return
+
+	# 🟢 2. Se recebeu round específico
+	if round_id != -1:
+		if not all_rounds.has(round_id):
+			_log_debug("[Camera] Round inválido: %s" % round_id)
+			return
+		
+		current_cam_round_index = round_id
+
+	# 🔵 3. Seleção circular automática
+	else:
+		# Se nunca selecionou ou não existe mais
+		if current_cam_round_index == -1 or not all_rounds.has(current_cam_round_index):
+			current_cam_round_index = all_rounds[0]
+		else:
+			var index := all_rounds.find(current_cam_round_index)
+			index = (index + 1) % all_rounds.size()
+			current_cam_round_index = all_rounds[index]
+
+	# ✅ 4. Aqui SEMPRE temos um round válido
+	_log_debug("[Camera] Indo para round: %s" % current_cam_round_index)
 	warning_overlay.show_message("[Camera] Câmera indo para o round: %s" % current_cam_round_index)
+
 	_switch_camera_to_round(current_cam_round_index)
 
 ## Ativa a câmera de um round específico e atualiza o display
@@ -1695,10 +1682,6 @@ func _on_round_ending(round_id: int, reason: String):
 		
 	await get_tree().process_frame
 	
-	# Se a câmera estiver neste round, mover para o próximo
-	if not is_headless and current_cam_round_index == round_["id"]:
-		_find_a_next_round_to_camera()
-	
 	# Finaliza completamente a rodada
 	_complete_round_end(round_id)
 
@@ -1751,6 +1734,17 @@ func _complete_round_end(round_id: int):
 				network_manager.rpc_id(player_peer_id, "_client_return_to_room", room)
 		
 	await get_tree().process_frame
+	
+	var active_count = round_registry.get_active_rounds_count()
+
+	if active_count == 0:
+		current_cam_round_index = -1
+		viewport_display.visible = false
+		warning_overlay.show_message("Não há rounds ativos")
+		return
+
+	if not is_headless and current_cam_round_index == round_id:
+		_find_a_next_round_to_camera()
 	
 	# Atualiza lista de salas (sala volta a ficar disponível)
 	_send_rooms_list_to_all()
