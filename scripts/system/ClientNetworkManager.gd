@@ -55,12 +55,14 @@ func _send_ping(client_time):
 	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
+	_log_debug("_client_send_ping", true)
 	rpc_id(1, "_client_send_ping", client_time)
 
 func _server_report_ping(latency):
 	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
+	_log_debug("_server_report_ping", true)
 	rpc_id(1, "_server_report_ping", latency)
 
 func _client_receive_pong(client_time):
@@ -74,6 +76,7 @@ func send_hello_to_server(_uuid_base: String, _token: String):
 	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
+	_log_debug("_server_receive_hello", true)
 	rpc_id(1, "_server_receive_hello", {"uuid_base": _uuid_base, "token": _token})
 
 func _client_receive_auth_result(_response: Dictionary):
@@ -88,6 +91,7 @@ func register_player_name(player_name: String):
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
 	_log_debug("📤 Registrando jogador: " + player_name)
+	_log_debug("_server_register_player_name", true)
 	rpc_id(1, "_server_register_player_name", player_name)
 
 func _client_update_info(info):
@@ -110,6 +114,7 @@ func request_rooms_list():
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
 	_log_debug("📤 Solicitando lista de salas")
+	_log_debug("_server_request_rooms_list", true)
 	rpc_id(1, "_server_request_rooms_list")
 
 ## Helper local: envia resposta sobre voltar (true) ou abandonar (false) a partida.
@@ -118,6 +123,7 @@ func _server_request_return_or_exit(chosen: bool):
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
 	_log_debug("Enviando resposta de retorno à sala/partida/abandono")
+	_log_debug("_server_request_return_or_exit", true)
 	rpc_id(1, "_server_request_return_or_exit", chosen)
 
 func create_room(room_name: String, password: String = ""):
@@ -125,6 +131,7 @@ func create_room(room_name: String, password: String = ""):
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
 	_log_debug("📤 Criando sala: " + room_name)
+	_log_debug("_server_create_room", true)
 	rpc_id(1, "_server_create_room", room_name, password)
 
 func join_room(room_id: int, password: String = ""):
@@ -132,6 +139,7 @@ func join_room(room_id: int, password: String = ""):
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
 	_log_debug("📤 Entrando na sala ID: %d" % room_id)
+	_log_debug("_server_join_room", true)
 	rpc_id(1, "_server_join_room", room_id, password)
 
 func join_room_by_name(room_name: String, password: String = ""):
@@ -139,12 +147,14 @@ func join_room_by_name(room_name: String, password: String = ""):
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
 	_log_debug("📤 Entrando na sala: " + room_name)
+	_log_debug("_server_join_room_by_name", true)
 	rpc_id(1, "_server_join_room_by_name", room_name, password)
 
 func request_update_room_settings(changed_settings: Dictionary):
 	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
+	_log_debug("_server_update_room_settings", true)
 	rpc_id(1, "_server_update_room_settings", changed_settings)
 
 func leave_room():
@@ -152,12 +162,14 @@ func leave_room():
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
 	_log_debug("📤 Saindo da sala")
+	_log_debug("_server_leave_room", true)
 	rpc_id(1, "_server_leave_room")
 
 func kick_player_from_room(_selected_player_uuid: String):
 	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
+	_log_debug("_server_kick_player", true)
 	rpc_id(1, "_server_kick_player", _selected_player_uuid)
 
 func close_room():
@@ -165,6 +177,7 @@ func close_room():
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
 	_log_debug("📤 Fechando sala")
+	_log_debug("_server_close_room", true)
 	rpc_id(1, "_server_close_room")
 
 
@@ -222,6 +235,7 @@ func _server_player_ready(check_this: Dictionary):
 	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
+	_log_debug("_server_player_ready", true)
 	rpc_id(1, "_server_player_ready", check_this)
 
 
@@ -233,6 +247,7 @@ func _server_request_start_round(round_settings: Dictionary = {}):
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
 	_log_debug("📤 Iniciando rodada")
+	_log_debug("_server_start_round", true)
 	rpc_id(1, "_server_start_round", round_settings)
 
 ## Helper local: envia aviso para o servidor quando está desconectado ou não do round atual
@@ -241,6 +256,7 @@ func _mark_player_disconnected(chosen: bool):
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
 	_log_debug("Enviando aviso para o servidor que está %s do round atual" % "DESCONECTADO" if chosen else "RECONECTADO")
+	_log_debug("_mark_player_disconnected", true)
 	rpc_id(1, "_mark_player_disconnected", chosen)
 
 
@@ -303,53 +319,61 @@ func _client_clear_all_objects():
 
 # ===== ITENS — HELPERS LOCAIS (enviam RPC ao servidor) =====
 
-func request_pick_up_item(player_id: int, object_id: int) -> void:
+func request_pick_up_item(object_id: int) -> void:
 	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
-	rpc_id(1, "_server_pick_up_item", player_id, object_id)
+	_log_debug("_server_pick_up_item", true)
+	rpc_id(1, "_server_pick_up_item", object_id)
 
-func request_equip_item(player_id: int, object_id: int, slot_type) -> void:
+func request_equip_item(object_id: int, slot_type) -> void:
 	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
-	rpc_id(1, "_server_equip_item", player_id, object_id, slot_type)
+	_log_debug("_server_equip_item", true)
+	rpc_id(1, "_server_equip_item", object_id, slot_type)
 
-func request_unequip_item(player_id: int, slot_type: String) -> void:
+func request_unequip_item(slot_type: String) -> void:
 	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
-	rpc_id(1, "_server_unequip_item", player_id, slot_type)
+	_log_debug("_server_unequip_item", true)
+	rpc_id(1, "_server_unequip_item", slot_type)
 
 func request_swap_items(item_id_1: int, item_id_2: int):
+	if not is_connected_:
+		_log_debug("❌ Erro: Não conectado ao servidor")
+		return
+	_log_debug("_server_swap_items", true)
 	rpc_id(1, "_server_swap_items", item_id_1, item_id_2)
-	if not is_connected_:
-		_log_debug("❌ Erro: Não conectado ao servidor")
-		return
 
-func request_trainer_spawn_item(player_id: int, item_id: int):
+func request_trainer_spawn_item(item_id: int):
 	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
-	rpc_id(1, "_server_trainer_spawn_item", player_id, item_id)
+	_log_debug("_server_trainer_spawn_item", true)
+	rpc_id(1, "_server_trainer_spawn_item", item_id)
 
-func request_trainer_drop_item(player_id: int):
+func request_trainer_drop_item():
 	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
-	rpc_id(1, "_server_trainer_drop_item", player_id)
+	_log_debug("_server_trainer_drop_item", true)
+	rpc_id(1, "_server_trainer_drop_item")
 
-func request_trainer_respawn_player(player_id: int):
+func request_trainer_respawn_player():
 	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
-	rpc_id(1, "_server_trainer_respawn_player", player_id)
+	_log_debug("_server_trainer_respawn_player", true)
+	rpc_id(1, "_server_trainer_respawn_player")
 
-func request_drop_item(player_id: int, obj_id):
+func request_drop_item(obj_id):
 	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
-	rpc_id(1, "_server_drop_item", player_id, obj_id)
+	_log_debug("_server_drop_item", true)
+	rpc_id(1, "_server_drop_item", obj_id)
 
 
 # ===== ITENS — APLICAÇÃO VISUAL NO CLIENTE (chamados pelo servidor) =====
@@ -445,10 +469,11 @@ func _client_swap_equipped_item(new_item_name: String, dragged_item: Dictionary,
 # ===== SINCRONIZAÇÃO DE ESTADO DE JOGADORES =====
 
 ## Helper local: envia estado do jogador ao servidor.
-func send_player_state(peer_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
+func send_player_state(pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
 	if not is_connected_:
 		return
-	rpc_id(1, "_server_player_state", peer_id, pos, rot, vel, running, jumping)
+	_log_debug("_server_player_state", true)
+	rpc_id(1, "_server_player_state", pos, rot, vel, running, jumping)
 
 func _client_player_state(peer_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
 	
@@ -476,11 +501,12 @@ func server_force_position(pos: Vector3):
 # ===== SINCRONIZAÇÃO DE ANIMAÇÕES =====
 
 ## Helper local: envia estado de animação ao servidor.
-func send_player_animation_state(peer_id: int, speed: float, attacking: bool, defending: bool,
+func send_player_animation_state(speed: float, attacking: bool, defending: bool,
 	jumping: bool, aiming: bool, running: bool, block_attacking: bool, on_floor: bool):
 	if not is_connected_:
 		return
-	rpc_id(1, "_server_player_animation_state", peer_id, speed, attacking, defending,
+	_log_debug("_server_player_animation_state", true)
+	rpc_id(1, "_server_player_animation_state", speed, attacking, defending,
 		   jumping, aiming, running, block_attacking, on_floor)
 
 func _client_player_animation_state(peer_id: int, speed: float, attacking: bool, defending: bool,
@@ -521,10 +547,9 @@ func unregister_syncable_object(object_id: int) -> void:
 	_log_debug("[ObjSync] 🗑️ Cliente removeu objeto: %d" % object_id)
 
 
-# ===== SYNC =====
+# ===== SINCRONIZAÇÃO DE ESTADO DE OBJETOS =====
 
 # RPC — RECEBE BATCH DO SERVIDOR
-@rpc("authority", "call_remote", "unreliable_ordered")
 func _rpc_client_batch_sync(
 		_round_id: int,
 		ids:       PackedInt32Array,
@@ -618,11 +643,12 @@ func _client_interpolate_all(delta: float) -> void:
 # ===== AÇÕES (ATAQUES, DEFESA) =====
 
 ## Helper local: envia ação do jogador ao servidor
-func send_player_action(p_id: int, action_type: String, item_equipado_nome, anim_name: String):
+func send_player_action(action_type: String, item_equipado_nome, anim_name: String):
 	if not is_connected_:
 		return
 	_log_debug("⚔️ Enviando ação: %s (%s)" % [action_type, anim_name])
-	rpc_id(1, "_server_player_action", p_id, action_type, item_equipado_nome, anim_name)
+	_log_debug("_server_player_action", true)
+	rpc_id(1, "_server_player_action", action_type, item_equipado_nome, anim_name)
 
 func _client_player_action(p_id: int, action_type: String, item_equipado_nome, anim_name: String):
 	_log_debug("⚔️ Recebendo ação: Player %d - %s" % [p_id, action_type])

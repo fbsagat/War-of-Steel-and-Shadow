@@ -31,12 +31,14 @@ func verificar_rede() -> bool:
 		return true
 	return false
 
-func _log_debug(message: String) -> void:
+func _log_debug(message: String, rpc_debug: bool = false) -> void:
 	if not debug_mode:
 		return
 	if initializer.activate_only_selected and not "NetworkManager" in initializer.selected:
 		return
-	print("%s%s" % [_get_log_prefix(), message])
+	if rpc_debug and not initializer.rpc_debug:
+		return
+	print("%s%s%s" % [_get_log_prefix(), "[RPC]" if rpc_debug else "", message])
 
 func _get_log_prefix() -> String:
 	assert(false, "_get_log_prefix() deve ser implementado nas classes filhas")
@@ -230,15 +232,15 @@ func _client_clear_all_objects():
 # ===== ITENS — REQUISIÇÕES DO CLIENTE AO SERVIDOR =====
 
 @rpc("any_peer", "call_remote", "unreliable")
-func _server_pick_up_item(_peer_id, _object_id):
+func _server_pick_up_item(_object_id):
 	pass
 
 @rpc("any_peer", "call_remote", "unreliable")
-func _server_equip_item(_peer_id, _item_id, _slot_type):
+func _server_equip_item(_item_id, _slot_type):
 	pass
 
 @rpc("any_peer", "call_remote", "unreliable")
-func _server_unequip_item(_peer_id, _item_id):
+func _server_unequip_item(_item_id):
 	pass
 
 @rpc("any_peer", "call_remote", "unreliable")
@@ -246,19 +248,19 @@ func _server_swap_items(_item_id_1: int, _item_id_2: int):
 	pass
 
 @rpc("any_peer", "call_remote", "reliable")
-func _server_trainer_spawn_item(_requesting_peer_id: int, _item_id: int):
+func _server_trainer_spawn_item(_item_id: int):
 	pass
 
 @rpc("any_peer", "call_remote", "reliable")
-func _server_trainer_drop_item(_peer_id):
+func _server_trainer_drop_item():
 	pass
 
 @rpc("any_peer", "call_remote", "unreliable")
-func _server_trainer_respawn_player(_peer_id):
+func _server_trainer_respawn_player():
 	pass
 
 @rpc("any_peer", "call_remote", "unreliable")
-func _server_drop_item(_peer_id, _obj_id):
+func _server_drop_item(_obj_id):
 	pass
 
 # ===== ITENS — APLICAÇÃO VISUAL NO CLIENTE (chamados pelo servidor) =====
@@ -304,7 +306,7 @@ func _client_swap_equipped_item(_new_item_name: String, _dragged_item: Dictionar
 # ===== SINCRONIZAÇÃO DE ESTADO DE JOGADORES =====
 
 @rpc("any_peer", "call_remote", "unreliable")
-func _server_player_state(_p_id: int, _pos: Vector3, _rot: Vector3, _vel: Vector3, _running: bool, _jumping: bool):
+func _server_player_state(_pos: Vector3, _rot: Vector3, _vel: Vector3, _running: bool, _jumping: bool):
 	pass
 
 @rpc("authority", "call_remote", "unreliable")
@@ -316,7 +318,7 @@ func server_force_position(_pos: Vector3):
 	pass
 
 @rpc("any_peer", "call_remote", "unreliable")
-func _server_player_animation_state(_p_id: int, _speed: float, _attacking: bool, _defending: bool, _jumping: bool, _aiming: bool, _running: bool, _block_attacking: bool, _on_floor: bool):
+func _server_player_animation_state(_speed: float, _attacking: bool, _defending: bool, _jumping: bool, _aiming: bool, _running: bool, _block_attacking: bool, _on_floor: bool):
 	pass
 
 @rpc("authority", "call_remote", "unreliable")
@@ -332,7 +334,7 @@ func _rpc_client_batch_sync(_round_id: int, _ids: PackedInt32Array, _positions: 
 # ===== AÇÕES (ATAQUES, DEFESA) =====
 
 @rpc("any_peer", "call_remote", "reliable")
-func _server_player_action(_p_id: int, _action_type: String, _item_equipado_nome, _anim_name: String):
+func _server_player_action(_action_type: String, _item_equipado_nome, _anim_name: String):
 	pass
 
 @rpc("authority", "call_remote", "reliable")

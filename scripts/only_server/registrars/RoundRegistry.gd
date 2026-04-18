@@ -387,13 +387,17 @@ func _mark_player_disconnected(round_id: int, uuid_base: String):
 		# Tem que estar fora das listas disconnected e quitted e não ser o próprio
 		if round_player["uuid_base"] in connected_clients and not round_player["uuid_base"] == uuid_base:
 			var r_player_tt = client_registry.get_player(round_player["uuid_base"])
-			if not network_manager._is_peer_connected(r_player_tt["peer_id"]):
+			if not network_manager._is_peer_connected(r_player_tt["peer_id"]) or not network_manager._in_game_peers.has(r_player_tt["peer_id"]):
 				continue
+			_log_debug("_client_receive_message", true)
 			network_manager._client_receive_message.rpc_id(r_player_tt["peer_id"], text, 6, "info")
 	
 	# Marca round como vazio se 'disconnected_players' ter a mesma quantidade de players que 'players'
 	if round_data["disconnected_players"].size() == round_data["players"].size():
 		mark_empty_round(round_id)
+	
+	# Pára o envio de sync de objetos para este player
+	network_manager.stop_peer_sync(disconnected_player["peer_id"])
 	
 	_log_debug("⚠ uuid=%s marcado como desconectado na rodada %d" % [uuid_base, round_id])
 	player_disconnected.emit(round_id, uuid_base)
@@ -424,8 +428,9 @@ func _unmark_player_disconnected(round_id: int, uuid_base: String):
 		# Tem que estar fora das listas disconnected e quitted e não ser o próprio
 		if round_player["uuid_base"] in connected_clients and not round_player["uuid_base"] == uuid_base:
 			var r_player_tt = client_registry.get_player(round_player["uuid_base"])
-			if not network_manager._is_peer_connected(r_player_tt["peer_id"]):
+			if not server_manager._is_peer_connected(r_player_tt["peer_id"]) or not network_manager._in_game_peers.has(r_player_tt["peer_id"]):
 				continue
+			_log_debug("_client_receive_message", true)
 			network_manager._client_receive_message.rpc_id(r_player_tt["peer_id"], text, 6, "info")
 	
 	# Marca round como não vazio se 'disconnected_players' ter menos quantidade de players que 'players'
@@ -437,6 +442,9 @@ func _unmark_player_disconnected(round_id: int, uuid_base: String):
 
 ## Remove um player de um round.
 func remove_player(round_id: int, player_uuid: String):
+	# Primeiro executa desconexão
+	_mark_player_disconnected(round_id, player_uuid)
+	
 	rounds[round_id]["players"] = rounds[round_id]["players"].filter(func(p):
 		unregister_spawned_player(round_id, player_uuid)
 		return p["uuid_base"] != player_uuid)
@@ -508,7 +516,7 @@ func get_active_player_count(round_id: int) -> int:
 	return get_active_players(round_id).size()
 
 ## Retorna lista de uuid_bases dos jogadores (ativos ou não).
-func get_all_players_ids(round_id: int) -> Array:
+func get_all_players_uuids(round_id: int) -> Array:
 	if not rounds.has(round_id):
 		return []
 
@@ -806,9 +814,11 @@ func _on_peer_id_updated(uuid_base: String, new_peer_id: int):
 				_log_debug("✓ peer_id atualizado para uuid=%s na rodada %d" % [uuid_base, round_id])
 				return
 
-func _log_debug(message: String):
+func _log_debug(message: String, rpc_debug: bool = false):
 	if not debug_mode:
 		return
 	if initializer.activate_only_selected and not "RoundRegistry" in initializer.selected:
 		return
-	print("[SERVER][RoundRegistry] %s" % message)
+	if rpc_debug and not initializer.rpc_debug:
+		return
+	print("[SERVER]%s[RoundRegistry] %s" % ["[RPC]" if rpc_debug else "", message])

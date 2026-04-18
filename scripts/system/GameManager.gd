@@ -228,10 +228,6 @@ func finish_loading():
 	is_loading = false
 	last_pong_time = Time.get_ticks_msec() + post_loading_tolerance
 	has_timed_out = false
-	
-	# Envia resultados de carregamento para o servidor checar integridade
-	var check_this = {"current_round": current_round}
-	network_manager._server_player_ready(check_this)
 
 
 # ===== FUNÇÕES DE MENU e INPUT =====
@@ -344,8 +340,6 @@ func _on_connected_to_server():
 	is_connecting = false
 	is_connected_to_server = true
 	local_peer_id = multiplayer.get_unique_id()
-
-	start_heartbeat()
 	
 	# Se visual_debug on, recebe debug_overlay_node
 	# Mostra debug_overlay quando se conecta em um servidor
@@ -750,6 +744,9 @@ func update_client_info(info: Dictionary):
 
 			# Agora enviamos o hello com uuid + token
 			network_manager.send_hello_to_server(uuid_base, token)
+			
+			# Agora iniciamos o heratbeet
+			start_heartbeat()
 	
 	# Ao atualizar, se estiver em uma partida e for o mesmo servidor, esconde o menu e continua
 	# Se não for o mesmo servidor, sem registro de cliente e partida nele, então: conexão nova.
@@ -1293,6 +1290,11 @@ func _load_round(server_id: String, match_data: Dictionary, is_return: bool) -> 
 	
 	round_started.emit()
 	is_in_round = true
+	
+	# Envia resultados de carregamento para o servidor checar integridade
+	var check_this = {"current_round": current_round}
+	network_manager._server_player_ready(check_this)
+	
 	_log_debug("Rodada %s no cliente." % ("recarregada" if is_return else "carregada"))
 
 ## Restaura o estado da rodada ao reconectar: equipamentos, inventário e objetos no mapa.

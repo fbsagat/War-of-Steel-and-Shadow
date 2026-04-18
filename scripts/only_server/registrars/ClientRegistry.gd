@@ -226,11 +226,13 @@ func update_peer_id(uuid_base: String, new_peer_id: int):
 			# _handle_request_return_or_exit já vai criar como novo session id.
 			if players[player_uuid]["connected"] == true and player_uuid != uuid_base:
 				var peer_id = get_peer_id_by_uuid(player_uuid)
-				network_manager.rpc_id(peer_id, "_client_update_character_peer_id", uuid_base, new_peer_id)
-				_log_debug("Enviando comando para cliente %s para atualizar session id de: %d para este novo: %d" % [players[uuid_base]["name"], old_peer_id, new_peer_id])
+				if server_manager._is_peer_connected(peer_id) and network_manager._in_game_peers.has(peer_id):
+					_log_debug("_client_update_character_peer_id", true)
+					network_manager.rpc_id(peer_id, "_client_update_character_peer_id", uuid_base, new_peer_id)
+					_log_debug("Enviando comando para cliente %s para atualizar session id de: %d para este novo: %d" % [players[uuid_base]["name"], old_peer_id, new_peer_id])
 	
-	# Remove de _excluded_peers no network manager (não será mais necessário lá)
-	network_manager.remove_old_peer_id(old_peer_id)
+	# Desabilita o peer_id antigo para o sync de objetos
+	network_manager.stop_peer_sync(old_peer_id)
 	
 	# Atualizar também no round do servidor
 	var node = get_player_node(uuid_base)
@@ -650,6 +652,7 @@ func add_item_to_inventory(round_id: int, uuid_base: String, item_id: int, objec
 	_log_debug("✓ Item adicionado: %s (ID: %s, Object: %d) → %s (Rodada %d)" % [item_name, item_id, object_id, uuid_base, round_id])
 
 	var peer_id = get_peer_id_by_uuid(uuid_base)
+	_log_debug("_client_add_item_to_inventory", true)
 	network_manager.rpc_id(peer_id, "_client_add_item_to_inventory", item_id, object_id)
 	return true
 
@@ -672,6 +675,7 @@ func remove_item_from_inventory(round_id: int, uuid_base: String, object_id: int
 	_log_debug("✓ Item removido: object_id=%d (%s) de %s (Rodada %d)" % [object_id, item_name, uuid_base, round_id])
 
 	var peer_id = get_peer_id_by_uuid(uuid_base)
+	_log_debug("_client_remove_item_from_inventory", true)
 	network_manager.rpc_id(peer_id, "_client_remove_item_from_inventory", object_id)
 	return true
 
@@ -714,6 +718,7 @@ func equip_item(round_id: int, uuid_base: String, item_name: String, object_id, 
 	_log_debug("✓ Item equipado: %s em %s (%s, Rodada %d)" % [item_name, slot, uuid_base, round_id])
 
 	var peer_id = get_peer_id_by_uuid(uuid_base)
+	_log_debug("_client_equip_item", true)
 	network_manager.rpc_id(peer_id, "_client_equip_item", item_name, object_id, slot)
 	return true
 
@@ -744,6 +749,7 @@ func unequip_item(round_id: int, uuid_base: String, slot: String, verify: bool =
 	_log_debug("✓ Item desequipado: %s de %s (%s, Rodada %d)" % [item_name, slot, uuid_base, round_id])
 
 	var peer_id = get_peer_id_by_uuid(uuid_base)
+	_log_debug("_client_unequip_item", true)
 	network_manager.rpc_id(peer_id, "_client_unequip_item", item_data["item_id"], slot, verify)
 	return true
 
@@ -784,6 +790,7 @@ func swap_equipped_item(round_id: int, uuid_base: String, new_item_name: String,
 	])
 
 	var peer_id = get_peer_id_by_uuid(uuid_base)
+	_log_debug("_client_swap_equipped_item", true)
 	network_manager.rpc_id(peer_id, "_client_swap_equipped_item", new_item_name, inventory_item, equiped_item_id, target_slot)
 	return true
 
@@ -1216,9 +1223,11 @@ func debug_print_all_players():
 
 	print("\n=====================================\n")
 
-func _log_debug(message: String):
+func _log_debug(message: String, rpc_debug: bool = false):
 	if not debug_mode:
 		return
 	if initializer.activate_only_selected and not "ClientRegistry" in initializer.selected:
 		return
-	print("[SERVER][ClientRegistry] %s" % message)
+	if rpc_debug and not initializer.rpc_debug:
+		return
+	print("[SERVER]%s[ClientRegistry] %s" % ["[RPC]" if rpc_debug else "", message])

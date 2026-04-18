@@ -103,6 +103,7 @@ func create_test_round(nome_sala_: String = "Sala de Teste"):
 		client_registry.register_player_name(_uuid_base, player_name)
 		
 		# Atualiza o cliente
+		_log_debug("_client_name_accepted", true)
 		network_manager.rpc_id(peer_id, "_client_name_accepted", player_name)
 		
 		player_data = client_registry.get_player(_uuid_base)
@@ -156,12 +157,13 @@ func create_test_round(nome_sala_: String = "Sala de Teste"):
 # ===== UTILITÁRIOS =====
 
 ## Função padrão de debug.
-func _log_debug(message: String):
+func _log_debug(message: String, rpc_debug: bool = false):
 	if not debug_mode:
 		return
 	
 	# Configurações do initializer
 	if initializer.activate_only_selected and not "TestManager" in initializer.selected:
-		return	
-		
-	print("[SERVER][TestManager] %s" % message)
+		return
+	if rpc_debug and not initializer.rpc_debug:
+		return
+	print("[SERVER][TestManager] %s%s" % ["[RPC]" if rpc_debug else "", message])

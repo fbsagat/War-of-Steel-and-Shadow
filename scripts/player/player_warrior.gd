@@ -891,7 +891,6 @@ func _send_state_to_server(delta: float):
 							_log_debug("📡 Enviando Y do terreno: %.2f (dist: %.2f)" % [sync_pos.y, dist_to_camera])
 
 				network_manager.send_player_state(
-					peer_id,
 					sync_pos,
 					rotation,
 					velocity,
@@ -933,7 +932,6 @@ func _send_animation_state(delta: float):
 			
 			if network_manager and network_manager.is_connected:
 				network_manager.send_player_animation_state(
-					peer_id,
 					current_state["speed"],
 					current_state["is_attacking"],
 					current_state["is_defending"],
@@ -1169,7 +1167,7 @@ func action_sword_attack_call():
 		if network_manager and network_manager.is_connected:
 			var anim_name = _determine_attack_from_input()
 			
-			network_manager.send_player_action(peer_id, "attack", item_equipado["name"], anim_name)
+			network_manager.send_player_action("attack", item_equipado["name"], anim_name)
 			
 			# executa animação localmente
 			var anim_length = _execute_animation(anim_name, "Attack", "parameters/sword_attacks/transition_request",
@@ -1210,7 +1208,7 @@ func action_block_attack_call():
 		
 			# Sincroniza defesa (Reliable)
 			if network_manager and network_manager.is_connected:
-				network_manager.send_player_action(peer_id, "block_attack", item_equipado["name"], "Block_Attack")
+				network_manager.send_player_action("block_attack", item_equipado["name"], "Block_Attack")
 
 ## Executa e sincroniza defesa.
 func action_lock_call():
@@ -1244,7 +1242,7 @@ func action_lock_call():
 		
 		# Sincroniza defesa (Reliable)
 		if network_manager and network_manager.is_connected:
-			network_manager.send_player_action(peer_id, "defend_start", "", "")
+			network_manager.send_player_action("defend_start", "", "")
 
 ## Executa e sincroniza fim da defesa.
 func action_stop_locking_call():
@@ -1335,7 +1333,7 @@ func handle_test_equip_inputs_call():
 		if mapped_id >= 1 and mapped_id <= 9:
 			# envia para o servidor (se conectado)
 			if network_manager and network_manager.is_connected:
-				network_manager.request_trainer_spawn_item(peer_id, mapped_id)
+				network_manager.request_trainer_spawn_item(mapped_id)
 				
 ## Ações de chamada do player (Dropar item).
 func handle_test_drop_item_call() -> void:
@@ -1347,7 +1345,7 @@ func handle_test_drop_item_call() -> void:
 		return
 		
 	if network_manager and network_manager.is_connected:
-		network_manager.request_trainer_drop_item(peer_id)
+		network_manager.request_trainer_drop_item()
 
 ## Ações de chamada do player (Respawnar novamente).
 func handle_test_repawn_player_call():
@@ -1359,7 +1357,7 @@ func handle_test_repawn_player_call():
 		return
 	
 	if network_manager and network_manager.is_connected:
-		network_manager.request_trainer_respawn_player(peer_id)
+		network_manager.request_trainer_respawn_player()
 	
 ## Executa quando o player equipa algum item / muda visual do modelo.
 ## Aplica mudança visual em itens equipéveis que estão como filhos no nó do player.
@@ -1393,7 +1391,7 @@ func action_pick_up_item_call():
 	var object = found[0]
 	_log_debug("Player %s pediu para pegar o item %d" % [player_name, object.object_id])
 	if network_manager and network_manager.is_connected and object:
-		network_manager.request_pick_up_item(peer_id, object.object_id)
+		network_manager.request_pick_up_item(object.object_id)
 
 ## Ações de execução do personagem (Pegar item).
 func action_pick_up_item():
@@ -1412,7 +1410,7 @@ func action_drop_item_call(obj_id) -> void:
 		return
 		
 	if network_manager and network_manager.is_connected:
-		network_manager.request_drop_item(peer_id, int(obj_id))
+		network_manager.request_drop_item(int(obj_id))
 
 ## Ação de execução do personagem (Dropar item).
 func execute_item_drop():
@@ -1434,7 +1432,7 @@ func action_equip_item_call(item_id, slot_type):
 		return
 		
 	if network_manager and network_manager.is_connected:
-		network_manager.request_equip_item(peer_id, int(item_id), slot_type)
+		network_manager.request_equip_item(int(item_id), slot_type)
 
 ## Ação de chamada do player (Desequipar item).
 func action_unequip_item_call(slot_type):
@@ -1446,7 +1444,7 @@ func action_unequip_item_call(slot_type):
 		return
 		
 	if network_manager and network_manager.is_connected:
-		network_manager.request_unequip_item(peer_id, slot_type)
+		network_manager.request_unequip_item(slot_type)
 
 ## Ação de chamada do player (Trocar item).
 func action_swap_items_call(item_id_1: int, item_id_2: int):

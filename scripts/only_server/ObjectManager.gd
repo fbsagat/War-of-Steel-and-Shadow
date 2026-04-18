@@ -220,7 +220,8 @@ func _send_spawn_to_clients(round_id: int, object_id: int, item_name: String, po
 
 		if player_id == 1 or not _is_peer_connected(player_id):
 			continue
-
+	
+		_log_debug("_client_spawn_item", true)
 		network_manager._client_spawn_item.rpc_id(
 			player_id, object_id, round_id, item_name, position, rotation, drop_velocity, owner_uuid
 		)
@@ -304,7 +305,8 @@ func _send_despawn_to_clients(round_id: int, object_id: int):
 
 		if player_id == 1 or not _is_peer_connected(player_id):
 			continue
-
+		
+		_log_debug("_client_despawn_item", true)
 		network_manager._client_despawn_item.rpc_id(player_id, object_id, round_id)
 
 ## Retorna true se o peer_id estiver conectado ao multiplayer.
@@ -762,10 +764,12 @@ func print_round_objects(round_id: int):
 
 	print("─────────────────────────────────────────\n")
 
-func _log_debug(message: String):
+func _log_debug(message: String, rpc_debug: bool = false):
 	if not debug_mode:
 		return
 	if initializer.activate_only_selected and not "ObjectManager" in initializer.selected:
 		return
-	print("[SERVER][ObjectManager] %s" % message)
+	if rpc_debug and not initializer.rpc_debug:
+		return
+	print("[SERVER][ObjectManager] %s%s" % ["[RPC]" if rpc_debug else "", message])
 	

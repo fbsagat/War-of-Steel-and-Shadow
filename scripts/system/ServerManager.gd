@@ -520,8 +520,6 @@ func process_client_hello(payload: Dictionary, peer_id: int) -> Dictionary:
 				
 				return {"status": "ok", "server_id": server_id, "player_name": player["name"]}
 			else:
-				# Retorna o sync de objetos para este player
-				network_manager.resume_peer_sync(peer_id)
 				# Marca player como conectado no round
 				round_registry._unmark_player_disconnected(player_round["id"], uuid_base)
 				return {"status": "ok_in_round", "server_id": server_id, "player_name": player["name"]}
@@ -545,10 +543,6 @@ func process_client_hello(payload: Dictionary, peer_id: int) -> Dictionary:
 
 ## Callback quando um cliente conecta ao servidor
 func _on_peer_connected(peer_id: int):
-	if multiplayer.get_peers().size() > max_clients:
-		_log_debug("🚫 Limite atingido, recusando: %s" % peer_id)
-		multiplayer.multiplayer_peer.disconnect_peer(peer_id)
-	
 	_log_debug("✓ Cliente conectado: Peer ID %d" % peer_id)
 	
 	# Envia configurações do servidor para o cliente
@@ -561,10 +555,15 @@ func _on_peer_connected(peer_id: int):
 	
 	# Atualiza max_players_per_room e min_players_to_start para clientes
 	# atualiza nome do servidor e envia id do servidor
-	network_manager.rpc_id(peer_id, "_client_update_info", configs)
+	if _is_peer_connected(peer_id):
+		_log_debug("_client_update_info", true)
+		network_manager.rpc_id(peer_id, "_client_update_info", configs)
 
 ## Callback quando um cliente desconecta
 func _on_peer_disconnected(peer_id: int):
+	# Desabilita o peer_id para o sync de objetos
+	network_manager.stop_peer_sync(peer_id)
+	
 	var player_uuid = client_registry.get_uuid_by_peer_id(peer_id)
 	
 	# Sistema para impedir execução múltipla
@@ -601,6 +600,7 @@ func _on_peer_disconnected(peer_id: int):
 					var updated_room = room_registry.get_room(room_id)
 					for player in updated_room["players"]:
 						if player["peer_id"] != peer_id and _is_peer_connected(player["peer_id"]):
+							_log_debug("_client_remove_player", true)
 							network_manager.rpc_id(player["peer_id"], "_client_remove_player", peer_id)
 				else:
 					_log_debug("Sala foi deletada (ficou vazia)")
@@ -623,6 +623,7 @@ func _handle_register_player_name(peer_id: int, player_name: String):
 	var validation_result = client_registry._validate_player_name(player_name)
 	if validation_result != "":
 		_log_debug("❌ Nome rejeitado: " + validation_result)
+		_log_debug("_client_name_rejected", true)
 		network_manager.rpc_id(peer_id, "_client_name_rejected", validation_result)
 		return
 		
@@ -634,10 +635,11 @@ func _handle_register_player_name(peer_id: int, player_name: String):
 	
 	if success:
 		_log_debug("✓ Jogador registrado: %s (Peer ID: %d)" % [player_name, peer_id])
-		
+		_log_debug("_client_name_accepted", true)
 		network_manager.rpc_id(peer_id, "_client_name_accepted", player_name)
 	else:
 		_log_debug("❌ Falha ao registrar jogador")
+		_log_debug("_client_name_rejected", true)
 		network_manager.rpc_id(peer_id, "_client_name_rejected", "Erro ao registrar no servidor")
 
 
@@ -665,12 +667,14 @@ func _handle_request_rooms_list(peer_id: int):
 		var room_id = client_registry.get_player_room(player_uuid)
 		var room = room_registry.get_room(room_id)
 		_log_debug("Requisitando para cliente %d retorno à partida em que estava ao desconectar")
+		_log_debug("_client_receive_round_return_request", true)
 		network_manager.rpc_id(peer_id, "_client_receive_round_return_request", room["name"])
 	else:
 		# Se não estiver, enviar lista de salas para ele escolher
 		# Busca salas disponíveis (fora de jogo)
 		var available_rooms = room_registry.get_rooms_in_lobby_clean_to_menu()
 		_log_debug("Enviando %d salas para o cliente, qtd: " % available_rooms.size())
+		_log_debug("_client_receive_rooms_list", true)
 		network_manager.rpc_id(peer_id, "_client_receive_rooms_list", available_rooms)
 
 ## Envia lista de salas disponíveis para todos os jogadores fora de partida 
@@ -694,6 +698,7 @@ func _send_rooms_list_to_all():
 	# Envia lista para cada um
 	for peer_id in lobby_players:
 		if _is_peer_connected(peer_id):
+			_log_debug("_client_broadcast_rooms_list", true)
 			network_manager.rpc_id(peer_id, "_client_broadcast_rooms_list", available_rooms)
 			## Aqui deu o erro Unnable to send packet on channel 0, max channels: 0
 			
@@ -801,10 +806,8 @@ func _execute_player_return_to_round(peer_id: int, player_uuid: String):
 		# muda estado do jogador
 		client_registry.set_player_state(player_uuid, client_registry.ClientState.LOADING)
 		
-		# Retorna o sync de objetos para este player
-		network_manager.resume_peer_sync(peer_id)
-		
 		# Envia comando de retorno para o cliente
+		_log_debug("_client_round_return", true)
 		network_manager.rpc_id(peer_id, "_client_round_return", server_id, match_data)
 
 ## Esta função deve ser executada quando o cliente sinaliza que quer abandonar o round em que está, 
@@ -841,9 +844,11 @@ func _player_exit_from_round(peer_id: int, player_uuid: String):
 					# Envia aviso para os outros de que este jogador saiu permanentemente
 					var r_player_tt = client_registry.get_player(r_player["uuid_base"])
 					var text = "Jogador %s desistiu da partida" % player["name"]
+					_log_debug("_client_receive_message", true)
 					network_manager._client_receive_message.rpc_id(r_player_tt["peer_id"], text, 6, "info")
 					
 					# Eviar comando para os outros clientes removerem também node da cena
+					_log_debug("_client_remove_player", true)
 					network_manager.rpc_id(r_player["peer_id"], "_client_remove_player", player_uuid)
 		
 	await get_tree().process_frame
@@ -911,9 +916,6 @@ func _mark_player_disconnected(peer_id: int, _chosen: bool):
 		# Marca player como conectado no round
 		round_registry._unmark_player_disconnected(_round["id"], player_uuid)
 		
-		# Retoma o sync de objetos pra este peer:
-		network_manager.resume_peer_sync(peer_id)
-		
 		_log_debug("✓ uuid=%s removido de disconnected_players na rodada %d" % [player["name"], _round["id"]])
 
 # Cria uma nova sala e adiciona o criador como host
@@ -940,6 +942,7 @@ func _handle_create_room(peer_id: int, room_name: String, password: String):
 	# Valida sala
 	var validation = room_registry._validate_room_name(room_name)
 	if validation != "":
+		_log_debug("_client_room_name_error", true)
 		network_manager.rpc_id(peer_id, "_client_room_name_error", validation)
 		return
 	
@@ -965,6 +968,7 @@ func _handle_create_room(peer_id: int, room_name: String, password: String):
 	_send_rooms_list_to_all()
 	
 	# Confirma criação para o criador
+	_log_debug("_client_room_created", true)
 	network_manager.rpc_id(peer_id, "_client_room_created", room_data)
 
 ## Wrapper: entra por ID
@@ -1011,6 +1015,7 @@ func _handle_join_room_common(peer_id: int, room_identifier: Variant, password: 
 	
 	if room.is_empty():
 		_log_debug("Sala não encontrada %s" % int(room_identifier))
+		_log_debug("_client_room_not_found", true)
 		network_manager.rpc_id(peer_id, "_client_room_not_found")
 		return false
 	
@@ -1032,6 +1037,7 @@ func _handle_join_room_common(peer_id: int, room_identifier: Variant, password: 
 	var has_password: bool = bool(room.get("has_password", false))
 	var room_password: String = str(room.get("password", ""))
 	if has_password and room_password != password:
+		_log_debug("_client_wrong_password", true)
 		network_manager.rpc_id(peer_id, "_client_wrong_password")
 		return false
 	
@@ -1069,6 +1075,7 @@ func _handle_join_room_common(peer_id: int, room_identifier: Variant, password: 
 	# Envia dados da sala para o novato
 		
 	var room_data_filtered: Dictionary = room_registry.get_room_filtered(room_id)
+	_log_debug("_client_joined_room", true)
 	network_manager.rpc_id(peer_id, "_client_joined_room", room_data_filtered)
 		
 	await get_tree().process_frame
@@ -1108,6 +1115,7 @@ func _handle_update_room_settings(peer_id, _changed_settings: Dictionary):
 	for peer in room["players"]:
 		var player_peer_id = client_registry.get_peer_id_by_uuid(peer["uuid_base"])
 		if _is_peer_connected(player_peer_id):
+			_log_debug("_client_update_match_settings", true)
 			network_manager.rpc_id(player_peer_id, "_client_update_match_settings", _changed_settings)
 
 ## Remove jogador da sala atual
@@ -1211,6 +1219,7 @@ func _handle_close_room(peer_id: int):
 	for room_player in room["players"]:
 		var player_peer_id = client_registry.get_peer_id_by_uuid(room_player["uuid_base"])
 		if player_peer_id != peer_id and _is_peer_connected(player_peer_id):
+			_log_debug("_client_room_closed", true)
 			network_manager.rpc_id(player_peer_id, "_client_room_closed", "O host fechou a sala")
 	
 	# Remove sala
@@ -1230,6 +1239,7 @@ func _notify_room_update(room_id: int):
 	for player in room["players"]:
 		var player_peer_id = client_registry.get_peer_id_by_uuid(player["uuid_base"])
 		if _is_peer_connected(player_peer_id):
+			_log_debug("_client_room_updated", true)
 			network_manager.rpc_id(player_peer_id, "_client_room_updated", room)
 
 ## Notifica um player de uma sala que ele foi kickado
@@ -1238,6 +1248,7 @@ func _notify_kicked_player(kicked_player_uuid: String):
 	_log_debug("Player %s foi expulso de sua sala, notificando" % player["name"])
 	var player_peer_id = client_registry.get_peer_id_by_uuid(kicked_player_uuid)
 	if _is_peer_connected(player_peer_id):
+		_log_debug("_client_kicked_from_room", true)
 		network_manager.rpc_id(player_peer_id, "_client_kicked_from_room")
 
 
@@ -1388,6 +1399,7 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary, is_test: bool
 		var player_sesion_id = client_registry.get_peer_id_by_uuid(room_player["uuid_base"])
 		client_registry.set_player_state(room_player["uuid_base"], client_registry.ClientState.LOADING)
 		if _is_peer_connected(player_sesion_id):
+			_log_debug("_client_round_started", true)
 			network_manager.rpc_id(player_sesion_id, "_client_round_started",server_id , match_data)
 		
 	await get_tree().process_frame
@@ -1658,7 +1670,7 @@ func _on_host_changed(room_id: int, new_host_uuid: String):
 	
 	if not _is_peer_connected(player_["peer_id"]):
 		return
-		
+	_log_debug("_client_receive_message", true)
 	network_manager._client_receive_message.rpc_id(player_["peer_id"], text, 6, "info")
 
 ## Callback quando uma rodada está terminando
@@ -1735,6 +1747,7 @@ func _complete_round_end(round_id: int):
 		for player in room["players"]:
 			var player_peer_id = client_registry.get_peer_id_by_uuid(player["uuid_base"])
 			if _is_peer_connected(player_peer_id):
+				_log_debug("_client_return_to_room", true)
 				network_manager.rpc_id(player_peer_id, "_client_return_to_room", room)
 		
 	await get_tree().process_frame
@@ -1905,6 +1918,7 @@ func _rpc_despawn_on_clients(player_ids: Array, round_id: int, object_id: int):
 	# Envia RPC para cada cliente
 	for player_id in player_ids:
 		var player_peer_id = client_registry.get_peer_id_by_uuid(player_id)
+		_log_debug("_client_despawn_item", true)
 		network_manager._client_despawn_item.rpc_id(player_peer_id, object_id, round_id)
 
 
@@ -1966,6 +1980,7 @@ func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 	# Executa animação no personagem remoto do servidor e nos clientes
 	for peer_id in round_players:
 		var player_peer_id = client_registry.get_peer_id_by_uuid(peer_id)
+		_log_debug("_client_apply_pick_up", true)
 		network_manager._client_apply_pick_up.rpc_id(player_peer_id, requesting_player_id)
 		
 	await get_tree().process_frame
@@ -1993,6 +2008,7 @@ func _server_validate_pick_up_item(requesting_player_id: int, object_id: int):
 	var filtered_ = round_registry.get_round_players_spawned_filter(round_["id"])
 	for peer in filtered_:
 		if _is_peer_connected(peer["peer_id"]):
+			_log_debug("_client_apply_equip", true)
 			network_manager.rpc_id(peer["peer_id"], "_client_apply_equip", requesting_player_id, item["id"])
 		
 	await get_tree().process_frame
@@ -2041,6 +2057,7 @@ func _server_validate_equip_item(requesting_player_id: int, object_id: int, _tar
 	for f_player in filtered_:
 		var session_id = client_registry.get_peer_id_by_uuid(f_player["uuid_base"])
 		if _is_peer_connected(session_id):
+			_log_debug("_client_apply_equip", true)
 			network_manager.rpc_id(session_id, "_client_apply_equip", requesting_player_id, item_id, false, true)
 		
 	await get_tree().process_frame
@@ -2086,6 +2103,7 @@ func _server_validate_unequip_item(requesting_player_id: int, slot_type: String)
 	for f_player in filtered_:
 		var player_peer_id = client_registry.get_peer_id_by_uuid(f_player["uuid_base"])
 		if _is_peer_connected(player_peer_id):
+			_log_debug("_client_apply_equip", true)
 			network_manager.rpc_id(player_peer_id, "_client_apply_equip", requesting_player_id, int(item_id), true, true)
 		
 	await get_tree().process_frame
@@ -2101,9 +2119,8 @@ func _server_validate_unequip_item(requesting_player_id: int, slot_type: String)
 ##  - O item EQUIPADO como segundo item (será substituído)
 ## Para isso, inverte os IDs se necessário, garantindo que a lógica do servidor
 ## sempre receba os parâmetros na ordem correta.
-func _server_validate_swap_items(dragged_item_id: int, target_item_id: int):
-	var player_id: int = multiplayer.get_remote_sender_id()
-	var player_uuid = client_registry.get_uuid_by_peer_id(player_id)
+func _server_validate_swap_items(peer_id: int, dragged_item_id: int, target_item_id: int):
+	var player_uuid = client_registry.get_uuid_by_peer_id(peer_id)
 	#var player = client_registry.get_player(player_uuid)
 	var round_id: int = client_registry.get_player_round(player_uuid)
 	var round_data = round_registry.get_round(round_id)
@@ -2201,7 +2218,8 @@ func _server_validate_swap_items(dragged_item_id: int, target_item_id: int):
 	for player in round_data["players"]:
 		var player_peer_id = client_registry.get_peer_id_by_uuid(player["uuid_base"])
 		if _is_peer_connected(player_peer_id):
-			network_manager.rpc_id(player_peer_id, "_client_apply_equip", player_id, item_data["id"], false, false, true)
+			_log_debug("_client_apply_equip", true)
+			network_manager.rpc_id(player_peer_id, "_client_apply_equip", peer_id, item_data["id"], false, false, true)
 	
 ## Servidor recebe pedido de spawnar item na frente do player para testes
 func _server_trainer_spawn_item(requesting_peer_id: int, item_id: int):
@@ -2281,6 +2299,7 @@ func _server_validate_drop_item(requesting_player_id: int, obj_id: int):
 		for f_player in filtered_:
 			var session_id = client_registry.get_peer_id_by_uuid(f_player["uuid_base"])
 			if _is_peer_connected(session_id):
+				_log_debug("_client_apply_equip", true)
 				network_manager.rpc_id(session_id, "_client_apply_equip", requesting_player_id, int(item_id), true)
 	
 	_log_debug("[ITEM]📦 Servidor vai validar pedido de drop de item ObjId: %d tipo %s do player ID %s" % [obj_id, item_["name"], requesting_player_id])
@@ -2334,6 +2353,7 @@ func _server_validate_drop_item(requesting_player_id: int, obj_id: int):
 		for peer_id in round_players:
 			var session_id = client_registry.get_peer_id_by_uuid(peer_id)
 			if _is_peer_connected(session_id):
+				_log_debug("_client_apply_drop", true)
 				network_manager._client_apply_drop.rpc_id(session_id, requesting_player_id, item_data["name"])
 			
 		await get_tree().process_frame
@@ -2429,6 +2449,7 @@ func _server_trainer_repawn_player(peer_id, player_uuid):
 	for f_player in filtered_:
 		var f_peer_id = client_registry.get_peer_id_by_uuid(f_player["uuid_base"])
 		if _is_peer_connected(peer_id):
+			_log_debug("_client_apply_respawn", true)
 			network_manager.rpc_id(f_peer_id, "_client_apply_respawn", peer_id, map_manager.spawn_center)
 			
 			
@@ -2446,6 +2467,7 @@ func attack_validation(target_group: String, peer_id: int, actual_weapon: String
 		
 		for peer_uuid in round_players:
 			var r_peer_id = client_registry.get_peer_id_by_uuid(peer_uuid)
+			_log_debug("_client_receive_attack", true)
 			network_manager._client_receive_attack.rpc_id(r_peer_id, victim_peer_id)
 			
 		await get_tree().process_frame
@@ -2495,6 +2517,7 @@ func _server_player_action(peer_id: int, action_type: String, item_equipado_nome
 	for peer_uuid in players_round:
 		if peer_uuid != player_uuid:
 			var r_peer_id = client_registry.get_peer_id_by_uuid(peer_uuid)
+			_log_debug("_client_player_action", true)
 			network_manager._client_player_action.rpc_id(r_peer_id, peer_id, action_type, item_equipado_nome, anim_name)
 
 			# Dica: Outra forma de chamar rpc(quando está inacessível p o server mas existe no pc remoto):
@@ -2598,6 +2621,7 @@ func _send_error_to_client(peer_id: int, message: String):
 	var client = client_registry.get_player(client_uuid)
 	_log_debug("❌ Enviando erro para cliente %s: %s" % [client["name"], message])
 	if _is_peer_connected(peer_id):
+		_log_debug("_client_receive_error", true)
 		network_manager.rpc_id(peer_id, "_client_receive_error", message)
 
 ## Verifica se um peer ainda está conectado
@@ -2633,7 +2657,7 @@ func sort_num(min_val: int, max_val: int) -> int:
 # ===== DEBUG =====
 
 ## Imprime mensagem de debug se habilitado
-func _log_debug(message: String):
+func _log_debug(message: String, rpc_debug: bool = false):
 	if not debug_mode:
 		return
 	
@@ -2641,7 +2665,9 @@ func _log_debug(message: String):
 	if initializer.activate_only_selected and not "Server" in initializer.selected:
 		return
 	
-	print("[SERVER]" + message)
+	if rpc_debug and not initializer.rpc_debug:
+		return
+	print("[SERVER]%s%s" % ["[RPC]" if rpc_debug else "", message])
 
 ## Debug: Imprime estados de todos os players para validação
 func _print_player_states():
