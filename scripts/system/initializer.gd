@@ -312,6 +312,7 @@ func _init_client(id_file_):
 	
 	# Se definido argumento de diferenciação para testes em múltiplas intâncias
 	if id_file_:
+		game_manager.load_position = id_file_
 		var UUID_string = "user://identity_%s.json" % id_file_
 		var TOKEN_string = "user://server_tokens_%s.json" % id_file_
 		game_manager.UUID_FILE = UUID_string

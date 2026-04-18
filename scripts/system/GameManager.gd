@@ -57,6 +57,7 @@ var initializer: Initializer = null
 
 # ===== VARIÁVEIS INTERNAS =====
 
+var load_position: int = 0
 var is_connected_to_server: bool = false
 var is_in_round: bool = false
 var is_loading: bool = false # True quando está durante carregamento de um round (initializer sobrepõe)
@@ -678,13 +679,16 @@ func handle_server_response(response: Dictionary) -> void:
 		"ok", "ok_in_round":
 			has_timed_out = false
 			player_name = response["player_name"]
-
+			
 			var in_round = status == "ok_in_round"
 			_log_debug(
 				"Autenticado com sucesso e retornando ao round"
 				if in_round
 				else "Autenticado com sucesso, server reiniciou, retornando ao menu"
 			)
+			
+			# Iniciar o heratbeet
+			start_heartbeat()
 
 			if in_round and is_in_round:
 				_client_update_character_peer_id(uuid_base, local_peer_id)
@@ -708,6 +712,7 @@ func handle_server_response(response: Dictionary) -> void:
 		"reject":
 			_log_debug("Conexão rejeitada: %s" % response.get("reason",""))
 			_disconnect_from_server()
+			start_connection_attempts(server_address, server_port)
 
 
 # ===== EXECUÇÃO DE BOTÕES DE CONEXÃO =====
@@ -737,8 +742,7 @@ func _on_gameplay_menu_give_up_game_pressed():
 
 ## Atualiza configurações do servidor para o cliente
 func update_client_info(info: Dictionary):
-	_log_debug("Atualizando configurações do servidor: %s" % info)
-	
+	_log_debug("<> Atualizando configs do servidor <>")
 	for key in info.keys():
 		var new_value = info[key]
 		
@@ -746,7 +750,7 @@ func update_client_info(info: Dictionary):
 		if not configs.has(key) or configs[key] != new_value:
 			configs[key] = new_value
 			_log_debug("[UPDATED] %s: %s" % [str(key), str(new_value)])
-			
+		
 		if key == "server_id":
 			var token : String = ""
 			if server_tokens.has(new_value):
@@ -754,9 +758,6 @@ func update_client_info(info: Dictionary):
 
 			# Agora enviamos o hello com uuid + token
 			network_manager.send_hello_to_server(uuid_base, token)
-			
-			# Agora iniciamos o heratbeet
-			start_heartbeat()
 	
 	# Ao atualizar, se estiver em uma partida e for o mesmo servidor, esconde o menu e continua
 	# Se não for o mesmo servidor, sem registro de cliente e partida nele, então: conexão nova.
@@ -2079,6 +2080,6 @@ func _log_debug(message: String):
 	
 	# Enquanto o cliente não receber id único de peer multiplayer, não exibe no log debug
 	if unique_id == 1:
-		print("[CLIENT][GameManager]:%s" % message)
+		print("[CLIENT][GameManager][P.%s]:%s" % [load_position, message])
 	else:
-		print("[GameManager][ClientID:%s]:%s" % [unique_id, message])
+		print("[GameManager][P.%s][ClientID:%s]:%s" % [load_position, unique_id, message])
