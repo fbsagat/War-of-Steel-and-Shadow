@@ -550,7 +550,18 @@ func join_server_by_ip(received_ip: String, received_port: String) -> bool:
 	if main_menu_node:
 		main_menu_node.show_loading_menu("Conectando ao servidor...")
 		
-	start_connection_attempts(server_address, server_port)
+	peer = ENetMultiplayerPeer.new()
+	var result := peer.create_client(server_address, server_port)
+
+	if result != OK:
+		_log_debug("Erro ao iniciar conexão: %s" % result)
+		return false
+
+	multiplayer.multiplayer_peer = peer
+
+	is_connecting = true
+	_log_debug("Tentando conectar...")
+
 	return true
 
 ## Validar localhost
