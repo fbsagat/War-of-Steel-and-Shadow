@@ -4,7 +4,7 @@ extends Control
 
 var game_manager: GameManager = null
 var server_list_manager: ServerListManager = null
-var initializer: Initializer = null
+var initializer: Initializer_ = null
 
 # ===== SINAIS =====
 

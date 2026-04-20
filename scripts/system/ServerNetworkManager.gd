@@ -267,11 +267,11 @@ func _server_player_ready(check_this_: Dictionary):
 	
 	# Sistema para impedir execução múltipla
 	# Só aceita se estava carregando
-	#var state = client_registry.get_player_state(player_uuid)
-	#var state_list = [client_registry.ClientState.LOADING]
-	#if state not in state_list:
-		#_log_debug("Estado (Atual: %s) de jogador %d não está entre: %s" % [state, peer_id, state_list])
-		#return
+	var state = client_registry.get_player_state(player_uuid)
+	var state_list = [client_registry.ClientState.LOADING, client_registry.ClientState.IN_GAME]
+	if state not in state_list:
+		_log_debug("Estado (Atual: %s) de jogador %d não está entre: %s" % [state, peer_id, state_list])
+		return
 	
 	client_registry.set_player_state(player_uuid, client_registry.ClientState.IN_GAME)
 	
@@ -422,8 +422,8 @@ func _server_player_state(pos: Vector3, rot: Vector3, vel: Vector3, running: boo
 	for r_peer_uuid in players_round:
 		if r_peer_uuid != sender_uuid:
 			var r_peer_id = client_registry.get_peer_id_by_uuid(r_peer_uuid)
-			if not _is_peer_connected(r_peer_id):
-				return
+			if not _in_game_peers.has(r_peer_id):
+				continue
 			_log_debug("_client_player_state", true)
 			rpc_id(r_peer_id, "_client_player_state", peer_id, pos, rot, vel, running, jumping)
 
@@ -445,8 +445,8 @@ func _server_player_animation_state(speed: float, attacking: bool, defending: bo
 	for r_peer_id in players_round:
 		if r_peer_id != player_uuid:
 			var session_id = client_registry.get_peer_id_by_uuid(r_peer_id)
-			if not _is_peer_connected(session_id):
-				return
+			if not _in_game_peers.has(r_peer_id):
+				continue
 			_log_debug("_client_player_animation_state", true)
 			rpc_id(session_id, "_client_player_animation_state", peer_id, speed, attacking,
 				   defending, jumping, aiming, running, block_attacking, on_floor)
@@ -481,7 +481,7 @@ func stop_round_sync(round_id: int) -> void:
 func start_peer_sync(peer_id: int):
 	if not _in_game_peers.has(peer_id) and _is_peer_connected(peer_id):
 		_in_game_peers.append(peer_id)
-
+		
 ## Desabilita o peer_id para o sync de objetos
 func stop_peer_sync(peer_id: int):
 	if _in_game_peers.has(peer_id):
@@ -625,7 +625,6 @@ func _safe_disconnect(peer_id: int):
 	
 	# Checa se o peer ainda existe
 	if peer_id in multiplayer.get_peers():
-		
 		# Desabilita o peer_id para o sync de objetos
 		stop_peer_sync(peer_id)
 		peer.disconnect_peer(peer_id)

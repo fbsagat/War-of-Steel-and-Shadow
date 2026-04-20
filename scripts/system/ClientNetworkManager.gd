@@ -230,14 +230,6 @@ func _client_kicked_from_room():
 	_log_debug("Foi expulso da sala")
 	game_manager._client_kicked_from_room()
 
-func _server_player_ready(check_this: Dictionary):
-	_log_debug("Cliente já carregou o seu round")
-	if not is_connected_:
-		_log_debug("❌ Erro: Não conectado ao servidor")
-		return
-	_log_debug("_server_player_ready", true)
-	rpc_id(1, "_server_player_ready", check_this)
-
 
 # ===== RODADAS — HELPERS LOCAIS =====
 
@@ -259,6 +251,14 @@ func _mark_player_disconnected(chosen: bool):
 	_log_debug("_mark_player_disconnected", true)
 	rpc_id(1, "_mark_player_disconnected", chosen)
 
+## Avisa o servidor que a rodada está totalmente carregada no cliente
+func _server_player_ready(check_this: Dictionary):
+	_log_debug("Cliente já carregou o seu round")
+	if not is_connected_:
+		_log_debug("❌ Erro: Não conectado ao servidor")
+		return
+	_log_debug("_server_player_ready", true)
+	rpc_id(1, "_server_player_ready", check_this)
 
 # ===== RODADAS — RECEBIMENTOS DO SERVIDOR =====
 
@@ -304,18 +304,6 @@ func _client_despawn_item(object_id: int, round_id: int):
 	if game_manager.has_method("_despawn_on_client"):
 		game_manager._despawn_on_client(object_id, round_id)
 
-func _client_clear_all_objects():
-	var count = 0
-	for round_id in game_manager.spawned_objects.keys():
-		for object_id in game_manager.spawned_objects[round_id].keys():
-			var obj_data = game_manager.spawned_objects[round_id][object_id]
-			var item_node = obj_data.get("node")
-			if item_node and is_instance_valid(item_node) and item_node.is_inside_tree():
-				item_node.queue_free()
-				count += 1
-	game_manager.spawned_objects.clear()
-	_log_debug("✓ Todos os objetos limpos no cliente (%d objetos)" % count)
-
 
 # ===== ITENS — HELPERS LOCAIS (enviam RPC ao servidor) =====
 
@@ -323,6 +311,11 @@ func request_pick_up_item(object_id: int) -> void:
 	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
+		
+	if not game_manager.is_in_round:
+		_log_debug("❌ Erro: Não está em uma partida")
+		return
+		
 	_log_debug("_server_pick_up_item", true)
 	rpc_id(1, "_server_pick_up_item", object_id)
 
@@ -330,6 +323,11 @@ func request_equip_item(object_id: int, slot_type) -> void:
 	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
+		
+	if not game_manager.is_in_round:
+		_log_debug("❌ Erro: Não está em uma partida")
+		return
+		
 	_log_debug("_server_equip_item", true)
 	rpc_id(1, "_server_equip_item", object_id, slot_type)
 
@@ -337,6 +335,11 @@ func request_unequip_item(slot_type: String) -> void:
 	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
+		
+	if not game_manager.is_in_round:
+		_log_debug("❌ Erro: Não está em uma partida")
+		return
+		
 	_log_debug("_server_unequip_item", true)
 	rpc_id(1, "_server_unequip_item", slot_type)
 
@@ -344,6 +347,11 @@ func request_swap_items(item_id_1: int, item_id_2: int):
 	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
+		
+	if not game_manager.is_in_round:
+		_log_debug("❌ Erro: Não está em uma partida")
+		return
+		
 	_log_debug("_server_swap_items", true)
 	rpc_id(1, "_server_swap_items", item_id_1, item_id_2)
 
@@ -351,6 +359,11 @@ func request_trainer_spawn_item(item_id: int):
 	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
+		
+	if not game_manager.is_in_round:
+		_log_debug("❌ Erro: Não está em uma partida")
+		return
+		
 	_log_debug("_server_trainer_spawn_item", true)
 	rpc_id(1, "_server_trainer_spawn_item", item_id)
 
@@ -358,6 +371,11 @@ func request_trainer_drop_item():
 	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
+		
+	if not game_manager.is_in_round:
+		_log_debug("❌ Erro: Não está em uma partida")
+		return
+		
 	_log_debug("_server_trainer_drop_item", true)
 	rpc_id(1, "_server_trainer_drop_item")
 
@@ -365,6 +383,11 @@ func request_trainer_respawn_player():
 	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
+		
+	if not game_manager.is_in_round:
+		_log_debug("❌ Erro: Não está em uma partida")
+		return
+		
 	_log_debug("_server_trainer_respawn_player", true)
 	rpc_id(1, "_server_trainer_respawn_player")
 
@@ -372,6 +395,11 @@ func request_drop_item(obj_id):
 	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
+		
+	if not game_manager.is_in_round:
+		_log_debug("❌ Erro: Não está em uma partida")
+		return
+		
 	_log_debug("_server_drop_item", true)
 	rpc_id(1, "_server_drop_item", obj_id)
 
@@ -379,8 +407,8 @@ func request_drop_item(obj_id):
 # ===== ITENS — APLICAÇÃO VISUAL NO CLIENTE (chamados pelo servidor) =====
 
 func _client_apply_pick_up(player_id):
-	
-	if not game_manager.players_node:
+	if not game_manager.is_in_round:
+		_log_debug("❌ Erro: Não está em uma partida")
 		return
 	
 	# Pegar o node do personagem pelo session id "p_id" no cachê de personagens da partida
@@ -395,8 +423,8 @@ func _client_apply_pick_up(player_id):
 		player_node.action_pick_up_item()
 
 func _client_apply_respawn(player_id, position: Vector3):
-	
-	if not game_manager.players_node:
+	if not game_manager.is_in_round:
+		_log_debug("❌ Erro: Não está em uma partida")
 		return
 		
 	# Pegar o node do personagem pelo session id "p_id" no cachê de personagens da partida
@@ -410,9 +438,9 @@ func _client_apply_respawn(player_id, position: Vector3):
 		player_node._respawn_player(position)
 
 func _client_apply_equip(peer_id: int, item_id: int, unequip: bool = false, from_inv_men = false, is_swap = false):
-
-	if not game_manager.players_node:
-		return
+	if not game_manager.is_in_round:
+			_log_debug("❌ Erro: Não está em uma partida")
+			return
 		
 	# Pegar o node do personagem pelo session id "p_id" no cachê de personagens da partida
 	# Verifica se já existe primeiro
@@ -427,6 +455,10 @@ func _client_apply_equip(peer_id: int, item_id: int, unequip: bool = false, from
 		player_node.execute_item_swap()
 
 func _client_apply_drop(peer_id: int, item_name: String):
+	if not game_manager.is_in_round:
+		_log_debug("❌ Erro: Não está em uma partida")
+		return
+		
 	_log_debug("📥 Dropando equipamento: Player %d, Item %s" % [peer_id, item_name])
 	
 	if not game_manager.players_node:
@@ -446,22 +478,42 @@ func _client_apply_drop(peer_id: int, item_name: String):
 # ===== ITENS — ATUALIZAÇÃO DE INVENTÁRIO NO CLIENTE =====
 
 func _client_add_item_to_inventory(item_id: int, object_id: int):
+	if not game_manager.is_in_round:
+		_log_debug("❌ Erro: Não está em uma partida")
+		return
+		
 	if game_manager and game_manager.has_method("add_item_to_inventory"):
 		game_manager.add_item_to_inventory(item_id, object_id)
 
 func _client_remove_item_from_inventory(object_id: int):
+	if not game_manager.is_in_round:
+		_log_debug("❌ Erro: Não está em uma partida")
+		return
+		
 	if game_manager and game_manager.has_method("remove_item_from_inventory"):
 		game_manager.remove_item_from_inventory(object_id)
 
 func _client_equip_item(item_name: String, object_id: int, slot):
+	if not game_manager.is_in_round:
+		_log_debug("❌ Erro: Não está em uma partida")
+		return
+		
 	if game_manager and game_manager.has_method("equip_item"):
 		game_manager.equip_item(object_id, slot, item_name)
 
 func _client_unequip_item(item_id: int, slot, verify: bool):
+	if not game_manager.is_in_round:
+		_log_debug("❌ Erro: Não está em uma partida")
+		return
+		
 	if game_manager and game_manager.has_method("unequip_item"):
 		game_manager.unequip_item(int(item_id), slot, verify)
 
 func _client_swap_equipped_item(new_item_name: String, dragged_item: Dictionary, existing_item_id: int, target_slot: String):
+	if not game_manager.is_in_round:
+		_log_debug("❌ Erro: Não está em uma partida")
+		return
+		
 	if game_manager and game_manager.has_method("swap_equipped_item"):
 		game_manager.swap_equipped_item(new_item_name, dragged_item, existing_item_id, target_slot)
 
@@ -472,12 +524,17 @@ func _client_swap_equipped_item(new_item_name: String, dragged_item: Dictionary,
 func send_player_state(pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
 	if not is_connected_:
 		return
+		
+	if not game_manager.is_in_round:
+		_log_debug("❌ Erro: Não está em uma partida")
+		return
+		
 	_log_debug("_server_player_state", true)
 	rpc_id(1, "_server_player_state", pos, rot, vel, running, jumping)
 
 func _client_player_state(peer_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
-	
-	if not game_manager.players_node:
+	if not game_manager.is_in_round:
+		_log_debug("❌ Erro: Não está em uma partida")
 		return
 	
 	# Pegar o node do personagem pelo session id "peer_id" no cachê de personagens da partida
@@ -496,6 +553,9 @@ func _client_player_state(peer_id: int, pos: Vector3, rot: Vector3, vel: Vector3
 		_log_debug("Erro! _client_player_state não encontrou método _character_receive_state em %d" % peer_id)
 
 func server_force_position(pos: Vector3):
+	if not game_manager.is_in_round:
+		_log_debug("❌ Erro: Não está em uma partida")
+		return
 	game_manager.server_force_position(pos)
 
 # ===== SINCRONIZAÇÃO DE ANIMAÇÕES =====
@@ -505,14 +565,19 @@ func send_player_animation_state(speed: float, attacking: bool, defending: bool,
 	jumping: bool, aiming: bool, running: bool, block_attacking: bool, on_floor: bool):
 	if not is_connected_:
 		return
+		
+	if not game_manager.is_in_round:
+		_log_debug("❌ Erro: Não está em uma partida")
+		return
+		
 	_log_debug("_server_player_animation_state", true)
 	rpc_id(1, "_server_player_animation_state", speed, attacking, defending,
 		   jumping, aiming, running, block_attacking, on_floor)
 
 func _client_player_animation_state(peer_id: int, speed: float, attacking: bool, defending: bool,
 									jumping: bool, aiming: bool, running: bool, block_attacking: bool, on_floor: bool):
-										
-	if not game_manager.players_node:
+	if not game_manager.is_in_round:
+		_log_debug("❌ Erro: Não está em uma partida")
 		return
 		
 	# Pegar o node do personagem pelo session id "p_id" no cachê de personagens da partida
@@ -556,6 +621,10 @@ func _rpc_client_batch_sync(
 		positions: PackedVector3Array,
 		rotations: PackedVector3Array
 ) -> void:
+	if not game_manager.is_in_round:
+		_log_debug("❌ Erro: Não está em uma partida")
+		return
+		
 	var now: float = Time.get_unix_time_from_system()
 
 	for i: int in ids.size():
@@ -646,15 +715,21 @@ func _client_interpolate_all(delta: float) -> void:
 func send_player_action(action_type: String, item_equipado_nome, anim_name: String):
 	if not is_connected_:
 		return
+		
+	if not game_manager.is_in_round:
+		_log_debug("❌ Erro: Não está em uma partida")
+		return
+		
 	_log_debug("⚔️ Enviando ação: %s (%s)" % [action_type, anim_name])
 	_log_debug("_server_player_action", true)
 	rpc_id(1, "_server_player_action", action_type, item_equipado_nome, anim_name)
 
 func _client_player_action(p_id: int, action_type: String, item_equipado_nome, anim_name: String):
-	_log_debug("⚔️ Recebendo ação: Player %d - %s" % [p_id, action_type])
-	
-	if not game_manager.players_node:
+	if not game_manager.is_in_round:
+		_log_debug("❌ Erro: Não está em uma partida")
 		return
+		
+	_log_debug("⚔️ Recebendo ação: Player %d - %s" % [p_id, action_type])
 	
 	# Pegar o node do personagem pelo session id "p_id" no cachê de personagens da partida
 	# Verifica se já existe primeiro
@@ -669,11 +744,11 @@ func _client_player_action(p_id: int, action_type: String, item_equipado_nome, a
 		_log_debug("Ação do player recebida!")
 
 func _client_receive_attack(victim_peer_id):
-	_log_debug("⚔️ Player %s recebendo dano" % victim_peer_id)
-	
-	if not game_manager.players_node:
+	if not game_manager.is_in_round:
+		_log_debug("❌ Erro: Não está em uma partida")
 		return
-	
+		
+	_log_debug("⚔️ Player %s recebendo dano" % victim_peer_id)
 	# Pegar o node do personagem pelo session id "p_id" no cachê de personagens da partida
 	# Verifica se já existe primeiro
 	if not game_manager.session_to_uuid.has(victim_peer_id):

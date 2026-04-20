@@ -21,8 +21,6 @@ class_name ServerManager
 @export var visual_debug: bool = false
 ## Timer para imprimir estados periodicamente
 @export var debug_timer: bool = false
-## Ativa/desativa persistência do servidor (para server_id, server_secret e dados de clientes)
-@export var is_persistent: bool = false
 ## [TESTES] Usa o TestManager para iniciar logo uma partida na execução (initializer sobrepõe)
 @export var fast_round: bool = false
 ## [TESTES] Define a quantidade de instnacias de clientes para executar fast_round (initializer sobrepõe)
@@ -83,7 +81,7 @@ var item_database: ItemDatabase = null
 var object_manager: ObjectManager = null
 var test_manager: TestManager = null
 var map_manager: Node = null
-var server_persistence: ServerPersistence = null
+var persistence_manager: ServerPersistence = null
 var debug_overlay = null
 var warning_overlay = null
 
@@ -96,7 +94,7 @@ var mouse_mode: bool = false
 var current_active_viewport: SubViewport = null
 var viewport_display: TextureRect = null
 var test_mode_check_timer: Timer
-var initializer: Initializer = null
+var initializer: Initializer_ = null
 
 # ===== VARIÁVEIS INTERNAS =====
 
@@ -108,12 +106,9 @@ var actual_camera: Camera3D = null
 # ===== INICIALIZAÇÃO DO MANAGER =====
 
 func _ready() -> void:
-	server_persistence = preload("res://scripts/only_server/server_persistence.gd").new()
-	server_persistence.name = "server_persistence"
-	add_child.call_deferred(server_persistence)
-	
-	# Injeta em client registry
-	client_registry.server_persistence = server_persistence
+	if persistence_manager:
+		# Injeta em client registry
+		client_registry.persistence_manager = persistence_manager
 
 func initialize():
 	# Conecta sinais
@@ -140,15 +135,15 @@ func initialize():
 	get_tree().root.add_child(all_rounds_node)
 	all_rounds_node.name = "All_Rounds"
 	
-	# Persistência: Gera ou carrega id único do servidor
-	server_persistence.init(is_persistent)
-	server_id = server_persistence.server_id
-	server_secret = server_persistence.server_secret
-	
 	# Se persistência estiver ativada
-	if is_persistent:
-		# Persistência: Carrega jogadores salvos
-		var loaded = server_persistence.load_players()
+	if persistence_manager:
+		# Gera ou carrega id único do servidor
+		persistence_manager.init(true if persistence_manager else false)
+		server_id = persistence_manager.server_id
+		server_secret = persistence_manager.server_secret
+		
+		# Carrega jogadores salvos
+		var loaded = persistence_manager.load_players()
 		client_registry.players = loaded["players"]
 		client_registry.players_cache = loaded["players_cache"]
 		
@@ -165,6 +160,11 @@ func initialize():
 				if player["room_id"] > 0:
 					client_registry.reset_player_room_round(player_uuid)
 	
+	else:
+		var crypto: Crypto = Crypto.new()
+		server_id = crypto.generate_random_bytes(16).hex_encode()
+		server_secret = crypto.generate_random_bytes(32)
+		
 	# Inicializa servidor
 	_start_server()
 	
@@ -192,6 +192,7 @@ func _connect_signals():
 ## Aqui inicializamos o sistema de verificação automática
 func _setup_test_mode_verification():
 	test_mode_check_timer = Timer.new()
+	test_mode_check_timer.name = "test_mode_verification_timer"
 	test_mode_check_timer.wait_time = 2.0 # período em segundos
 	test_mode_check_timer.one_shot = false
 	test_mode_check_timer.timeout.connect(_on_fast_round_verify_timeout)
@@ -234,7 +235,7 @@ func _setup_debug_timer():
 	debug_timer_.wait_time = 5.0
 	debug_timer_.autostart = true
 	debug_timer_.timeout.connect(_print_player_states)
-	debug_timer_.name = "DebugTimer"
+	debug_timer_.name = "debug_timer"
 	add_child(debug_timer_)
 
 ## Essa função cria e configura um timer automático no servidor para fazer limpeza periódica 
@@ -244,7 +245,7 @@ func _setup_cleanup_empty_rounds_timer():
 	cleanup_timer_.wait_time = CLEANUP_INTERVAL
 	cleanup_timer_.autostart = true
 	cleanup_timer_.timeout.connect(_cleanup_empty_rounds)
-	cleanup_timer_.name = "CleanupTimer"
+	cleanup_timer_.name = "cleanup_timer"
 	add_child(cleanup_timer_)
 
 # ===== FUNÇÕES DE INPUT =====

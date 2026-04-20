@@ -94,7 +94,7 @@ var server_manager: ServerManager = null
 var network_manager: NetworkManager = null
 
 ## Referência ao NetworkManager - Injetado via initializer
-var initializer: Initializer = null
+var initializer: Initializer_ = null
 
 # ─────────────────────────────────────────────────────────────────────────────
 # ESTADO INTERNO

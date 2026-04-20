@@ -28,7 +28,7 @@ class_name DroppedItem
 
 var network_manager: NetworkManager = null
 var server_manager: ServerManager = null
-var initializer: Initializer = null
+var initializer: Initializer_ = null
 
 # ===== VARIÁVEIS INTERNAS =====
 

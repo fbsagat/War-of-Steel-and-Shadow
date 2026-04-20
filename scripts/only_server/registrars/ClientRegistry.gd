@@ -24,13 +24,13 @@ class_name ClientRegistry
 
 var network_manager: NetworkManager = null
 var server_manager: ServerManager = null
-var server_persistence: ServerPersistence = null
+var persistence_manager: ServerPersistence = null
 var room_registry: RoomRegistry = null
 var round_registry: RoundRegistry = null
 var object_manager: ObjectManager = null
 var item_database: ItemDatabase = null
 var debug_overlay = null
-var initializer: Initializer = null
+var initializer: Initializer_ = null
 
 # ===== VARIÁVEIS INTERNAS =====
 
@@ -179,7 +179,8 @@ func add_peer(peer_id: int, uuid_base: String):
 	}
 	
 	# Persistência - registrar cliente
-	server_persistence.register_player(uuid_base, players[uuid_base])
+	if persistence_manager:
+		persistence_manager.register_player(uuid_base, players[uuid_base])
 	
 	_log_debug("✓ Peer adicionado: uuid=%s peer_id=%d" % [uuid_base, peer_id])
 	peer_added.emit(uuid_base)
@@ -213,8 +214,9 @@ func update_peer_id(uuid_base: String, new_peer_id: int):
 	players[uuid_base]["peer_id"] = new_peer_id
 	
 	# Persistência - atualizar novo peer id
-	var update = {"peer_id": new_peer_id}
-	server_persistence.patch_player_data(uuid_base ,update)
+	if persistence_manager:
+		var update = {"peer_id": new_peer_id}
+		persistence_manager.patch_player_data(uuid_base ,update)
 	
 	# Se o cliente ter um personagem ativo em um round, atualizar seu novo id para os outros clientes no round
 	# Apenas os que estão conectados
@@ -265,9 +267,10 @@ func set_disconnected_peer(peer_id: int):
 	players[uuid_base]["disconnected_at"] = Time.get_unix_time_from_system()
 	set_disconnected_peer_from_room_and_round(peer_id)
 	
-	# Persistência - atualizar connected e disconnected_at
-	var update = {"connected": false, "disconnected_at": players[uuid_base]["disconnected_at"]}
-	server_persistence.patch_player_data(uuid_base ,update)
+	if persistence_manager:
+		# Persistência - atualizar connected e disconnected_at
+		var update = {"connected": false, "disconnected_at": players[uuid_base]["disconnected_at"]}
+		persistence_manager.patch_player_data(uuid_base ,update)
 	
 	peer_disconnected.emit(uuid_base)
 
@@ -318,10 +321,11 @@ func register_player_name(uuid_base: String, player_name: String) -> bool:
 	players[uuid_base]["name"] = player_name
 	players[uuid_base]["registered"] = true
 	
-	# Persistência - atualizar registered
-	var update = {"name": player_name, "registered": true}
-	server_persistence.patch_player_data(uuid_base ,update)
-	
+	if persistence_manager:
+		# Persistência - atualizar registered
+		var update = {"name": player_name, "registered": true}
+		persistence_manager.patch_player_data(uuid_base ,update)
+		
 	player_name_registered.emit(uuid_base, player_name)
 	_log_debug("✓ Nome registrado: %s (uuid=%s)" % [player_name, uuid_base])
 	return true
@@ -342,9 +346,10 @@ func _register_connection(uuid_base: String):
 	players[uuid_base]["connected"] = true
 	_log_debug("Peer uuid=%s marcado como conectado" % uuid_base)
 	
-	# Persistência - atualizar nome
-	var update = {"connected": true}
-	server_persistence.patch_player_data(uuid_base ,update)
+	if persistence_manager:
+		# Persistência - atualizar nome
+		var update = {"connected": true}
+		persistence_manager.patch_player_data(uuid_base ,update)
 	
 	# Remove do timout detection
 	network_manager.remove_client_from_timeout_detection(uuid_base)
@@ -401,9 +406,10 @@ func join_room(uuid_base: String, room_id: int):
 
 	player["room_id"] = room_id
 	
-	# Persistência - atualizar room
-	var update = {"room_id": room_id}
-	server_persistence.patch_player_data(uuid_base ,update)
+	if persistence_manager:
+		# Persistência - atualizar room
+		var update = {"room_id": room_id}
+		persistence_manager.patch_player_data(uuid_base ,update)
 	
 	_log_debug("✓ %s entrou na sala %d" % [uuid_base, room_id])
 	player_joined_room.emit(uuid_base, room_id)
@@ -444,10 +450,11 @@ func join_round(uuid_base: String, round_id: int):
 	player["round_id"] = round_id
 	init_player_inventory(round_id, uuid_base)
 	
-	# Persistência - atualizar round
-	var update = {"round_id": round_id}
-	server_persistence.patch_player_data(uuid_base ,update)
-	
+	if persistence_manager:
+		# Persistência - atualizar round
+		var update = {"round_id": round_id}
+		persistence_manager.patch_player_data(uuid_base ,update)
+		
 	_log_debug("✓ %s entrou na rodada %d" % [uuid_base, round_id])
 	player_joined_round.emit(uuid_base, round_id)
 
@@ -548,9 +555,10 @@ func set_player_state(uuid_base: String, new_state: int) -> bool:
 	# Aplica mudança
 	players[uuid_base]["ClientState"] = new_state
 	
-	# Persistência - atualizar ClientState
-	var update = {"ClientState": new_state}
-	server_persistence.patch_player_data(uuid_base ,update)
+	if persistence_manager:
+		# Persistência - atualizar ClientState
+		var update = {"ClientState": new_state}
+		persistence_manager.patch_player_data(uuid_base ,update)
 	
 	peer_state_changed.emit()
 	_log_debug("Mundano estado de player %s: %s → %s" % [uuid_base, str(old_state),str(new_state)])
@@ -1053,8 +1061,9 @@ func register_player_node(uuid_base: String, player_node: Node):
 	players[uuid_base]["node_path"] = node_path
 	players_cache[uuid_base] = node_path
 	
-	# Persistência - atualizar node path
-	server_persistence.bind_player_path(uuid_base, node_path)
+	if persistence_manager:
+		# Persistência - atualizar node path
+		persistence_manager.bind_player_path(uuid_base, node_path)
 
 	_log_debug("✓ Nó registrado: %s → %s" % [uuid_base, node_path])
 

@@ -63,7 +63,7 @@ var network_manager: NetworkManager = null
 var item_database: ItemDatabase = null
 var server_manager: ServerManager = null
 var game_manager: GameManager = null
-var initializer: Initializer = null
+var initializer: Initializer_ = null
 
 # Identificação multiplayer
 var peer_id: int = 0
@@ -1283,7 +1283,7 @@ func action_stop_locking_call():
 		
 	# Sincroniza fim da defesa (Reliable)
 	if network_manager and network_manager.is_connected:
-		network_manager.send_player_action(peer_id, "defend_stop", "", "")
+		network_manager.send_player_action("defend_stop", "", "")
 		
 		
 # ===== INICIALIZAÇÃO MULTIPLAYER =====

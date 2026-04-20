@@ -41,7 +41,7 @@ var network_manager: NetworkManager = null
 var client_registry: ClientRegistry = null
 var round_registry: RoundRegistry = null
 var item_database: ItemDatabase = null
-var initializer: Initializer = null
+var initializer: Initializer_ = null
 
 
 # ===== REGISTROS =====

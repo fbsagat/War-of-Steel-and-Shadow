@@ -1,5 +1,5 @@
 extends Node
-class_name Initializer
+class_name Initializer_
 
 # Configurações
 ## [TESTES] Usa o TestManager para iniciar uma partida logo na execução (localhost)
@@ -14,10 +14,12 @@ class_name Initializer
 @export var disable_protection: bool = false
 ## [TESTES] Ativa/desativa o debug visual na gameplay
 @export var visual_debug: bool = true
-## [TESTES] Ativa/desativa debug de rpcs
-@export var rpc_debug: bool = false
+## [TESTES] Ativa/desativa debug de rpcs (_log_debug's adicionados acima de cada rpc em todo o código)
+@export var rpc_debug: bool = true
 ## [TESTES] [Clientes] Iniciar com o mouse destrancado
 @export var start_unlocked_mouse: bool = true
+## Ativa/desativa persistência do servidor (para server_id, server_secret e dados de clientes)
+@export var is_persistent: bool = true
 
 # Instruções para debug
 ## Executa _log_debug apenas nos itens selecionados
@@ -25,7 +27,7 @@ var activate_only_selected: bool = false
 # Disponíveis: "Server", "NetworkManager", "TestManager", "GameManager", "RoomRegistry"
 # "RoundRegistry", "ClientRegistry", "Player_node", "ObjectManager", "MapManager", "MainMenu"
 # "ItemDatabase", "InventoryMenu", "DroppedItem"
-var selected: Array = ["Server", "ClientRegistry", "RoomRegistry", "NetworkManager", "TestManager", "GameManager", "MainMenu"]
+var selected: Array = []
 
 # Referências
 ## Manager de rede, gerencia comunicação entre servidor e clientes
@@ -40,6 +42,8 @@ var server_list_manager: ServerListManager = null
 var item_database: ItemDatabase = null
 ## Gerenciador de mapas e spawns de players
 var map_manager: Node = null
+## Gerenciador de persistência do servidor
+var persistence_manager: ServerPersistence = null
 
 ## Managers auxiliares para o servidor
 ## Gerenciador autoritativo de objetos no mundo
@@ -186,7 +190,14 @@ func _init_server(is_headless):
 	test_manager.map_manager = map_manager
 	test_manager.initializer = self
 	
-	# Carregar nós que serão usados apenas se não headless
+	# Carrega sistema de persistência se estiver ativado
+	if is_persistent:
+		persistence_manager = preload("res://scripts/only_server/server_persistence.gd").new()
+		persistence_manager.name = "persistence_manager"
+		server_manager.add_child.call_deferred(persistence_manager)
+		server_manager.persistence_manager = persistence_manager
+	
+	# Carrega nós que serão usados apenas se não headless
 	if not is_headless:
 		var server_debug_overlay_scene: PackedScene = preload("res://scenes/ui/server_debug_overlay.tscn")
 		var warning_overlay_scene: PackedScene = preload("res://scenes/ui/warning_overlay.tscn")
@@ -194,11 +205,11 @@ func _init_server(is_headless):
 		debug_overlay = server_debug_overlay_scene.instantiate()
 		warning_overlay = warning_overlay_scene.instantiate()
 		
-		debug_overlay.name = "ServerDebugOverlay"
-		warning_overlay.name = "WarningOverlay"
+		debug_overlay.name = "server_debug_overlay"
+		warning_overlay.name = "server_warning_overlay"
 		
-		get_tree().root.add_child.call_deferred(debug_overlay)
-		get_tree().root.add_child.call_deferred(warning_overlay)
+		server_manager.add_child.call_deferred(debug_overlay)
+		server_manager.add_child.call_deferred(warning_overlay)
 		
 		# Injeta dependências cruzadas:
 		server_manager.warning_overlay = warning_overlay

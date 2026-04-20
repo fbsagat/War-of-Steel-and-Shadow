@@ -53,11 +53,11 @@ const MAX_SAVED_TOKENS: int = 50
 var item_database: ItemDatabase = null
 var network_manager: NetworkManager = null
 var map_manager: Node = null
-var initializer: Initializer = null
+var initializer: Initializer_ = null
 
 # ===== VARIÁVEIS INTERNAS =====
 
-var load_position: int = 0
+var load_position: int = 1
 var is_connected_to_server: bool = false
 var is_in_round: bool = false
 var is_loading: bool = false # True quando está durante carregamento de um round (initializer sobrepõe)
@@ -350,6 +350,9 @@ func _on_connected_to_server():
 		debug_overlay_node.peer_id = local_peer_id
 	
 	_log_debug(" Cliente conectado ao servidor com sucesso! Peer ID: %d" % local_peer_id)
+	
+	# Iniciar o heratbeet
+	start_heartbeat()
 	
 	connected_to_server.emit()
 
@@ -686,9 +689,6 @@ func handle_server_response(response: Dictionary) -> void:
 				if in_round
 				else "Autenticado com sucesso, server reiniciou, retornando ao menu"
 			)
-			
-			# Iniciar o heratbeet
-			start_heartbeat()
 
 			if in_round and is_in_round:
 				_client_update_character_peer_id(uuid_base, local_peer_id)

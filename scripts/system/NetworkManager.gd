@@ -11,7 +11,7 @@ class_name NetworkManager
 
 # ===== REGISTROS (Injetados pelo initializer.gd) =====
 
-var initializer: Initializer = null
+var initializer: Initializer_ = null
 
 # ===== CONFIGURAÇÕES =====
 
@@ -223,10 +223,6 @@ func _client_spawn_item(_object_id: int, _round_id: int, _item_name: String, _po
 
 @rpc("authority", "call_remote", "reliable")
 func _client_despawn_item(_object_id: int, _round_id: int):
-	pass
-
-@rpc("authority", "call_remote", "reliable")
-func _client_clear_all_objects():
 	pass
 
 # ===== ITENS — REQUISIÇÕES DO CLIENTE AO SERVIDOR =====

@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://dichfh1h2idqe"]
 
-[ext_resource type="Script" uid="uid://bvdieu0yc0rcg" path="res://scripts/ui/client_debug_overlay.gd" id="1_53of1"]
+[ext_resource type="Script" uid="uid://dw5bbfo6j6ye4" path="res://scripts/ui/client_debug_overlay.gd" id="1_53of1"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tasbd"]
 bg_color = Color(0, 0, 0, 0.5019608)
@@ -15,7 +15,7 @@ anchors_preset = -1
 anchor_left = 0.0057812505
 anchor_top = 0.009388889
 anchor_right = 0.133125
-anchor_bottom = 0.25277779
+anchor_bottom = 0.37916666
 offset_left = -0.40000057
 offset_top = 0.23999977
 offset_right = -0.40000916
