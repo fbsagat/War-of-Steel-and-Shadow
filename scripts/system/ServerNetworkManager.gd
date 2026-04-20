@@ -461,8 +461,8 @@ func _server_player_state(pos: Vector3, rot: Vector3, vel: Vector3, running: boo
 	for r_peer_uuid in players_round:
 		if r_peer_uuid != sender_uuid:
 			var r_peer_id = client_registry.get_peer_id_by_uuid(r_peer_uuid)
-			if not _in_game_peers.has(r_peer_id):
-				continue
+			if not _is_peer_connected(r_peer_id):
+				return
 			#_log_debug("_client_player_state", true)
 			rpc_id(r_peer_id, "_client_player_state", peer_id, pos, rot, vel, running, jumping)
 
@@ -484,8 +484,8 @@ func _server_player_animation_state(speed: float, attacking: bool, defending: bo
 	for r_peer_id in players_round:
 		if r_peer_id != player_uuid:
 			var session_id = client_registry.get_peer_id_by_uuid(r_peer_id)
-			if not _in_game_peers.has(r_peer_id):
-				continue
+			if not _is_peer_connected(session_id):
+				return
 			#_log_debug("_client_player_animation_state", true)
 			rpc_id(session_id, "_client_player_animation_state", peer_id, speed, attacking,
 				   defending, jumping, aiming, running, block_attacking, on_floor)
@@ -670,11 +670,14 @@ func _safe_disconnect(peer_id: int):
 	if peer_id in _disconnecting_peers or peer_id not in multiplayer.get_peers():
 		return
 
-	# Marca o peer com timestamp atual
+	# Marca o peer com timestamp atual em _disconnecting_peers
 	_disconnecting_peers[peer_id] = Time.get_ticks_msec()
 	
+	# limpa de players_peer_ids_cache
 	client_registry.players_peer_ids_cache.erase(peer_id)
+	# Para o sync de objetos
 	stop_peer_sync(peer_id)
+	# Desconecta
 	multiplayer.disconnect_peer(peer_id)
 	_log_debug("⚠️ Peer %d marcado para desconexão imediata." % peer_id)
 	
