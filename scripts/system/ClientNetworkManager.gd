@@ -30,6 +30,9 @@ func _on_connected_to_server():
 	if unique_id == 0 and verificar_rede() and multiplayer.has_multiplayer_peer():
 		unique_id = multiplayer.get_unique_id()
 		cached_unique_id = unique_id
+	
+	_log_debug("_server_give_me_configs", true)
+	rpc_id(1, "_server_give_me_configs")
 	_log_debug("Conexão de rede estabelecida")
 
 func _on_server_disconnected():
@@ -55,14 +58,14 @@ func _send_ping(client_time):
 	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
-	_log_debug("_client_send_ping", true)
-	rpc_id(1, "_client_send_ping", client_time)
+	#_log_debug("_server_send_ping", true)
+	rpc_id(1, "_server_send_ping", client_time)
 
 func _server_report_ping(latency):
 	if not is_connected_:
 		_log_debug("❌ Erro: Não conectado ao servidor")
 		return
-	_log_debug("_server_report_ping", true)
+	#_log_debug("_server_report_ping", true)
 	rpc_id(1, "_server_report_ping", latency)
 
 func _client_receive_pong(client_time):
@@ -95,6 +98,7 @@ func register_player_name(player_name: String):
 	rpc_id(1, "_server_register_player_name", player_name)
 
 func _client_update_info(info):
+	_log_debug("Recebendo informações de: %s" % info["server_name"])
 	if game_manager and game_manager.has_method("update_client_info"):
 		game_manager.update_client_info(info)
 
@@ -529,7 +533,7 @@ func send_player_state(pos: Vector3, rot: Vector3, vel: Vector3, running: bool, 
 		_log_debug("❌ Erro: Não está em uma partida")
 		return
 		
-	_log_debug("_server_player_state", true)
+	#_log_debug("_server_player_state", true)
 	rpc_id(1, "_server_player_state", pos, rot, vel, running, jumping)
 
 func _client_player_state(peer_id: int, pos: Vector3, rot: Vector3, vel: Vector3, running: bool, jumping: bool):
@@ -570,7 +574,7 @@ func send_player_animation_state(speed: float, attacking: bool, defending: bool,
 		_log_debug("❌ Erro: Não está em uma partida")
 		return
 		
-	_log_debug("_server_player_animation_state", true)
+	#_log_debug("_server_player_animation_state", true)
 	rpc_id(1, "_server_player_animation_state", speed, attacking, defending,
 		   jumping, aiming, running, block_attacking, on_floor)
 

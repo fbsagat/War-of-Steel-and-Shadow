@@ -40,6 +40,9 @@ var players: Dictionary = {}
 ## Cache de NodePath para acesso rápido: {uuid_base: NodePath_string}
 var players_cache: Dictionary = {}
 
+## Lista atualizada em tempo real com todos os peers que estão conectados
+var players_peer_ids_cache: Array = []
+
 ## Inventários organizados por rodada: {round_id: {uuid_base: InventoryData}}
 var player_inventories: Dictionary = {}
 
@@ -75,6 +78,7 @@ signal peer_added(uuid_base: String)
 signal peer_connected(uuid_base: String)
 signal peer_disconnected(uuid_base: String)
 signal peer_removed(uuid_base: String)
+signal player_registered(uuid_base: String)
 signal player_name_registered(uuid_base: String, player_name: String)
 signal peer_id_updated(uuid_base: String, new_peer_id: int)
 signal peer_state_changed()
@@ -213,6 +217,12 @@ func update_peer_id(uuid_base: String, new_peer_id: int):
 	var old_peer_id = players[uuid_base]["peer_id"]
 	players[uuid_base]["peer_id"] = new_peer_id
 	
+	# Atualiza players_peer_ids_cache
+	if not players_peer_ids_cache.has(new_peer_id):
+		players_peer_ids_cache.append(new_peer_id)
+	if players_peer_ids_cache.has(old_peer_id):
+		players_peer_ids_cache.erase(old_peer_id)
+	
 	# Persistência - atualizar novo peer id
 	if persistence_manager:
 		var update = {"peer_id": new_peer_id}
@@ -311,6 +321,26 @@ func remove_peer(peer_id: int):
 
 	_log_debug("✓ Peer removido: %d (%s / uuid=%s)" % [peer_id, player_name, uuid_base])
 	peer_removed.emit(uuid_base)
+
+## Status de registro do jogador.
+func register_player(uuid_base: String, peer_id: int) -> bool:
+	if not players.has(uuid_base):
+		_log_debug("❌ Tentou registrar nome de UUID inexistente: %s" % uuid_base)
+		return false
+
+	players[uuid_base]["registered"] = true
+	# Adição inicial do id de sessão em players_peer_ids_cache
+	if not players_peer_ids_cache.has(peer_id):
+		players_peer_ids_cache.append(peer_id)
+	
+	if persistence_manager:
+		# Persistência - atualizar registered
+		var update = {"registered": true}
+		persistence_manager.patch_player_data(uuid_base ,update)
+		
+	player_registered.emit(uuid_base)
+	_log_debug("✓ Player registrado: (uuid=%s)" % [uuid_base])
+	return true
 
 ## Registra nome do jogador.
 func register_player_name(uuid_base: String, player_name: String) -> bool:

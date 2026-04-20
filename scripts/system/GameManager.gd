@@ -217,13 +217,13 @@ func _ping_pong(_delta):
 	if not has_received_pong:
 		return
 	
-	# Se já estiver detectado a primeira vez, ignora as outras (_process está no loop)
+	# Se já estiver detectado a primeira vez, ignora as outras (Está no loop do _process)
 	if has_timed_out:
 		return
 	
 	if Time.get_ticks_msec() - last_pong_time > timeout_limit:
 		has_timed_out = true
-		_on_server_disconnected()
+		multiplayer.multiplayer_peer.close()
 
 func finish_loading():
 	is_loading = false
@@ -350,9 +350,6 @@ func _on_connected_to_server():
 		debug_overlay_node.peer_id = local_peer_id
 	
 	_log_debug(" Cliente conectado ao servidor com sucesso! Peer ID: %d" % local_peer_id)
-	
-	# Iniciar o heratbeet
-	start_heartbeat()
 	
 	connected_to_server.emit()
 
@@ -678,17 +675,23 @@ func handle_server_response(response: Dictionary) -> void:
 			_save_tokens()
 			if main_menu_node:
 				main_menu_node.show_name_input_menu(true)
-
+		
+			# Iniciar o heratbeet depois de aprovado pelo servidor
+			start_heartbeat()
+		
 		"ok", "ok_in_round":
 			has_timed_out = false
 			player_name = response["player_name"]
 			
 			var in_round = status == "ok_in_round"
 			_log_debug(
-				"Autenticado com sucesso e retornando ao round"
+				"Autenticado com sucesso, jogador está em um round no servidor"
 				if in_round
-				else "Autenticado com sucesso, server reiniciou, retornando ao menu"
+				else "Autenticado com sucesso, server novo, retornando ao menu"
 			)
+			
+			# Iniciar o heratbeet depois de aprovado pelo servidor
+			start_heartbeat()
 
 			if in_round and is_in_round:
 				_client_update_character_peer_id(uuid_base, local_peer_id)
@@ -712,7 +715,6 @@ func handle_server_response(response: Dictionary) -> void:
 		"reject":
 			_log_debug("Conexão rejeitada: %s" % response.get("reason",""))
 			_disconnect_from_server()
-			start_connection_attempts(server_address, server_port)
 
 
 # ===== EXECUÇÃO DE BOTÕES DE CONEXÃO =====

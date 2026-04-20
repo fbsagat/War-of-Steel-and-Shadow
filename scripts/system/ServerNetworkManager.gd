@@ -22,7 +22,7 @@ var _player_rpc_timestamps = {}
 ## Atenção! A informação em client_latency_map é uma informação não confiável q vem do cliente
 var client_latency_map: Dictionary = {}
 var last_ping_from_client : Dictionary = {} # peer_id -> timestamp
-var timeout_limit := 4000 # ms
+var timeout_limit := 3000 # ms
 
 ## Sincronização de objetos
 const _PEER_READY_DELAY := 0.15  # segundos de carência pós-conexão
@@ -40,6 +40,10 @@ var _in_game_peers: Array = []
 ## { object_id: int → { "pos": Vector3, "rot": Vector3 } }
 var _last_sent_state: Dictionary = {}
 
+## Lista com session ids de peers que estão com desconexão em andamento
+var _disconnecting_peers: Dictionary = {} # peer_id -> timestamp (ticks_msec)
+const DISCONNECT_CLEANUP_TIMEOUT: float = 8.0 # Tempo máximo (segundos) antes de remover
+
 ## Threshold de posição para considerar mudança (metros)
 @export var pos_change_threshold: float = 0.005
 
@@ -49,6 +53,7 @@ var _last_sent_state: Dictionary = {}
 # ===== INICIALIZAÇÃO =====
 
 func initialize():
+	_setup_cleanup_timer()
 	_player_rpc_timestamps.clear()
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
@@ -57,7 +62,18 @@ func initialize():
 func _process(delta: float):
 	_server_update_batch(delta)
 	_client_timout_detection(delta)
+	
+	
+# ===== FUNÇÕES AUXILIARES DE SETUP =====
 
+func _setup_cleanup_timer():
+	var timer = Timer.new()
+	timer.name = "disconnecting_peers_cleanup_timer"
+	timer.wait_time = 1.0
+	timer.one_shot = false
+	timer.autostart = true
+	timer.timeout.connect(_cleanup_stale_peers)
+	add_child(timer)
 
 # ===== CLIENT TIMOUT DETECTOR =====
 
@@ -101,7 +117,7 @@ func _on_client_timeout(peer_uuid: String):
 
 ## 1. Recebe o 'client_time' e o devolve imediatamente (ECHO)
 ## 2. Envia de volta o mesmo timestamp para o cliente específico
-func _client_send_ping(client_time: float):
+func _server_send_ping(client_time: float):
 	var peer_id = multiplayer.get_remote_sender_id()
 	var uuid = client_registry.get_uuid_by_peer_id(peer_id)
 
@@ -114,9 +130,10 @@ func _client_send_ping(client_time: float):
 	var state_list = [client_registry.ClientState.DISCONNECTED, client_registry.ClientState.CONNECTING]
 	if state in state_list:
 		return
-		
-	_log_debug("_client_receive_pong", true)
-	rpc_id(peer_id, "_client_receive_pong", client_time)
+	
+	if client_registry.players_peer_ids_cache.has(peer_id):
+		_log_debug("_client_receive_pong %s" % peer_id, true)
+		rpc_id(peer_id, "_client_receive_pong", client_time)
 
 # Recebe o ping calculado pelo cliente
 func _server_report_ping(client_latency: int):
@@ -131,9 +148,30 @@ func _server_report_ping(client_latency: int):
 # ===== CONECÇÃO =====
 
 func _on_peer_connected(peer_id: int) -> void:
+	_log_debug("✓ Cliente conectado: Peer ID %d" % peer_id)
 	pass
 
+func _server_give_me_configs():
+	var peer_id = multiplayer.get_remote_sender_id()
+	if not _is_peer_connected(peer_id):
+		return
+	_log_debug("✓ Enviando configurações do servidor para o cliente: Peer ID %d" % peer_id)
+	
+	var configs: Dictionary = {
+		"max_players_per_room": server_manager.max_players_per_room,
+		"min_players_to_start": server_manager.min_players_to_start,
+		"server_name": server_manager.public_server_name,
+		"server_id": server_manager.server_id,
+	}
+	
+	# Atualiza max_players_per_room e min_players_to_start para clientes
+	# atualiza nome do servidor e envia id do servidor
+	_log_debug("_client_update_info %d" % peer_id, true)
+	rpc_id(peer_id, "_client_update_info", configs)
+		
 func _on_peer_disconnected(peer_id: int):
+	_disconnecting_peers.erase(peer_id)
+	
 	if _player_rpc_timestamps.has(peer_id):
 		_player_rpc_timestamps.erase(peer_id)
 	if not _player_rpc_timestamps.has(peer_id):
@@ -165,15 +203,16 @@ func is_rpc_allowed(peer_id: int) -> bool:
 
 ## Servidor recebe hello do cliente, processa e responde
 func _server_receive_hello(payload: Dictionary):
-	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
-		return
-		
 	var peer_id = multiplayer.get_remote_sender_id()
+	
+	if not _is_peer_connected(peer_id):
+		return
+	
 	var response = server_manager.process_client_hello(payload, peer_id)
 
-	if _is_peer_connected(peer_id):
+	if client_registry.players_peer_ids_cache.has(peer_id):
 		# Destino: game_manager.handle_server_response
-		_log_debug("_client_receive_auth_result", true)
+		_log_debug("_client_receive_auth_result %d" % peer_id, true)
 		rpc_id(peer_id, "_client_receive_auth_result", response)
 
 # ===== REGISTRO DE JOGADOR =====
@@ -424,7 +463,7 @@ func _server_player_state(pos: Vector3, rot: Vector3, vel: Vector3, running: boo
 			var r_peer_id = client_registry.get_peer_id_by_uuid(r_peer_uuid)
 			if not _in_game_peers.has(r_peer_id):
 				continue
-			_log_debug("_client_player_state", true)
+			#_log_debug("_client_player_state", true)
 			rpc_id(r_peer_id, "_client_player_state", peer_id, pos, rot, vel, running, jumping)
 
 func _server_player_animation_state(speed: float, attacking: bool, defending: bool,
@@ -447,7 +486,7 @@ func _server_player_animation_state(speed: float, attacking: bool, defending: bo
 			var session_id = client_registry.get_peer_id_by_uuid(r_peer_id)
 			if not _in_game_peers.has(r_peer_id):
 				continue
-			_log_debug("_client_player_animation_state", true)
+			#_log_debug("_client_player_animation_state", true)
 			rpc_id(session_id, "_client_player_animation_state", peer_id, speed, attacking,
 				   defending, jumping, aiming, running, block_attacking, on_floor)
 				
@@ -542,7 +581,7 @@ func _send_batch_for_round(round_id: int) -> void:
 		# Verificação: passa apenas se peer_id estiver em uma lista com conectados e em partida
 		if not _in_game_peers.has(peer_id):
 			continue
-
+		
 		if enet_mp:
 			var ep: ENetPacketPeer = enet_mp.get_peer(peer_id)
 			if not ep or ep.get_state() != ENetPacketPeer.STATE_CONNECTED:
@@ -550,7 +589,7 @@ func _send_batch_for_round(round_id: int) -> void:
 
 		if not _is_peer_connected(peer_id):
 			continue
-		_log_debug("_rpc_client_batch_sync", true)
+		#_log_debug("_rpc_client_batch_sync", true)
 		_rpc_client_batch_sync.rpc_id(peer_id, round_id, ids, positions, rotations)
 
 ## Retorna true se pos ou rot diferirem do último estado enviado além do threshold.
@@ -610,26 +649,34 @@ func _is_peer_connected(peer_id: int) -> bool:
 	
 	var connected_peers = multiplayer.get_peers()
 	return peer_id in connected_peers
-	
+
+func _cleanup_stale_peers():
+	if _disconnecting_peers.is_empty():
+		return
+
+	var now = Time.get_ticks_msec()
+	var timeout_ms = DISCONNECT_CLEANUP_TIMEOUT * 1000
+	var to_remove: Array[int] = []
+
+	for peer_id: int in _disconnecting_peers:
+		if now - _disconnecting_peers[peer_id] > timeout_ms:
+			to_remove.append(peer_id)
+
+	for peer_id in to_remove:
+		_disconnecting_peers.erase(peer_id)
+		_log_debug("🧹 Peer órfão removido do cache de desconexão: %d" % peer_id)
+
 func _safe_disconnect(peer_id: int):
-	if not multiplayer.has_multiplayer_peer():
+	if peer_id in _disconnecting_peers or peer_id not in multiplayer.get_peers():
 		return
+
+	# Marca o peer com timestamp atual
+	_disconnecting_peers[peer_id] = Time.get_ticks_msec()
 	
-	var peer = multiplayer.multiplayer_peer
-	if peer == null:
-		return
+	client_registry.players_peer_ids_cache.erase(peer_id)
+	stop_peer_sync(peer_id)
+	multiplayer.disconnect_peer(peer_id)
+	_log_debug("⚠️ Peer %d marcado para desconexão imediata." % peer_id)
 	
-	# Checa se ainda está ativo
-	if not peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED:
-		return
-	
-	# Checa se o peer ainda existe
-	if peer_id in multiplayer.get_peers():
-		# Desabilita o peer_id para o sync de objetos
-		stop_peer_sync(peer_id)
-		peer.disconnect_peer(peer_id)
-	else:
-		_log_debug("⚠️ Peer já desconectado: %d" % peer_id)
-		
 func _get_log_prefix() -> String:
 	return "[SERVER][NetworkManager]"

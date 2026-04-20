@@ -19,7 +19,7 @@ class_name Initializer_
 ## [TESTES] [Clientes] Iniciar com o mouse destrancado
 @export var start_unlocked_mouse: bool = true
 ## Ativa/desativa persistência do servidor (para server_id, server_secret e dados de clientes)
-@export var is_persistent: bool = true
+@export var is_persistent: bool = false
 
 # Instruções para debug
 ## Executa _log_debug apenas nos itens selecionados

@@ -52,7 +52,7 @@ func _get_log_prefix() -> String:
 # ===== HEARTBEAT =====
 
 @rpc("any_peer", "call_remote", "unreliable")
-func _client_send_ping(_client_time):
+func _server_send_ping(_client_time):
 	pass
 
 @rpc("any_peer", "call_remote", "unreliable")
@@ -64,6 +64,10 @@ func _client_receive_pong(_client_time):
 	pass
 
 # ===== AUTENTICAÇÃO =====
+
+@rpc("any_peer", "call_remote", "unreliable")
+func _server_give_me_configs():
+	pass
 
 @rpc("any_peer", "call_remote", "unreliable")
 func _server_receive_hello(_payload: Dictionary):

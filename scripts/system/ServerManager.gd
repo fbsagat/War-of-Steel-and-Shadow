@@ -505,7 +505,6 @@ func process_client_hello(payload: Dictionary, peer_id: int) -> Dictionary:
 				var client = client_registry.get_player(client_uuid)
 				if client and client["round_id"] == -1:
 					client_registry.set_player_state(client_uuid, client_registry.ClientState.LOBBY)
-				
 				return {"status": "ok", "server_id": server_id, "player_name": player["name"]}
 			else:
 				# Marca player como conectado no round
@@ -519,7 +518,7 @@ func process_client_hello(payload: Dictionary, peer_id: int) -> Dictionary:
 	client_registry._register_connection(uuid_base)
 
 	var new_token = client_registry._compute_token(uuid_base)
-
+	client_registry.register_player(uuid_base, peer_id)
 	return {
 		"status": "new_token",
 		"token": new_token,
@@ -532,20 +531,6 @@ func process_client_hello(payload: Dictionary, peer_id: int) -> Dictionary:
 ## Callback quando um cliente conecta ao servidor
 func _on_peer_connected(peer_id: int):
 	_log_debug("✓ Cliente conectado: Peer ID %d" % peer_id)
-	
-	# Envia configurações do servidor para o cliente
-	var configs: Dictionary = {
-		"max_players_per_room": max_players_per_room,
-		"min_players_to_start": min_players_to_start,
-		"server_name": public_server_name,
-		"server_id": server_id,
-	}
-	
-	# Atualiza max_players_per_room e min_players_to_start para clientes
-	# atualiza nome do servidor e envia id do servidor
-	if _is_peer_connected(peer_id):
-		_log_debug("_client_update_info", true)
-		network_manager.rpc_id(peer_id, "_client_update_info", configs)
 
 ## Callback quando um cliente desconecta
 func _on_peer_disconnected(peer_id: int):
