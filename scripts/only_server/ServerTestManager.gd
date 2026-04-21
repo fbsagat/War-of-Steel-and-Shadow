@@ -23,7 +23,7 @@ class_name TestManager
 var server_manager: ServerManager = null
 var network_manager: NetworkManager = null
 var item_database :ItemDatabase = null
-var map_manager: MapManager = null
+var map_manager: ServerMapManager = null
 var client_registry: ClientRegistry = null
 var room_registry: RoomRegistry = null
 var round_registry: RoundRegistry = null

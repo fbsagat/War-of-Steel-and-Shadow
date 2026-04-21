@@ -89,7 +89,7 @@ func _init_server(is_headless):
 	client_registry = preload("res://scripts/only_server/registrars/ServerClientRegistry.gd").new()
 	room_registry = preload("res://scripts/only_server/registrars/ServerRoomRegistry.gd").new()
 	round_registry = preload("res://scripts/only_server/registrars/ServerRoundRegistry.gd").new()
-	map_manager = preload("res://scripts/system/MapManager.gd").new()
+	map_manager = preload("res://scripts/only_server/ServerMapManager.gd").new()
 	item_database = preload("res://scripts/gameplay/ItemDatabase.gd").new()
 	object_manager = preload("res://scripts/only_server/ServerObjectManager.gd").new()
 	test_manager = preload("res://scripts/only_server/ServerTestManager.gd").new()
@@ -192,7 +192,7 @@ func _init_server(is_headless):
 	
 	# Carrega sistema de persistência se estiver ativado
 	if is_persistent:
-		persistence_manager = preload("res://scripts/only_server/persistence_manager.gd").new()
+		persistence_manager = preload("res://scripts/only_server/server_persistence_manager.gd").new()
 		persistence_manager.name = "persistence_manager"
 		server_manager.add_child.call_deferred(persistence_manager)
 		server_manager.persistence_manager = persistence_manager
@@ -259,8 +259,8 @@ func _init_client(id_file_):
 	var warning_overlay_scene: PackedScene = preload("res://scenes/ui/warning_overlay.tscn")
 	
 	item_database = preload("res://scripts/gameplay/ItemDatabase.gd").new()
-	map_manager = preload("res://scripts/system/MapManager.gd").new()
-	server_list_manager = preload("res://scripts/system/serverlist_manager.gd").new()
+	map_manager = preload("res://scripts/only_client/ClientMapManager.gd").new()
+	server_list_manager = preload("res://scripts/only_server/serverlist_manager.gd").new()
 
 	network_manager = network_manager_scene.instantiate()
 	game_manager = game_manager_scene.instantiate()

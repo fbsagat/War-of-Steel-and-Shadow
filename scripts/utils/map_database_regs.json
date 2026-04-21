@@ -1,0 +1,30 @@
+[
+  {
+	"id": 1,
+	"scene_path": "res://scenes/maps/test_map/test_map.tscn",
+	"name": "Test Map",
+	"thumb_path": "res://assets/thumbs/test.png",
+	"min_players": 1,
+	"max_players": 12,
+	"enabled": true,
+	"weight": 1.0,
+	"modes": ["test"],
+	"size": "small",
+	"tags": ["debug"],
+	"checksum": ""
+  },
+  {
+	"id": 2,
+	"scene_path": "res://scenes/maps/vainer_village/vainer_village.tscn",
+	"name": "Vainer Village",
+	"thumb_path": "res://assets/thumbs/vainer.png",
+	"min_players": 2,
+	"max_players": 20,
+	"enabled": true,
+	"weight": 1.2,
+	"modes": ["deathmatch"],
+	"size": "large",
+	"tags": ["open", "village"],
+	"checksum": ""
+  }
+]

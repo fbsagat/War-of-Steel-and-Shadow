@@ -102,6 +102,7 @@ var initializer: GameInitializer = null
 ## Formato: {peer_uuid: {pos: Vector3, vel: Vector3, rot: Vector3, timestamp: int}}
 var player_states: Dictionary = {}
 var actual_camera: Camera3D = null
+var is_loading: bool = false
 
 # ===== INICIALIZAÇÃO DO MANAGER =====
 
@@ -1229,6 +1230,18 @@ func _notify_kicked_player(kicked_player_uuid: String):
 
 ## Inicia uma nova rodada na sala.
 func _handle_start_round(peer_id: int, round_settings: Dictionary, is_test: bool = false):
+	# Aguarda liberação com timeout de segurança (~10s a 60fps)
+	var timeout_frames: int = 600
+	var waited_frames: int = 0
+
+	while is_loading:
+		await get_tree().process_frame
+		waited_frames += 1
+		if waited_frames >= timeout_frames:
+			_log_debug("Timeout: is_loading não liberou após %d frames" % timeout_frames)
+			break
+	
+	is_loading = true
 	var player_uuid = client_registry.get_uuid_by_peer_id(peer_id)
 	var player = client_registry.get_player(player_uuid)
 	
@@ -1337,7 +1350,7 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary, is_test: bool
 	await get_tree().process_frame
 	
 	# Carrega o mapa
-	var result = await map_manager.load_map(map_scene, round_node, actual_camera)
+	var result: bool = await map_manager.load_map(map_scene, round_node, actual_camera)
 	
 	if not result:
 		push_error("Falha crítica ao carregar o mapa!: ", result)
@@ -1426,6 +1439,9 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary, is_test: bool
 		if rounds_count == 1:
 			await get_tree().process_frame
 			_find_a_next_round_to_camera(round_data["id"])
+	
+	# termina de carregar o round
+	is_loading = false
 
 
 # ===== INSTANCIAÇÃO NO SERVIDOR =====
