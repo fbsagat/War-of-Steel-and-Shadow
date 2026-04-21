@@ -71,7 +71,7 @@ func _ready() -> void:
 		test_threaded_loading()
 
 func test_threaded_loading():
-	var path = "res://scenes/gameplay/terrain_3d.tscn"
+	var path = "res://scenes/maps/vainer_village/vainer_village.tscn"
 
 	print("Testando carregamento em thread: %s" % path)
 	print("Arquivo existe: %s" % FileAccess.file_exists(path))

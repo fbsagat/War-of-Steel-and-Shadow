@@ -86,13 +86,13 @@ func _init_server(is_headless):
 	# Instancia managers e registros
 	var network_manager_scene: PackedScene = preload("res://scenes/system/server_network_manager.tscn")
 	var server_manager_scene: PackedScene = preload("res://scenes/system/server_manager.tscn")
-	client_registry = preload("res://scripts/only_server/registrars/ClientRegistry.gd").new()
-	room_registry = preload("res://scripts/only_server/registrars/RoomRegistry.gd").new()
-	round_registry = preload("res://scripts/only_server/registrars/RoundRegistry.gd").new()
+	client_registry = preload("res://scripts/only_server/registrars/ServerClientRegistry.gd").new()
+	room_registry = preload("res://scripts/only_server/registrars/ServerRoomRegistry.gd").new()
+	round_registry = preload("res://scripts/only_server/registrars/ServerRoundRegistry.gd").new()
 	map_manager = preload("res://scripts/system/MapManager.gd").new()
 	item_database = preload("res://scripts/gameplay/ItemDatabase.gd").new()
-	object_manager = preload("res://scripts/only_server/ObjectManager.gd").new()
-	test_manager = preload("res://scripts/only_server/TestManager.gd").new()
+	object_manager = preload("res://scripts/only_server/ServerObjectManager.gd").new()
+	test_manager = preload("res://scripts/only_server/ServerTestManager.gd").new()
 	
 	network_manager = network_manager_scene.instantiate()
 	server_manager = server_manager_scene.instantiate()
@@ -192,7 +192,7 @@ func _init_server(is_headless):
 	
 	# Carrega sistema de persistência se estiver ativado
 	if is_persistent:
-		persistence_manager = preload("res://scripts/only_server/server_persistence.gd").new()
+		persistence_manager = preload("res://scripts/only_server/persistence_manager.gd").new()
 		persistence_manager.name = "persistence_manager"
 		server_manager.add_child.call_deferred(persistence_manager)
 		server_manager.persistence_manager = persistence_manager

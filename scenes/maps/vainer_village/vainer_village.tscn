@@ -14,7 +14,7 @@
 size = 0.25
 
 [node name="Terrain3D" type="Terrain3D" unique_id=110752287]
-data_directory = "res://scenes/system/terrain_data"
+data_directory = "res://scenes/maps/vainer_village/terrain_data"
 material = ExtResource("1_3txeo")
 assets = ExtResource("1_0rjur")
 collision_mode = 3

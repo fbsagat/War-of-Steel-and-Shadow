@@ -42,7 +42,7 @@ var server_id : String
 var server_secret : PackedByteArray
 
 @export_category("Default Node References")
-const map_scene : String = "res://scenes/gameplay/terrain_3d.tscn"
+const map_scene : String = "res://scenes/maps/vainer_village/vainer_village.tscn"
 const player_scene : String = "res://scenes/gameplay/player_warrior.tscn"
 const camera_controller : String = "res://scenes/system/camera_controller.tscn"
 const server_camera : String = "res://scenes/server_scenes/server_camera.tscn"
