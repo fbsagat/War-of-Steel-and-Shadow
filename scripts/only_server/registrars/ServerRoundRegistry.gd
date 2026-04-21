@@ -695,7 +695,7 @@ func sky3d_config_generator() -> Dictionary:
 	var paleta = paletas_cores[randi() % paletas_cores.size()]
 
 	config["time"] = {
-		"current_time": randf_range(6.0, 14.0),
+		"current_time": randf_range(5.0, 18.0),
 		"day_duration": randf_range(840.0, 1200.0),
 		"auto_advance": true,
 		"time_scale": 1.0

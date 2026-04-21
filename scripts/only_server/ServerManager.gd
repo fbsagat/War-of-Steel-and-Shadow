@@ -42,7 +42,6 @@ var server_id : String
 var server_secret : PackedByteArray
 
 @export_category("Default Node References")
-const map_scene : String = "res://scenes/maps/vainer_village/vainer_village.tscn"
 const player_scene : String = "res://scenes/gameplay/player_warrior.tscn"
 const camera_controller : String = "res://scenes/system/camera_controller.tscn"
 const server_camera : String = "res://scenes/server_scenes/server_camera.tscn"
@@ -80,7 +79,7 @@ var round_registry: RoundRegistry = null
 var item_database: ItemDatabase = null
 var object_manager: ObjectManager = null
 var test_manager: TestManager = null
-var map_manager: Node = null
+var map_manager: MapManager = null
 var persistence_manager: ServerPersistence = null
 var debug_overlay = null
 var warning_overlay = null
@@ -729,7 +728,7 @@ func _execute_player_return_to_round(peer_id: int, player_uuid: String):
 		var match_data = {
 			"round_id": round_["id"],
 			"room_id": round_["room_id"],
-			"map_scene": map_scene,
+			"map_scene": round_["settings"]["selected_map"],
 			"settings": round_["settings"],
 			"players": filtered_players,
 			"player_items": [],
@@ -893,7 +892,7 @@ func _mark_player_disconnected(peer_id: int, _chosen: bool):
 		_log_debug("✓ uuid=%s removido de disconnected_players na rodada %d" % [player["name"], _round["id"]])
 
 # Cria uma nova sala e adiciona o criador como host
-func _handle_create_room(peer_id: int, room_name: String, password: String):
+func _handle_create_room(peer_id: int, room_name: String, password: String, selected_map: int = 2):
 	var player_uuid = client_registry.get_uuid_by_peer_id(peer_id)
 	var player = client_registry.get_player(player_uuid)
 	
@@ -927,8 +926,8 @@ func _handle_create_room(peer_id: int, room_name: String, password: String):
 		password,
 		player_uuid,
 		min_players_to_start,
-		max_players_per_room
-	)
+		max_players_per_room,
+		selected_map)
 	
 	if room_data.is_empty():
 		_send_error_to_client(peer_id, "Erro ao criar sala")
@@ -1328,8 +1327,11 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary, is_test: bool
 	
 	# Extrai configurações da rodada
 	var final_settings = round_data.get("settings", {})
-	var map_scene_ = final_settings.get("map_scene", map_scene)
-		
+	
+	# Pega scene_path do mapa selecionado para a rodada
+	var map = map_manager.map_database.get_map_by_id(round_settings["selected_map"])
+	var map_scene_ = map["scene_path"]
+	
 	await get_tree().process_frame
 		
 	# Cria câmera livre se não estiver em modo headless
@@ -1350,13 +1352,13 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary, is_test: bool
 	await get_tree().process_frame
 	
 	# Carrega o mapa
-	var result: bool = await map_manager.load_map(map_scene, round_node, actual_camera)
+	var result: bool = await map_manager.load_map(map_scene_, round_node, actual_camera)
 	
 	if not result:
 		push_error("Falha crítica ao carregar o mapa!: ", result)
 	else:
 		_log_debug("Mapa carregado com sucesso")
-		round_registry.set_round_map_node(round_data["id"], round_node.get_node_or_null("Terrain3D"))
+		round_registry.set_round_map_node(round_data["id"], map_manager.get_current_map())
 		
 	await get_tree().process_frame
 	
@@ -1391,7 +1393,7 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary, is_test: bool
 	await get_tree().process_frame
 	
 	# Instancia mapa e players no servidor também
-	await _server_instantiate_round(match_data, round_node, players_node)
+	await _server_instantiate_round(match_data, players_node)
 			
 	await get_tree().process_frame
 	
@@ -1448,12 +1450,13 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary, is_test: bool
 
 ## Instancia a rodada no servidor (mapa e players)
 ## Chamado após enviar comando para clientes carregarem
-func _server_instantiate_round(match_data: Dictionary, round_node, players_node):
+func _server_instantiate_round(match_data: Dictionary, players_node):
 	_log_debug("Instanciando rodada no servidor...")
 	
 	# Aplica configurações de mapa
 	await map_manager.apply_map_configs(match_data["settings"])
-	var terrain_3d = round_node.get_node_or_null("Terrain3D")
+	var terrain = round_registry.get_round(match_data["round_id"])["map_node"]
+	var terrain_3d = terrain.get_node_or_null("Terrain3D")
 		
 	await get_tree().process_frame
 	

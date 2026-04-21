@@ -5,7 +5,7 @@
 	"name": "Test Map",
 	"thumb_path": "res://assets/thumbs/test.png",
 	"min_players": 1,
-	"max_players": 12,
+	"max_players": 20,
 	"enabled": true,
 	"weight": 1.0,
 	"modes": ["test"],

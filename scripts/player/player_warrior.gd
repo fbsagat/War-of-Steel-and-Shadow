@@ -100,7 +100,7 @@ const STAMINA_RECOVERY_RATE: float = 15.0   # por segundo
 const MAX_DIRECTION_HISTORY = 2
 
 # Variáveis de sincronização com terreno
-var terrain_: Terrain3D = null
+var terrain_: Node3D = null
 var central_spawn: Node3D = null
 var underground_timer: Timer = null
 var terrain_height_cache: float = -INF

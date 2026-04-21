@@ -52,7 +52,7 @@ const MAX_SAVED_TOKENS: int = 50
 
 var item_database: ItemDatabase = null
 var network_manager: NetworkManager = null
-var map_manager: ClientMapManager = null
+var map_manager: MapManager = null
 var initializer: GameInitializer = null
 
 # ===== VARIÁVEIS INTERNAS =====
@@ -1190,7 +1190,7 @@ func _load_round(server_id: String, match_data: Dictionary, is_return: bool) -> 
 		_log_debug("- %s (ID: %s)%s%s" % [player["name"], player["uuid_base"], is_host, is_me])
 
 	_log_debug("========================================")
-
+	
 	await get_tree().process_frame
 
 	# Cria o nó organizador da rodada

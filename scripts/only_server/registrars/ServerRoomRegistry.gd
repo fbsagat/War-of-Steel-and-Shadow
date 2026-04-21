@@ -95,7 +95,7 @@ func _get_next_room_id() -> int:
 	return max_id
 
 ## Cria nova sala. Retorna RoomData completo ou {} se falhar.
-func create_room(room_name: String, password: String, host_uuid: String, min_players: int, max_players: int) -> Dictionary:
+func create_room(room_name: String, password: String, host_uuid: String, min_players: int, max_players: int, selected_map: int = 1) -> Dictionary:
 	var room_id = _get_next_room_id()
 
 	if rooms.has(room_id):
@@ -123,7 +123,10 @@ func create_room(room_name: String, password: String, host_uuid: String, min_pla
 		"total_playtime": 0.0,
 		"available_colors": _get_color_pool(),
 		"last_hue": 0.0,
-		"settings": {"locked": false}
+		"settings": {
+			"locked": false,
+			"selected_map": selected_map
+			}
 	}
 
 	rooms[room_id] = room_data

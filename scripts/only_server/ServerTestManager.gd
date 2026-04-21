@@ -16,6 +16,7 @@ class_name TestManager
 
 @export_category("Debug")
 @export var debug_mode: bool = true
+@export var map_id: int = 1
 
 
 # ===== REGISTROS (Injetados pelo initializer.gd) =====
@@ -23,7 +24,7 @@ class_name TestManager
 var server_manager: ServerManager = null
 var network_manager: NetworkManager = null
 var item_database :ItemDatabase = null
-var map_manager: ServerMapManager = null
+var map_manager: MapManager = null
 var client_registry: ClientRegistry = null
 var room_registry: RoomRegistry = null
 var round_registry: RoundRegistry = null
@@ -124,12 +125,10 @@ func create_test_round(nome_sala_: String = "Sala de Teste"):
 	
 	await get_tree().process_frame
 	
-	# Remove jogadores de qualquer round ou partida que possam estar
-	#for i in range(server_manager.simulador_players_qtd - 1):
-		#client_registry.
+	var selected_map: int = map_id
 	
 	# Cria sala no RoomRegistry
-	server_manager._handle_create_room(host_peer_id, "Sala de testes", "")
+	server_manager._handle_create_room(host_peer_id, "Sala de testes", "", selected_map)
 	
 	var host = client_registry.get_player_by_uuid(host_uuid)
 	var room_data = room_registry.get_room(host["room_id"])
@@ -148,11 +147,10 @@ func create_test_round(nome_sala_: String = "Sala de Teste"):
 	
 	await get_tree().create_timer(0.2).timeout
 	
+	server_manager._handle_start_round(players[0]["peer_id"], {"selected_map": selected_map}, true)
+	
 	# Cria rodada no RoundRegistry
 	_log_debug("  ✓ Iniciando rodada de teste...")
-	
-	server_manager._handle_start_round(players[0]["peer_id"], {}, true)
-	
 	
 # ===== UTILITÁRIOS =====
 

@@ -41,7 +41,9 @@ var server_list_manager: ServerListManager = null
 ## Carrega a base de dados de itens de gameplay, comum entre servidor e clientes
 var item_database: ItemDatabase = null
 ## Gerenciador de mapas e spawns de players
-var map_manager: Node = null
+var map_manager: MapManager = null
+## Carrega a base de dados de mapas
+var map_database: MapDatabase = null
 ## Gerenciador de persistência do servidor
 var persistence_manager: ServerPersistence = null
 
@@ -89,7 +91,8 @@ func _init_server(is_headless):
 	client_registry = preload("res://scripts/only_server/registrars/ServerClientRegistry.gd").new()
 	room_registry = preload("res://scripts/only_server/registrars/ServerRoomRegistry.gd").new()
 	round_registry = preload("res://scripts/only_server/registrars/ServerRoundRegistry.gd").new()
-	map_manager = preload("res://scripts/only_server/ServerMapManager.gd").new()
+	map_manager = preload("res://scripts/system/MapManager.gd").new()
+	map_database = preload("res://scripts/only_server/MapDatabase.gd").new()
 	item_database = preload("res://scripts/gameplay/ItemDatabase.gd").new()
 	object_manager = preload("res://scripts/only_server/ServerObjectManager.gd").new()
 	test_manager = preload("res://scripts/only_server/ServerTestManager.gd").new()
@@ -104,6 +107,7 @@ func _init_server(is_headless):
 	room_registry.name = "RoomRegistry"
 	round_registry.name = "RoundRegistry"
 	map_manager.name = "MapManager"
+	map_database.name = "MapDatabase"
 	item_database.name = "ItemDatabase"
 	object_manager.name = "ObjectManager"
 	test_manager.name = "TestManager"
@@ -115,6 +119,7 @@ func _init_server(is_headless):
 	get_tree().root.add_child.call_deferred(room_registry)
 	get_tree().root.add_child.call_deferred(round_registry)
 	get_tree().root.add_child.call_deferred(map_manager)
+	map_manager.add_child.call_deferred(map_database)
 	get_tree().root.add_child.call_deferred(item_database)
 	get_tree().root.add_child.call_deferred(object_manager)
 	get_tree().root.add_child.call_deferred(test_manager)
@@ -167,6 +172,10 @@ func _init_server(is_headless):
 	
 	# MapManager precisa de:
 	map_manager.initializer = self
+	map_manager.map_database = map_database
+	
+	# MapDatabase precisa de:
+	map_database.initializer = self
 	
 	# ItemDatabase precisa de:
 	item_database.initializer = self
@@ -230,6 +239,7 @@ func _init_server(is_headless):
 	server_manager.is_headless = is_headless
 	map_manager.is_server = true
 	item_database.is_server = true
+	map_database.load_map_registry()
 	
 	# Configurar modo de testes
 	if test_mode:
@@ -259,7 +269,7 @@ func _init_client(id_file_):
 	var warning_overlay_scene: PackedScene = preload("res://scenes/ui/warning_overlay.tscn")
 	
 	item_database = preload("res://scripts/gameplay/ItemDatabase.gd").new()
-	map_manager = preload("res://scripts/only_client/ClientMapManager.gd").new()
+	map_manager = preload("res://scripts/system/MapManager.gd").new()
 	server_list_manager = preload("res://scripts/only_server/serverlist_manager.gd").new()
 
 	network_manager = network_manager_scene.instantiate()

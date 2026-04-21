@@ -1,23 +1,23 @@
 [gd_scene format=3 uid="uid://x34e4v60vdmy"]
 
-[ext_resource type="Script" uid="uid://ba508qknm6m5" path="res://demo/src/DemoScene.gd" id="1_po4vw"]
+[ext_resource type="Script" uid="uid://dyrv28v8ihds8" path="res://demo/src/DemoScene.gd" id="1_po4vw"]
 [ext_resource type="PackedScene" uid="uid://dwnhqfjq7v1pq" path="res://demo/components/Borders.tscn" id="3_3upu0"]
-[ext_resource type="Shader" uid="uid://dw1cefd46umfe" path="res://addons/sky_3d/shaders/SkyMaterial.gdshader" id="3_e4kas"]
+[ext_resource type="Shader" uid="uid://bipvxhsup06dy" path="res://addons/sky_3d/shaders/SkyMaterial.gdshader" id="3_e4kas"]
 [ext_resource type="Texture2D" uid="uid://cfqk60lpl5ljv" path="res://addons/sky_3d/assets/resources/SNoise.tres" id="4_10bv2"]
 [ext_resource type="PackedScene" uid="uid://domhm87hbhbg1" path="res://demo/components/Player.tscn" id="4_fk3ul"]
 [ext_resource type="PackedScene" uid="uid://djhl3foqkj4e2" path="res://demo/components/Tunnel.tscn" id="5_2lvlr"]
-[ext_resource type="Texture2D" uid="uid://mo6emlvn0a1x" path="res://addons/sky_3d/assets/textures/noiseClouds.png" id="5_qxi3g"]
+[ext_resource type="Texture2D" uid="uid://d0k0u3ty4x0oq" path="res://addons/sky_3d/assets/textures/noiseClouds.png" id="5_qxi3g"]
 [ext_resource type="PackedScene" uid="uid://d2jihfohphuue" path="res://demo/components/UI.tscn" id="5_rc7e2"]
-[ext_resource type="Texture2D" uid="uid://03s2mulp6jff" path="res://addons/sky_3d/assets/thirdparty/textures/moon/MoonMap.png" id="6_ch65t"]
-[ext_resource type="Texture2D" uid="uid://d2woysd0c1ck6" path="res://addons/sky_3d/assets/textures/noise.jpg" id="7_7erbs"]
+[ext_resource type="Texture2D" uid="uid://cgkpt1phegr0o" path="res://addons/sky_3d/assets/thirdparty/textures/moon/MoonMap.png" id="6_ch65t"]
+[ext_resource type="Texture2D" uid="uid://duouhha3p8le4" path="res://addons/sky_3d/assets/textures/noise.jpg" id="7_7erbs"]
 [ext_resource type="NavigationMesh" uid="uid://yf3fu23666k8" path="res://demo/data/nav_mesh.res" id="8_6jfdr"]
-[ext_resource type="Texture2D" uid="uid://63jy4sjke7i6" path="res://addons/sky_3d/assets/thirdparty/textures/milkyway/StarField.jpg" id="8_6nd03"]
-[ext_resource type="Texture2D" uid="uid://b6q5qe6q000m7" path="res://addons/sky_3d/assets/thirdparty/textures/milkyway/Milkyway.jpg" id="9_6lbwu"]
+[ext_resource type="Texture2D" uid="uid://cmjud60lva1s4" path="res://addons/sky_3d/assets/thirdparty/textures/milkyway/StarField.jpg" id="8_6nd03"]
+[ext_resource type="Texture2D" uid="uid://ce52d4b2a7g87" path="res://addons/sky_3d/assets/thirdparty/textures/milkyway/Milkyway.jpg" id="9_6lbwu"]
 [ext_resource type="Terrain3DAssets" uid="uid://dal3jhw6241qg" path="res://demo/data/assets.tres" id="10_qmhh8"]
-[ext_resource type="Script" uid="uid://b551jsaemg3qo" path="res://addons/sky_3d/src/Sky3D.gd" id="10_typrb"]
-[ext_resource type="Script" uid="uid://b0ml57ff1ehx6" path="res://addons/sky_3d/src/SkyDome.gd" id="11_y32s5"]
+[ext_resource type="Script" uid="uid://b5u3wf6k6i0q6" path="res://addons/sky_3d/src/Sky3D.gd" id="10_typrb"]
+[ext_resource type="Script" uid="uid://dj2qy5yam03pw" path="res://addons/sky_3d/src/SkyDome.gd" id="11_y32s5"]
 [ext_resource type="PackedScene" uid="uid://di5fovhcyd7re" path="res://demo/components/Enemy.tscn" id="12_b2xl8"]
-[ext_resource type="Script" uid="uid://ckck8wyfsjci3" path="res://addons/sky_3d/src/TimeOfDay.gd" id="12_jmdsm"]
+[ext_resource type="Script" uid="uid://cv5j5empg8inu" path="res://addons/sky_3d/src/TimeOfDay.gd" id="12_jmdsm"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_ojoex"]
 shader = ExtResource("3_e4kas")
@@ -107,7 +107,7 @@ background_mode = 2
 sky = SubResource("Sky_a6n5c")
 ambient_light_source = 3
 ambient_light_color = Color(1, 1, 1, 1)
-ambient_light_sky_contribution = 0.78610003
+ambient_light_sky_contribution = 0.81982696
 reflected_light_source = 2
 tonemap_mode = 3
 tonemap_white = 6.0

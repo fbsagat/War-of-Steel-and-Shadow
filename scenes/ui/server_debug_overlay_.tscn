@@ -1,6 +1,0 @@
-[gd_scene format=3 uid="uid://b2h7kw8kf8dyd"]
-
-[ext_resource type="Script" path="res://scripts/ui/server_debug_overlay_.gd" id="1_qk85c"]
-
-[node name="DebugOverlay" type="Node" unique_id=563762291]
-script = ExtResource("1_qk85c")

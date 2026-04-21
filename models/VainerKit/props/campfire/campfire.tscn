@@ -118,17 +118,17 @@ color = Color(10.317386, 3.57094, 0, 1)
 [node name="campfire" parent="." unique_id=968054892 instance=ExtResource("5_0cly2")]
 transform = Transform3D(0.25, 0, 0, 0, 0.25, 0, 0, 0, 0.25, -0.34171587, 0, -0.05597587)
 
-[node name="StaticBody3D" type="StaticBody3D" parent="campfire/Cylinder" parent_id_path=PackedInt32Array(968054892, 914205526) index="0" unique_id=402239853]
+[node name="StaticBody3D" type="StaticBody3D" parent="campfire/Cylinder" parent_id_path=PackedInt32Array(968054892, 346763199) index="0" unique_id=402239853]
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="campfire/Cylinder/StaticBody3D" unique_id=813323415]
 shape = SubResource("ConvexPolygonShape3D_lqls4")
 
-[node name="StaticBody3D" type="StaticBody3D" parent="campfire/Cylinder_003" parent_id_path=PackedInt32Array(968054892, 358466696) index="0" unique_id=76160036]
+[node name="StaticBody3D" type="StaticBody3D" parent="campfire/Cylinder_003" parent_id_path=PackedInt32Array(968054892, 1199622322) index="0" unique_id=76160036]
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="campfire/Cylinder_003/StaticBody3D" unique_id=1739638573]
 shape = SubResource("ConvexPolygonShape3D_lbo5b")
 
-[node name="StaticBody3D" type="StaticBody3D" parent="campfire/Cylinder_005" parent_id_path=PackedInt32Array(968054892, 162450530) index="0" unique_id=1618325904]
+[node name="StaticBody3D" type="StaticBody3D" parent="campfire/Cylinder_005" parent_id_path=PackedInt32Array(968054892, 1189170961) index="0" unique_id=1618325904]
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="campfire/Cylinder_005/StaticBody3D" unique_id=654046893]
 shape = SubResource("ConvexPolygonShape3D_7gpcm")
