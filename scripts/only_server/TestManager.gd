@@ -28,7 +28,7 @@ var client_registry: ClientRegistry = null
 var room_registry: RoomRegistry = null
 var round_registry: RoundRegistry = null
 var object_manager: ObjectManager = null
-var initializer: Initializer_ = null
+var initializer: GameInitializer = null
 
 
 # ===== VARIÁVEIS INTERNAS =====

@@ -94,7 +94,7 @@ var mouse_mode: bool = false
 var current_active_viewport: SubViewport = null
 var viewport_display: TextureRect = null
 var test_mode_check_timer: Timer
-var initializer: Initializer_ = null
+var initializer: GameInitializer = null
 
 # ===== VARIÁVEIS INTERNAS =====
 

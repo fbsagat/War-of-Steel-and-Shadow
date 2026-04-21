@@ -1,5 +1,5 @@
 extends Node
-class_name Initializer_
+class_name GameInitializer
 
 # Configurações
 ## [TESTES] Usa o TestManager para iniciar uma partida logo na execução (localhost)
@@ -14,8 +14,8 @@ class_name Initializer_
 @export var disable_protection: bool = false
 ## [TESTES] Ativa/desativa o debug visual na gameplay
 @export var visual_debug: bool = true
-## [TESTES] Ativa/desativa debug de rpcs (_log_debug's adicionados acima de cada rpc em todo o código)
-@export var rpc_debug: bool = true
+## [TESTES] Ativa/desativa debug de RPCs (_log_debug's adicionados acima de cada RPC em todo o código)
+@export var rpc_debug: bool = false
 ## [TESTES] [Clientes] Iniciar com o mouse destrancado
 @export var start_unlocked_mouse: bool = true
 ## Ativa/desativa persistência do servidor (para server_id, server_secret e dados de clientes)

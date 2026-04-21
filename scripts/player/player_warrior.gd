@@ -63,7 +63,7 @@ var network_manager: NetworkManager = null
 var item_database: ItemDatabase = null
 var server_manager: ServerManager = null
 var game_manager: GameManager = null
-var initializer: Initializer_ = null
+var initializer: GameInitializer = null
 
 # Identificação multiplayer
 var peer_id: int = 0

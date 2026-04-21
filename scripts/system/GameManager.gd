@@ -53,7 +53,7 @@ const MAX_SAVED_TOKENS: int = 50
 var item_database: ItemDatabase = null
 var network_manager: NetworkManager = null
 var map_manager: Node = null
-var initializer: Initializer_ = null
+var initializer: GameInitializer = null
 
 # ===== VARIÁVEIS INTERNAS =====
 

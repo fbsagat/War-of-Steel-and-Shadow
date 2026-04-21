@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://bbtne7r17yl3i"]
+
+[ext_resource type="Script" uid="uid://ncebv3vvc1pq" path="res://scripts/system/GameInitializer.gd" id="1_j5jxx"]
+
+[node name="initializer" type="Node" unique_id=620103514]
+script = ExtResource("1_j5jxx")

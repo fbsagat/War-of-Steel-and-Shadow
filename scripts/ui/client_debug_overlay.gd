@@ -3,7 +3,7 @@ extends CanvasLayer
 # ===== REGISTROS (Injetados pelo initializer.gd) =====
 
 var game_manager: GameManager = null
-var initializer: Initializer_ = null
+var initializer: GameInitializer = null
 
 @onready var label: Label = $Panel/Label
 

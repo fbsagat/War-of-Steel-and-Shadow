@@ -11,7 +11,7 @@ class_name NetworkManager
 
 # ===== REGISTROS (Injetados pelo initializer.gd) =====
 
-var initializer: Initializer_ = null
+var initializer: GameInitializer = null
 
 # ===== CONFIGURAÇÕES =====
 

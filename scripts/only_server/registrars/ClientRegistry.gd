@@ -30,7 +30,7 @@ var round_registry: RoundRegistry = null
 var object_manager: ObjectManager = null
 var item_database: ItemDatabase = null
 var debug_overlay = null
-var initializer: Initializer_ = null
+var initializer: GameInitializer = null
 
 # ===== VARIÁVEIS INTERNAS =====
 

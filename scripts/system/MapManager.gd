@@ -26,7 +26,7 @@ class_name MapManager
 
 # ===== REGISTROS (Injetados pelo initializer.gd) =====
 
-var initializer: Initializer_ = null
+var initializer: GameInitializer = null
 
 # ===== FILA ESTÁTICA COMPARTILHADA =====
 ## Compartilhada entre TODAS as instâncias de MapManager.

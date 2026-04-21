@@ -33,7 +33,7 @@ var object_manager: ObjectManager = null
 var debug_overlay: DebugOverlay = null
 var server_manager: ServerManager = null
 var network_manager: NetworkManager = null
-var initializer: Initializer_ = null
+var initializer: GameInitializer = null
 
 # ===== VARIÁVEIS INTERNAS =====
 

@@ -25,7 +25,7 @@ var client_registry: ClientRegistry = null
 var round_registry: RoundRegistry = null
 var object_manager: ObjectManager = null
 var debug_overlay: DebugOverlay = null
-var initializer: Initializer_ = null
+var initializer: GameInitializer = null
 
 # ===== VARIÁVEIS INTERNAS =====
 
