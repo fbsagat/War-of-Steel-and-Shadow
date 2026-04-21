@@ -239,7 +239,6 @@ func _init_server(is_headless):
 	server_manager.is_headless = is_headless
 	map_manager.is_server = true
 	item_database.is_server = true
-	map_database.load_map_registry()
 	
 	# Configurar modo de testes
 	if test_mode:
@@ -257,8 +256,10 @@ func _init_server(is_headless):
 	room_registry.initialize()
 	round_registry.initialize()
 	item_database.load_database()
+	map_database.load_map_registry()
 	object_manager.initialize()
 	test_manager.initialize()
+	server_manager.finish_start_server_log()
 
 func _init_client(id_file_):
 	# Instancia managers e registros

@@ -100,8 +100,8 @@ class MapData:
 
 	## Retorna uma string legível para logs.
 	func _to_string() -> String:
-		return "[%d] '%s' | size=%s | modes=%s | players=%d–%d | weight=%.2f | enabled=%s" % [
-			id, name, size, ", ".join(modes), min_players, max_players, weight, enabled
+		return "[%d] '%s' | modes=%s | players=%d–%d | " % [
+			id, name, ", ".join(modes), min_players, max_players,
 		]
 
 
@@ -183,7 +183,7 @@ func load_map_registry() -> bool:
 
 		_map_registry[map.id] = map
 		loaded += 1
-		_log_debug("Registrado: %s" % map.to_string())
+		_log_debug("Registrado: %s" % map._to_string())
 
 	_registry_loaded = true
 	_log_debug("Registro concluído — %d válidos | %d ignorados." % [loaded, skipped])
@@ -530,7 +530,7 @@ func request_map_load(map_id: int, player_count: int = 1) -> MapLoadResult:
 	_current_map_id    = map_id
 	get_tree().root.add_child(_current_map_scene)
 
-	_log_debug("Mapa ativo: %s" % map.to_string())
+	_log_debug("Mapa ativo: %s" % map._to_string())
 	map_loaded.emit(map_id)
 
 	if old_id != -1:
@@ -595,7 +595,7 @@ func print_registry_summary() -> void:
 		return
 	_log_debug("─── REGISTRO DE MAPAS (%d) ───────────────────────" % _map_registry.size())
 	for map: MapData in _map_registry.values():
-		_log_debug("  %s" % map.to_string())
+		_log_debug("  %s" % map._to_string())
 	_log_debug("──────────────────────────────────────────────────")
 
 

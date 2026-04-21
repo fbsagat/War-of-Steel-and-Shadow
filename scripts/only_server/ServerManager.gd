@@ -427,7 +427,7 @@ func _start_server():
 	_log_debug("Min. de jogadores/sala: %s, Max. de jogadores/sala: %s" % [min_players_to_start, max_players_per_room])
 	_log_debug("Tempo de espera de reconexão(peer): %sms" % reconnect_timout)
 	_log_debug("-----------------------------------------------------------------")
-	var c = get_node_or_null("CleanupTimer")
+	var c = self.get_node_or_null("cleanup_timer")
 	_log_debug("🆗 Limpador periódico de rounds carregado com sucesso" if c else
 	 "❌ Limpador periódico de rounds não foi carregado")
 	var d = get_node_or_null("DebugTimer")
@@ -452,11 +452,12 @@ func _start_server():
 	# Conecta sinais de rede
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
+
+func finish_start_server_log():
 	_log_debug("================================================================")
 	_log_debug("▶️ Servidor inicializado com sucesso! ▶️")
 	_log_debug("================================================================")
 	print("")
-
 
 # ===== SISTEMA DE IDENTIFIAÇÃO =====
 
@@ -892,7 +893,7 @@ func _mark_player_disconnected(peer_id: int, _chosen: bool):
 		_log_debug("✓ uuid=%s removido de disconnected_players na rodada %d" % [player["name"], _round["id"]])
 
 # Cria uma nova sala e adiciona o criador como host
-func _handle_create_room(peer_id: int, room_name: String, password: String, selected_map: int = 2):
+func _handle_create_room(peer_id: int, room_name: String, password: String, selected_map: int = 3):
 	var player_uuid = client_registry.get_uuid_by_peer_id(peer_id)
 	var player = client_registry.get_player(player_uuid)
 	

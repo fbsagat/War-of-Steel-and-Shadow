@@ -26,5 +26,19 @@
 	"size": "large",
 	"tags": ["open", "village"],
 	"checksum": ""
+  },
+  {
+	"id": 3,
+	"scene_path": "res://scenes/maps/fb_village/fb_village.tscn",
+	"name": "Fabio Village",
+	"thumb_path": "res://assets/thumbs/fbaugusto.png",
+	"min_players": 2,
+	"max_players": 20,
+	"enabled": true,
+	"weight": 1.2,
+	"modes": ["deathmatch"],
+	"size": "large",
+	"tags": ["open", "village"],
+	"checksum": ""
   }
 ]

@@ -23,6 +23,25 @@ last_lod = 0
 last_shadow_lod = 0
 lod0_range = 128.0
 
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_y3ibi"]
+transparency = 4
+cull_mode = 2
+vertex_color_use_as_albedo = true
+backlight_enabled = true
+backlight = Color(0.5, 0.5, 0.5, 1)
+distance_fade_mode = 1
+distance_fade_min_distance = 128.0
+distance_fade_max_distance = 96.0
+
+[sub_resource type="Terrain3DMeshAsset" id="Terrain3DMeshAsset_adagb"]
+id = 1
+generated_type = 1
+height_offset = 0.5
+material_override = SubResource("StandardMaterial3D_y3ibi")
+last_lod = 0
+last_shadow_lod = 0
+lod0_range = 128.0
+
 [sub_resource type="Terrain3DTextureAsset" id="Terrain3DTextureAsset_adagb"]
 name = "Rock"
 albedo_color = Color(0.98939866, 0.98939866, 0.98939854, 1)
@@ -39,11 +58,50 @@ id = 1
 albedo_color = Color(0.60585034, 0.6754324, 0.5141187, 1)
 albedo_texture = ExtResource("3_g8f2m")
 normal_texture = ExtResource("4_aw5y1")
-normal_depth = 0.8
+normal_depth = 0.407
 ao_strength = 0.8
 roughness = 1.0
 uv_scale = 0.05
 
+[sub_resource type="Terrain3DTextureAsset" id="Terrain3DTextureAsset_rh15k"]
+name = "ground037_alb_ht"
+id = 2
+albedo_color = Color(0.57, 0.55935997, 0.4902, 1)
+albedo_texture = ExtResource("3_g8f2m")
+normal_texture = ExtResource("4_aw5y1")
+normal_depth = 1.699
+ao_strength = 0.562
+roughness = 1.0
+uv_scale = 0.32
+detiling_rotation = 0.644
+detiling_shift = 0.822
+
+[sub_resource type="Terrain3DTextureAsset" id="Terrain3DTextureAsset_y3ibi"]
+name = ""
+id = 3
+albedo_color = Color(0.71, 0.65887994, 0.5964, 1)
+albedo_texture = ExtResource("2_y3ibi")
+normal_texture = ExtResource("2_y3ibi")
+normal_depth = 1.53
+ao_strength = 0.231
+roughness = -0.466
+uv_scale = 0.811
+detiling_rotation = 0.264
+detiling_shift = 0.337
+
+[sub_resource type="Terrain3DTextureAsset" id="Terrain3DTextureAsset_cmr6o"]
+name = "metal"
+id = 4
+albedo_color = Color(0.4359263, 0.37033725, 0.3144682, 1)
+albedo_texture = ExtResource("3_g8f2m")
+normal_texture = ExtResource("3_wncaf")
+normal_depth = 0.55
+ao_strength = 0.929
+roughness = 0.369
+uv_scale = 0.958
+detiling_rotation = 0.257
+detiling_shift = 0.214
+
 [resource]
-mesh_list = Array[Terrain3DMeshAsset]([SubResource("Terrain3DMeshAsset_y3ibi")])
-texture_list = Array[Terrain3DTextureAsset]([SubResource("Terrain3DTextureAsset_adagb"), SubResource("Terrain3DTextureAsset_e6edf")])
+mesh_list = Array[Terrain3DMeshAsset]([SubResource("Terrain3DMeshAsset_y3ibi"), SubResource("Terrain3DMeshAsset_adagb")])
+texture_list = Array[Terrain3DTextureAsset]([SubResource("Terrain3DTextureAsset_adagb"), SubResource("Terrain3DTextureAsset_e6edf"), SubResource("Terrain3DTextureAsset_rh15k"), SubResource("Terrain3DTextureAsset_y3ibi"), SubResource("Terrain3DTextureAsset_cmr6o")])
