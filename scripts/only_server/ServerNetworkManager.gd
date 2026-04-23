@@ -363,6 +363,9 @@ func _server_start_round(round_settings: Dictionary):
 		_log_debug("Estado de jogador %s não está entre: %s" % [state, state_list])
 		return
 	
+	var selected_map: int = server_manager.test_manager.map_id
+	
+	round_settings["selected_map"] = selected_map
 	server_manager._handle_start_round(peer_id, round_settings)
 	
 func _mark_player_disconnected(_chosen: bool):

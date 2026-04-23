@@ -16,7 +16,7 @@ class_name TestManager
 
 @export_category("Debug")
 @export var debug_mode: bool = true
-@export var map_id: int = 3
+@export var map_id: int = 1
 
 
 # ===== REGISTROS (Injetados pelo initializer.gd) =====
