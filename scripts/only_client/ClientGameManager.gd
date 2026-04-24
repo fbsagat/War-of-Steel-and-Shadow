@@ -12,7 +12,6 @@ const DEFAULT_SERVER_PORT: int = 7777
 @export var server_address: String = DEFAULT_SERVER_ADDRESS
 @export var server_port: int = DEFAULT_SERVER_PORT
 ## (initializer sobrepõe) Conecta automaticamente no localhost na inicialização
-@export var localhost_auto_connect: bool = false
 
 @export_category("Default Node References")
 const map_scene : String = "res://scenes/maps/vainer_village/vainer_village.tscn"
@@ -126,16 +125,7 @@ func initialize():
 	connect_inventory_signals()
 	connect_muiltiplayer_signals()
 	connect_other_signals()
-	
 	setup_reconection_timer()
-	
-	if main_menu_node:
-		main_menu_node.show_main_menu()
-	
-	if localhost_auto_connect:
-		_log_debug("Função de testes está ativada: Entrando no servidor localhost")
-		await get_tree().create_timer(0.25).timeout
-		join_server_by_ip(server_address, str(server_port))
 	
 	# Identificação de cliente
 	uuid_base = _load_or_create_uuid()
@@ -146,7 +136,15 @@ func initialize():
 		
 	server_tokens = _load_tokens()
 	
+	if main_menu_node:
+		main_menu_node.show_main_menu()
+	
 	_log_debug("▶️ GameManager inicializado com sucesso!")
+	
+func localhost_auto_connect():
+	_log_debug("Função de testes está ativada: Entrando no servidor localhost")
+	#await get_tree().create_timer(0.25).timeout
+	join_server_by_ip(server_address, str(server_port))
 
 func setup_reconection_timer():
 	reconnect_timer = Timer.new()
@@ -355,6 +353,7 @@ func _on_connected_to_server():
 
 ## Dispara quando a tentativa de conexão falha.
 func _on_connection_failed():
+	_disconnect_from_server()
 	_log_debug("Falha ao conectar ao servidor")
 
 func _on_reconnect_timeout() -> void:
@@ -452,15 +451,11 @@ func _on_reconnect_gave_up() -> void:
 ## Dispara quando o cliente quer desconectar do servidor intencionalmente
 ## Aqui o jogo deve retornar para a tela inicial, desconectado do servidor, tudo resetado e sem 
 ## possibilidade de o cliente retornar ao round em que estava
-## notify = avisa o servidor.
-func _disconnect_from_server(notify_server: bool = false):
+func _disconnect_from_server():
+
 	# Não executa enquanto está carregando rodada
 	if is_loading:
 		return
-		
-	if notify_server:
-		_log_debug("Avisando servidor")
-		# Fazer a função
 	
 	# Iniciando reset completo
 	# Fecha conexão com o servidor

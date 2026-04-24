@@ -5,9 +5,9 @@ class_name GameInitializer
 ## [TESTES] Usa o TestManager para iniciar uma partida logo na execução (localhost)
 ## (configura server e clients / server cria round e inicia partida com primeiros clientes /
 ##  clientes recebem localhost_auto_connect = true pr conectr autom.)
-@export var test_mode: bool = false
+@export var test_mode: bool = true
 ## [TESTES] Define a quantidade de instâcias de clientes conectadas para executar fast_round
-@export var simulador_players_qtd: int = 2
+@export var simulador_players_qtd: int = 1
 ## [TESTES] Dropa itens perto dos players e ativa o trainer de cada player
 @export var trainer: bool = true
 ## [TESTES] Ativa/desativa proteção dos botões dos menus (desativar para testes de multiplos RPCs)
@@ -342,11 +342,7 @@ func _init_client(id_file_):
 		# Altera o primeiro jogador para o localhost (desenvolvimento)
 		if test_mode and id_file_ == "1":
 			game_manager.server_address = "127.0.0.1"
-		
-	# Configurar modo de testes
-	if test_mode:
-		game_manager.localhost_auto_connect = true
-		game_manager.is_loading = true
+			
 	if visual_debug:
 		game_manager.debug_overlay_node = debug_overlay
 		game_manager.debug_menu_visible = true
@@ -363,7 +359,12 @@ func _init_client(id_file_):
 	# Inicializa tudo
 	network_manager.initialize()
 	item_database.load_database()
+	main_menu.initialize()
 	game_manager.initialize()
+	
+	# Execução do modo de testes
+	if test_mode:
+		game_manager.localhost_auto_connect()
 
 # ============== FUNÇÕES AUXILIARES GLOBAIS ==============
 

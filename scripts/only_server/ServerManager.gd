@@ -1745,7 +1745,8 @@ func _complete_round_end(round_id: int):
 
 	if active_count == 0:
 		current_cam_round_index = -1
-		viewport_display.visible = false
+		if viewport_display:
+			viewport_display.visible = false
 		warning_overlay.show_message("Não há rounds ativos")
 		return
 

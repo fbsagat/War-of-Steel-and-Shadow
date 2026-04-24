@@ -204,7 +204,7 @@ var last_selected_match_id: int
 var ml_error_messages: Array[String] = []
 const ML_MAX_ERRORS := 3
 
-func _ready():
+func initialize():
 	# Configura o Control para preencher toda a tela
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	

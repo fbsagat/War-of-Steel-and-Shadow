@@ -37,7 +37,6 @@ func _on_connected_to_server():
 
 func _on_server_disconnected():
 	is_connected_ = false
-	_log_debug("❌ Conexão de rede perdida")
 
 func _on_connection_failed():
 	is_connected_ = false
