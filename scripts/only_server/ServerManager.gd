@@ -717,8 +717,7 @@ func _execute_player_return_to_round(peer_id: int, player_uuid: String):
 		_log_debug("enviando comando para o cliente carregar a partida dele")
 		
 		# Tratar round settings para enviar atualizadas para o cliente
-		var round_node = round_["round_node"]
-		var terrain_ = round_node.get_node("Terrain3D")
+		var terrain_ = round_["map_node"]
 		var sky_node = terrain_.get_node("Sky3D")
 		var time_node = sky_node.get_node_or_null("TimeOfDay")
 		round_["settings"]["sky_rand_configs"]["time"]["current_time"] = time_node.current_time
@@ -726,10 +725,13 @@ func _execute_player_return_to_round(peer_id: int, player_uuid: String):
 		# Filtrar players que ainda estão na partida (apenas spawned players)
 		var filtered_players = round_registry.get_round_players_spawned_filter(round_["id"])
 		
+		# Pega scene_path do mapa selecionado para a rodada
+		var map = map_manager.map_database.get_map_by_id(round_["settings"]["selected_map"])
+		
 		var match_data = {
 			"round_id": round_["id"],
 			"room_id": round_["room_id"],
-			"map_scene": round_["settings"]["selected_map"],
+			"map_scene": map["scene_path"],
 			"settings": round_["settings"],
 			"players": filtered_players,
 			"player_items": [],

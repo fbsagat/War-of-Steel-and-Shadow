@@ -521,11 +521,13 @@ func stop_round_sync(round_id: int) -> void:
 ## Habilita o peer_id para o sync de objetos
 ## Deve acontecer com o cliente conectado e em um round carregado
 func start_peer_sync(peer_id: int):
+	_log_debug("Habilitando o peer_id %s para o sync de objetos" % peer_id)
 	if not _in_game_peers.has(peer_id) and _is_peer_connected(peer_id):
 		_in_game_peers.append(peer_id)
 		
 ## Desabilita o peer_id para o sync de objetos
 func stop_peer_sync(peer_id: int):
+	_log_debug("Desabilitando o peer_id %s para o sync de objetos" % peer_id)
 	if _in_game_peers.has(peer_id):
 		_in_game_peers.erase(peer_id)
 

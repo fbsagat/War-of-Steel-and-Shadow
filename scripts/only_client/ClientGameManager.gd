@@ -1651,11 +1651,7 @@ func _cleanup_local_round():
 	# Limpa objetos spawnados
 	for obj in spawned_objects.keys():
 		for object_id in spawned_objects[obj].keys():
-			var obj_data = spawned_objects[obj][object_id]
-			var item_node = obj_data.get("node")
-			
-			if item_node and is_instance_valid(item_node) and item_node.is_inside_tree():
-				item_node.queue_free()
+			network_manager.unregister_syncable_object(object_id)
 		await get_tree().process_frame
 	
 	spawned_objects.clear()
