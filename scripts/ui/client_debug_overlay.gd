@@ -40,12 +40,13 @@ func _process(_delta: float) -> void:
 	elif ping > LAG_THRESHOLD_MS:
 		status = "🟡 LAG"
 
-	label.text = "Status: %s\nAdress: %s\nPing: %d ms\nPing médio: %d ms\nSem resposta: %.2f s\n\nLoadPos: %s\nUUID: %s\nPeer id: %d\nP. Name: %s\nIs Loading: %s" % [
+	label.text = "Status: %s\nAdress: %s\nPing: %d ms\nPing médio: %d ms\nSem resposta: %.2f s\n\nModo: %s\nLoadPos: %s\nUUID: %s\nPeer id: %d\nP. Name: %s\nIs Loading: %s" % [
 		status,
 		game_manager.server_address,
 		ping,
 		ping_avg,
 		time_since_last / 1000.0,
+		"Teste" if game_manager.initializer.test_mode else "Normal",
 		game_manager.load_position,
 		initializer._zip_uuid(client_uuid),
 		peer_id,
