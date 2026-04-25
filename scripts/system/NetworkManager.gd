@@ -204,6 +204,10 @@ func _client_round_return(_server_id: String, _match_data: Dictionary):
 	pass
 
 @rpc("authority", "call_remote", "reliable")
+func _client_player_simple_return(_server_id: String, _match_data: Dictionary):
+	pass
+
+@rpc("authority", "call_remote", "reliable")
 func _client_round_ended(_end_data: Dictionary):
 	pass
 

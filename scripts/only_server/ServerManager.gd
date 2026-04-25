@@ -704,8 +704,55 @@ func _handle_request_return_or_exit(peer_id: int, chosen: bool):
 		
 	_player_exit_from_round(peer_id, player_uuid)
 
-## Esta função deve ser executada quando o cliente sinaliza que quer voltar ao round em que está, 
-##	quando seu personagem está instanciado em um round e seu registros indicam isso também
+## Esta função deve ser executada quando o cliente simplesmente reconecta ao round em que está,
+## neste caso o cliente ainda está com a partida carregada, está apenas retornando de uma queda de
+## conexão. Esta função é necesária porque as posições de players e objetos são alteradas durante a
+##  gameplay enquando o cliente está ausente da partida.
+func _execute_player_simple_return_to_round(peer_id: int, player_uuid: String):
+	var round_id = client_registry.get_player_round(player_uuid)
+	var round_ = round_registry.get_round(round_id)
+	# Filtrar players que ainda estão na partida (apenas spawned players)
+	var filtered_players = round_registry.get_round_players_spawned_filter(round_["id"])
+	
+	var match_data = {
+	"settings": {},
+	"round_objects": {},
+	}
+	match_data["settings"]["spawn_points"] = {}
+	
+	for f_player in filtered_players:
+		# Prepara posições e rotações de cada remoto na partida
+		# {peer_uuid: {pos: Vector3, vel: Vector3, rot: Vector3, timestamp: int}}
+		var position: Vector3 = player_states[f_player["uuid_base"]].get("pos")
+		var rotation: Vector3 = player_states[f_player["uuid_base"]].get("rot")
+		match_data["settings"]["spawn_points"][f_player["uuid_base"]] = {
+			"position": position,
+			"rotation": rotation}
+		await get_tree().process_frame
+	
+	# Prepara objetos da cena para atualização visual
+	var round_objects = object_manager.get_round_objects(round_["id"])
+	# round_objects: [Object_1_torch_1:<RigidBody3D#123765524253>, Object_2_torch_1:<RigidBody3D#123916521411>]
+	# executa no game manager: _spawn_on_client(object_id: int, round_id: int, 
+	# item_name: String, position: Vector3, rotation: Vector3, drop_velocity: Vector3, owner_uuid: String)
+	var all_objects: Dictionary
+	for object in round_objects:
+		await get_tree().process_frame
+		all_objects[object["object_id"]] = {
+			"position": object.global_position,
+			"rotation": object.global_rotation,
+			"linear_velocity": object["linear_velocity"],
+			"owner_uuid": object["owner_uuid"],
+		}
+	match_data["round_objects"] = all_objects
+	
+	# Envia comando de retorno para o cliente
+	_log_debug("_client_player_simple_return", true)
+	network_manager.rpc_id(peer_id, "_client_player_simple_return", server_id, match_data)
+	
+## Esta função deve ser executada quando o cliente sinaliza que quer voltar ao round em que está,
+## mas não está com a partida carregada, portanto precisa dos dados completos para o retorno, acontece 
+## quando, no servidor, seu personagem está instanciado em um round e seu registros indicam isso também
 func _execute_player_return_to_round(peer_id: int, player_uuid: String):
 	var player = client_registry.get_player(player_uuid)
 	_log_debug("Player %s quer retornar à partida em que estava" % player["name"])
@@ -748,6 +795,7 @@ func _execute_player_return_to_round(peer_id: int, player_uuid: String):
 			match_data["settings"]["spawn_points"][f_player["uuid_base"]] = {
 				"position": position,
 				"rotation": rotation}
+				
 			await get_tree().process_frame
 			
 			# Prepara modelos de personagens (próprio e remotos) para atualização visual
@@ -1484,11 +1532,10 @@ func _server_instantiate_round(match_data: Dictionary, players_node):
 	
 	# Configura o Terrain3D para usar actual_camera
 	if terrain_3d:
+		_log_debug("Terrain_3d encontrado neste mapa, configurando câmera")
 		terrain_3d.set_camera(actual_camera)
 		# Ativa o physics_process após atribuir a câmera
 		terrain_3d.set_physics_process(true)
-	else:
-		push_warning("terrain_3d não encontrado neste mapa para configurar câmera")
 
 ## Spawna um jogador no servidor (versão autoritativa)
 ## Registra node e inicializa estado para validação

@@ -349,7 +349,7 @@ func _on_connected_to_server():
 	
 	_log_debug(" Cliente conectado ao servidor com sucesso! Peer ID: %d" % local_peer_id)
 	
-	connected_to_server.emit()
+	#connected_to_server.emit()
 
 ## Dispara quando a tentativa de conexão falha.
 func _on_connection_failed():
@@ -435,7 +435,6 @@ func _try_reconnect() -> void:
 	
 	multiplayer.multiplayer_peer = peer
 	local_peer_id = peer.get_unique_id()
-	_log_debug("Conseguiu reconectar, novo peer id: %s" % peer.get_unique_id())
 
 	# Se o servidor estiver offline, o resultado real virá por signal
 	# Este timer serve como fallback caso a rede demore demais
@@ -682,8 +681,7 @@ func handle_server_response(response: Dictionary) -> void:
 			_log_debug(
 				"Autenticado com sucesso, jogador está em um round no servidor"
 				if in_round
-				else "Autenticado com sucesso, server novo, retornando ao menu"
-			)
+				else "Autenticado com sucesso, server novo, retornando ao menu")
 			
 			# Iniciar o heratbeet depois de aprovado pelo servidor
 			start_heartbeat()
@@ -693,8 +691,8 @@ func handle_server_response(response: Dictionary) -> void:
 				# Envia resultados de carregamento para o servidor checar integridade
 				var check_this = {"current_round": current_round}
 				network_manager._server_player_ready(check_this)
-				if main_menu_node:
-					main_menu_node.hide_main_menu()
+				#if main_menu_node:
+					#main_menu_node.hide_main_menu()
 
 				return
 			
@@ -766,7 +764,7 @@ func update_client_info(info: Dictionary):
 			return
 			
 		if loaded_round.server_id == configs["server_id"]:
-			main_menu_node.hide_main_menu()
+			return
 		else:
 			_cleanup_local_round()
 			_log_debug("Não é o mesmo servidor / id incompatível")
@@ -1143,6 +1141,33 @@ func _client_round_ended(end_data: Dictionary):
 	# Limpa objetos locais
 	_cleanup_local_round()
 
+## Callback quando o jogador retorna a uma rodada em andamento (recarrega a partida totalmente).
+func _client_player_simple_return(_server_id: String, match_data: Dictionary) -> void:
+	_log_debug("Retornando à rodada, recebend posições atualizadas de jogadores e itens")
+	
+	for player_node in player_nodes_by_uuid.keys():
+		# Posiciona
+		if match_data["settings"]["spawn_points"].has(player_node):
+			var player_pos = match_data["settings"]["spawn_points"][player_node]
+			if not player_pos:
+				push_error("GameManager: Spawn point não encontrado para player: %s" % uuid_base)
+				player_pos = {"position": Vector3.ZERO, "rotation": Vector3.ZERO}
+			player_nodes_by_uuid[player_node].positionate(player_pos["position"], player_pos["rotation"])
+	
+	# Reposiciona os objetos presentes na rodada com suas posições e atributos atuais
+	for object in objects_node.get_children():
+		if object["object_id"] in match_data["round_objects"].keys():
+			object.global_position = match_data["round_objects"][object["object_id"]]["position"]
+			object.global_rotation = match_data["round_objects"][object["object_id"]]["rotation"]
+			object.linear_velocity = match_data["round_objects"][object["object_id"]]["linear_velocity"]
+			object["owner_uuid"] = match_data["round_objects"][object["object_id"]]["owner_uuid"]
+		else:
+			_despawn_on_client(object["object_id"], current_round["round_id"])
+	
+	# Esconde o menu
+	if main_menu_node:
+		main_menu_node.hide_main_menu()
+	
 ## Callback quando a rodada inicia pela primeira vez.
 func _client_round_started(server_id: String, match_data: Dictionary) -> void:
 	_log_debug("Rodada iniciada pelo servidor!")
@@ -1155,9 +1180,9 @@ func _client_round_started(server_id: String, match_data: Dictionary) -> void:
 	
 	await _load_round(server_id, match_data, false)
 
-## Callback quando o jogador retorna a uma rodada em andamento.
+## Callback quando o jogador retorna a uma rodada em andamento (recarrega a partida totalmente).
 func _client_round_return(server_id: String, match_data: Dictionary) -> void:
-	_log_debug("Retornando à rodada.")
+	_log_debug("Retornando à rodada, recebendo dados completos atualizados")
 	#print("[pp]  -------------------- _client_round_return --------------------")
 	#initializer.pretty_print_dict(match_data)
 	#print("[pp]  -------------------- pp End --------------------")
@@ -1637,7 +1662,6 @@ func _client_update_character_peer_id(remote_uuid_base: String, remote_new_peer_
 
 ## Limpa todos os objetos da rodada no cliente.
 func _cleanup_local_round():
-	_log_debug("Limpando objetos da rodada...")
 	is_loading = true
 	local_player_node = null
 	is_in_round = false
@@ -1648,6 +1672,7 @@ func _cleanup_local_round():
 	player_nodes_by_uuid.clear()
 	session_to_uuid.clear()
 	
+	_log_debug("Limpando objetos da rodada...")
 	# Limpa objetos spawnados
 	for obj in spawned_objects.keys():
 		for object_id in spawned_objects[obj].keys():

@@ -312,6 +312,11 @@ func _server_player_ready(check_this_: Dictionary):
 		_log_debug("Estado (Atual: %s) de jogador %d não está entre: %s" % [state, peer_id, state_list])
 		return
 	
+	# Se o estado for IN_GAME, significa que foi uma reconexão pós queda, enviar posições
+	# atualizadas de personagens e itens no round para o cliente
+	if state == client_registry.ClientState.IN_GAME:
+		server_manager._execute_player_simple_return_to_round(peer_id, player_uuid)
+	
 	client_registry.set_player_state(player_uuid, client_registry.ClientState.IN_GAME)
 	
 	# Habilita o peer_id para o sync de objetos

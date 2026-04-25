@@ -271,9 +271,14 @@ func _client_round_started(_server_id: String, match_data: Dictionary):
 	game_manager._client_round_started(_server_id, match_data)
 
 func _client_round_return(server_id: String, match_data: Dictionary):
-	_log_debug("retornando à rodada")
+	_log_debug("Retornando à rodada, recebendo dados completos atualizados")
 	game_manager.is_loading = true
 	game_manager._client_round_return(server_id, match_data)
+
+func _client_player_simple_return(server_id: String, match_data: Dictionary):
+	_log_debug("Retornando à rodada, recebend posições atualizadas de jogadores e itens")
+	game_manager.is_loading = true
+	game_manager._client_player_simple_return(server_id, match_data)
 
 func _client_round_ended(end_data: Dictionary):
 	_log_debug("🏁 Rodada finalizada")
