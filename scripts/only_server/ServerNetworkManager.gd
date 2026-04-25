@@ -132,7 +132,7 @@ func _server_send_ping(client_time: float):
 		return
 	
 	if client_registry.players_peer_ids_cache.has(peer_id):
-		_log_debug("_client_receive_pong %s" % peer_id, true)
+		#_log_debug("_client_receive_pong %s" % peer_id, true)
 		rpc_id(peer_id, "_client_receive_pong", client_time)
 
 # Recebe o ping calculado pelo cliente

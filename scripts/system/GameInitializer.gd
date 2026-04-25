@@ -15,7 +15,8 @@ class_name GameInitializer
 ## [TESTES] Ativa/desativa o debug visual na gameplay
 @export var visual_debug: bool = true
 ## [TESTES] Ativa/desativa debug de RPCs (_log_debug's adicionados acima de cada RPC em todo o código)
-@export var rpc_debug: bool = true
+## Alguns _log_debug estão comentados (geralmente são os de rpcs chamados no delta)
+@export var rpc_debug: bool = false
 ## [TESTES] [Clientes] Iniciar com o mouse destrancado
 @export var start_unlocked_mouse: bool = true
 ## Ativa/desativa persistência do servidor (para server_id, server_secret e dados de clientes)

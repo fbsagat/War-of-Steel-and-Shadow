@@ -1488,7 +1488,7 @@ func _server_instantiate_round(match_data: Dictionary, players_node):
 		# Ativa o physics_process após atribuir a câmera
 		terrain_3d.set_physics_process(true)
 	else:
-		push_warning("terrain_3d não encontrado para configurar câmera")
+		push_warning("terrain_3d não encontrado neste mapa para configurar câmera")
 
 ## Spawna um jogador no servidor (versão autoritativa)
 ## Registra node e inicializa estado para validação
