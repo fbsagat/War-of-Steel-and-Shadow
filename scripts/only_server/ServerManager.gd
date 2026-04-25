@@ -2073,6 +2073,7 @@ func _server_validate_equip_item(requesting_player_id: int, object_id: int, _tar
 	var player = client_registry.get_player(player_uuid)
 	var round_ = round_registry.get_round_by_player_uuid(player_uuid)
 	var item_id = item_database.get_item(object_manager.get_stored_object_item_name(round_["id"] ,object_id))["id"]
+	# De vez em quando dá um erro aqui nessa linha! /\
 	var item = item_database.get_item_by_id(item_id)
 	#var item_slot = item.get_slot()
 	
@@ -2083,7 +2084,7 @@ func _server_validate_equip_item(requesting_player_id: int, object_id: int, _tar
 	_log_debug("[ITEM]📦 Player %s pediu para equipar item %d no slot %s, no round %d" % [player["name"], item_id, item["type"], round_["id"]])
 	
 	# Verifica se o id do item é válido
-	if not item_database.get_item_by_id(item_id):
+	if not item:
 		return
 	
 	# Verifica se o slot está vazio no inventário do player
