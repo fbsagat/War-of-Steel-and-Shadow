@@ -70,6 +70,14 @@ func _server_report_ping(latency):
 func _client_receive_pong(client_time):
 	game_manager._client_receive_pong(client_time)
 
+func request_kill_local_match():
+	if not is_connected_:
+		_log_debug("❌ Erro: Não conectado ao servidor")
+		return
+	_log_debug("Solicitando fechamento do servidor")
+	_log_debug("_server_kill_local_match", true)
+	rpc_id(1, "_server_kill_local_match")
+	
 
 # ===== AUTENTICAÇÃO =====
 

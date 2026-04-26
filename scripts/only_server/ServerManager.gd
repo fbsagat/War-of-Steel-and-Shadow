@@ -40,6 +40,7 @@ class_name ServerManager
 
 var server_id : String
 var server_secret : PackedByteArray
+var server_owner_ : String = ""
 
 @export_category("Default Node References")
 const player_scene : String = "res://scenes/gameplay/player_warrior.tscn"
@@ -292,7 +293,8 @@ func _find_a_next_round_to_camera(round_id: int = -1):
 	if all_rounds.is_empty():
 		current_cam_round_index = -1
 		_log_debug("[Camera] Não há rounds ativos")
-		warning_overlay.show_message("Não há rounds ativos")
+		if warning_overlay:
+			warning_overlay.show_message("Não há rounds ativos")
 		viewport_display.visible = false
 		return
 
@@ -316,7 +318,8 @@ func _find_a_next_round_to_camera(round_id: int = -1):
 
 	# ✅ 4. Aqui SEMPRE temos um round válido
 	_log_debug("[Camera] Indo para round: %s" % current_cam_round_index)
-	warning_overlay.show_message("[Camera] Câmera indo para o round: %s" % current_cam_round_index)
+	if warning_overlay:
+		warning_overlay.show_message("[Camera] Câmera indo para o round: %s" % current_cam_round_index)
 
 	_switch_camera_to_round(current_cam_round_index)
 
@@ -479,11 +482,21 @@ func process_client_hello(payload: Dictionary, peer_id: int) -> Dictionary:
 	
 	var uuid_base : String = payload.get("uuid_base", "")
 	var client_token : String = payload.get("token", "")
-
-	if uuid_base.is_empty():
+	
+	# 1. Validação básica
+	if uuid_base.is_empty() or uuid_base.length() != 32:
 		return {"status": "reject", "reason": "missing_uuid"}
+	
+	# 2. Validação caracteres válidos
+	for c in uuid_base:
+		if not (
+			(c >= "0" and c <= "9") or
+			(c >= "a" and c <= "f") or
+			(c >= "A" and c <= "F")
+		):
+			return {"status": "reject", "reason": "invalid_format"}
 
-	# 🔒 Bloqueia duplicidade ativa
+	# 3. Bloqueia duplicidade ativa
 	if client_registry._is_uuid_connected(uuid_base):
 		return {"status": "reject", "reason": "dup_session"}
 
@@ -511,7 +524,6 @@ func process_client_hello(payload: Dictionary, peer_id: int) -> Dictionary:
 				round_registry._unmark_player_disconnected(player_round["id"], uuid_base)
 				return {"status": "ok_in_round", "server_id": server_id, "player_name": player["name"]}
 				
-
 	# 🔄 Token inválido ou inexistente → emitir novo
 	if not client_registry.get_player_by_uuid(uuid_base):
 		client_registry.add_peer(peer_id, uuid_base)
@@ -1795,7 +1807,8 @@ func _complete_round_end(round_id: int):
 		current_cam_round_index = -1
 		if viewport_display:
 			viewport_display.visible = false
-		warning_overlay.show_message("Não há rounds ativos")
+		if warning_overlay:
+			warning_overlay.show_message("Não há rounds ativos")
 		return
 
 	if not is_headless and current_cam_round_index == round_id:
@@ -2596,38 +2609,40 @@ func _get_position_front_and_above(pos: Vector3, rot: Vector3, dist: float = 1.5
 	return pos + forward * dist + Vector3.UP * height
 
 ## Desliga servidor completamente e limpa todos os recursos
-## ORDEM:
-##  1. Finaliza todas as rodadas ativas
-##  2. Remove todas as salas
-##  3. Desconecta todos os jogadores
-##  4. Reseta registries
-func shutdown_registry():
+## Obs: Se o servidor não fechar, provalvelmente tem algum erro no caminho até aqui
+## (testar com o headless e não headless).
+func shutdown_server():
 	_log_debug("========================================")
 	_log_debug("DESLIGANDO SERVIDOR")
 	_log_debug("========================================")
 	
-	# 1. Finaliza todas as rodadas ativas
-	for round_id in round_registry.get_all_rounds().keys():
-		round_registry.end_round(round_id, "server_shutdown")
-		round_registry.complete_round_end(round_id)
+	#var text = "O servidor será fechado"
+	#_log_debug("_client_receive_message", true)
+	#network_manager._client_receive_message.rpc_id(peer_id, text, 6, "error")
+	#await get_tree().create_timer(6).timeout
 	
-	# 2. Remove todas as salas
-	var all_rooms = room_registry.get_rooms_list(true)
-	for room_data in all_rooms:
-		room_registry.remove_room(room_data["id"])
+	# Limpa debug overlay
+	if debug_overlay:
+		debug_overlay.queue_free()
 	
-	# 3. Desconecta todos os jogadores
-	for player_data in client_registry.get_all_players():
-		var peer_id = player_data["uuid_base"]
-		if _is_peer_connected(peer_id):
-			multiplayer.disconnect_peer(peer_id)
-	
-	# 4. Reseta registries
-	round_registry.reset()
-	room_registry.reset()
-	client_registry.reset()
-	
+	# 🔒 Evita novas ações enquanto está desligando
+	set_process(false)
+	set_physics_process(false)
+
+	# 4. Fecha o servidor de rede corretamente
+	if multiplayer.multiplayer_peer:
+		multiplayer.multiplayer_peer.close()
+		multiplayer.multiplayer_peer = null
+
 	_log_debug("✓ Servidor desligado completamente")
+
+	# 🧨 FINALIZA O PROCESSO
+	get_tree().quit()
+	
+	# fallback caso quit falhe (headless bug / loop preso)
+	await get_tree().create_timer(0.2).timeout
+	
+	OS.kill(OS.get_process_id())
 
 ## Remove estado de validação do jogador
 ## Chamado quando desconecta

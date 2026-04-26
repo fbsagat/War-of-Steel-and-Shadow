@@ -9,8 +9,9 @@ class_name GameManager
 @export_category("Connection Settings")
 const DEFAULT_SERVER_ADDRESS: String = "127.0.0.1"  # Localhost: "127.0.0.1" zeroTier: "172.23.2.183"
 const DEFAULT_SERVER_PORT: int = 7777
-@export var server_address: String = DEFAULT_SERVER_ADDRESS
-@export var server_port: int = DEFAULT_SERVER_PORT
+var server_address: String = DEFAULT_SERVER_ADDRESS
+var server_port: int = DEFAULT_SERVER_PORT
+var in_local_server: bool = false
 ## (initializer sobrepõe) Conecta automaticamente no localhost na inicialização
 
 @export_category("Default Node References")
@@ -94,7 +95,7 @@ var room_settings: Dictionary = {"locked": false}
 
 # ===== SINAIS =====
 
-signal connected_to_server()
+signal game_manager_connected_to_server()
 signal connection_failed(reason: String)
 signal disconnected_from_server()
 signal rooms_list_received(success: bool, rooms: Array)
@@ -249,6 +250,11 @@ func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_debug") and debug_overlay_node:
 		debug_menu_visible = not debug_menu_visible
 		debug_overlay_node.visible = debug_menu_visible
+	
+	# Teste
+	#if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_BACKSPACE:
+		#_log_debug("Backspace!!! Coloque algo aqui...")
+		#request_kill_local_match()
 
 # Validação
 func _can_process_menu_input() -> bool:
@@ -347,9 +353,8 @@ func _on_connected_to_server():
 		debug_menu_visible = true
 		debug_overlay_node.peer_id = local_peer_id
 	
+	game_manager_connected_to_server.emit()
 	_log_debug(" Cliente conectado ao servidor com sucesso! Peer ID: %d" % local_peer_id)
-	
-	#connected_to_server.emit()
 
 ## Dispara quando a tentativa de conexão falha.
 func _on_connection_failed():
@@ -451,7 +456,9 @@ func _on_reconnect_gave_up() -> void:
 ## Aqui o jogo deve retornar para a tela inicial, desconectado do servidor, tudo resetado e sem 
 ## possibilidade de o cliente retornar ao round em que estava
 func _disconnect_from_server():
-
+	request_kill_local_match()
+	await get_tree().create_timer(0.2).timeout
+	
 	# Não executa enquanto está carregando rodada
 	if is_loading:
 		return
@@ -499,7 +506,12 @@ func _disconnect_from_server():
 	disconnected_from_server.emit()
 
 ## Validar IP/hostname
-func join_server_by_ip(received_ip: String, received_port: String) -> bool:
+func join_server_by_ip(received_ip: String, received_port: String, local: bool = false) -> bool:
+	
+	if not local and in_local_server:
+		_log_debug("Já está em uma partida local, saia primeiro")
+		return false
+	
 	if received_ip and received_ip.strip_edges() != "":
 		var trimmed_ip: String = received_ip.strip_edges()
 		
@@ -773,7 +785,28 @@ func update_client_info(info: Dictionary):
 
 ## Criar uma partida local
 func create_local_match():
-	pass
+	if is_connected_to_server:
+		return
+	
+	if in_local_server:
+		_log_debug("Já está criando uma partida local")
+		return
+	
+	in_local_server = true
+	# Verificar se dá pra ficar apenas localhost e depois poder abrir pra geral lá ele
+	OS.create_process(
+		OS.get_executable_path(),
+		["--headless", "--server", "--owner=%s" % uuid_base]
+	)
+	await get_tree().create_timer(0.5).timeout
+	join_server_by_ip(server_address, str(server_port), true)
+
+## Requisita ao servidor a finalização do serviço
+## Sujeito à validação de propriedade
+func request_kill_local_match():
+	_log_debug("Solicitando fechamento do servidor")
+	network_manager.request_kill_local_match()
+	in_local_server = false
 
 # ===== REGISTRO DE JOGADOR =====
 	

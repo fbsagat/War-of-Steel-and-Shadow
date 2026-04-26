@@ -215,6 +215,18 @@ func _server_receive_hello(payload: Dictionary):
 		_log_debug("_client_receive_auth_result %d" % peer_id, true)
 		rpc_id(peer_id, "_client_receive_auth_result", response)
 
+func _server_kill_local_match():
+	var peer_id = multiplayer.get_remote_sender_id()
+	_log_debug("Cliente %d solicitou fechamento do servidor" % peer_id)
+	var uuid = client_registry.get_uuid_by_peer_id(peer_id)
+	
+	# Verifica se o requerente é o propietário do servidor
+	if server_manager.server_owner_ == "" or not uuid == server_manager.server_owner_:
+		return
+	
+	_log_debug("%s é o proprietário do servidor, server_manager.shutdown_registry executado!" % uuid)
+	server_manager.shutdown_server()
+
 # ===== REGISTRO DE JOGADOR =====
 
 ## Servidor recebe pedido de registro de nome do cliente, processa e responde

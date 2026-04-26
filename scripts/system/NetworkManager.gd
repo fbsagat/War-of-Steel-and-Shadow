@@ -73,8 +73,12 @@ func _server_give_me_configs():
 func _server_receive_hello(_payload: Dictionary):
 	pass
 
-@rpc("authority", "call_remote", "unreliable")
+@rpc("any_peer", "call_remote", "unreliable")
 func _client_receive_auth_result(_response: Dictionary):
+	pass
+
+@rpc("any_peer", "call_remote", "unreliable")
+func _server_kill_local_match():
 	pass
 
 # ===== REGISTRO DE JOGADOR =====

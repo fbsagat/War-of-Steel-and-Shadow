@@ -369,6 +369,7 @@ func _rebuild_clients(list: VBoxContainer) -> void:
 			
 			_col_btn("Kick",  func(): server_manager._kick_player_from_round(c["peer_id"], "O servidor quis"), 75),
 			_col_btn("Print",  func(): print(c), 75),
+			_col_btn("Kill",  func(): server_manager.shutdown_registry(), 75),
 		])
 		_client_rows[client_uuid] = _refs
 	

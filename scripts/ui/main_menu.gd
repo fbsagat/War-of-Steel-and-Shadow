@@ -33,7 +33,6 @@ signal gameplay_menu_give_up_game_pressed()
 @onready var manual_room_join_menu: CenterContainer
 @onready var manual_server_join_menu: CenterContainer
 @onready var create_room_menu: CenterContainer
-@onready var create_local_match_menu: CenterContainer
 @onready var how_to_play_menu: CenterContainer
 @onready var options_menu: CenterContainer
 @onready var loading_menu: CenterContainer
@@ -44,6 +43,7 @@ signal gameplay_menu_give_up_game_pressed()
 
 # Menu principal
 @onready var connect_name_label: Label
+@onready var join_single_button: Button
 @onready var join_server_button: Button
 
 # Menu de lista de servidores
@@ -254,7 +254,6 @@ func _setup_menu_references():
 	manual_room_join_menu = control_pai.get_node("ManualRoomJoinMenu")
 	manual_server_join_menu = control_pai.get_node("ManualServerJoinMenu")
 	create_room_menu = control_pai.get_node("CreateRoomMenu")
-	create_local_match_menu = control_pai.get_node("CreateLocalMatchMenu")
 	how_to_play_menu = control_pai.get_node("HowToPlayMenu")
 	options_menu = control_pai.get_node("OptionsMenu")
 	loading_menu = control_pai.get_node("LoadingMenu")
@@ -293,6 +292,7 @@ func _setup_element_references():
 	
 	# Menu principal
 	connect_name_label = main_menu.find_child("ConnecteName", true, false)
+	join_single_button = main_menu.find_child("JoinSinglePlayerButton", true, false)
 	join_server_button = main_menu.find_child("JoinServerButton", true, false)
 	
 	# Menu de conexão
@@ -459,10 +459,6 @@ func _connect_button_signals():
 	_connect_if_exists(create_room_menu, "ConfirmButton", _on_create_match_confirm_pressed)
 	_connect_if_exists(create_room_menu, "BackButton", _on_create_match_back_pressed)
 	
-	# Criar partida local
-	_connect_if_exists(create_local_match_menu, "ConfirmButton", _on_create_local_match_confirm_pressed)
-	_connect_if_exists(create_local_match_menu, "BackButton", _on_create_local_match_back_pressed)
-	
 	# Como jogar
 	_connect_if_exists(how_to_play_menu, "BackButton", _on_how_to_play_back_pressed)
 	
@@ -504,7 +500,7 @@ func _connect_if_exists(parent: Node,button_name: String,callback: Callable,set_
 		_log_debug("%s não encontrado em %s" % [button_name, parent.name])
 		
 func _connect_game_manager_signals():
-	game_manager.connected_to_server.connect(_on_game_manager_connected)
+	game_manager.game_manager_connected_to_server.connect(_on_connected_to_server)
 	game_manager.connection_failed.connect(_on_game_manager_connection_failed)
 	game_manager.disconnected_from_server.connect(_on_game_manager_disconnected)
 	game_manager.rooms_list_received.connect(_on_game_manager_rooms_received)
@@ -613,6 +609,7 @@ func show_main_menu():
 	transparent.visible = false
 	color_rect.visible = true
 	current_menu_visible = main_menu
+	join_single_button.disabled = false
 	self.get_node("CanvasLayer").show()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
@@ -760,11 +757,6 @@ func show_manual_server_join_menu():
 	if manual_server_join_error_label:
 		manual_server_join_error_label.text = ""
 
-func show_create_local_match_menu():
-	hide_all_menus()
-	create_local_match_menu.visible = true
-	current_menu_visible = create_local_match_menu
-
 func show_create_match_menu():
 	hide_all_menus()
 	create_room_confirm_button.disabled = false
@@ -842,7 +834,6 @@ func hide_all_menus():
 	manual_room_join_menu.visible = false
 	manual_server_join_menu.visible = false
 	create_room_menu.visible = false
-	create_local_match_menu.visible = false
 	room_menu.visible = false
 	how_to_play_menu.visible = false
 	options_menu.visible = false
@@ -863,7 +854,6 @@ func get_current_visible_menu() -> CenterContainer:
 	if manual_room_join_menu.visible: return manual_room_join_menu
 	if manual_server_join_menu.visible: return manual_server_join_menu
 	if create_room_menu.visible: return create_room_menu
-	if create_local_match_menu.visible: return create_local_match_menu
 	if how_to_play_menu.visible: return how_to_play_menu
 	if options_menu.visible: return options_menu
 	if loading_menu.visible: return loading_menu
@@ -911,7 +901,10 @@ func _on_join_server_pressed():
 		show_room_list_menu()
 
 func _on_join_singleplayer_pressed():
-	show_create_local_match_menu()
+	if game_manager.in_local_server == false:
+		game_manager.create_local_match()
+		if disable_protection:
+			join_single_button.disabled = true
 
 func _on_how_to_play_pressed():
 	show_how_to_play_menu()
@@ -1193,12 +1186,6 @@ func _on_create_match_confirm_pressed(text: String = ""):
 		create_room_confirm_button.disabled = true
 		
 	game_manager.create_room(room_name, password)
-
-func _on_create_local_match_confirm_pressed():
-	game_manager.create_local_match()
-
-func _on_create_local_match_back_pressed():
-	show_main_menu()
 
 func _on_create_match_back_pressed():
 	show_room_list_menu()
@@ -1694,7 +1681,7 @@ func update_loading_message(message: String):
 
 # ===== CALLBACKS DO GAMEMANAGER =====
 
-func _on_game_manager_connected():
+func _on_connected_to_server():
 	_log_debug("Conectado ao servidor com sucesso!")
 	# Mudar o nome do botão de "Entrar em um servidor" para "Salas do servidor"
 	join_server_button.text = "Salas do servidor"

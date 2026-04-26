@@ -854,58 +854,6 @@ custom_minimum_size = Vector2(150, 50)
 layout_mode = 2
 text = "Confirmar"
 
-[node name="CreateLocalMatchMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=496196873]
-visible = false
-layout_mode = 0
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="ReferenceRect" type="ReferenceRect" parent="CanvasLayer/CenterContainer/Control/CreateLocalMatchMenu" unique_id=1722821067]
-custom_minimum_size = Vector2(600, 500)
-layout_mode = 2
-border_color = Color(0, 0, 0, 1)
-border_width = 2.0
-editor_only = false
-
-[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/CreateLocalMatchMenu" unique_id=1293439646]
-layout_mode = 2
-theme_override_constants/separation = 10
-
-[node name="Label" type="Label" parent="CanvasLayer/CenterContainer/Control/CreateLocalMatchMenu/VBoxContainer" unique_id=2033207797]
-layout_mode = 2
-text = "Criar Partia Local"
-horizontal_alignment = 1
-
-[node name="Label2" type="Label" parent="CanvasLayer/CenterContainer/Control/CreateLocalMatchMenu/VBoxContainer" unique_id=2023778109]
-layout_mode = 2
-text = "Selecione o modo de jogo"
-horizontal_alignment = 1
-
-[node name="OptionButton" type="OptionButton" parent="CanvasLayer/CenterContainer/Control/CreateLocalMatchMenu/VBoxContainer" unique_id=1158370934]
-layout_mode = 2
-item_count = 2
-popup/item_0/text = "Modo 1 exemplo"
-popup/item_0/id = 0
-popup/item_1/text = "Modo 2 exemplo"
-popup/item_1/id = 1
-
-[node name="ButtonsContainer" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/CreateLocalMatchMenu/VBoxContainer" unique_id=1656747740]
-layout_mode = 2
-theme_override_constants/separation = 40
-alignment = 1
-
-[node name="BackButton" type="Button" parent="CanvasLayer/CenterContainer/Control/CreateLocalMatchMenu/VBoxContainer/ButtonsContainer" unique_id=2108484275]
-custom_minimum_size = Vector2(150, 40)
-layout_mode = 2
-text = "Voltar"
-
-[node name="ConfirmButton" type="Button" parent="CanvasLayer/CenterContainer/Control/CreateLocalMatchMenu/VBoxContainer/ButtonsContainer" unique_id=1042803092]
-custom_minimum_size = Vector2(150, 40)
-layout_mode = 2
-text = "Iniciar"
-
 [node name="CreateRoomMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=765356564]
 visible = false
 layout_mode = 1

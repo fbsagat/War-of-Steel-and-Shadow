@@ -5,13 +5,13 @@ class_name GameInitializer
 ## [TESTES] Usa o TestManager para iniciar uma partida logo na execução (localhost)
 ## (configura server e clients / server cria round e inicia partida com primeiros clientes /
 ##  clientes recebem localhost_auto_connect = true pr conectr autom.)
-@export var test_mode: bool = true
+@export var test_mode: bool = false
 ## [TESTES] Define a quantidade de instâcias de clientes conectadas para executar fast_round
 @export var simulador_players_qtd: int = 1
 ## [TESTES] Dropa itens perto dos players e ativa o trainer de cada player
 @export var trainer: bool = true
 ## [TESTES] Ativa/desativa proteção dos botões dos menus (desativar para testes de multiplos RPCs)
-@export var disable_protection: bool = false
+@export var disable_protection: bool = true
 ## [TESTES] Ativa/desativa o debug visual na gameplay
 @export var visual_debug: bool = true
 ## [TESTES] Ativa/desativa debug de RPCs (_log_debug's adicionados acima de cada RPC em todo o código)
@@ -75,7 +75,11 @@ func _ready():
 	var is_headless = DisplayServer.get_name() == "headless"
 
 	if is_server:
-		_init_server(is_headless)
+		var server_owner_ = null
+		for arg in args:
+			if arg.begins_with("--owner="):
+				server_owner_ = arg.split("=")[1]
+		_init_server(is_headless, server_owner_)
 	else:
 		# Injetar uuid do argumento client_uuid, substituindo a verificação
 		# padrão na pasta do usuário (apenas para desenvolvimento)
@@ -85,7 +89,7 @@ func _ready():
 				id_file_ = arg.split("=")[1]
 		_init_client(id_file_)
 	
-func _init_server(is_headless):
+func _init_server(is_headless, server_owner_):
 	# Instancia managers e registros
 	var network_manager_scene: PackedScene = preload("res://scenes/system/server_network_manager.tscn")
 	var server_manager_scene: PackedScene = preload("res://scenes/system/server_manager.tscn")
@@ -237,7 +241,8 @@ func _init_server(is_headless):
 		debug_overlay._connect_signals()
 	
 	# configurações
-	server_manager.is_headless = is_headless
+	server_manager.server_owner_ = server_owner_
+	is_headless = is_headless
 	map_manager.is_server = true
 	item_database.is_server = true
 	
