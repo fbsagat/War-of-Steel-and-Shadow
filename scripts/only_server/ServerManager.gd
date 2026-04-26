@@ -86,6 +86,7 @@ var warning_overlay = null
 
 # ===== REFERÊNCIAS INTERNAS =====
 
+var server_root: Node = null
 var all_rounds_node: Node = null
 var current_cam_round_index: int = -1
 var current_active_camera: Camera3D = null
@@ -132,7 +133,7 @@ func initialize():
 	
 	# Cria nó organizacional para os Rounds
 	all_rounds_node = Node.new()
-	get_tree().root.add_child(all_rounds_node)
+	server_root.add_child(all_rounds_node)
 	all_rounds_node.name = "All_Rounds"
 	
 	# Se persistência estiver ativada
@@ -227,7 +228,7 @@ func _setup_viewport_display():
 	viewport_display.name = "ViewportDisplay"
 	
 	# Adiciona como child direto da raiz para preencher a tela
-	get_tree().root.add_child(viewport_display)
+	server_root.add_child(viewport_display)
 
 ## Cria timer para imprimir estados periodicamente
 func _setup_debug_timer():
@@ -433,7 +434,7 @@ func _start_server():
 	var d = get_node_or_null("DebugTimer")
 	_log_debug("🆗 Timer de debug carregado com sucesso" if d else
 	 "ℹ️ Timer de debug desativado")
-	var v = get_tree().root.get_node_or_null("ViewportDisplay")
+	var v = server_root.get_node_or_null("ViewportDisplay")
 	_log_debug("🆗 Viewport Display carregado com sucesso" if v else
 	 "ℹ️ Viewport Display não foi carregado")
 	

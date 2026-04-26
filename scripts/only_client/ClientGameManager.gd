@@ -7,7 +7,7 @@ class_name GameManager
 # ===== CONFIGURAÇÕES =====
 
 @export_category("Connection Settings")
-const DEFAULT_SERVER_ADDRESS: String = "172.23.2.183"  # Localhost: "127.0.0.1" zeroTier: "172.23.2.183"
+const DEFAULT_SERVER_ADDRESS: String = "127.0.0.1"  # Localhost: "127.0.0.1" zeroTier: "172.23.2.183"
 const DEFAULT_SERVER_PORT: int = 7777
 @export var server_address: String = DEFAULT_SERVER_ADDRESS
 @export var server_port: int = DEFAULT_SERVER_PORT
@@ -53,6 +53,7 @@ var item_database: ItemDatabase = null
 var network_manager: NetworkManager = null
 var map_manager: MapManager = null
 var initializer: GameInitializer = null
+var server_root: Node = null
 
 # ===== VARIÁVEIS INTERNAS =====
 
@@ -773,11 +774,12 @@ func update_client_info(info: Dictionary):
 
 ## Criar uma partida local
 func create_local_match():
-	_log_debug("Iniciando uma partida local")
 	# Executar build do servidor.
-	#var server_pid := -1
-	#var server_path = ProjectSettings.globalize_path("res://server/server.exe")
-	#server_pid = OS.create_process(server_path, ["--port", "7777"])
+	var response = initializer._init_local()
+	if response:
+		await get_tree().create_timer(2.2).timeout
+		join_server_by_ip("127.0.0.1", str(server_port))
+		_log_debug("Partida local inicializada")
 
 # ===== REGISTRO DE JOGADOR =====
 	
