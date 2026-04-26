@@ -5,9 +5,9 @@ class_name GameInitializer
 ## [TESTES] Usa o TestManager para iniciar uma partida logo na execução (localhost)
 ## (configura server e clients / server cria round e inicia partida com primeiros clientes /
 ##  clientes recebem localhost_auto_connect = true pr conectr autom.)
-@export var test_mode: bool = false
+@export var test_mode: bool = true
 ## [TESTES] Define a quantidade de instâcias de clientes conectadas para executar fast_round
-@export var simulador_players_qtd: int = 2
+@export var simulador_players_qtd: int = 1
 ## [TESTES] Dropa itens perto dos players e ativa o trainer de cada player
 @export var trainer: bool = true
 ## [TESTES] Ativa/desativa proteção dos botões dos menus (desativar para testes de multiplos RPCs)
@@ -84,27 +84,8 @@ func _ready():
 			if arg.begins_with("--client_id="):
 				id_file_ = arg.split("=")[1]
 		_init_client(id_file_)
-
-## Inicializa o modo local
-func _init_local() -> bool:
-	# Verifica se game manager está carregado
-	if not game_manager:
-		return false
-		
-	# se já existir, não faz nada (deve limpar nó 'local_server' quando finalizada)
-	if get_tree().root.get_node_or_null("LocalServer"):
-		return false
-		
-	var local_server = Node.new()
-	local_server.name = "LocalServer"
-	get_tree().root.add_child(local_server)
 	
-	_init_server(true, local_server)
-	game_manager.server_root = local_server
-	
-	return true
-	
-func _init_server(is_headless, local: Node = null):
+func _init_server(is_headless):
 	# Instancia managers e registros
 	var network_manager_scene: PackedScene = preload("res://scenes/system/server_network_manager.tscn")
 	var server_manager_scene: PackedScene = preload("res://scenes/system/server_manager.tscn")
@@ -133,17 +114,16 @@ func _init_server(is_headless, local: Node = null):
 	test_manager.name = "TestManager"
 
 	# Adiciona à árvore
-	var tree = get_tree().root if not local else local
-	tree.add_child.call_deferred(network_manager)
-	tree.add_child.call_deferred(server_manager)
-	tree.add_child.call_deferred(client_registry)
-	tree.add_child.call_deferred(room_registry)
-	tree.add_child.call_deferred(round_registry)
-	tree.add_child.call_deferred(map_manager)
+	get_tree().root.add_child.call_deferred(network_manager)
+	get_tree().root.add_child.call_deferred(server_manager)
+	get_tree().root.add_child.call_deferred(client_registry)
+	get_tree().root.add_child.call_deferred(room_registry)
+	get_tree().root.add_child.call_deferred(round_registry)
+	get_tree().root.add_child.call_deferred(map_manager)
 	map_manager.add_child.call_deferred(map_database)
-	tree.add_child.call_deferred(item_database)
-	tree.add_child.call_deferred(object_manager)
-	tree.add_child.call_deferred(test_manager)
+	get_tree().root.add_child.call_deferred(item_database)
+	get_tree().root.add_child.call_deferred(object_manager)
+	get_tree().root.add_child.call_deferred(test_manager)
 	
 	# Injeta dependências cruzadas:
 	
@@ -257,10 +237,6 @@ func _init_server(is_headless, local: Node = null):
 		debug_overlay._connect_signals()
 	
 	# configurações
-	if local:
-		server_manager.server_root = local
-	else:
-		server_manager.server_root = get_tree().root
 	server_manager.is_headless = is_headless
 	map_manager.is_server = true
 	item_database.is_server = true

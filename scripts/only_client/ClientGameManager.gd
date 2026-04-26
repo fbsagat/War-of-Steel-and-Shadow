@@ -144,7 +144,6 @@ func initialize():
 	
 func localhost_auto_connect():
 	_log_debug("Função de testes está ativada: Entrando no servidor localhost")
-	#await get_tree().create_timer(0.25).timeout
 	join_server_by_ip(server_address, str(server_port))
 
 func setup_reconection_timer():
@@ -774,12 +773,7 @@ func update_client_info(info: Dictionary):
 
 ## Criar uma partida local
 func create_local_match():
-	# Executar build do servidor.
-	var response = initializer._init_local()
-	if response:
-		await get_tree().create_timer(2.2).timeout
-		join_server_by_ip("127.0.0.1", str(server_port))
-		_log_debug("Partida local inicializada")
+	pass
 
 # ===== REGISTRO DE JOGADOR =====
 	
