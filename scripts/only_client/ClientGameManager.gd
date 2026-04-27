@@ -548,7 +548,7 @@ func join_server_by_ip(received_ip: String, received_port: String, local: bool =
 	
 	_log_debug("Tentando conectar ao servidor: %s:%d" % [server_address, server_port])
 	
-	if main_menu_node:
+	if main_menu_node and not local:
 		main_menu_node.show_loading_menu("Conectando ao servidor...")
 		
 	peer = ENetMultiplayerPeer.new()
@@ -736,8 +736,13 @@ func _on_gameplay_menu_exit_game_pressed():
 	_log_debug("_on_gameplay_menu_exit_game_pressed")
 
 func _on_gameplay_menu_give_up_game_pressed():
+	if in_local_server:
+		_disconnect_from_server()
+	else:
+		network_manager._server_request_return_or_exit(false)
+	
+	# Limpa a partoda local
 	_cleanup_local_round()
-	network_manager._server_request_return_or_exit(false)
 	
 	# Volta para o menu da sala
 	if main_menu_node:
@@ -784,8 +789,10 @@ func update_client_info(info: Dictionary):
 
 ## Criar uma partida local
 func create_local_match():
+	# Se estiver conectado em um servidor, desconecta pra criar um local
 	if is_connected_to_server:
-		return
+		_disconnect_from_server()
+		await get_tree().create_timer(0.2).timeout
 	
 	if in_local_server:
 		_log_debug("Já está criando uma partida local")
@@ -830,7 +837,6 @@ func _client_name_accepted(accepted_name: String):
 	
 	if main_menu_node:
 		main_menu_node.update_name_e_connected(configs["server_name"], accepted_name)
-		
 	name_accepted.emit()
 
 ## Callback quando o nome é rejeitado
@@ -899,7 +905,6 @@ func _client_receive_round_return_request(_room_name: String):
 ## Cliente envia resposta dizendo que quer voltar à partida em que estava
 func _request_return_to_round():
 	is_loading = true
-		
 	network_manager._server_request_return_or_exit(true)
 
 ## Cliente envia resposta dizendo que quer abandonar a partida em que estava
@@ -1056,6 +1061,10 @@ func leave_room():
 
 ## Fecha a sala atual (apenas host)
 func close_room():
+	# No servidor local é sala única (Também verifica no servidor)
+	if in_local_server:
+		return
+	
 	if is_in_round:
 		return
 	

@@ -72,7 +72,7 @@ func create_test_round(nome_sala_: String = "Sala de Teste"):
 	# Obtém peers conectados (exclui servidor - ID 1)
 	var all_peers = multiplayer.get_peers()
 	var connected_peers = multiplayer.get_peers()
-	connected_peers.remove_at(0)  # Remove servidor
+	connected_peers.remove_at(0)  # Remove host
 
 	if all_peers.is_empty():
 		_log_debug("⚠ Nenhum cliente conectado para criar partida de teste")
@@ -128,7 +128,7 @@ func create_test_round(nome_sala_: String = "Sala de Teste"):
 	var selected_map: int = map_id
 	
 	# Cria sala no RoomRegistry
-	server_manager._handle_create_room(host_peer_id, "Sala de testes", "", selected_map)
+	server_manager._handle_create_room(host_peer_id, "Sala de testes", "", false, selected_map)
 	
 	var host = client_registry.get_player_by_uuid(host_uuid)
 	var room_data = room_registry.get_room(host["room_id"])

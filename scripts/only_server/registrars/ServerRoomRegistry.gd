@@ -95,7 +95,7 @@ func _get_next_room_id() -> int:
 	return max_id
 
 ## Cria nova sala. Retorna RoomData completo ou {} se falhar.
-func create_room(room_name: String, password: String, host_uuid: String, min_players: int, max_players: int, selected_map: int = 1) -> Dictionary:
+func create_room(room_name: String, password: String, host_uuid: String, min_players: int, max_players: int, locked = false, selected_map: int = 1) -> Dictionary:
 	var room_id = _get_next_room_id()
 
 	if rooms.has(room_id):
@@ -124,7 +124,7 @@ func create_room(room_name: String, password: String, host_uuid: String, min_pla
 		"available_colors": _get_color_pool(),
 		"last_hue": 0.0,
 		"settings": {
-			"locked": false,
+			"locked": locked,
 			"selected_map": selected_map
 			}
 	}
@@ -862,6 +862,14 @@ func _on_peer_id_updated(uuid_base: String, new_peer_id: int):
 			if player["uuid_base"] == uuid_base:
 				player["peer_id"] = new_peer_id
 				_log_debug("✓ Peer id de %s atualizado para %d no registro da sala %d" % [uuid_base, new_peer_id, room_id])
+				return
+
+func _on_peer_name_updated(uuid_base: String, new_peer_name: String):
+	for room_id in rooms:
+		for player in rooms[room_id]["players"]:
+			if player["uuid_base"] == uuid_base:
+				player["name"] = new_peer_name
+				_log_debug("✓ Nome de %s atualizado para %s no registro da sala %d" % [uuid_base, new_peer_name, room_id])
 				return
 
 func get_room_count() -> int:

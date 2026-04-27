@@ -157,20 +157,21 @@ func _get_next_position() -> int:
 
 ## Adiciona um novo peer conectado (ainda não registrado).
 ## uuid_base é obrigatório e será a chave primária do jogador.
-func add_peer(peer_id: int, uuid_base: String):
+func add_peer(peer_id: int, uuid_base: String) -> int:
 	if uuid_base.is_empty():
 		push_error("ClientRegistry: Tentou adicionar peer %d sem uuid_base" % peer_id)
-		return
+		return -1
 
 	if players.has(uuid_base):
 		_log_debug("⚠ UUID %s já existe, atualizando peer_id para %d" % [uuid_base, peer_id])
 		players[uuid_base]["peer_id"] = peer_id
-		return
-
+		return -1
+	
+	var entry: int = _get_next_position()
 	players[uuid_base] = {
 		"peer_id": peer_id,
 		"uuid_base": uuid_base,
-		"entry_position": _get_next_position(),
+		"entry_position": entry,
 		"name": "",
 		"registered": false,
 		"connected": false,
@@ -188,6 +189,7 @@ func add_peer(peer_id: int, uuid_base: String):
 	
 	_log_debug("✓ Peer adicionado: uuid=%s peer_id=%d" % [uuid_base, peer_id])
 	peer_added.emit(uuid_base)
+	return entry
 
 func connected_since(uuid_base: String) -> float:
 	if not players.has(uuid_base):
@@ -350,6 +352,12 @@ func register_player_name(uuid_base: String, player_name: String) -> bool:
 
 	players[uuid_base]["name"] = player_name
 	players[uuid_base]["registered"] = true
+	# Se estiver em uma sala, renomear lá também
+	if players[uuid_base]["room_id"] > 0:
+		var room = room_registry.get_room(players[uuid_base]["room_id"])
+		for player in room["players"]:
+			if player.get("uuid_base") == players[uuid_base]["uuid_base"]:
+				room_registry._on_peer_name_updated(players[uuid_base]["uuid_base"], player_name)
 	
 	if persistence_manager:
 		# Persistência - atualizar registered

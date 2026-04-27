@@ -107,6 +107,7 @@ signal gameplay_menu_give_up_game_pressed()
 @onready var kick_player_button: Button
 @onready var room_error_label: Label
 @onready var room_status_label: Label
+@onready var room_rename_button: Button
 
 # Menu de retorna à sala/partida
 @onready var round_return_room_label: Label
@@ -189,6 +190,7 @@ var resolutions = [
 
 var inventory_mode: bool = false # True se está com inventário aberto
 var current_menu_visible: CenterContainer = null
+var _from_lobby = false
 var current_matches = []
 var current_servers = []
 var current_players = []
@@ -376,6 +378,7 @@ func _setup_element_references():
 	room_leave_button = room_menu.find_child("LeaveButton", true, false)
 	room_error_label = room_menu.find_child("ErrorLabel", true, false)
 	room_status_label = room_menu.find_child("StatusLabel", true, false)
+	room_rename_button = room_menu.find_child("RenameButton", true, false)
 	
 	# Opções
 	vsync_check = options_menu.find_child("VsyncCheck", true, false)
@@ -449,6 +452,7 @@ func _connect_button_signals():
 	_connect_if_exists(room_menu, "LockButton", _on_room_lock_pressed)
 	_connect_if_exists(room_menu, "KickPlayer", _on_room_kick_player_pressed)
 	_connect_if_exists(room_menu, "LeaveButton", _on_room_leave_pressed)
+	_connect_if_exists(room_menu, "RenameButton", _on_rename_button_pressed_f_room)
 	
 	if room_players_list:
 		room_players_list.item_selected.connect(_on_player_list_player_selected)
@@ -795,6 +799,10 @@ func show_room_menu(room_data: Dictionary):
 	current_menu_visible = room_menu
 	room_start_button.disabled = false
 	_update_room_display(room_data)
+	if game_manager.in_local_server:
+		room_close_button.text = "Sair"
+	else:
+		room_close_button.text = "Fechar Sala"
 
 func show_loading_menu(message: String = "Carregando...", can_cancel: bool = true, progress: bool = false):
 	canvas_layer.show()
@@ -892,7 +900,10 @@ func _on_name_confirm_pressed(text: String = ""):
 func _on_name_input_return_pressed():
 	if disable_protection:
 		name_input_confirm_button.disabled = true
-	show_room_list_menu()
+	if _from_lobby:
+		show_room_menu({})
+	else:
+		show_room_list_menu()
 
 # ===== CALLBACKS DO MENU PRINCIPAL =====
 
@@ -1165,7 +1176,13 @@ func _on_confirm_delete_server_pressed():
 	_show_error_("Servidor apagado", server_list_error_label, "Yellow")
 
 func _on_rename_button_pressed():
-	_log_debug("Botão de renomear pressionado")
+	_log_debug("Botão de renomear pressionado a partir da lista de salas")
+	_from_lobby = false
+	show_name_input_menu(false)
+
+func _on_rename_button_pressed_f_room():
+	_log_debug("Botão de renomear pressionado a partir de um lobby")
+	_from_lobby = true
 	show_name_input_menu(false)
 
 func _on_manual_server_join_confirm_pressed():
@@ -1526,6 +1543,9 @@ func _on_room_start_pressed():
 func _on_room_close_pressed():
 	if disable_protection:
 		room_close_button.disabled = true
+	if game_manager.in_local_server:
+		game_manager._disconnect_from_server()
+		return
 	game_manager.close_room()
 
 func _on_room_lock_pressed():
@@ -1715,13 +1735,25 @@ func _on_game_manager_rooms_received(sucess: bool, rooms: Array):
 
 func _on_game_manager_name_accepted():
 	_log_debug("Nome aceito pelo servidor")
-	show_room_list_menu()
+	# Se estiver em um servidor local mas não estiver vindo do lobby, 
+	# não direciona; já é direcinado pelo servidor pra sala única
+	if game_manager.in_local_server and not _from_lobby:
+		return
+	
+	# Se não estiver vindo de um lobby, volta pra lista de salas, pois o botão é de lá.
+	if not _from_lobby:
+		show_room_list_menu()
+	else:
+		# Se estiver vindo de um lobby (botão de renomear de lá) volta pra lá.
+		show_room_menu({})
 
 func _on_game_manager_name_rejected(reason: String):
 	_log_debug("Nome rejeitado: " + reason)
 
 func _on_game_manager_room_created(room_data: Dictionary):
 	_log_debug("Sala criada com sucesso")
+	if room_data["settings"]["locked"]:
+		_on_room_lock_pressed()
 	show_room_menu(room_data)
 
 func _on_game_manager_room_joined(room_data: Dictionary):

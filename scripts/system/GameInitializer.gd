@@ -241,7 +241,8 @@ func _init_server(is_headless, server_owner_):
 		debug_overlay._connect_signals()
 	
 	# configurações
-	server_manager.server_owner_ = server_owner_
+	if server_owner_:
+		server_manager.server_owner_ = server_owner_
 	is_headless = is_headless
 	map_manager.is_server = true
 	item_database.is_server = true

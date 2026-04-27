@@ -265,6 +265,7 @@ layout_mode = 2
 text = "Voltar"
 
 [node name="ServerListMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=1788849445]
+visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -549,11 +550,6 @@ layout_mode = 2
 text = "Criar Sala
 "
 
-[node name="RenameButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer/ButtonsContainer1" unique_id=211677312]
-custom_minimum_size = Vector2(150, 40)
-layout_mode = 2
-text = "Mudar Nome"
-
 [node name="ButtonsContainer2" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer" unique_id=2096999428]
 layout_mode = 2
 theme_override_constants/separation = 40
@@ -563,6 +559,11 @@ alignment = 1
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 text = "Voltar"
+
+[node name="RenameButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer/ButtonsContainer2" unique_id=211677312]
+custom_minimum_size = Vector2(150, 40)
+layout_mode = 2
+text = "Mudar Nome"
 
 [node name="ExitServerButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoomListMenu/VBoxContainer/ButtonsContainer2" unique_id=713213911]
 custom_minimum_size = Vector2(150, 40)
@@ -626,11 +627,6 @@ custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 text = "Iniciar Partida"
 
-[node name="CloseButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer/ButtonsContainer" unique_id=1171284964]
-custom_minimum_size = Vector2(150, 40)
-layout_mode = 2
-text = "Fechar Sala"
-
 [node name="LockButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer/ButtonsContainer" unique_id=1828208451]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
@@ -646,6 +642,21 @@ custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 text = "Expulsar jogador
 "
+
+[node name="ButtonsContainer2" type="HBoxContainer" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer" unique_id=758566526]
+layout_mode = 2
+theme_override_constants/separation = 40
+alignment = 1
+
+[node name="CloseButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer/ButtonsContainer2" unique_id=938281156]
+custom_minimum_size = Vector2(150, 40)
+layout_mode = 2
+text = "Fechar Sala"
+
+[node name="RenameButton" type="Button" parent="CanvasLayer/CenterContainer/Control/RoomMenu/VBoxContainer/ButtonsContainer2" unique_id=1656090525]
+custom_minimum_size = Vector2(150, 40)
+layout_mode = 2
+text = "Mudar Nome"
 
 [node name="RoundReturnMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=1882250171]
 visible = false

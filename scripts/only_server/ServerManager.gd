@@ -447,6 +447,10 @@ func _start_server():
 		_log_debug("================================================================")
 		push_error("ERRO ao criar servidor: " + str(error))
 		_log_debug("================================================================")
+		
+		# Se for local, desliga o servidor
+		if server_owner_ != "":
+			shutdown_server()
 		return
 	
 	multiplayer.multiplayer_peer = peer
@@ -526,7 +530,7 @@ func process_client_hello(payload: Dictionary, peer_id: int) -> Dictionary:
 				
 	# 🔄 Token inválido ou inexistente → emitir novo
 	if not client_registry.get_player_by_uuid(uuid_base):
-		client_registry.add_peer(peer_id, uuid_base)
+		var entry = client_registry.add_peer(peer_id, uuid_base)
 	client_registry._register_connection(uuid_base)
 
 	var new_token = client_registry._compute_token(uuid_base)
@@ -627,6 +631,17 @@ func _handle_register_player_name(peer_id: int, player_name: String):
 		_log_debug("✓ Jogador registrado: %s (Peer ID: %d)" % [player_name, peer_id])
 		_log_debug("_client_name_accepted", true)
 		network_manager.rpc_id(peer_id, "_client_name_accepted", player_name)
+		
+		# Atualzia a sala deste player, se ele estiver em uma
+		var player = client_registry.get_player(player_uuid)
+		if player["room_id"] > 0:
+			_notify_room_update(player["room_id"])
+		
+		# Se for servidor local, já cria a sala única (verificando se é o primeiro a conectar/o dono)
+		if player and server_owner_ != "" and player["entry_position"] == 1:
+			if player_uuid == server_owner_ and player["room_id"] < 0:
+				# Função para criar partida local
+				create_local_round(peer_id)
 	else:
 		_log_debug("❌ Falha ao registrar jogador")
 		_log_debug("_client_name_rejected", true)
@@ -634,6 +649,19 @@ func _handle_register_player_name(peer_id: int, player_name: String):
 
 
 # ===== HANDLERS DE SALAS =====
+
+## Cria uma sala local para o cliente proprietário do servidor. Chamado automaticamente.
+func create_local_round(peer_id, nome_sala_: String = "Partida Local"):
+
+	# Valida registries
+	if not client_registry or not room_registry or not round_registry:
+		_log_debug("❌ Registries não disponíveis!")
+		return
+	
+	var selected_map: int = 3
+	
+	# Cria sala no RoomRegistry
+	_handle_create_room(peer_id, nome_sala_, "", true, selected_map)
 
 ## Envia lista de salas disponíveis (não em jogo) para o cliente que requisitou
 func _handle_request_rooms_list(peer_id: int):
@@ -959,7 +987,7 @@ func _mark_player_disconnected(peer_id: int, _chosen: bool):
 		_log_debug("✓ uuid=%s removido de disconnected_players na rodada %d" % [player["name"], _round["id"]])
 
 # Cria uma nova sala e adiciona o criador como host
-func _handle_create_room(peer_id: int, room_name: String, password: String, selected_map: int = 3):
+func _handle_create_room(peer_id: int, room_name: String, password: String, locked = false, selected_map: int = 3):
 	var player_uuid = client_registry.get_uuid_by_peer_id(peer_id)
 	var player = client_registry.get_player(player_uuid)
 	
@@ -994,6 +1022,7 @@ func _handle_create_room(peer_id: int, room_name: String, password: String, sele
 		player_uuid,
 		min_players_to_start,
 		max_players_per_room,
+		locked,
 		selected_map)
 	
 	if room_data.is_empty():

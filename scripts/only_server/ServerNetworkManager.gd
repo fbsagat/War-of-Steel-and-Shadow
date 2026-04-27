@@ -157,10 +157,12 @@ func _server_give_me_configs():
 		return
 	_log_debug("✓ Enviando configurações do servidor para o cliente: Peer ID %d" % peer_id)
 	
+	# Nome de servidor só é necessário se for remoto, local não envia
+	var s_name = server_manager.public_server_name if server_manager.server_owner_ == "" else ""
 	var configs: Dictionary = {
 		"max_players_per_room": server_manager.max_players_per_room,
 		"min_players_to_start": server_manager.min_players_to_start,
-		"server_name": server_manager.public_server_name,
+		"server_name": s_name,
 		"server_id": server_manager.server_id,
 	}
 	
@@ -301,9 +303,14 @@ func _server_kick_player(selected_player_id: String):
 	server_manager._handle_kick_player_from_room(peer_id, selected_player_id)
 
 func _server_close_room():
-	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
-		return
 	var peer_id = multiplayer.get_remote_sender_id()
+	if not is_rpc_allowed(peer_id):
+		return
+	
+	# Não fecha sala se for local (É sala única)
+	if server_manager.server_owner_ != "":
+		return
+		
 	server_manager._handle_close_room(peer_id)
 
 ## Cliente avisa servidor que concluiu o carregamento de seu round e envia check_this_ para
@@ -699,8 +706,16 @@ func _safe_disconnect(peer_id: int):
 	client_registry.players_peer_ids_cache.erase(peer_id)
 	# Para o sync de objetos
 	stop_peer_sync(peer_id)
+	
+	# Se for o proprietário, desliga  o servidor
+	var player_uuid = client_registry.get_uuid_by_peer_id(peer_id)
+	
 	# Desconecta
 	multiplayer.disconnect_peer(peer_id)
+	
+	if server_manager.server_owner_ == player_uuid:
+		server_manager.shutdown_server()
+		
 	_log_debug("⚠️ Peer %d marcado para desconexão imediata." % peer_id)
 	
 func _get_log_prefix() -> String:

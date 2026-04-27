@@ -2,5 +2,5 @@
 
 [ext_resource type="Script" uid="uid://dnddagcrg47fi" path="res://scripts/ui/server_debug_overlay.gd" id="1_ydxd1"]
 
-[node name="DebugOverlay" type="Node" unique_id=563762291]
+[node name="DebugOverlay2" type="Node" unique_id=563762291]
 script = ExtResource("1_ydxd1")
