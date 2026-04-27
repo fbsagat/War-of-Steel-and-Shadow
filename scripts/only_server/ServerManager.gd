@@ -530,7 +530,7 @@ func process_client_hello(payload: Dictionary, peer_id: int) -> Dictionary:
 				
 	# 🔄 Token inválido ou inexistente → emitir novo
 	if not client_registry.get_player_by_uuid(uuid_base):
-		var entry = client_registry.add_peer(peer_id, uuid_base)
+		client_registry.add_peer(peer_id, uuid_base)
 	client_registry._register_connection(uuid_base)
 
 	var new_token = client_registry._compute_token(uuid_base)

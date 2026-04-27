@@ -91,7 +91,6 @@ func create_test_round(nome_sala_: String = "Sala de Teste"):
 	var host_peer_id: int = all_peers[0]
 	var host_uuid = client_registry.get_uuid_by_peer_id(host_peer_id)
 
-	var players: Array = []
 	for i in range(server_manager.simulador_players_qtd):
 		var peer_id = all_peers[i]
 		var _uuid_base = client_registry.get_uuid_by_peer_id(peer_id)
@@ -109,19 +108,7 @@ func create_test_round(nome_sala_: String = "Sala de Teste"):
 		
 		player_data = client_registry.get_player(_uuid_base)
 		
-		# Adiciona à lista de jogadores
-		players.append({
-			"peer_id": peer_id,
-			"uuid_base": _uuid_base,
-			"name": player_data["name"],
-			"is_host": (i == 0)  # Primeiro é o host
-		})
-		
 		_log_debug("  ✓ Jogador registrado: %s (ID: %d)" % [player_data["name"], peer_id])
-
-	if players.is_empty():
-		_log_debug("❌ Nenhum jogador válido para criar partida")
-		return
 	
 	await get_tree().process_frame
 	
@@ -147,7 +134,7 @@ func create_test_round(nome_sala_: String = "Sala de Teste"):
 	
 	await get_tree().create_timer(0.2).timeout
 	
-	server_manager._handle_start_round(players[0]["peer_id"], {"selected_map": selected_map}, true)
+	server_manager._handle_start_round(host_peer_id, {"selected_map": selected_map}, true)
 	
 	# Cria rodada no RoundRegistry
 	_log_debug("  ✓ Iniciando rodada de teste...")

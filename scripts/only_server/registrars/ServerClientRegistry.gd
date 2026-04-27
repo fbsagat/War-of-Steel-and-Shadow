@@ -157,21 +157,20 @@ func _get_next_position() -> int:
 
 ## Adiciona um novo peer conectado (ainda não registrado).
 ## uuid_base é obrigatório e será a chave primária do jogador.
-func add_peer(peer_id: int, uuid_base: String) -> int:
+func add_peer(peer_id: int, uuid_base: String):
 	if uuid_base.is_empty():
 		push_error("ClientRegistry: Tentou adicionar peer %d sem uuid_base" % peer_id)
-		return -1
+		return
 
 	if players.has(uuid_base):
 		_log_debug("⚠ UUID %s já existe, atualizando peer_id para %d" % [uuid_base, peer_id])
 		players[uuid_base]["peer_id"] = peer_id
-		return -1
+		return
 	
-	var entry: int = _get_next_position()
 	players[uuid_base] = {
 		"peer_id": peer_id,
 		"uuid_base": uuid_base,
-		"entry_position": entry,
+		"entry_position": _get_next_position(),
 		"name": "",
 		"registered": false,
 		"connected": false,
@@ -189,7 +188,7 @@ func add_peer(peer_id: int, uuid_base: String) -> int:
 	
 	_log_debug("✓ Peer adicionado: uuid=%s peer_id=%d" % [uuid_base, peer_id])
 	peer_added.emit(uuid_base)
-	return entry
+	return
 
 func connected_since(uuid_base: String) -> float:
 	if not players.has(uuid_base):

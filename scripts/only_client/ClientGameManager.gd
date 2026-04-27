@@ -34,7 +34,7 @@ var reconnect_timer: Timer
 # Heartbeat (detecção)
 var last_pong_time := 0
 var ping_interval := 1.0
-var timeout_limit := 3500 # ms
+var timeout_limit := 4000 # ms
 var post_loading_tolerance := 4000
 var ping_start_time := 0
 var has_received_pong := false
