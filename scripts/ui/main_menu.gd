@@ -615,7 +615,6 @@ func show_main_menu():
 	transparent.visible = false
 	color_rect.visible = true
 	current_menu_visible = main_menu
-	join_single_button.disabled = false
 	self.get_node("CanvasLayer").show()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
@@ -651,6 +650,10 @@ func hide_gameplay_menu():
 
 func show_name_input_menu(welcome: bool):
 	hide_all_menus()
+	if game_manager.in_local_server:
+		join_server_button.text = "Sala Local"
+		join_single_button.disabled = true
+		
 	name_input_confirm_button.disabled = false
 	if welcome:
 		welcome_label.visible = true
@@ -1654,7 +1657,10 @@ func update_name_e_connected(server_name: String, player_name: String):
 		actual_server_name = server_name
 		connect_name_label = main_menu.get_node_or_null("VBoxContainer/ConnecteName")
 		if connect_name_label:
-			connect_name_label.text = '🌐🔗 Conectado em "%s" como %s' % [server_name, player_name]
+			if server_name != "":
+				connect_name_label.text = '🌐🔗 Conectado em "%s" como %s' % [server_name, player_name]
+			else:
+				connect_name_label.text = '🌐🔗 Conectado em %s como %s' % ["Rede Local" ,player_name]
 		
 		
 # ===== FUNÇÕES DE MENSAGENS DE ERRO =====
@@ -1714,7 +1720,8 @@ func update_loading_message(message: String):
 func _on_connected_to_server():
 	_log_debug("Conectado ao servidor com sucesso!")
 	# Mudar o nome do botão de "Entrar em um servidor" para "Salas do servidor"
-	join_server_button.text = "Salas do servidor"
+	if not game_manager.in_local_server:
+		join_server_button.text = "Salas do servidor"
 
 func _on_game_manager_connection_failed(reason: String):
 	_log_debug("Falha na conexão: " + reason)
@@ -1724,6 +1731,7 @@ func _on_game_manager_connection_failed(reason: String):
 
 func _on_game_manager_disconnected():
 	_log_debug("Desconectado do servidor")
+	join_single_button.disabled = false
 	join_server_button.text = "Entrar em um servidor"
 	connect_name_label.text = "Desconectado 🌐⛓️‍💥"
 	show_main_menu()

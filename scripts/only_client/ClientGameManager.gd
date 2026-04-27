@@ -733,7 +733,7 @@ func _on_gameplay_menu_exit_game_pressed():
 	if main_menu_node:
 		main_menu_node.show_main_menu()
 		
-	_log_debug("_on_gameplay_menu_exit_game_pressed")
+	_log_debug("[111] Sainda da partida")
 
 func _on_gameplay_menu_give_up_game_pressed():
 	if in_local_server:
@@ -747,6 +747,7 @@ func _on_gameplay_menu_give_up_game_pressed():
 	# Volta para o menu da sala
 	if main_menu_node:
 		main_menu_node.show_main_menu()
+	_log_debug("[111] Desistindo da partida")
 
 
 # ===== ATUALIZAÇÃO DE CONFIGURAÇÕES =====
@@ -909,6 +910,9 @@ func _request_return_to_round():
 
 ## Cliente envia resposta dizendo que quer abandonar a partida em que estava
 func _request_exit_from_round():
+	if in_local_server:
+		_disconnect_from_server()
+		return
 	network_manager._server_request_return_or_exit(false)
 
 ## Callback quando recebe atualização de lista de salas por prte do servidor(não requisitado)
