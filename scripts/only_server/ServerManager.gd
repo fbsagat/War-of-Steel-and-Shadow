@@ -551,6 +551,11 @@ func _on_peer_disconnected(peer_id: int):
 	
 	var player_uuid = client_registry.get_uuid_by_peer_id(peer_id)
 	
+	# Se o servidor for local e o dono for este cliente, fecha o processo
+	# (Redundância/godot já fecha processos filhos)
+	if server_owner_ == player_uuid:
+		shutdown_server()
+	
 	# Sistema para impedir execução múltipla
 	# Só passa se não for DISCONNECTED
 	var state = client_registry.get_player_state(player_uuid)

@@ -12,7 +12,6 @@ const DEFAULT_SERVER_PORT: int = 7777
 var server_address: String = DEFAULT_SERVER_ADDRESS
 var server_port: int = DEFAULT_SERVER_PORT
 var in_local_server: bool = false
-## (initializer sobrepõe) Conecta automaticamente no localhost na inicialização
 
 @export_category("Default Node References")
 const map_scene : String = "res://scenes/maps/vainer_village/vainer_village.tscn"
@@ -222,7 +221,7 @@ func _ping_pong(_delta):
 	
 	if Time.get_ticks_msec() - last_pong_time > timeout_limit:
 		has_timed_out = true
-		multiplayer.multiplayer_peer.close()
+		_disconnect_from_server()
 
 func finish_loading():
 	is_loading = false
@@ -401,15 +400,16 @@ func _on_server_disconnected():
 	network_manager.is_connected_ = false
 	has_received_pong = false
 	
-	# Inicia processo de reconexão
+	# Inicia processo de reconexão (se não for local)
 	# Mostra menu de reconexão
-	if main_menu_node:
-		main_menu_node.show_main_menu()
-		main_menu_node.show_connecting_menu()
-		main_menu_node.show_error_connecting("Conexão perdida. Tentando reconectar...")
+	if not in_local_server:
+		if main_menu_node:
+			main_menu_node.show_main_menu()
+			main_menu_node.show_connecting_menu()
+			main_menu_node.show_error_connecting("Conexão perdida. Tentando reconectar...")
+		
+		start_connection_attempts(server_address, server_port)
 	
-	start_connection_attempts(server_address, server_port)
-
 func start_connection_attempts(address: String, port: int) -> void:
 	server_address = address
 	server_port = port
@@ -457,7 +457,6 @@ func _on_reconnect_gave_up() -> void:
 ## possibilidade de o cliente retornar ao round em que estava
 func _disconnect_from_server():
 	request_kill_local_match()
-	await get_tree().create_timer(0.2).timeout
 	
 	# Não executa enquanto está carregando rodada
 	if is_loading:
@@ -806,6 +805,7 @@ func create_local_match():
 func request_kill_local_match():
 	_log_debug("Solicitando fechamento do servidor")
 	network_manager.request_kill_local_match()
+	await get_tree().create_timer(0.4).timeout
 	in_local_server = false
 
 # ===== REGISTRO DE JOGADOR =====

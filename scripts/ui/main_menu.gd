@@ -66,6 +66,7 @@ signal gameplay_menu_give_up_game_pressed()
 @onready var match_list_join_button: Button
 @onready var manual_join_button: Button
 @onready var match_list_rename_button: Button
+@onready var match_list_exit_button: Button
 
 # Menu de conexão
 @onready var connecting_label: Label
@@ -339,6 +340,7 @@ func _setup_element_references():
 	match_list_join_button = room_list_menu.find_child("JoinButton", true, false)
 	manual_join_button = room_list_menu.find_child("ManualJoinButton", true, false)
 	match_list_rename_button = room_list_menu.find_child("RenameButton", true, false)
+	match_list_exit_button = room_list_menu.find_child("ExitServerButton", true, false)
 	
 	# Entrada manual de sala
 	manual_room_name_input = manual_room_join_menu.find_child("ManualRoomNameInput", true, false)
@@ -682,6 +684,9 @@ func show_room_list_menu(_error_visible: bool = false, match_password_visible: b
 	if match_list_join_button:
 		match_list_join_button.disabled = true
 	
+	# Ativa botão de desconexão
+	match_list_exit_button.disabled = false
+	
 	if match_password_visible:
 		if match_password_container:
 			match_password_container.visible = true
@@ -941,6 +946,8 @@ func _on_match_list_back_pressed():
 
 func _on_exit_server_pressed():
 	game_manager._disconnect_from_server()
+	if disable_protection:
+		match_list_exit_button.disabled = true
 
 func _on_match_list_join_pressed(_text_password: String = ""):
 
@@ -1072,6 +1079,9 @@ func _on_server_list_delete_pressed():
 	_log_debug("Entrando na tela para confirmar exclusão de servidor da lista")
 
 func _on_server_list_enter_pressed():
+	# Se estiver em uma partida local, não faz nada
+	if game_manager.in_local_server:
+		return
 	# Não faz nada se não selecionar nenhum
 	if selected_server_id <= 0:
 		_show_error_("Nenhum servidor selecionado", server_list_error_label, "Red")
