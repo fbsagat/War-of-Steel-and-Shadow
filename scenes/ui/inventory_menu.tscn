@@ -66,10 +66,15 @@ script = ExtResource("1_xmty8")
 
 [node name="Inventory" type="CenterContainer" parent="." unique_id=92906380]
 layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_top = -56.0
+anchors_preset = -1
+anchor_left = 0.27400002
+anchor_top = 0.149
+anchor_right = 0.72400004
+anchor_bottom = 0.596
+offset_left = -350.72003
+offset_top = -163.28
+offset_right = 353.27997
+offset_bottom = 290.87997
 grow_horizontal = 2
 grow_vertical = 2
 
@@ -275,14 +280,15 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_fy31g")
 
 [node name="StatusBar" type="CenterContainer" parent="." unique_id=2019371477]
 layout_mode = 1
-anchors_preset = 7
+anchors_preset = -1
 anchor_left = 0.5
-anchor_top = 1.0
+anchor_top = 0.90300006
 anchor_right = 0.5
-anchor_bottom = 1.0
+anchor_bottom = 0.90300006
 offset_left = -640.0
-offset_top = -238.0
+offset_top = -168.16003
 offset_right = 640.0
+offset_bottom = 68.839966
 grow_horizontal = 2
 grow_vertical = 0
 

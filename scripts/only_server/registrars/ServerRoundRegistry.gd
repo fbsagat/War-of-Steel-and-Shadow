@@ -1,6 +1,6 @@
 extends Node
-class_name RoundRegistry
-## RoundRegistry - Gerenciador de rodadas/partidas (SERVIDOR APENAS)
+class_name ServerRoundRegistry
+## ServerRoundRegistry - Gerenciador de rodadas/partidas (SERVIDOR APENAS)
 ## Rodadas são partidas ativas jogadas dentro de salas
 ##
 ## RESPONSABILIDADES:
@@ -10,7 +10,7 @@ class_name RoundRegistry
 ## - Detectar desconexões e finalizar automaticamente se necessário
 ## - Rastrear jogadores spawnados na cena
 ## - Registrar eventos da rodada
-## - Finalizar rodada e enviar dados para RoomRegistry
+## - Finalizar rodada e enviar dados para ServerRoomRegistry
 ##
 ## IDENTIFICAÇÃO:
 ## - Jogadores são identificados por uuid_base (String) em todos os métodos
@@ -27,12 +27,12 @@ class_name RoundRegistry
 
 # ===== REGISTROS (Injetados pelo initializer.gd) =====
 
-var client_registry: ClientRegistry = null
-var room_registry: RoomRegistry = null
-var object_manager: ObjectManager = null
+var client_registry: ServerClientRegistry = null
+var room_registry: ServerRoomRegistry = null
+var object_manager: ServerObjectManager = null
 var debug_overlay: DebugOverlay = null
 var server_manager: ServerManager = null
-var network_manager: NetworkManager = null
+var network_manager: ServerNetworkManager = null
 var initializer: GameInitializer = null
 
 # ===== VARIÁVEIS INTERNAS =====
@@ -89,17 +89,17 @@ signal player_despawned_from_round(round_id: int, uuid_base: String)
 
 # ===== INICIALIZAÇÃO =====
 
-## Inicializa o RoundRegistry (chamado apenas no servidor).
+## Inicializa o ServerRoundRegistry (chamado apenas no servidor).
 func initialize():
 	if _initialized:
-		_log_debug("⚠ RoundRegistry já inicializado")
+		_log_debug("⚠ ServerRoundRegistry já inicializado")
 		return
 	
 	# Conecta sinais
 	client_registry.peer_id_updated.connect(_on_peer_id_updated)
 	
 	_initialized = true
-	_log_debug("▶️ RoundRegistry inicializado")
+	_log_debug("▶️ ServerRoundRegistry inicializado")
 
 ## Reseta completamente o registro (usado ao desligar servidor).
 func reset():
@@ -115,7 +115,7 @@ func reset():
 
 	rounds.clear()
 	_initialized = false
-	_log_debug("🔄 RoundRegistry resetado")
+	_log_debug("🔄 ServerRoundRegistry resetado")
 
 
 # ===== GERENCIAMENTO DE RODADAS =====
@@ -127,11 +127,11 @@ func create_round(room_id: int, room_name: String, players: Array, settings: Dic
 	var round_id = _get_next_round_id()
 
 	if not room_registry or not room_registry.room_exists(room_id):
-		push_error("RoundRegistry: Sala %d não existe" % room_id)
+		push_error("ServerRoundRegistry: Sala %d não existe" % room_id)
 		return {}
 
 	if players.is_empty():
-		push_error("RoundRegistry: Tentou criar rodada sem jogadores")
+		push_error("ServerRoundRegistry: Tentou criar rodada sem jogadores")
 		return {}
 
 	var round_data = {
@@ -167,7 +167,7 @@ func create_round(room_id: int, room_name: String, players: Array, settings: Dic
 
 	rounds[round_id] = round_data
 
-	# Registra jogadores na rodada (ClientRegistry)
+	# Registra jogadores na rodada (ServerClientRegistry)
 	if client_registry:
 		for player in players:
 			client_registry.join_round(player["uuid_base"], round_id)
@@ -181,7 +181,7 @@ func create_round(room_id: int, room_name: String, players: Array, settings: Dic
 ## Define o nó da cena para uma rodada existente.
 func set_round_node(round_id: int, node: Node):
 	if not rounds.has(round_id):
-		push_error("RoundRegistry: Rodada %d não existe" % round_id)
+		push_error("ServerRoundRegistry: Rodada %d não existe" % round_id)
 		return false
 	rounds[round_id]["round_node"] = node
 	_log_debug("Nó da rodada %d definido: %s" % [round_id, node.name])
@@ -190,7 +190,7 @@ func set_round_node(round_id: int, node: Node):
 ## Define o nó da cena do mapa para uma rodada existente.
 func set_round_map_node(round_id: int, node: Node):
 	if not rounds.has(round_id):
-		push_error("RoundRegistry: Rodada %d não existe" % round_id)
+		push_error("ServerRoundRegistry: Rodada %d não existe" % round_id)
 		return false
 	rounds[round_id]["map_node"] = node
 	_log_debug("Nó do mapa da rodada %d definido: %s" % [round_id, node.name])
@@ -200,7 +200,7 @@ func set_round_map_node(round_id: int, node: Node):
 ## Chamado DEPOIS de spawnar todos os jogadores na cena.
 func start_round(round_id: int):
 	if not rounds.has(round_id):
-		push_error("RoundRegistry: Rodada %d não existe" % round_id)
+		push_error("ServerRoundRegistry: Rodada %d não existe" % round_id)
 		return
 
 	var round_data = rounds[round_id]
@@ -342,7 +342,7 @@ func unmark_empty_round(round_id):
 ## Registra player que foi spawnado na cena da rodada.
 func register_spawned_player(round_id: int, uuid_base: String, player_node: Node):
 	if not rounds.has(round_id):
-		push_error("RoundRegistry: Tentou registrar player em rodada inexistente: %d" % round_id)
+		push_error("ServerRoundRegistry: Tentou registrar player em rodada inexistente: %d" % round_id)
 		return
 
 	rounds[round_id]["spawned_players"][uuid_base] = player_node

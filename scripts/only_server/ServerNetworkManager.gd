@@ -6,11 +6,11 @@ class_name ServerNetworkManager
 # ===== REGISTROS =====
 
 var server_manager: ServerManager = null
-var client_registry: ClientRegistry = null
-var room_registry: RoomRegistry = null
-var round_registry: RoundRegistry = null
-var object_manager: ObjectManager = null
-var game_manager: GameManager = null
+var client_registry: ServerClientRegistry = null
+var room_registry: ServerRoomRegistry = null
+var round_registry: ServerRoundRegistry = null
+var object_manager: ServerObjectManager = null
+var game_manager: ClientGameManager = null
 var item_database: ItemDatabase = null
 
 # ===== VARIÁVEIS INTERNAS =====
@@ -159,10 +159,12 @@ func _server_give_me_configs():
 	
 	# Nome de servidor só é necessário se for remoto, local não envia
 	var s_name = server_manager.public_server_name if server_manager.server_owner_ == "" else ""
+	var s_type = "dedicated" if server_manager.server_owner_ == "" else "local"
 	var configs: Dictionary = {
 		"max_players_per_room": server_manager.max_players_per_room,
 		"min_players_to_start": server_manager.min_players_to_start,
 		"server_name": s_name,
+		"server_type": s_type,
 		"server_id": server_manager.server_id,
 	}
 	
@@ -212,10 +214,10 @@ func _server_receive_hello(payload: Dictionary):
 	
 	var response = server_manager.process_client_hello(payload, peer_id)
 
-	if client_registry.players_peer_ids_cache.has(peer_id):
+	#if client_registry.players_peer_ids_cache.has(peer_id):
 		# Destino: game_manager.handle_server_response
-		_log_debug("_client_receive_auth_result %d" % peer_id, true)
-		rpc_id(peer_id, "_client_receive_auth_result", response)
+	_log_debug("_client_receive_auth_result %d" % peer_id, true)
+	rpc_id(peer_id, "_client_receive_auth_result", response)
 
 func _server_kill_local_match():
 	var peer_id = multiplayer.get_remote_sender_id()
@@ -278,6 +280,12 @@ func _server_join_room(room_id: int, password: String):
 	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
 		return
 	var peer_id = multiplayer.get_remote_sender_id()
+	
+	# Não aceita pedidos pra entrar em sala se for local (É sala única)
+	_log_debug("'Entrar em sala' rejeitado: servidor compartilhado")
+	if server_manager.server_owner_ != "":
+		return
+		
 	server_manager._handle_join_room(peer_id, room_id, password)
 
 func _server_join_room_by_name(room_name: String, password: String):
@@ -293,6 +301,12 @@ func _server_update_room_settings(changed_settings: Dictionary):
 func _server_leave_room():
 	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
 		return
+	
+	# Não aceita pedidos pra deixar sala se for local (É sala única)
+	if server_manager.server_owner_ != "":
+		_log_debug("'Deixar sala' rejeitado: servidor compartilhado")
+		return
+		
 	var peer_id = multiplayer.get_remote_sender_id()
 	server_manager._handle_leave_room(peer_id)
 
@@ -307,8 +321,9 @@ func _server_close_room():
 	if not is_rpc_allowed(peer_id):
 		return
 	
-	# Não fecha sala se for local (É sala única)
+	# Não aceita pedidos pra fechar sala se for local (É sala única)
 	if server_manager.server_owner_ != "":
+		_log_debug("'Fechar sala' rejeitado: servidor compartilhado")
 		return
 		
 	server_manager._handle_close_room(peer_id)

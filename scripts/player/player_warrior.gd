@@ -62,7 +62,7 @@ extends CharacterBody3D
 var network_manager: NetworkManager = null
 var item_database: ItemDatabase = null
 var server_manager: ServerManager = null
-var game_manager: GameManager = null
+var game_manager: ClientGameManager = null
 var initializer: GameInitializer = null
 
 # Identificação multiplayer

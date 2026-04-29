@@ -9,7 +9,7 @@ extends Control
 
 # ===== REGISTROS (Injetados pelo initializer.gd) =====
 
-var game_manager: GameManager = null
+var game_manager: ClientGameManager = null
 var player_node: CharacterBody3D = null
 var initializer: GameInitializer = null
 

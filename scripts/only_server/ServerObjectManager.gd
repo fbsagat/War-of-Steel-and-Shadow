@@ -1,6 +1,6 @@
 extends Node
-class_name ObjectManager
-## ObjectManager - Gerenciador autoritativo de objetos no mundo (SERVIDOR APENAS)
+class_name ServerObjectManager
+## ServerObjectManager - Gerenciador autoritativo de objetos no mundo (SERVIDOR APENAS)
 ##
 ## RESPONSABILIDADES:
 ## - Spawnar itens no mundo usando ItemDatabase como fonte
@@ -37,9 +37,9 @@ class_name ObjectManager
 # ===== DEPENDÊNCIAS (Injetadas pelo initializer.gd) =====
 
 var server_manager: ServerManager = null
-var network_manager: NetworkManager = null
-var client_registry: ClientRegistry = null
-var round_registry: RoundRegistry = null
+var network_manager: ServerNetworkManager = null
+var client_registry: ServerClientRegistry = null
+var round_registry: ServerRoundRegistry = null
 var item_database: ItemDatabase = null
 var initializer: GameInitializer = null
 
@@ -82,22 +82,22 @@ signal round_objects_cleared(round_id: int, count: int)
 
 # ===== INICIALIZAÇÃO =====
 
-## Inicializa o ObjectManager. Deve ser chamado pelo ServerManager após injetar as dependências.
+## Inicializa o ServerObjectManager. Deve ser chamado pelo ServerManager após injetar as dependências.
 func initialize():
 	if _initialized:
-		_log_debug("⚠ ObjectManager já inicializado")
+		_log_debug("⚠ ServerObjectManager já inicializado")
 		return
 
 	if not item_database:
-		push_error("ObjectManager: ItemDatabase não encontrado!")
+		push_error("ServerObjectManager: ItemDatabase não encontrado!")
 		return
 
 	if not item_database.is_loaded:
-		push_error("ObjectManager: ItemDatabase não está carregado!")
+		push_error("ServerObjectManager: ItemDatabase não está carregado!")
 		return
 
 	_initialized = true
-	_log_debug("✓ ObjectManager inicializado com sucesso!")
+	_log_debug("✓ ServerObjectManager inicializado com sucesso!")
 
 ## Reseta completamente o manager, destruindo todos os objetos e limpando os registros.
 func reset():
@@ -110,7 +110,7 @@ func reset():
 	all_stored_objects.clear()
 	next_object_id = 1
 	_initialized = false
-	_log_debug("🔄 ObjectManager resetado")
+	_log_debug("🔄 ServerObjectManager resetado")
 
 
 # ===== SPAWN =====
@@ -126,15 +126,15 @@ func reset():
 ## @return O ID único gerado para o objeto, ou -1 em caso de falidade.
 func spawn_item(objects_node, round_id: int, item_name: String, position: Vector3, rotation: Vector3 = Vector3.ZERO, velocity: Vector3 = Vector3.ZERO, owner_uuid: String = "") -> int:
 	if not _initialized:
-		push_error("ObjectManager: Não inicializado")
+		push_error("ServerObjectManager: Não inicializado")
 		return -1
 
 	if not item_database.item_exists(item_name):
-		push_error("ObjectManager: Item '%s' não existe no ItemDatabase" % item_name)
+		push_error("ServerObjectManager: Item '%s' não existe no ItemDatabase" % item_name)
 		return -1
 
 	if not round_registry or not round_registry.is_round_active(round_id):
-		push_error("ObjectManager: Rodada %d não está ativa" % round_id)
+		push_error("ServerObjectManager: Rodada %d não está ativa" % round_id)
 		return -1
 
 	var object_id = _get_next_object_id()
@@ -144,7 +144,7 @@ func spawn_item(objects_node, round_id: int, item_name: String, position: Vector
 	var item_node = await _spawn_on_server(objects_node, object_id, round_id, item_name, position, rotation, velocity, owner_uuid)
 
 	if not item_node:
-		push_error("ObjectManager: Falha ao spawnar '%s'" % item_name)
+		push_error("ServerObjectManager: Falha ao spawnar '%s'" % item_name)
 		return -1
 
 	# Armazena apenas o nó
@@ -167,7 +167,7 @@ func spawn_item(objects_node, round_id: int, item_name: String, position: Vector
 ## Retorna o object_id gerado, ou -1 em caso de falha.
 func spawn_item_in_front_of_player(objects_node, round_id: int, player_uuid: String, item_name: String) -> int:
 	if not server_manager.player_states.has(player_uuid):
-		push_error("ObjectManager: Player '%s' não tem estado no servidor" % player_uuid)
+		push_error("ServerObjectManager: Player '%s' não tem estado no servidor" % player_uuid)
 		return -1
 
 	var player_state = server_manager.player_states[player_uuid]
@@ -182,7 +182,7 @@ func spawn_item_in_front_of_player(objects_node, round_id: int, player_uuid: Str
 ## Retorna o object_id gerado, ou -1 em caso de falha.
 func spawn_item_over_of_player(objects_node, round_id: int, player_uuid: String, item_name: String) -> int:
 	if not server_manager.player_states.has(player_uuid):
-		push_error("ObjectManager: Player '%s' não tem estado no servidor" % player_uuid)
+		push_error("ServerObjectManager: Player '%s' não tem estado no servidor" % player_uuid)
 		return -1
 
 	var player_pos = server_manager.player_states[player_uuid]["pos"]
@@ -237,7 +237,7 @@ func _send_spawn_to_clients(round_id: int, object_id: int, item_name: String, po
 ## Retorna true em caso de sucesso.
 func despawn_object(round_id: int, object_id: int) -> bool:
 	if not spawned_objects.has(round_id) or not spawned_objects[round_id].has(object_id):
-		push_warning("ObjectManager: Objeto %d não existe na rodada %d" % [object_id, round_id])
+		push_warning("ServerObjectManager: Objeto %d não existe na rodada %d" % [object_id, round_id])
 		return false
 
 	var item_node: Node = spawned_objects[round_id][object_id]
@@ -269,7 +269,7 @@ func despawn_object_by_node(round_id: int, node: Node) -> bool:
 		if spawned_objects[round_id][object_id] == node:
 			return despawn_object(round_id, object_id)
 
-	push_warning("ObjectManager: Nó não encontrado no registro da rodada %d" % round_id)
+	push_warning("ServerObjectManager: Nó não encontrado no registro da rodada %d" % round_id)
 	return false
 
 ## Remove todos os objetos (spawnados e guardados) de uma rodada.
@@ -324,7 +324,7 @@ func _is_peer_connected(peer_id: int) -> bool:
 ## Retorna true em caso de sucesso.
 func store_object(round_id: int, object_id: int, owner_uuid: String, custom_data: Dictionary = {}) -> bool:
 	if not spawned_objects.has(round_id) or not spawned_objects[round_id].has(object_id):
-		push_error("ObjectManager: Objeto %d não está spawnado na rodada %d" % [object_id, round_id])
+		push_error("ServerObjectManager: Objeto %d não está spawnado na rodada %d" % [object_id, round_id])
 		return false
 
 	var item_node: Node = spawned_objects[round_id][object_id]
@@ -373,7 +373,7 @@ func store_object(round_id: int, object_id: int, owner_uuid: String, custom_data
 ## Retorna true em caso de sucesso.
 func retrieve_stored_object(objects_node, round_id: int, object_id: int, position: Vector3, rotation: Vector3 = Vector3.ZERO, new_owner_uuid: String = "") -> bool:
 	if not stored_objects.has(round_id) or not stored_objects[round_id].has(object_id):
-		push_error("ObjectManager: Objeto %d não está guardado na rodada %d" % [object_id, round_id])
+		push_error("ServerObjectManager: Objeto %d não está guardado na rodada %d" % [object_id, round_id])
 		return false
 
 	var stored_data = stored_objects[round_id][object_id]
@@ -386,7 +386,7 @@ func retrieve_stored_object(objects_node, round_id: int, object_id: int, positio
 	var item_node = await _spawn_on_server(objects_node, object_id, round_id, item_name, position, rotation, Vector3.ZERO, new_owner_uuid)
 
 	if not item_node:
-		push_error("ObjectManager: Falha ao respawnar objeto guardado %d" % object_id)
+		push_error("ServerObjectManager: Falha ao respawnar objeto guardado %d" % object_id)
 		# Reverte para guardado
 		stored_objects[round_id][object_id] = stored_data
 		all_stored_objects[object_id] = stored_data
@@ -414,7 +414,7 @@ func retrieve_stored_object(objects_node, round_id: int, object_id: int, positio
 ## Retorna true em caso de sucesso.
 func transfer_stored_object(round_id: int, object_id: int, new_owner_uuid: String) -> bool:
 	if not stored_objects.has(round_id) or not stored_objects[round_id].has(object_id):
-		push_error("ObjectManager: Objeto %d não está guardado na rodada %d" % [object_id, round_id])
+		push_error("ServerObjectManager: Objeto %d não está guardado na rodada %d" % [object_id, round_id])
 		return false
 
 	var stored_data = stored_objects[round_id][object_id]
@@ -437,7 +437,7 @@ func transfer_stored_object(round_id: int, object_id: int, new_owner_uuid: Strin
 ## Retorna true em caso de sucesso.
 func destroy_stored_object(round_id: int, object_id: int) -> bool:
 	if not stored_objects.has(round_id) or not stored_objects[round_id].has(object_id):
-		push_warning("ObjectManager: Objeto %d não está guardado na rodada %d" % [object_id, round_id])
+		push_warning("ServerObjectManager: Objeto %d não está guardado na rodada %d" % [object_id, round_id])
 		return false
 
 	stored_objects[round_id].erase(object_id)
@@ -546,17 +546,17 @@ func _spawn_on_server(objects_node, object_id: int, round_id: int, item_name: St
 	var scene_path: String = item_database.get_item(item_name)["scene_path"]
 
 	if scene_path.is_empty():
-		push_error("ObjectManager: scene_path vazio para '%s'" % item_name)
+		push_error("ServerObjectManager: scene_path vazio para '%s'" % item_name)
 		return null
 
 	var item_scene = load(scene_path)
 	if not item_scene:
-		push_error("ObjectManager: Falha ao carregar cena: %s" % scene_path)
+		push_error("ServerObjectManager: Falha ao carregar cena: %s" % scene_path)
 		return null
 
 	var item_node = item_scene.instantiate()
 	if not item_node:
-		push_error("ObjectManager: Falha ao instanciar cena")
+		push_error("ServerObjectManager: Falha ao instanciar cena")
 		return null
 
 	item_node.name = "Object_%d_%s_%d" % [object_id, item_name, round_id]
@@ -571,7 +571,7 @@ func _spawn_on_server(objects_node, object_id: int, round_id: int, item_name: St
 	await get_tree().process_frame
 
 	if not item_node.is_inside_tree():
-		push_error("ObjectManager: Nó não foi adicionado à árvore")
+		push_error("ServerObjectManager: Nó não foi adicionado à árvore")
 		item_node.queue_free()
 		return null
 

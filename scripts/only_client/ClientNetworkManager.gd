@@ -5,7 +5,7 @@ class_name ClientNetworkManager
 
 # ===== REGISTROS =====
 
-var game_manager: GameManager = null
+var game_manager: ClientGameManager = null
 var item_database: ItemDatabase = null
 
 # ===== VARIÁVEIS INTERNAS =====
@@ -109,9 +109,9 @@ func _client_update_info(info):
 	if game_manager and game_manager.has_method("update_client_info"):
 		game_manager.update_client_info(info)
 
-func _client_name_accepted(accepted_name: String):
+func _client_name_accepted(accepted_name: String, room_data: Dictionary = {}):
 	_log_debug("Nome aceito: " + accepted_name)
-	game_manager._client_name_accepted(accepted_name)
+	game_manager._client_name_accepted(accepted_name, room_data)
 
 func _client_name_rejected(reason: String):
 	_log_debug("❌ Nome rejeitado: " + reason)

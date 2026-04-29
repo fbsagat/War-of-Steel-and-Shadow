@@ -76,22 +76,22 @@ const PANEL_SIZE: Vector2 = Vector2(1020.0, 680.0)
 # ─────────────────────────────────────────────────────────────────────────────
 
 ## Referência ao ClientManager — configure via setup()
-var client_registry: ClientRegistry = null
+var client_registry: ServerClientRegistry = null
 
 ## Referência ao RoomManager — configure via setup()
-var room_registry: RoomRegistry = null
+var room_registry: ServerRoomRegistry = null
 
 ## Referência ao MatchManager — configure via setup()
-var round_registry: RoundRegistry = null
+var round_registry: ServerRoundRegistry = null
 
-## Referência ao ObjectManager — configure via setup()
-var object_manager: ObjectManager = null
+## Referência ao ServerObjectManager — configure via setup()
+var object_manager: ServerObjectManager = null
 
 ## Referência ao ServerManager - Injetado via initializer
 var server_manager: ServerManager = null
 
 ## Referência ao NetworkManager - Injetado via initializer
-var network_manager: NetworkManager = null
+var network_manager: ServerNetworkManager = null
 
 ## Referência ao NetworkManager - Injetado via initializer
 var initializer: GameInitializer = null
@@ -348,7 +348,7 @@ func _rebuild_clients(list: VBoxContainer) -> void:
 	_add_header(list, col_names, column_sizes)
 
 	if client_registry == null:
-		_add_placeholder(list, "ClientRegistry não configurado.")
+		_add_placeholder(list, "ServerClientRegistry não configurado.")
 		return
 
 	for client_uuid in client_registry.get_all_players_uuid():
@@ -400,7 +400,7 @@ func _rebuild_rooms(list: VBoxContainer) -> void:
 	_add_header(list, col_names, col_sizes)
 
 	if room_registry == null:
-		_add_placeholder(list, "RoomRegistry não configurado.")
+		_add_placeholder(list, "ServerRoomRegistry não configurado.")
 		return
 
 	for room_id in room_registry.get_all_rooms_ids():
@@ -442,7 +442,7 @@ func _rebuild_matches(list: VBoxContainer) -> void:
 	_add_header(list, col_names, col_sizes)
 
 	if round_registry == null:
-		_add_placeholder(list, "RoundRegistry não configurado.")
+		_add_placeholder(list, "ServerRoundRegistry não configurado.")
 		return
 
 	for round_id in round_registry.get_all_rounds_ids():
@@ -489,7 +489,7 @@ func _rebuild_spawned_objects(list: VBoxContainer) -> void:
 	_add_header(list, col_names, col_sizes)
 
 	if object_manager == null:
-		_add_placeholder(list, "ObjectManager não configurado.")
+		_add_placeholder(list, "ServerObjectManager não configurado.")
 		return
 		
 	if network_manager == null:
@@ -547,7 +547,7 @@ func _rebuild_stored_objects(list: VBoxContainer) -> void:
 	_add_header(list, col_names, col_sizes)
 
 	if object_manager == null:
-		_add_placeholder(list, "ObjectManager não configurado.")
+		_add_placeholder(list, "ServerObjectManager não configurado.")
 		return
 		
 	if network_manager == null:

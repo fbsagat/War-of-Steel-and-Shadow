@@ -2,7 +2,7 @@ extends Control
 
 # ===== REGISTROS (Injetados pelo initializer.gd) =====
 
-var game_manager: GameManager = null
+var game_manager: ClientGameManager = null
 var server_list_manager: ServerListManager = null
 var initializer: GameInitializer = null
 
@@ -45,6 +45,7 @@ signal gameplay_menu_give_up_game_pressed()
 @onready var connect_name_label: Label
 @onready var join_single_button: Button
 @onready var join_server_button: Button
+@onready var mm_error_label: Label
 
 # Menu de lista de servidores
 @onready var server_list: ItemList
@@ -297,6 +298,8 @@ func _setup_element_references():
 	connect_name_label = main_menu.find_child("ConnecteName", true, false)
 	join_single_button = main_menu.find_child("JoinSinglePlayerButton", true, false)
 	join_server_button = main_menu.find_child("JoinServerButton", true, false)
+	mm_error_label = main_menu.find_child("ErrorLabel", true, false)
+	
 	
 	# Menu de conexão
 	connecting_label = connecting_menu.find_child("ConnectingLabel", true, false)
@@ -650,7 +653,7 @@ func hide_gameplay_menu():
 
 func show_name_input_menu(welcome: bool):
 	hide_all_menus()
-	if game_manager.in_local_server:
+	if game_manager.shared_server:
 		join_server_button.text = "Sala Local"
 		join_single_button.disabled = true
 		
@@ -802,7 +805,7 @@ func show_room_menu(room_data: Dictionary):
 	current_menu_visible = room_menu
 	room_start_button.disabled = false
 	_update_room_display(room_data)
-	if game_manager.in_local_server:
+	if game_manager.shared_server:
 		room_close_button.text = "Sair"
 	else:
 		room_close_button.text = "Fechar Sala"
@@ -920,8 +923,8 @@ func _on_join_server_pressed():
 		show_room_list_menu()
 
 func _on_join_singleplayer_pressed():
-	if game_manager.in_local_server == false:
-		game_manager.create_local_match()
+	if game_manager.shared_server == false:
+		game_manager.create_shared_server()
 		if disable_protection:
 			join_single_button.disabled = true
 
@@ -1017,16 +1020,20 @@ func populate_room_list(matches: Array):
 	selected_match_id = -1
 	
 	for match_data in matches:
-		var text = match_data.get("name", "Sala sem nome")  # Usa valor padrão se "name" não existir
+		var text =  "🚪 "
+		
 		if match_data.get("has_password", false):
-			text += " 🔒"
+			text += "🔒 "
+		
+		text += " %s" % match_data.get("name", "Sala sem nome")  # Usa valor padrão se "name" não existir
 		
 		# Converte valores para inteiros com segurança
 		var players = match_data.get("players", 0)
 		var max_players = match_data.get("max_players", 0)
 		
 		# Formatação segura
-		text += " (%d/%d)" % [players, max_players]
+		text += " / 🎮:(%d/%d) " % [players, max_players]
+		text += " / 🎚️: %s" % match_data.get("host", "")
 		match_list.add_item(text)
 		
 func _on_manual_room_join_confirm_pressed(_input: String = ""):
@@ -1094,7 +1101,7 @@ func _on_server_list_delete_pressed():
 
 func _on_server_list_enter_pressed():
 	# Se estiver em uma partida local, não faz nada
-	if game_manager.in_local_server:
+	if game_manager.shared_server:
 		return
 	# Não faz nada se não selecionar nenhum
 	if selected_server_id <= 0:
@@ -1546,7 +1553,7 @@ func _on_room_start_pressed():
 func _on_room_close_pressed():
 	if disable_protection:
 		room_close_button.disabled = true
-	if game_manager.in_local_server:
+	if game_manager.shared_server:
 		game_manager._disconnect_from_server()
 		return
 	game_manager.close_room()
@@ -1559,8 +1566,13 @@ func _on_room_lock_pressed():
 	})
 
 func _on_room_leave_pressed():
-	game_manager.leave_room()
-	show_room_list_menu()
+	if not game_manager.shared_server:
+		game_manager.leave_room()
+		show_room_list_menu()
+	else:
+		game_manager.shared_server = false
+		game_manager._cleanup_local_round()
+		game_manager._disconnect_from_server()
 
 func _on_player_list_player_selected(index: int) -> void:
 	if index < 0 or index >= current_players.size():
@@ -1720,7 +1732,7 @@ func update_loading_message(message: String):
 func _on_connected_to_server():
 	_log_debug("Conectado ao servidor com sucesso!")
 	# Mudar o nome do botão de "Entrar em um servidor" para "Salas do servidor"
-	if not game_manager.in_local_server:
+	if not game_manager.shared_server:
 		join_server_button.text = "Salas do servidor"
 
 func _on_game_manager_connection_failed(reason: String):
@@ -1743,16 +1755,12 @@ func _on_game_manager_rooms_received(sucess: bool, rooms: Array):
 
 func _on_game_manager_name_accepted():
 	_log_debug("Nome aceito pelo servidor")
-	# Se estiver em um servidor local mas não estiver vindo do lobby, 
-	# não direciona; já é direcinado pelo servidor pra sala única
-	if game_manager.in_local_server and not _from_lobby:
-		return
-	
-	# Se não estiver vindo de um lobby, volta pra lista de salas, pois o botão é de lá.
-	if not _from_lobby:
+
+	var should_go_to_room_list = not game_manager.shared_server and not _from_lobby
+
+	if should_go_to_room_list:
 		show_room_list_menu()
 	else:
-		# Se estiver vindo de um lobby (botão de renomear de lá) volta pra lá.
 		show_room_menu({})
 
 func _on_game_manager_name_rejected(reason: String):

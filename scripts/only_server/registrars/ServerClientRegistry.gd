@@ -1,6 +1,6 @@
 extends Node
-class_name ClientRegistry
-## ClientRegistry - Registro centralizado de jogadores (SERVIDOR APENAS)
+class_name ServerClientRegistry
+## ServerClientRegistry - Registro centralizado de jogadores (SERVIDOR APENAS)
 ## Gerencia informações de todos os jogadores conectados + Inventário por Rodada
 ##
 ## RESPONSABILIDADES:
@@ -22,12 +22,12 @@ class_name ClientRegistry
 
 # ===== REGISTROS (Injetados pelo initializer.gd) =====
 
-var network_manager: NetworkManager = null
+var network_manager: ServerNetworkManager = null
 var server_manager: ServerManager = null
 var persistence_manager: ServerPersistence = null
-var room_registry: RoomRegistry = null
-var round_registry: RoundRegistry = null
-var object_manager: ObjectManager = null
+var room_registry: ServerRoomRegistry = null
+var round_registry: ServerRoundRegistry = null
+var object_manager: ServerObjectManager = null
 var item_database: ItemDatabase = null
 var debug_overlay = null
 var initializer: GameInitializer = null
@@ -122,14 +122,14 @@ signal player_left_round(uuid_base: String, round_id: int)
 
 # ===== INICIALIZAÇÃO =====
 
-## Inicializa o ClientRegistry (chamado apenas no servidor).
+## Inicializa o ServerClientRegistry (chamado apenas no servidor).
 func initialize():
 	if _initialized:
-		_log_debug("⚠ ClientRegistry já inicializado")
+		_log_debug("⚠ ServerClientRegistry já inicializado")
 		return
  
 	_initialized = true
-	_log_debug("▶️ ClientRegistry inicializado com sucesso!")
+	_log_debug("▶️ ServerClientRegistry inicializado com sucesso!")
 
 ## Reseta completamente o registro (usado ao desligar servidor).
 func reset():
@@ -137,7 +137,7 @@ func reset():
 	players_cache.clear()
 	player_inventories.clear()
 	_initialized = false
-	_log_debug("🔄 ClientRegistry resetado")
+	_log_debug("🔄 ServerClientRegistry resetado")
 
 ## Reset forçado de player para sala e round
 func reset_player_room_round(uuid_base: String):
@@ -159,7 +159,7 @@ func _get_next_position() -> int:
 ## uuid_base é obrigatório e será a chave primária do jogador.
 func add_peer(peer_id: int, uuid_base: String):
 	if uuid_base.is_empty():
-		push_error("ClientRegistry: Tentou adicionar peer %d sem uuid_base" % peer_id)
+		push_error("ServerClientRegistry: Tentou adicionar peer %d sem uuid_base" % peer_id)
 		return
 
 	if players.has(uuid_base):
@@ -212,7 +212,7 @@ func connected_since(uuid_base: String) -> float:
 ## Substitui o antigo update_player_id — sem necessidade de mover entradas.
 func update_peer_id(uuid_base: String, new_peer_id: int):
 	if not players.has(uuid_base):
-		push_error("ClientRegistry: UUID %s não encontrado para atualizar peer_id" % uuid_base)
+		push_error("ServerClientRegistry: UUID %s não encontrado para atualizar peer_id" % uuid_base)
 		return
 
 	var old_peer_id = players[uuid_base]["peer_id"]
@@ -433,7 +433,7 @@ func get_peer_id_by_uuid(uuid_base: String) -> int:
 ## Marca jogador como dentro de uma sala.
 func join_room(uuid_base: String, room_id: int):
 	if not players.has(uuid_base):
-		push_error("ClientRegistry: UUID %s não existe para join_room" % uuid_base)
+		push_error("ServerClientRegistry: UUID %s não existe para join_room" % uuid_base)
 		return
 
 	var player = players[uuid_base]
@@ -476,7 +476,7 @@ func _leave_room_internal(uuid_base: String):
 ## Marca jogador como dentro de uma rodada e inicializa inventário.
 func join_round(uuid_base: String, round_id: int):
 	if not players.has(uuid_base):
-		push_error("ClientRegistry: UUID %s não existe para join_round" % uuid_base)
+		push_error("ServerClientRegistry: UUID %s não existe para join_round" % uuid_base)
 		return
 
 	var player = players[uuid_base]
@@ -649,7 +649,7 @@ func get_connected_player_count() -> int:
 ## Inicializa inventário do jogador em uma rodada específica.
 func init_player_inventory(round_id: int, uuid_base: String) -> bool:
 	if not is_player_registered(uuid_base):
-		push_error("ClientRegistry: Tentou inicializar inventário de UUID %s não registrado" % uuid_base)
+		push_error("ServerClientRegistry: Tentou inicializar inventário de UUID %s não registrado" % uuid_base)
 		return false
 
 	if not player_inventories.has(round_id):
@@ -677,7 +677,7 @@ func init_player_inventory(round_id: int, uuid_base: String) -> bool:
 func add_item_to_inventory(round_id: int, uuid_base: String, item_id: int, object_id: int) -> bool:
 	var inventory = _get_player_inventory(round_id, uuid_base)
 	if inventory.is_empty():
-		push_error("ClientRegistry: Inventário não encontrado: uuid=%s, rodada=%d" % [uuid_base, round_id])
+		push_error("ServerClientRegistry: Inventário não encontrado: uuid=%s, rodada=%d" % [uuid_base, round_id])
 		return false
 
 	if inventory["inventory"].size() >= max_inventory_slots:
@@ -685,7 +685,7 @@ func add_item_to_inventory(round_id: int, uuid_base: String, item_id: int, objec
 		return false
 
 	if item_database and not item_database.item_exists_by_id(item_id):
-		push_error("ClientRegistry: Item inválido: %s" % item_id)
+		push_error("ServerClientRegistry: Item inválido: %s" % item_id)
 		return false
 
 	var item_name = item_database.get_item_by_id(item_id).to_dictionary()['name']
@@ -743,15 +743,15 @@ func equip_item(round_id: int, uuid_base: String, item_name: String, object_id, 
 		if item_database:
 			slot = item_database.get_slot(item_name)
 		if slot.is_empty():
-			push_error("ClientRegistry: Não foi possível detectar slot para item: %s" % item_name)
+			push_error("ServerClientRegistry: Não foi possível detectar slot para item: %s" % item_name)
 			return false
 
 	if not inventory["equipped"].has(slot):
-		push_error("ClientRegistry: Slot inválido: %s" % slot)
+		push_error("ServerClientRegistry: Slot inválido: %s" % slot)
 		return false
 
 	if item_database and not item_database.can_equip_in_slot(item_name, slot):
-		push_error("ClientRegistry: Item %s não pode ser equipado em %s" % [item_name, slot])
+		push_error("ServerClientRegistry: Item %s não pode ser equipado em %s" % [item_name, slot])
 		return false
 
 	if not inventory["equipped"][slot].is_empty():
@@ -775,7 +775,7 @@ func unequip_item(round_id: int, uuid_base: String, slot: String, verify: bool =
 		return false
 
 	if not inventory["equipped"].has(slot):
-		push_error("ClientRegistry: Slot inválido: %s" % slot)
+		push_error("ServerClientRegistry: Slot inválido: %s" % slot)
 		return false
 
 	var item_data = inventory["equipped"][slot]
@@ -805,12 +805,12 @@ func swap_equipped_item(round_id: int, uuid_base: String, new_item_name: String,
 		return false
 
 	if not inventory["equipped"].has(target_slot):
-		push_error("ClientRegistry: Slot inválido para swap: %s" % target_slot)
+		push_error("ServerClientRegistry: Slot inválido para swap: %s" % target_slot)
 		return false
 
 	var old_item_data = inventory["equipped"][target_slot]
 	if old_item_data.is_empty():
-		push_error("ClientRegistry: Nenhum item equipado no slot %s para trocar" % target_slot)
+		push_error("ServerClientRegistry: Nenhum item equipado no slot %s para trocar" % target_slot)
 		return false
 
 	var new_item_idx = inventory["inventory"].find_custom(func(item): return item["object_id"] == inventory_item["object_id"])
@@ -820,7 +820,7 @@ func swap_equipped_item(round_id: int, uuid_base: String, new_item_name: String,
 			break
 
 	if new_item_idx == -1:
-		push_error("ClientRegistry: Item arrastado não encontrado no inventário de %s" % uuid_base)
+		push_error("ServerClientRegistry: Item arrastado não encontrado no inventário de %s" % uuid_base)
 		return false
 
 	var new_item_data = inventory["inventory"][new_item_idx]
@@ -1087,11 +1087,11 @@ func get_first_equipped_item(round_id: int, uuid_base: String) -> Dictionary:
 ## Registra referência ao node do jogador na cena.
 func register_player_node(uuid_base: String, player_node: Node):
 	if not is_player_registered(uuid_base):
-		push_error("ClientRegistry: Tentou registrar nó de UUID %s não registrado" % uuid_base)
+		push_error("ServerClientRegistry: Tentou registrar nó de UUID %s não registrado" % uuid_base)
 		return
 
 	if not player_node or not player_node.is_inside_tree():
-		push_error("ClientRegistry: Tentou registrar nó inválido para uuid=%s" % uuid_base)
+		push_error("ServerClientRegistry: Tentou registrar nó inválido para uuid=%s" % uuid_base)
 		return
 
 	var node_path = str(player_node.get_path())

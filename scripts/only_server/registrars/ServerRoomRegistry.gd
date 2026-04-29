@@ -1,6 +1,6 @@
 extends Node
-class_name RoomRegistry
-## RoomRegistry - Gerenciador de salas de lobby (SERVIDOR APENAS)
+class_name ServerRoomRegistry
+## ServerRoomRegistry - Gerenciador de salas de lobby (SERVIDOR APENAS)
 ## Salas são locais onde jogadores aguardam antes de iniciar partidas (rodadas)
 ##
 ## RESPONSABILIDADES:
@@ -21,9 +21,9 @@ class_name RoomRegistry
 # ===== REGISTROS (Injetados pelo initializer.gd) =====
 
 var server_manager: ServerManager = null
-var client_registry: ClientRegistry = null
-var round_registry: RoundRegistry = null
-var object_manager: ObjectManager = null
+var client_registry: ServerClientRegistry = null
+var round_registry: ServerRoundRegistry = null
+var object_manager: ServerObjectManager = null
 var debug_overlay: DebugOverlay = null
 var initializer: GameInitializer = null
 
@@ -69,23 +69,23 @@ signal room_state_changed(room_id: int, in_game: bool)
 
 # ===== INICIALIZAÇÃO =====
 
-## Inicializa o RoomRegistry (chamado apenas no servidor).
+## Inicializa o ServerRoomRegistry (chamado apenas no servidor).
 func initialize():
 	if _initialized:
-		_log_debug("⚠ RoomRegistry já inicializado")
+		_log_debug("⚠ ServerRoomRegistry já inicializado")
 		return
 	
 	# Conecta sinais
 	client_registry.peer_id_updated.connect(_on_peer_id_updated)
 	
 	_initialized = true
-	_log_debug("▶️ RoomRegistry inicializado")
+	_log_debug("▶️ ServerRoomRegistry inicializado")
 
 ## Reseta completamente o registro (usado ao desligar servidor).
 func reset():
 	rooms.clear()
 	_initialized = false
-	_log_debug("🔄 RoomRegistry resetado")
+	_log_debug("🔄 ServerRoomRegistry resetado")
 
 
 # ===== GERENCIAMENTO DE SALAS =====
@@ -97,13 +97,17 @@ func _get_next_room_id() -> int:
 ## Cria nova sala. Retorna RoomData completo ou {} se falhar.
 func create_room(room_name: String, password: String, host_uuid: String, min_players: int, max_players: int, locked = false, selected_map: int = 1) -> Dictionary:
 	var room_id = _get_next_room_id()
-
+	
+	if server_manager.server_owner_ != "" and rooms.size() > 0:
+		push_error("ServerRoomRegistry: Cliente tentou criar outra sala num servidor compartilhado")
+		return {}
+	
 	if rooms.has(room_id):
-		push_error("RoomRegistry: Sala com ID %d já existe!" % room_id)
+		push_error("ServerRoomRegistry: Sala com ID %d já existe!" % room_id)
 		return {}
 
 	if not client_registry or not client_registry.is_player_registered(host_uuid):
-		push_error("RoomRegistry: Host uuid=%s não é um jogador válido" % host_uuid)
+		push_error("ServerRoomRegistry: Host uuid=%s não é um jogador válido" % host_uuid)
 		return {}
 
 	var room_data = {
@@ -310,7 +314,8 @@ func get_rooms_in_lobby_clean_to_menu() -> Array:
 		room.erase("total_playtime")
 		room.erase("settings")
 		room.erase("password")
-
+		
+		room["host"] = client_registry.get_player_name(room_data["host_uuid"])
 		room["players"] = players_count
 		room["min_players"] = min_players
 		room["max_players"] = max_players
@@ -332,7 +337,7 @@ func get_rooms_in_game() -> Array:
 
 # ===== GERENCIAMENTO DE PLAYERS =====
 
-## Adiciona jogador à sala. Atualiza ClientRegistry automaticamente.
+## Adiciona jogador à sala. Atualiza ServerClientRegistry automaticamente.
 func add_player_to_room(room_id: int, uuid_base: String) -> bool:
 	if not rooms.has(room_id):
 		_log_debug("❌ Sala %d não existe" % room_id)
@@ -355,7 +360,7 @@ func add_player_to_room(room_id: int, uuid_base: String) -> bool:
 		return false
 
 	if not client_registry or not client_registry.is_player_registered(uuid_base):
-		push_error("RoomRegistry: uuid=%s não está registrado" % uuid_base)
+		push_error("ServerRoomRegistry: uuid=%s não está registrado" % uuid_base)
 		return false
 
 	var player_name = client_registry.get_player_name(uuid_base)

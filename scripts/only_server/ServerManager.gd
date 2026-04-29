@@ -40,6 +40,7 @@ class_name ServerManager
 
 var server_id : String
 var server_secret : PackedByteArray
+# Se ter um uuid aqui, significa que o servidor é compartilhado e tem um dono player, se "", é dedicado.
 var server_owner_ : String = ""
 
 @export_category("Default Node References")
@@ -73,12 +74,12 @@ const server_camera : String = "res://scenes/server_scenes/server_camera.tscn"
 
 # ===== REGISTROS (Injetados pelo initializer.gd) =====
 
-var network_manager: NetworkManager = null
-var client_registry : ClientRegistry = null
-var room_registry: RoomRegistry = null
-var round_registry: RoundRegistry = null
+var network_manager: ServerNetworkManager = null
+var client_registry : ServerClientRegistry = null
+var room_registry: ServerRoomRegistry = null
+var round_registry: ServerRoundRegistry = null
 var item_database: ItemDatabase = null
-var object_manager: ObjectManager = null
+var object_manager: ServerObjectManager = null
 var test_manager: TestManager = null
 var map_manager: MapManager = null
 var persistence_manager: ServerPersistence = null
@@ -425,6 +426,7 @@ func _start_server():
 	_log_debug("Em: %s" % timestamp)
 	_log_debug("Porta: %d" % server_port)
 	_log_debug("ID: %s" % server_id)
+	_log_debug("👑 Servidor de %s" % server_owner_ if server_owner_ != "" else "👑 Servidor dedicado")
 	_log_debug("Máximo de clientes: %d" % max_clients)
 	_log_debug("Trainer de testes: %s, Fast Round: %s" % [test_trainer, fast_round])
 	_log_debug("Min. de jogadores/sala: %s, Max. de jogadores/sala: %s" % [min_players_to_start, max_players_per_room])
@@ -491,6 +493,14 @@ func process_client_hello(payload: Dictionary, peer_id: int) -> Dictionary:
 	if uuid_base.is_empty() or uuid_base.length() != 32:
 		return {"status": "reject", "reason": "missing_uuid"}
 	
+	# Se for local, continuar apenas se a sala já existir e estiver destrancada,
+	# caso contrário, emitir 'rejeitado pelo servidor'
+	if server_owner_ != "" and not room_registry.rooms.is_empty():
+		var keys = room_registry.rooms.keys()
+		var room = room_registry.rooms[keys[0]]
+		if room["settings"]["locked"]:
+			return {"status": "reject", "reason": "locked_room"}
+		
 	# 2. Validação caracteres válidos
 	for c in uuid_base:
 		if not (
@@ -530,6 +540,7 @@ func process_client_hello(payload: Dictionary, peer_id: int) -> Dictionary:
 				
 	# 🔄 Token inválido ou inexistente → emitir novo
 	if not client_registry.get_player_by_uuid(uuid_base):
+				
 		client_registry.add_peer(peer_id, uuid_base)
 	client_registry._register_connection(uuid_base)
 
@@ -595,7 +606,7 @@ func _on_peer_disconnected(peer_id: int):
 					for player in updated_room["players"]:
 						if player["peer_id"] != peer_id and _is_peer_connected(player["peer_id"]):
 							_log_debug("_client_remove_player", true)
-							network_manager.rpc_id(player["peer_id"], "_client_remove_player", peer_id)
+							network_manager.rpc_id(player["peer_id"], "_client_remove_player", player_uuid)
 				else:
 					_log_debug("Sala foi deletada (ficou vazia)")
 					_send_rooms_list_to_all()
@@ -623,21 +634,30 @@ func _handle_register_player_name(peer_id: int, player_name: String):
 		
 	await get_tree().process_frame
 	
-	# Registra no ClientRegistry
+	# Registra no ServerClientRegistry
 	var player_uuid = client_registry.get_uuid_by_peer_id(peer_id)
 	var success = client_registry.register_player_name(player_uuid, player_name)
 	
 	if success:
 		_log_debug("✓ Jogador registrado: %s (Peer ID: %d)" % [player_name, peer_id])
 		_log_debug("_client_name_accepted", true)
-		network_manager.rpc_id(peer_id, "_client_name_accepted", player_name)
+		
+		var player = client_registry.get_player(player_uuid)
+		var room_data_filtered: Dictionary = {}
+		# Se for local, envia dados da sala para o cliente
+		if server_owner_ != "" and player["uuid_base"] != server_owner_:
+			var host = client_registry.get_player(server_owner_)
+			if host:
+				room_data_filtered = room_registry.get_room_filtered(host["room_id"])
+				_handle_join_room(peer_id, host["room_id"], "")
+		network_manager.rpc_id(peer_id, "_client_name_accepted", player_name, room_data_filtered)
 		
 		# Atualzia a sala deste player, se ele estiver em uma
-		var player = client_registry.get_player(player_uuid)
+
 		if player["room_id"] > 0:
 			_notify_room_update(player["room_id"])
 		
-		# Se for servidor local, já cria a sala única (verificando se é o primeiro a conectar/o dono)
+		# Se for servidor compartilhado, já cria a sala única (verificando se é o primeiro a conectar/o dono)
 		if player and server_owner_ != "" and player["entry_position"] == 1:
 			if player_uuid == server_owner_ and player["room_id"] < 0:
 				# Função para criar partida local
@@ -660,7 +680,7 @@ func create_local_round(peer_id, nome_sala_: String = "Partida Local"):
 	
 	var selected_map: int = 3
 	
-	# Cria sala no RoomRegistry
+	# Cria sala no ServerRoomRegistry
 	_handle_create_room(peer_id, nome_sala_, "", true, selected_map)
 
 ## Envia lista de salas disponíveis (não em jogo) para o cliente que requisitou
@@ -698,6 +718,9 @@ func _handle_request_rooms_list(peer_id: int):
 ## Envia lista de salas disponíveis para todos os jogadores fora de partida 
 ## (cliente ignora se não estiver na lista de salas) (não envia para jogadores em partida)
 func _send_rooms_list_to_all():
+	if server_owner_ != "":
+		_log_debug("Não enviando lista de salas: Servidor compartilhado")
+		return
 	_log_debug("Servidor enviando lista de salas para todos os jogadores fora de uma sala")
 	var available_rooms = room_registry.get_rooms_in_lobby_clean_to_menu()
 		
@@ -1015,6 +1038,7 @@ func _handle_create_room(peer_id: int, room_name: String, password: String, lock
 		return
 	
 	_log_debug("Criando sala '%s' para jogador %s (ID: %d)" % [room_name, player["name"], peer_id])
+	
 	# Cria sala
 	var room_data = room_registry.create_room(
 		room_name,
@@ -1377,7 +1401,7 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary, is_test: bool
 	print("")
 	await get_tree().process_frame
 	
-	# Cria rodada no RoundRegistry
+	# Cria rodada no ServerRoundRegistry
 	# IMPORTANTE: Isso já chama client_registry.join_round() para cada player
 	var round_data = round_registry.create_round(
 		room["id"],
@@ -1556,7 +1580,7 @@ func _server_instantiate_round(match_data: Dictionary, players_node):
 		
 	await get_tree().process_frame
 	
-	# Salva referência no RoundRegistry
+	# Salva referência no ServerRoundRegistry
 	if round_registry.rounds.has(match_data["round_id"]):
 		round_registry.rounds[match_data["round_id"]]["map_manager"] = map_manager
 		
@@ -1706,14 +1730,14 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, pl
 	await get_tree().process_frame
 	
 	# REGISTRO NO CLIENT REGISTRY
-	_log_debug("📝 [SPAWN] Registrando no ClientRegistry...")
+	_log_debug("📝 [SPAWN] Registrando no ServerClientRegistry...")
 	
 	client_registry.register_player_node(p_uuid, player_instance)
 	
 	await get_tree().process_frame
 	
 	# REGISTRO NO ROUND REGISTRY
-	_log_debug("📝 [SPAWN] Registrando no RoundRegistry...")
+	_log_debug("📝 [SPAWN] Registrando no ServerRoundRegistry...")
 	
 	var p_round = round_registry.get_round_by_player_uuid(p_uuid)
 	if p_round.is_empty():
@@ -1789,7 +1813,7 @@ func _on_round_ending(round_id: int, reason: String):
 ## ORDEM:
 ##  1. Adiciona ao histórico da sala
 ##  2. Limpa objetos da cena
-##  3. Finaliza no RoundRegistry
+##  3. Finaliza no ServerRoundRegistry
 ##  4. Marca sala como fora de jogo
 ##  5. Notifica clientes para voltar ao lobby
 func _complete_round_end(round_id: int):
@@ -1815,7 +1839,7 @@ func _complete_round_end(round_id: int):
 	
 	_log_debug("========================================")
 	
-	# Finaliza completamente no RoundRegistry
+	# Finaliza completamente no ServerRoundRegistry
 	# IMPORTANTE: Isso adiciona ao histórico da sala automaticamente e já executa _cleanup_round
 	round_registry.complete_round_end(round_id)
 	
@@ -2006,7 +2030,7 @@ func _apply_animation_state_on_server(p_id: int, speed: float, attacking: bool, 
 											   aiming, running, block_attacking, on_floor)
 
 ## Envia comando de despawn para clientes
-## Chamado pelo ObjectManager.despawn_object()
+## Chamado pelo ServerObjectManager.despawn_object()
 func _rpc_despawn_on_clients(player_ids: Array, round_id: int, object_id: int):
 	if not multiplayer.is_server():
 		return
@@ -2340,7 +2364,7 @@ func _server_trainer_spawn_item(requesting_peer_id: int, item_id: int):
 	
 	var objects_node = round_["round_node"].get_node_or_null("Objects")
 	var item_name = item_database.get_item_by_id(item_id)
-	# ObjectManager cuida de spawnar E enviar RPC
+	# ServerObjectManager cuida de spawnar E enviar RPC
 	object_manager.spawn_item_over_of_player(objects_node, round_["id"], player_uuid, item_name["name"])
 
 ## Servidor recebe pedido de drop, valida e spawna item executando drop_item()
@@ -2364,7 +2388,7 @@ func _server_validate_drop_item(requesting_player_id: int, obj_id: int):
 	
 	# Validação 3:
 	if not object_manager.stored_object_exists(round_["id"], obj_id):
-		push_warning("[ServerManager]: Objeto inválido, não existe no ObjectManager stored_objects do player")
+		push_warning("[ServerManager]: Objeto inválido, não existe no ServerObjectManager stored_objects do player")
 		return
 	
 	var is_item_equipped = client_registry.is_item_equipped(round_["id"], player_uuid, obj_id)

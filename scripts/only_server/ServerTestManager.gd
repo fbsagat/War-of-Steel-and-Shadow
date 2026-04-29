@@ -22,13 +22,13 @@ class_name TestManager
 # ===== REGISTROS (Injetados pelo initializer.gd) =====
 
 var server_manager: ServerManager = null
-var network_manager: NetworkManager = null
+var network_manager: ServerNetworkManager = null
 var item_database :ItemDatabase = null
 var map_manager: MapManager = null
-var client_registry: ClientRegistry = null
-var room_registry: RoomRegistry = null
-var round_registry: RoundRegistry = null
-var object_manager: ObjectManager = null
+var client_registry: ServerClientRegistry = null
+var room_registry: ServerRoomRegistry = null
+var round_registry: ServerRoundRegistry = null
+var object_manager: ServerObjectManager = null
 var initializer: GameInitializer = null
 
 
@@ -87,7 +87,7 @@ func create_test_round(nome_sala_: String = "Sala de Teste"):
 	print("")
 	await get_tree().process_frame
 	
-	# Registra jogadores no ClientRegistry
+	# Registra jogadores no ServerClientRegistry
 	var host_peer_id: int = all_peers[0]
 	var host_uuid = client_registry.get_uuid_by_peer_id(host_peer_id)
 
@@ -114,7 +114,7 @@ func create_test_round(nome_sala_: String = "Sala de Teste"):
 	
 	var selected_map: int = map_id
 	
-	# Cria sala no RoomRegistry
+	# Cria sala no ServerRoomRegistry
 	server_manager._handle_create_room(host_peer_id, "Sala de testes", "", false, selected_map)
 	
 	var host = client_registry.get_player_by_uuid(host_uuid)
@@ -136,7 +136,7 @@ func create_test_round(nome_sala_: String = "Sala de Teste"):
 	
 	server_manager._handle_start_round(host_peer_id, {"selected_map": selected_map}, true)
 	
-	# Cria rodada no RoundRegistry
+	# Cria rodada no ServerRoundRegistry
 	_log_debug("  ✓ Iniciando rodada de teste...")
 	
 # ===== UTILITÁRIOS =====

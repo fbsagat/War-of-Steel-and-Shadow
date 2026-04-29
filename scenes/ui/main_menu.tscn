@@ -87,7 +87,6 @@ custom_minimum_size = Vector2(1200, 800)
 layout_mode = 2
 
 [node name="MainMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=272160322]
-visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -147,6 +146,17 @@ theme_override_font_sizes/font_size = 15
 text = "Desconectado 🌐⛓️‍💥"
 horizontal_alignment = 1
 vertical_alignment = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/Control/MainMenu/VBoxContainer" unique_id=1050320598]
+layout_mode = 2
+
+[node name="ErrorLabel" type="Label" parent="CanvasLayer/CenterContainer/Control/MainMenu/VBoxContainer/VBoxContainer" unique_id=717199322]
+custom_minimum_size = Vector2(400, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.71609545, 0.27946, 0, 1)
+theme_override_font_sizes/font_size = 20
+horizontal_alignment = 1
+autowrap_mode = 3
 
 [node name="NameInputMenu" type="CenterContainer" parent="CanvasLayer/CenterContainer/Control" unique_id=7578943]
 visible = false

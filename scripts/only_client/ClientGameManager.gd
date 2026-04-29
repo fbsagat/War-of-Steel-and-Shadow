@@ -1,5 +1,5 @@
 extends Node
-class_name GameManager
+class_name ClientGameManager
 
 ## GameManager - Gerenciador principal do jogo multiplayer (CLIENTE)
 ## Responsável por conectar ao servidor dedicado e gerenciar o fluxo do jogo
@@ -11,10 +11,10 @@ const DEFAULT_SERVER_ADDRESS: String = "127.0.0.1"  # Localhost: "127.0.0.1" zer
 const DEFAULT_SERVER_PORT: int = 7777
 var server_address: String = DEFAULT_SERVER_ADDRESS
 var server_port: int = DEFAULT_SERVER_PORT
-var in_local_server: bool = false
+var shared_server: bool = false
+var shared_is_mine: bool = false
 
 @export_category("Default Node References")
-const map_scene : String = "res://scenes/maps/vainer_village/vainer_village.tscn"
 const player_scene : String = "res://scenes/gameplay/player_warrior.tscn"
 const camera_controller : String = "res://scenes/gameplay/camera_controller.tscn"
 var camera_scene: PackedScene
@@ -50,7 +50,7 @@ const MAX_SAVED_TOKENS: int = 50
 # ===== REGISTROS (Injetados pelo initializer.gd) =====
 
 var item_database: ItemDatabase = null
-var network_manager: NetworkManager = null
+var network_manager: ClientNetworkManager = null
 var map_manager: MapManager = null
 var initializer: GameInitializer = null
 var server_root: Node = null
@@ -139,6 +139,13 @@ func initialize():
 	
 	if main_menu_node:
 		main_menu_node.show_main_menu()
+	
+	# Se visual_debug on, recebe debug_overlay_node
+	# Mostra debug_overlay quando se conecta em um servidor
+	if debug_overlay_node:
+		debug_overlay_node.visible = true
+		debug_menu_visible = true
+		debug_overlay_node.peer_id = local_peer_id
 	
 	_log_debug("▶️ GameManager inicializado com sucesso!")
 	
@@ -345,13 +352,6 @@ func _on_connected_to_server():
 	is_connected_to_server = true
 	local_peer_id = multiplayer.get_unique_id()
 	
-	# Se visual_debug on, recebe debug_overlay_node
-	# Mostra debug_overlay quando se conecta em um servidor
-	if debug_overlay_node:
-		debug_overlay_node.visible = true
-		debug_menu_visible = true
-		debug_overlay_node.peer_id = local_peer_id
-	
 	game_manager_connected_to_server.emit()
 	_log_debug(" Cliente conectado ao servidor com sucesso! Peer ID: %d" % local_peer_id)
 
@@ -390,25 +390,32 @@ func _schedule_next_retry() -> void:
 ## desconecta totalmente e reseta, se conseguir, esconde a tela de reconexão e volta à partida normalmente.
 func _on_server_disconnected():
 	_log_debug("Conexão perdida com o servidor, tentando reconectar para voltar à partida")
+	if shared_server:
+		_disconnect_from_server()
+		if main_menu_node:
+			var msg = "Conexão perdida com o servidor"
+			main_menu_node._show_error_(msg, main_menu_node.mm_error_label, "yellow")
 	
 	# Fecha conexão com o servidor
 	if multiplayer.multiplayer_peer:
 		multiplayer.multiplayer_peer.close()
 		multiplayer.multiplayer_peer = null
 	
+	shared_is_mine = false
 	is_connected_to_server = false
 	network_manager.is_connected_ = false
 	has_received_pong = false
 	
 	# Inicia processo de reconexão (se não for local)
 	# Mostra menu de reconexão
-	if not in_local_server:
+	if not shared_server:
 		if main_menu_node:
 			main_menu_node.show_main_menu()
 			main_menu_node.show_connecting_menu()
 			main_menu_node.show_error_connecting("Conexão perdida. Tentando reconectar...")
 		
 		start_connection_attempts(server_address, server_port)
+	shared_server = false
 	
 func start_connection_attempts(address: String, port: int) -> void:
 	server_address = address
@@ -497,17 +504,15 @@ func _disconnect_from_server():
 	# Esconde debug_overlay quando desconexão é intencional
 	if debug_overlay_node:
 		debug_overlay_node.on_disconnected()
-		debug_overlay_node.visible = false
-		debug_menu_visible = false
 	
 	_log_debug("Cliente desconectado intencionalmente do servidor, resetando estado do cliente e voltando ao menu principal")
 	# Emite sinal
 	disconnected_from_server.emit()
 
 ## Validar IP/hostname
-func join_server_by_ip(received_ip: String, received_port: String, local: bool = false) -> bool:
+func join_server_by_ip(received_ip: String, received_port: String, _shared_server: bool = false) -> bool:
 	
-	if not local and in_local_server:
+	if not _shared_server and shared_server:
 		_log_debug("Já está em uma partida local, saia primeiro")
 		return false
 	
@@ -548,7 +553,7 @@ func join_server_by_ip(received_ip: String, received_port: String, local: bool =
 	
 	_log_debug("Tentando conectar ao servidor: %s:%d" % [server_address, server_port])
 	
-	if main_menu_node and not local:
+	if main_menu_node and not _shared_server:
 		main_menu_node.show_loading_menu("Conectando ao servidor...")
 		
 	peer = ENetMultiplayerPeer.new()
@@ -671,6 +676,7 @@ func _save_tokens() -> void:
 ## Processa resposta do servidor.
 ## Salva novo token se necessário.
 func handle_server_response(response: Dictionary) -> void:
+	_log_debug("Recebendo resposta do servidor. Status: %s" % response["status"])
 	var status = response["status"]
 
 	match status:
@@ -717,8 +723,13 @@ func handle_server_response(response: Dictionary) -> void:
 					main_menu_node.show_main_menu()
 
 		"reject":
-			_log_debug("Conexão rejeitada: %s" % response.get("reason",""))
+			var reason = response.get("reason","")
+			_log_debug("Conexão rejeitada: %s" % reason)
 			_disconnect_from_server()
+			if main_menu_node and reason == "locked_room":
+				var msg = "Conexão rejeitada: A sala está trancada"
+				main_menu_node._show_error_(msg, main_menu_node.mm_error_label, "yellow")
+				shared_server = false
 
 
 # ===== EXECUÇÃO DE BOTÕES DE CONEXÃO =====
@@ -733,10 +744,10 @@ func _on_gameplay_menu_exit_game_pressed():
 	if main_menu_node:
 		main_menu_node.show_main_menu()
 		
-	_log_debug("[111] Sainda da partida")
+	_log_debug("Sainda da partida")
 
 func _on_gameplay_menu_give_up_game_pressed():
-	if in_local_server:
+	if shared_server:
 		_disconnect_from_server()
 	else:
 		network_manager._server_request_return_or_exit(false)
@@ -747,7 +758,7 @@ func _on_gameplay_menu_give_up_game_pressed():
 	# Volta para o menu da sala
 	if main_menu_node:
 		main_menu_node.show_main_menu()
-	_log_debug("[111] Desistindo da partida")
+	_log_debug("Desistindo da partida")
 
 
 # ===== ATUALIZAÇÃO DE CONFIGURAÇÕES =====
@@ -763,11 +774,16 @@ func update_client_info(info: Dictionary):
 			configs[key] = new_value
 			_log_debug("[UPDATED] %s: %s" % [str(key), str(new_value)])
 		
+		if key == "server_type":
+			if info[key] == "local":
+				shared_server = true
+			elif info[key] == "dedicated":
+				shared_server = false
+		
 		if key == "server_id":
 			var token : String = ""
 			if server_tokens.has(new_value):
 				token = server_tokens[new_value]
-
 			# Agora enviamos o hello com uuid + token
 			network_manager.send_hello_to_server(uuid_base, token)
 	
@@ -788,18 +804,19 @@ func update_client_info(info: Dictionary):
 
 # ===== CRIAÇÃO DE REDE LOCAL =====
 
-## Criar uma partida local
-func create_local_match():
+## Criar um servidor compartilhado
+func create_shared_server():
 	# Se estiver conectado em um servidor, desconecta pra criar um local
 	if is_connected_to_server:
 		_disconnect_from_server()
 		await get_tree().create_timer(0.2).timeout
 	
-	if in_local_server:
+	if shared_server:
 		_log_debug("Já está criando uma partida local")
 		return
 	
-	in_local_server = true
+	shared_server = true
+	shared_is_mine = true
 	# Verificar se dá pra ficar apenas localhost e depois poder abrir pra geral lá ele
 	OS.create_process(
 		OS.get_executable_path(),
@@ -811,10 +828,11 @@ func create_local_match():
 ## Requisita ao servidor a finalização do serviço
 ## Sujeito à validação de propriedade
 func request_kill_local_match():
-	_log_debug("Solicitando fechamento do servidor")
-	network_manager.request_kill_local_match()
-	await get_tree().create_timer(0.4).timeout
-	in_local_server = false
+	if shared_is_mine:
+		_log_debug("Solicitando fechamento do servidor")
+		network_manager.request_kill_local_match()
+		await get_tree().create_timer(0.4).timeout
+		shared_server = false
 
 # ===== REGISTRO DE JOGADOR =====
 	
@@ -832,13 +850,16 @@ func set_player_name(p_name: String):
 	network_manager.register_player_name(p_name)
 
 ## Callback quando o nome é aceito pelo servidor
-func _client_name_accepted(accepted_name: String):
+func _client_name_accepted(accepted_name: String, room_data: Dictionary = {}):
 	player_name = accepted_name
 	_log_debug("Nome aceito pelo servidor: " + player_name)
 	
 	if main_menu_node:
 		main_menu_node.update_name_e_connected(configs["server_name"], accepted_name)
+	
 	name_accepted.emit()
+	if room_data.size() > 0:
+		room_updated.emit(room_data)
 
 ## Callback quando o nome é rejeitado
 func _client_name_rejected(reason: String):
@@ -857,6 +878,8 @@ func _client_name_rejected(reason: String):
 
 ## Callback quando a senha está incorreta
 func _client_wrong_password():
+	if shared_server:
+		_disconnect_from_server()
 	var current_menu_visible_name = main_menu_node.current_menu_visible.name
 	main_menu_node.room_list_menu.visible = true
 	
@@ -870,12 +893,16 @@ func _client_wrong_password():
 
 ## Callback de quando existe um erro com o nome da sala
 func _client_room_name_error(error_msg : String):
+	if shared_server:
+		_disconnect_from_server()
 	if main_menu_node:
 		main_menu_node.show_create_match_menu()
 		main_menu_node._show_error_(error_msg, main_menu_node.create_room_error_label, "Red")
 
 ## Callback quando a sala não é encontrada
 func _client_room_not_found():
+	if shared_server:
+		_disconnect_from_server()
 	if main_menu_node:
 		main_menu_node.show_room_list_menu(true, false)
 		main_menu_node.match_password_container.visible = true
@@ -910,7 +937,7 @@ func _request_return_to_round():
 
 ## Cliente envia resposta dizendo que quer abandonar a partida em que estava
 func _request_exit_from_round():
-	if in_local_server:
+	if shared_server:
 		_disconnect_from_server()
 		return
 	network_manager._server_request_return_or_exit(false)
@@ -926,6 +953,9 @@ func all_client_receive_rooms_list(rooms: Array):
 
 ## Cria uma nova sala
 func create_room(room_name: String, password: String = ""):
+	if shared_server:
+		return
+	
 	if is_in_round:
 		return
 	
@@ -1065,8 +1095,8 @@ func leave_room():
 
 ## Fecha a sala atual (apenas host)
 func close_room():
-	# No servidor local é sala única (Também verifica no servidor)
-	if in_local_server:
+	# No servidor compartilhado é sala única (Também verifica no servidor)
+	if shared_server:
 		return
 	
 	if is_in_round:
@@ -1765,7 +1795,7 @@ func add_item_to_inventory(item_id: int, object_id: int) -> bool:
 	
 	# Valida item no ItemDatabase se disponível
 	if item_database and not item_database.item_exists_by_id(item_id):
-		push_error("ClientRegistry: Item inválido: %s" % item_id)
+		push_error("ServerClientRegistry: Item inválido: %s" % item_id)
 		return false
 	
 	var item_name = item_database.get_item_by_id(item_id)["name"]
@@ -1828,17 +1858,17 @@ func equip_item(object_id: int, item_slot: String = "", item_name: String = "") 
 		if item_database:
 			item_slot = item_database.get_slot(item_name)
 		if item_slot.is_empty():
-			push_error("ClientRegistry: Não foi possível detectar slot para item: %s" % item_name)
+			push_error("ServerClientRegistry: Não foi possível detectar slot para item: %s" % item_name)
 			return false
 	
 	# Valida slot
 	if not local_inventory["equipped"].has(item_slot):
-		push_error("ClientRegistry: Slot inválido: %s" % item_slot)
+		push_error("ServerClientRegistry: Slot inválido: %s" % item_slot)
 		return false
 	
 	# Valida se item pode ser equipado neste slot
 	if item_database and not item_database.can_equip_in_slot(item_name, item_slot):
-		push_error("ClientRegistry: Item %s não pode ser equipado em %s" % [item_name, item_slot])
+		push_error("ServerClientRegistry: Item %s não pode ser equipado em %s" % [item_name, item_slot])
 		return false
 	
 	# Desequipa item atual se houver
@@ -1864,7 +1894,7 @@ func unequip_item(_object_id: int, item_slot: String, verify: bool = true) -> bo
 		return false
 	
 	if not local_inventory["equipped"].has(item_slot):
-		push_error("ClientRegistry: Slot inválido: %s" % item_slot)
+		push_error("ServerClientRegistry: Slot inválido: %s" % item_slot)
 		return false
 	
 	var item_data = local_inventory["equipped"][item_slot]
@@ -1900,19 +1930,19 @@ func swap_equipped_item(new_item_name: String, dragged_item: Dictionary, existin
 		return false
 	
 	if not local_inventory["equipped"].has(target_slot):
-		push_error("ClientRegistry: Slot inválido para swap: %s" % target_slot)
+		push_error("ServerClientRegistry: Slot inválido para swap: %s" % target_slot)
 		return false
 	
 	var old_item_data = local_inventory["equipped"][target_slot]
 	if old_item_data.is_empty():
-		push_error("ClientRegistry: Nenhum item equipado no slot %s para trocar" % target_slot)
+		push_error("ServerClientRegistry: Nenhum item equipado no slot %s para trocar" % target_slot)
 		return false
 	
 	# Verifica se o dragged_item realmente está no inventário
 	var new_item_idx = local_inventory["inventory"].find_custom(func(item): return item["object_id"] == dragged_item["object_id"])
 	
 	if new_item_idx == -1:
-		push_error("ClientRegistry: Item arrastado não encontrado no inventário")
+		push_error("ServerClientRegistry: Item arrastado não encontrado no inventário")
 		return false
 	
 	var new_item_data = local_inventory["inventory"][new_item_idx]

@@ -2,10 +2,13 @@ extends CanvasLayer
 
 # ===== REGISTROS (Injetados pelo initializer.gd) =====
 
-var game_manager: GameManager = null
+var game_manager: ClientGameManager = null
 var initializer: GameInitializer = null
 
-@onready var label: Label = $Panel/Label
+@onready var panel_on: Panel = $Panel_on
+@onready var panel_off: Panel = $Panel_off
+@onready var label_on: Label = $Panel_on/Label_on
+@onready var label_off: Label = $Panel_off/Label_off
 
 const PING_HISTORY_SIZE := 10
 const PING_TIMEOUT_MS := 3000
@@ -28,31 +31,50 @@ func _process(_delta: float) -> void:
 		return
 	
 	if not is_connected:
-		label.text = "Status: ⚪ DESCONECTADO\nPing: -- ms\nPing médio: -- ms\nSem resposta: -- s\n UUID: %s\n Peer id: %d" % [initializer._zip_uuid(client_uuid), peer_id]
+		label_off.text = "Status: ⚪ DESCONECTADO\nPing: -- ms\nPing médio: -- ms\nSem resposta: -- s\n UUID: %s\n Peer id: %d" % [initializer._zip_uuid(client_uuid), peer_id]
 		return
 
 	var now := Time.get_ticks_msec()
 	var time_since_last := now - last_pong_time
-
-	var status := "🟢 OK"
-	if time_since_last > PING_TIMEOUT_MS:
-		status = "🔴 TIMEOUT"
-	elif ping > LAG_THRESHOLD_MS:
-		status = "🟡 LAG"
-
-	label.text = "Status: %s\nAdress: %s\nPing: %d ms\nPing médio: %d ms\nSem resposta: %.2f s\n\nModo: %s\nLoadPos: %s\nUUID: %s\nPeer id: %d\nP. Name: %s\nIs Loading: %s" % [
-		status,
-		game_manager.server_address,
-		ping,
-		ping_avg,
-		time_since_last / 1000.0,
-		"Teste" if game_manager.initializer.test_mode else "Normal",
-		game_manager.load_position,
-		initializer._zip_uuid(client_uuid),
-		peer_id,
-		game_manager.player_name,
-		game_manager.is_loading
-	]
+	
+	var status := ""
+	if _is_connected:
+		status = "🟢 OK"
+		if time_since_last > PING_TIMEOUT_MS:
+			status = "🔴 TIMEOUT"
+		elif ping > LAG_THRESHOLD_MS:
+			status = "🟡 LAG"
+	else:
+		status = "🔴 DISCONNECTED"
+	
+	if _is_connected:
+		panel_on.visible = true
+		panel_off.visible = false
+		label_on.text = "Status: %s\nServer: %s\nAdress: %s\nPing: %d ms\nPing médio: %d ms\nSem resposta: %.2f s\n\nModo teste: %s\nLoadPos: %s\nUUID: %s\nPeer id: %d%s\nIs Loading: %s" % [
+			status,
+			"Compartilhado" if game_manager.shared_server else "Dedicado",
+			game_manager.server_address,
+			ping,
+			ping_avg,
+			time_since_last / 1000.0,
+			game_manager.initializer.test_mode,
+			game_manager.load_position,
+			initializer._zip_uuid(client_uuid),
+			peer_id,
+			"\nP. Name: %s" % game_manager.player_name if game_manager.player_name != "" else "",
+			game_manager.is_loading
+		]
+	else:
+		panel_on.visible = false
+		panel_off.visible = true
+		label_off.text = "Status: %s\nModo teste: %s\nLoadPos: %s\nUUID: %s%s\nIs Loading: %s" % [
+			status,
+			game_manager.initializer.test_mode,
+			game_manager.load_position,
+			initializer._zip_uuid(client_uuid),
+			"\nP. Name: %s" % game_manager.player_name if game_manager.player_name != "" else "",
+			game_manager.is_loading
+		]
 
 func update_ping(value: int) -> void:
 	ping = value

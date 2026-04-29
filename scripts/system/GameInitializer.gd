@@ -50,13 +50,13 @@ var persistence_manager: ServerPersistence = null
 
 ## Managers auxiliares para o servidor
 ## Gerenciador autoritativo de objetos no mundo
-var object_manager: ObjectManager = null
+var object_manager: ServerObjectManager = null
 ## Ferramenta de desenvolvimento para testes automatizados
 var test_manager: TestManager = null
 ## Registro do servidor, classe de players, classe de salas e classe de partidas
-var client_registry : ClientRegistry = null
-var room_registry: RoomRegistry = null
-var round_registry: RoundRegistry = null
+var client_registry : ServerClientRegistry = null
+var room_registry: ServerRoomRegistry = null
+var round_registry: ServerRoundRegistry = null
 
 ## Managers auxiliares para os clienes
 ## Menu de inicialização
@@ -108,13 +108,13 @@ func _init_server(is_headless, server_owner_):
 	# Nomeia para facilitar visualização
 	network_manager.name = "NetworkManager"
 	server_manager.name = "ServerManager"
-	client_registry.name = "ClientRegistry"
+	client_registry.name = "ServerClientRegistry"
 	room_registry.name = "RoomRegistry"
-	round_registry.name = "RoundRegistry"
+	round_registry.name = "ServerRoundRegistry"
 	map_manager.name = "MapManager"
 	map_database.name = "MapDatabase"
 	item_database.name = "ItemDatabase"
-	object_manager.name = "ObjectManager"
+	object_manager.name = "ServerObjectManager"
 	test_manager.name = "TestManager"
 
 	# Adiciona à árvore
@@ -151,7 +151,7 @@ func _init_server(is_headless, server_owner_):
 	network_manager.item_database = item_database
 	network_manager.initializer = self
 	
-	# ClientRegistry precisa de:
+	# ServerClientRegistry precisa de:
 	client_registry.network_manager = network_manager
 	client_registry.server_manager = server_manager
 	client_registry.room_registry = room_registry
@@ -167,7 +167,7 @@ func _init_server(is_headless, server_owner_):
 	room_registry.object_manager = object_manager
 	room_registry.initializer = self
 	
-	# RoundRegistry precisa de:
+	# ServerRoundRegistry precisa de:
 	round_registry.client_registry = client_registry
 	round_registry.server_manager = server_manager
 	round_registry.network_manager = network_manager
@@ -185,7 +185,7 @@ func _init_server(is_headless, server_owner_):
 	# ItemDatabase precisa de:
 	item_database.initializer = self
 	
-	# ObjectManager precisa de:
+	# ServerObjectManager precisa de:
 	object_manager.server_manager = server_manager
 	object_manager.network_manager = network_manager
 	object_manager.client_registry = client_registry
@@ -346,11 +346,12 @@ func _init_client(id_file_):
 		var TOKEN_string = "user://server_tokens_%s.json" % id_file_
 		game_manager.UUID_FILE = UUID_string
 		game_manager.TOKEN_FILE = TOKEN_string
-		# Altera o primeiro jogador para o localhost (desenvolvimento)
+		
+		# Alterar conexão do primeiro jogador para o adaptador (testes de desenvolvimento)
 		if test_mode and id_file_ == "1":
-			game_manager.server_address = "127.0.0.1"
-		else:
 			game_manager.server_address = "172.23.2.183"
+		else:
+			game_manager.server_address = "127.0.0.1"
 			
 	if visual_debug:
 		game_manager.debug_overlay_node = debug_overlay
