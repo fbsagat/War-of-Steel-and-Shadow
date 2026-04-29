@@ -493,14 +493,19 @@ func process_client_hello(payload: Dictionary, peer_id: int) -> Dictionary:
 	if uuid_base.is_empty() or uuid_base.length() != 32:
 		return {"status": "reject", "reason": "missing_uuid"}
 	
-	# Se for local, continuar apenas se a sala já existir e estiver destrancada,
+	# Se for servidor compartilhado, continuar apenas se a sala já existir e estiver destrancada,
 	# caso contrário, emitir 'rejeitado pelo servidor'
 	if server_owner_ != "" and not room_registry.rooms.is_empty():
 		var keys = room_registry.rooms.keys()
 		var room = room_registry.rooms[keys[0]]
 		if room["settings"]["locked"]:
 			return {"status": "reject", "reason": "locked_room"}
-		
+	
+	# Se for servidor compartilhado e não for o proprietário e não houver sala criada, o cliente
+	# entrou antes dele: 'rejeitado pelo servidor'
+	if server_owner_ != "" and uuid_base != server_owner_ and room_registry.rooms.is_empty():
+		return {"status": "reject", "reason": "await_owner"}
+	
 	# 2. Validação caracteres válidos
 	for c in uuid_base:
 		if not (
@@ -532,6 +537,19 @@ func process_client_hello(payload: Dictionary, peer_id: int) -> Dictionary:
 				var client = client_registry.get_player(client_uuid)
 				if client and client["round_id"] == -1:
 					client_registry.set_player_state(client_uuid, client_registry.ClientState.LOBBY)
+				
+				# Se for shred server e já estiver com nome definido, cria sala, adiciona na sala e
+				# envia dados dela para o cliente
+				if player["name"] != "" and server_owner_ != "":
+					if player["entry_position"] == 1:
+						if client_uuid == server_owner_ and player["room_id"] < 0:
+							# Função para criar partida local
+							create_shared_round(peer_id)
+					
+					var host = client_registry.get_player(server_owner_)
+					if host:
+						_handle_join_room(peer_id, host["room_id"], "")
+				
 				return {"status": "ok", "server_id": server_id, "player_name": player["name"]}
 			else:
 				# Marca player como conectado no round
@@ -551,7 +569,6 @@ func process_client_hello(payload: Dictionary, peer_id: int) -> Dictionary:
 		"token": new_token,
 		"server_id": server_id
 	}
-
 
 # ===== CALLBACKS DE CONEXÃO =====
 
@@ -640,16 +657,16 @@ func _handle_register_player_name(peer_id: int, player_name: String):
 	
 	if success:
 		_log_debug("✓ Jogador registrado: %s (Peer ID: %d)" % [player_name, peer_id])
-		_log_debug("_client_name_accepted", true)
 		
 		var player = client_registry.get_player(player_uuid)
 		var room_data_filtered: Dictionary = {}
-		# Se for local, envia dados da sala para o cliente
+		# Se for shred server, adiciona na sala e envia dados dela para o cliente
 		if server_owner_ != "" and player["uuid_base"] != server_owner_:
 			var host = client_registry.get_player(server_owner_)
 			if host:
 				room_data_filtered = room_registry.get_room_filtered(host["room_id"])
 				_handle_join_room(peer_id, host["room_id"], "")
+		_log_debug("_client_name_accepted", true)
 		network_manager.rpc_id(peer_id, "_client_name_accepted", player_name, room_data_filtered)
 		
 		# Atualzia a sala deste player, se ele estiver em uma
@@ -661,7 +678,7 @@ func _handle_register_player_name(peer_id: int, player_name: String):
 		if player and server_owner_ != "" and player["entry_position"] == 1:
 			if player_uuid == server_owner_ and player["room_id"] < 0:
 				# Função para criar partida local
-				create_local_round(peer_id)
+				create_shared_round(peer_id)
 	else:
 		_log_debug("❌ Falha ao registrar jogador")
 		_log_debug("_client_name_rejected", true)
@@ -671,7 +688,7 @@ func _handle_register_player_name(peer_id: int, player_name: String):
 # ===== HANDLERS DE SALAS =====
 
 ## Cria uma sala local para o cliente proprietário do servidor. Chamado automaticamente.
-func create_local_round(peer_id, nome_sala_: String = "Partida Local"):
+func create_shared_round(peer_id, nome_sala_: String = "Partida Local"):
 
 	# Valida registries
 	if not client_registry or not room_registry or not round_registry:

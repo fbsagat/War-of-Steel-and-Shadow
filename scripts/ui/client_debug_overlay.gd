@@ -46,6 +46,11 @@ func _process(_delta: float) -> void:
 			status = "🟡 LAG"
 	else:
 		status = "🔴 DISCONNECTED"
+		
+	var p_name = "\nP. Name: %s" % game_manager.player_name if game_manager.player_name != "" else ""
+	var load_pos = str(game_manager.load_position) if game_manager.load_position > 0 else "null"
+	var uuid = initializer._zip_uuid(client_uuid)
+	var test_m = game_manager.initializer.test_mode
 	
 	if _is_connected:
 		panel_on.visible = true
@@ -57,11 +62,11 @@ func _process(_delta: float) -> void:
 			ping,
 			ping_avg,
 			time_since_last / 1000.0,
-			game_manager.initializer.test_mode,
-			game_manager.load_position,
-			initializer._zip_uuid(client_uuid),
+			test_m,
+			load_pos,
+			uuid,
 			peer_id,
-			"\nP. Name: %s" % game_manager.player_name if game_manager.player_name != "" else "",
+			p_name,
 			game_manager.is_loading
 		]
 	else:
@@ -69,10 +74,10 @@ func _process(_delta: float) -> void:
 		panel_off.visible = true
 		label_off.text = "Status: %s\nModo teste: %s\nLoadPos: %s\nUUID: %s%s\nIs Loading: %s" % [
 			status,
-			game_manager.initializer.test_mode,
-			game_manager.load_position,
-			initializer._zip_uuid(client_uuid),
-			"\nP. Name: %s" % game_manager.player_name if game_manager.player_name != "" else "",
+			test_m,
+			load_pos,
+			uuid,
+			p_name,
 			game_manager.is_loading
 		]
 

@@ -247,7 +247,7 @@ func load_players() -> Dictionary:
 
 	for uuid: String in raw_players:
 		var raw: Dictionary = raw_players[uuid]
-		# Conversão explícita e segura de cada campo conforme sua estrutura
+		# Conversão explícita e segura de cada campo conforme estrutura
 		typed_players[uuid] = {
 			"peer_id": int(raw.get("peer_id", 0)),
 			"uuid_base": str(raw.get("uuid_base", uuid)),

@@ -57,7 +57,7 @@ var server_root: Node = null
 
 # ===== VARIÁVEIS INTERNAS =====
 
-var load_position: int = 1
+var load_position: int = -1
 var is_connected_to_server: bool = false
 var is_in_round: bool = false
 var is_loading: bool = false # True quando está durante carregamento de um round (initializer sobrepõe)
@@ -729,6 +729,8 @@ func handle_server_response(response: Dictionary) -> void:
 			if main_menu_node and reason == "locked_room":
 				var msg = "Conexão rejeitada: A sala está trancada"
 				main_menu_node._show_error_(msg, main_menu_node.mm_error_label, "yellow")
+				shared_server = false
+			if main_menu_node and reason == "await_owner":
 				shared_server = false
 
 
