@@ -426,7 +426,7 @@ func _start_server():
 	_log_debug("Em: %s" % timestamp)
 	_log_debug("Porta: %d" % server_port)
 	_log_debug("ID: %s" % server_id)
-	_log_debug("👑 Servidor de %s" % server_owner_ if server_owner_ != "" else "👑 Servidor dedicado")
+	_log_debug("👑 Servidor de %s" % server_owner_ if is_shared_server() else "👑 Servidor dedicado")
 	_log_debug("Máximo de clientes: %d" % max_clients)
 	_log_debug("Trainer de testes: %s, Fast Round: %s" % [test_trainer, fast_round])
 	_log_debug("Min. de jogadores/sala: %s, Max. de jogadores/sala: %s" % [min_players_to_start, max_players_per_room])
@@ -450,8 +450,8 @@ func _start_server():
 		push_error("ERRO ao criar servidor: " + str(error))
 		_log_debug("================================================================")
 		
-		# Se for local, desliga o servidor
-		if server_owner_ != "":
+		# Se for compartilhado, desliga o servidor
+		if is_shared_server():
 			shutdown_server()
 		return
 	
@@ -495,7 +495,7 @@ func process_client_hello(payload: Dictionary, peer_id: int) -> Dictionary:
 	
 	# Se for servidor compartilhado, continuar apenas se a sala já existir e estiver destrancada,
 	# caso contrário, emitir 'rejeitado pelo servidor'
-	if server_owner_ != "" and not room_registry.rooms.is_empty():
+	if is_shared_server() and not room_registry.get_room_count() == 0:
 		var keys = room_registry.rooms.keys()
 		var room = room_registry.rooms[keys[0]]
 		if room["settings"]["locked"]:
@@ -503,7 +503,7 @@ func process_client_hello(payload: Dictionary, peer_id: int) -> Dictionary:
 	
 	# Se for servidor compartilhado e não for o proprietário e não houver sala criada, o cliente
 	# entrou antes dele: 'rejeitado pelo servidor'
-	if server_owner_ != "" and uuid_base != server_owner_ and room_registry.rooms.is_empty():
+	if is_shared_server() and uuid_base != server_owner_ and room_registry.get_room_count() == 0:
 		return {"status": "reject", "reason": "await_owner"}
 	
 	# 2. Validação caracteres válidos
@@ -538,9 +538,9 @@ func process_client_hello(payload: Dictionary, peer_id: int) -> Dictionary:
 				if client and client["round_id"] == -1:
 					client_registry.set_player_state(client_uuid, client_registry.ClientState.LOBBY)
 				
-				# Se for shred server e já estiver com nome definido, cria sala, adiciona na sala e
+				# Se for shared server e já estiver com nome definido, cria sala, adiciona na sala e
 				# envia dados dela para o cliente
-				if player["name"] != "" and server_owner_ != "":
+				if player["name"] != "" and is_shared_server():
 					if player["entry_position"] == 1:
 						if client_uuid == server_owner_ and player["room_id"] < 0:
 							# Função para criar partida local
@@ -585,7 +585,7 @@ func _on_peer_disconnected(peer_id: int):
 	
 	# Se o servidor for local e o dono for este cliente, fecha o processo
 	# (Redundância/godot já fecha processos filhos)
-	if server_owner_ == player_uuid:
+	if is_server_owner(player_uuid):
 		shutdown_server()
 	
 	# Sistema para impedir execução múltipla
@@ -631,8 +631,8 @@ func _on_peer_disconnected(peer_id: int):
 	# Define cliente como desconectado
 	client_registry.set_disconnected_peer(peer_id)
 	_log_debug("❌ Cliente desconectado: Peer ID %d" % peer_id)
-
-
+	
+	
 # ===== HANDLERS DE JOGADOR =====
 
 ## Processa solicitação de registro de nome de jogador
@@ -648,20 +648,28 @@ func _handle_register_player_name(peer_id: int, player_name: String):
 		_log_debug("_client_name_rejected", true)
 		network_manager.rpc_id(peer_id, "_client_name_rejected", validation_result)
 		return
+	
+	await get_tree().process_frame
+	
+	var player_uuid = client_registry.get_uuid_by_peer_id(peer_id)
+		
+	# Valida estado da partida
+	var player = client_registry.get_player(player_uuid)
+	var room_in_game = room_registry.is_room_in_game(player["room_id"])
+	if room_in_game:
+		_log_debug("❌ Jogador tentou registrar nome duarante a partida")
+		return
 		
 	await get_tree().process_frame
 	
 	# Registra no ServerClientRegistry
-	var player_uuid = client_registry.get_uuid_by_peer_id(peer_id)
 	var success = client_registry.register_player_name(player_uuid, player_name)
-	
 	if success:
 		_log_debug("✓ Jogador registrado: %s (Peer ID: %d)" % [player_name, peer_id])
 		
-		var player = client_registry.get_player(player_uuid)
 		var room_data_filtered: Dictionary = {}
 		# Se for shred server, adiciona na sala e envia dados dela para o cliente
-		if server_owner_ != "" and player["uuid_base"] != server_owner_:
+		if is_shared_server() and player["uuid_base"] != server_owner_:
 			var host = client_registry.get_player(server_owner_)
 			if host:
 				room_data_filtered = room_registry.get_room_filtered(host["room_id"])
@@ -675,7 +683,7 @@ func _handle_register_player_name(peer_id: int, player_name: String):
 			_notify_room_update(player["room_id"])
 		
 		# Se for servidor compartilhado, já cria a sala única (verificando se é o primeiro a conectar/o dono)
-		if player and server_owner_ != "" and player["entry_position"] == 1:
+		if player and is_shared_server() and player["entry_position"] == 1:
 			if player_uuid == server_owner_ and player["room_id"] < 0:
 				# Função para criar partida local
 				create_shared_round(peer_id)
@@ -683,13 +691,13 @@ func _handle_register_player_name(peer_id: int, player_name: String):
 		_log_debug("❌ Falha ao registrar jogador")
 		_log_debug("_client_name_rejected", true)
 		network_manager.rpc_id(peer_id, "_client_name_rejected", "Erro ao registrar no servidor")
-
-
+		
+		
 # ===== HANDLERS DE SALAS =====
 
 ## Cria uma sala local para o cliente proprietário do servidor. Chamado automaticamente.
 func create_shared_round(peer_id, nome_sala_: String = "Partida Local"):
-
+	
 	# Valida registries
 	if not client_registry or not room_registry or not round_registry:
 		_log_debug("❌ Registries não disponíveis!")
@@ -699,7 +707,7 @@ func create_shared_round(peer_id, nome_sala_: String = "Partida Local"):
 	
 	# Cria sala no ServerRoomRegistry
 	_handle_create_room(peer_id, nome_sala_, "", true, selected_map)
-
+	
 ## Envia lista de salas disponíveis (não em jogo) para o cliente que requisitou
 func _handle_request_rooms_list(peer_id: int):
 	_log_debug("Cliente %d solicitou lista de salas" % peer_id)
@@ -716,7 +724,7 @@ func _handle_request_rooms_list(peer_id: int):
 		
 	await get_tree().process_frame
 	
-	# Verificar se jogador está em uma partida no momento
+	# Verificar se jogador está em uma partida no momento (no servidor)
 	if client_registry.in_round(player_uuid):
 		# Se estiver em uma partida, perguntar se quer retornar para ela
 		var room_id = client_registry.get_player_room(player_uuid)
@@ -735,7 +743,7 @@ func _handle_request_rooms_list(peer_id: int):
 ## Envia lista de salas disponíveis para todos os jogadores fora de partida 
 ## (cliente ignora se não estiver na lista de salas) (não envia para jogadores em partida)
 func _send_rooms_list_to_all():
-	if server_owner_ != "":
+	if is_shared_server():
 		_log_debug("Não enviando lista de salas: Servidor compartilhado")
 		return
 	_log_debug("Servidor enviando lista de salas para todos os jogadores fora de uma sala")
@@ -911,7 +919,7 @@ func _execute_player_return_to_round(peer_id: int, player_uuid: String):
 		# Define o player como conectado de novo na sala
 		room_registry._set_connected_peer(peer_id, round_["room_id"])
 		
-		# muda estado do jogador
+		# Muda estado do jogador
 		client_registry.set_player_state(player_uuid, client_registry.ClientState.LOADING)
 		
 		# Envia comando de retorno para o cliente
@@ -1111,7 +1119,7 @@ func _handle_join_room_common(peer_id: int, room_identifier: Variant, password: 
 	var current_room: Dictionary = room_registry.get_player_room(player_uuid)
 	if not current_room.is_empty():
 		_log_debug("Jogador %s já está em uma sala." % player["name"])
-		_send_error_to_client(peer_id, "Você já está em uma sala. Saia primeiro.")
+		_send_error_to_client(peer_id, "Jogador já está em uma sala. Saia primeiro.")
 		return false
 			
 	await get_tree().process_frame
@@ -2792,8 +2800,13 @@ func _cleanup_empty_rounds():
 					
 func sort_num(min_val: int, max_val: int) -> int:
 	return randi_range(min_val, max_val)
-
-
+	
+func is_shared_server() -> bool:
+	return server_owner_ != ""
+	
+func is_server_owner(player_uuid: String) -> bool:
+	return server_owner_ == player_uuid
+	
 # ===== DEBUG =====
 
 ## Imprime mensagem de debug se habilitado

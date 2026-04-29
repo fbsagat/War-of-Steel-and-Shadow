@@ -98,7 +98,7 @@ func _get_next_room_id() -> int:
 func create_room(room_name: String, password: String, host_uuid: String, min_players: int, max_players: int, locked = false, selected_map: int = 1) -> Dictionary:
 	var room_id = _get_next_room_id()
 	
-	if server_manager.server_owner_ != "" and rooms.size() > 0:
+	if server_manager.is_shared_server() and rooms.size() > 0:
 		push_error("ServerRoomRegistry: Cliente tentou criar outra sala num servidor compartilhado")
 		return {}
 	

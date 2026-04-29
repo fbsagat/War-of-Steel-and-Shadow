@@ -281,9 +281,9 @@ func _server_join_room(room_id: int, password: String):
 		return
 	var peer_id = multiplayer.get_remote_sender_id()
 	
-	# Não aceita pedidos pra entrar em sala se for local (É sala única)
+	# Não aceita pedidos pra entrar em sala se for compartilhado (É sala única)
 	_log_debug("'Entrar em sala' rejeitado: servidor compartilhado")
-	if server_manager.server_owner_ != "":
+	if server_manager.is_shared_server():
 		return
 		
 	server_manager._handle_join_room(peer_id, room_id, password)
@@ -302,8 +302,8 @@ func _server_leave_room():
 	if not is_rpc_allowed(multiplayer.get_remote_sender_id()):
 		return
 	
-	# Não aceita pedidos pra deixar sala se for local (É sala única)
-	if server_manager.server_owner_ != "":
+	# Não aceita pedidos pra deixar sala se for compartilhado (É sala única)
+	if server_manager.is_shared_server():
 		_log_debug("'Deixar sala' rejeitado: servidor compartilhado")
 		return
 		
@@ -321,8 +321,8 @@ func _server_close_room():
 	if not is_rpc_allowed(peer_id):
 		return
 	
-	# Não aceita pedidos pra fechar sala se for local (É sala única)
-	if server_manager.server_owner_ != "":
+	# Não aceita pedidos pra fechar sala se for compartilhado (É sala única)
+	if server_manager.is_shared_server():
 		_log_debug("'Fechar sala' rejeitado: servidor compartilhado")
 		return
 		
@@ -728,7 +728,7 @@ func _safe_disconnect(peer_id: int):
 	# Desconecta
 	multiplayer.disconnect_peer(peer_id)
 	
-	if server_manager.server_owner_ == player_uuid:
+	if server_manager.is_server_owner(player_uuid):
 		server_manager.shutdown_server()
 		
 	_log_debug("⚠️ Peer %d marcado para desconexão imediata." % peer_id)

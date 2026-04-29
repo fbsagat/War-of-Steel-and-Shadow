@@ -260,7 +260,6 @@ func _input(event: InputEvent) -> void:
 	# Teste
 	#if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_BACKSPACE:
 		#_log_debug("Backspace!!! Coloque algo aqui...")
-		#request_kill_local_match()
 
 # Validação
 func _can_process_menu_input() -> bool:
@@ -463,11 +462,11 @@ func _on_reconnect_gave_up() -> void:
 ## Aqui o jogo deve retornar para a tela inicial, desconectado do servidor, tudo resetado e sem 
 ## possibilidade de o cliente retornar ao round em que estava
 func _disconnect_from_server():
-	request_kill_local_match()
-	
 	# Não executa enquanto está carregando rodada
 	if is_loading:
 		return
+		
+	request_kill_local_match()
 	
 	# Iniciando reset completo
 	# Fecha conexão com o servidor
