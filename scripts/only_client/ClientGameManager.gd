@@ -728,9 +728,13 @@ func handle_server_response(response: Dictionary) -> void:
 			if main_menu_node and reason == "locked_room":
 				var msg = "Conexão rejeitada: A sala está trancada"
 				main_menu_node._show_error_(msg, main_menu_node.mm_error_label, "yellow")
-				shared_server = false
-			if main_menu_node and reason == "await_owner":
-				shared_server = false
+			if main_menu_node and reason == "in_game":
+				var msg = "Conexão rejeitada: A sala está em uma partida"
+				main_menu_node._show_error_(msg, main_menu_node.mm_error_label, "yellow")
+			if main_menu_node and reason == "player_kicked":
+				var msg = "Conexão rejeitada: Você não pode voltar para esta sala"
+				main_menu_node._show_error_(msg, main_menu_node.mm_error_label, "yellow")
+			shared_server = false
 
 
 # ===== EXECUÇÃO DE BOTÕES DE CONEXÃO =====
@@ -748,10 +752,12 @@ func _on_gameplay_menu_exit_game_pressed():
 	_log_debug("Sainda da partida")
 
 func _on_gameplay_menu_give_up_game_pressed():
+	network_manager._server_request_return_or_exit(false)
+	await get_tree().create_timer(0.1).timeout
 	if shared_server:
+		# Desconectar do servidor
 		_disconnect_from_server()
-	else:
-		network_manager._server_request_return_or_exit(false)
+		shared_server = false
 	
 	# Limpa a partoda local
 	_cleanup_local_round()

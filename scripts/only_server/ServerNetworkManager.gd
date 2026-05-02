@@ -214,8 +214,6 @@ func _server_receive_hello(payload: Dictionary):
 	
 	var response = server_manager.process_client_hello(payload, peer_id)
 
-	#if client_registry.players_peer_ids_cache.has(peer_id):
-		# Destino: game_manager.handle_server_response
 	_log_debug("_client_receive_auth_result %d" % peer_id, true)
 	rpc_id(peer_id, "_client_receive_auth_result", response)
 

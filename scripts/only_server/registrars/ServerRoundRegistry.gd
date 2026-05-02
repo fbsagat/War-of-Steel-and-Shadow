@@ -363,6 +363,10 @@ func unregister_spawned_player(round_id: int, uuid_base: String):
 		rounds[round_id]["quitted_players"].append(uuid_base)
 		connected_clients.erase(uuid_base)
 		
+		# Adiciona em kicked na sala
+		var room_id = rounds[round_id]["room_id"]
+		room_registry.add_player_to_kicked(room_id, uuid_base)
+		
 		player_despawned_from_round.emit(round_id, uuid_base)
 
 ## Marca player como desconectado durante a rodada (não remove da rodada).
