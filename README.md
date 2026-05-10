@@ -132,4 +132,14 @@ Planned README improvements:
 ## ▶️ Running the Project
 
 ```bash
-# Open the project with Godot Engine
+# Open the project with Godot Engine and use the following arguments:
+
+"--server --headless"
+Runs the game as a dedicated headless server.
+
+"--server"
+Runs the server with rendering enabled (server camera/window visible).
+
+"--client_id=1", "--client_id=2", etc.
+Used to identify different client instances when running multiple clients on the same machine.
+```
