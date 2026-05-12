@@ -489,10 +489,11 @@ func process_client_hello(payload: Dictionary, peer_id: int) -> Dictionary:
 	var uuid_base : String = payload.get("uuid_base", "")
 	var client_token : String = payload.get("token", "")
 	
-	# 1. Validação básica
+	# Validação básica
 	if uuid_base.is_empty() or uuid_base.length() != 32:
 		return {"status": "reject", "reason": "missing_uuid"}
 	
+	# Validações para servidor compartilhado
 	# Se for servidor compartilhado, continuar apenas se a sala já existir e estiver destrancada,
 	# caso contrário, emitir 'rejeitado pelo servidor'
 	if is_shared_server() and not room_registry.get_room_count() == 0:
@@ -506,7 +507,22 @@ func process_client_hello(payload: Dictionary, peer_id: int) -> Dictionary:
 	if is_shared_server() and uuid_base != server_owner_ and room_registry.get_room_count() == 0:
 		return {"status": "reject", "reason": "await_owner"}
 	
-	# 2. Validação caracteres válidos
+	# Se a sala já estiver em jogo
+	if is_shared_server() and room_registry.get_room_count() > 0:
+		var keys = room_registry.rooms.keys()
+		var room = room_registry.rooms[keys[0]]
+		if room["in_game"]:
+			return {"status": "reject", "reason": "in_game"}
+	
+	# Se o jogador está em quitted_players (Saiu permanentemente da partida)
+	if is_shared_server() and room_registry.get_room_count() > 0:
+		var keys = room_registry.rooms.keys()
+		var room = room_registry.rooms[keys[0]]
+		for player in room["kicked_players"]:
+			if player["uuid_base"] == uuid_base:
+				return {"status": "reject", "reason": "player_kicked"}
+		
+	# Validação caracteres válidos
 	for c in uuid_base:
 		if not (
 			(c >= "0" and c <= "9") or
@@ -515,11 +531,11 @@ func process_client_hello(payload: Dictionary, peer_id: int) -> Dictionary:
 		):
 			return {"status": "reject", "reason": "invalid_format"}
 
-	# 3. Bloqueia duplicidade ativa
+	# Bloqueia duplicidade ativa
 	if client_registry._is_uuid_connected(uuid_base):
 		return {"status": "reject", "reason": "dup_session"}
 
-	# 🔎 Se cliente enviou token, validar
+	# Se cliente enviou token, validar
 	if not client_token.is_empty():
 		var expected = client_registry._compute_token(uuid_base)
 		if client_token == expected:
@@ -556,7 +572,7 @@ func process_client_hello(payload: Dictionary, peer_id: int) -> Dictionary:
 				round_registry._unmark_player_disconnected(player_round["id"], uuid_base)
 				return {"status": "ok_in_round", "server_id": server_id, "player_name": player["name"]}
 				
-	# 🔄 Token inválido ou inexistente → emitir novo
+	# Token inválido ou inexistente → emitir novo
 	if not client_registry.get_player_by_uuid(uuid_base):
 				
 		client_registry.add_peer(peer_id, uuid_base)
@@ -737,8 +753,9 @@ func _handle_request_rooms_list(peer_id: int):
 		# Busca salas disponíveis (fora de jogo)
 		var available_rooms = room_registry.get_rooms_in_lobby_clean_to_menu()
 		_log_debug("Enviando %d salas para o cliente, qtd: " % available_rooms.size())
-		_log_debug("_client_receive_rooms_list", true)
-		network_manager.rpc_id(peer_id, "_client_receive_rooms_list", available_rooms)
+		if _is_peer_connected(peer_id):
+			_log_debug("_client_receive_rooms_list", true)
+			network_manager.rpc_id(peer_id, "_client_receive_rooms_list", available_rooms)
 
 ## Envia lista de salas disponíveis para todos os jogadores fora de partida 
 ## (cliente ignora se não estiver na lista de salas) (não envia para jogadores em partida)
@@ -776,7 +793,7 @@ func _send_rooms_list_to_all():
 ## 2. Se ele clicar em 'sair de vez': Retirar (descarregar nós e mudar estados) o jogador da 
 ## sala/partida(no servidor e cliente(caso esteja) e enviar normalmente a lista de salas
 ## pra ele escolher.
-## chosen = true - Cliente quer voltr ao round
+## chosen = true - Cliente quer voltr ao round / false: Cliente saiu de vez
 func _handle_request_return_or_exit(peer_id: int, chosen: bool):
 	var player_uuid: String = client_registry.get_uuid_by_peer_id(peer_id)
 	
@@ -1567,11 +1584,10 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary, is_test: bool
 		object_manager.spawn_item(objects_node, round_data["id"], "sword_2", Vector3(0, 2, 0), Vector3(0, 0, 0), Vector3(sort_num(-3, 3), sort_num(20, 30), sort_num(-3, 3)))
 		object_manager.spawn_item(objects_node, round_data["id"], "shield_3", Vector3(0, 2, 0), Vector3(0, 0, 0), Vector3(sort_num(-3, 3), sort_num(20, 30), sort_num(-3, 3)))
 		object_manager.spawn_item(objects_node, round_data["id"], "potion_glass_heal", Vector3(0, 3, 0), Vector3(0, 0, 0), Vector3(sort_num(-3, 3), sort_num(20, 30), sort_num(-3, 3)))
-		object_manager.spawn_item(objects_node, round_data["id"], "potion_glass_stamina", Vector3(0, 3, 0), Vector3(0, 0, 0), Vector3(sort_num(-3, 3), sort_num(20, 30), sort_num(-3, 3)))
-		object_manager.spawn_item(objects_node, round_data["id"], "potion_glass_poison", Vector3(4.577, 3, 22.876), Vector3(0, 0, 0), Vector3(0, 0, 0))
-		object_manager.spawn_item(objects_node, round_data["id"], "potion_glass_poison", Vector3(-7.998, 4.937, -10.437), Vector3(0, 0, 0), Vector3(0, 0, 0))
-		object_manager.spawn_item(objects_node, round_data["id"], "potion_glass_stamina", Vector3(-2.561, 4.937, 9.187), Vector3(0, 0, 0), Vector3(0, 0, 0))
-		object_manager.spawn_item(objects_node, round_data["id"], "potion_glass_heal", Vector3(-42.622, 41.035, 0.898), Vector3(0, 0, 0), Vector3(0, 0, 0))
+		object_manager.spawn_item(objects_node, round_data["id"], "potion_glass_stamina", Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(sort_num(-3, 3), sort_num(20, 30), sort_num(-3, 3)))
+		object_manager.spawn_item(objects_node, round_data["id"], "potion_glass_poison", Vector3(4.577, 0, 22.876), Vector3(0, 0, 0), Vector3(0, 0, 0))
+		object_manager.spawn_item(objects_node, round_data["id"], "potion_glass_poison", Vector3(-7.998, 0, -10.437), Vector3(0, 0, 0), Vector3(0, 0, 0))
+		object_manager.spawn_item(objects_node, round_data["id"], "potion_glass_stamina", Vector3(-2.561, 0, 9.187), Vector3(0, 0, 0), Vector3(0, 0, 0))
 		
 	await get_tree().process_frame
 	
