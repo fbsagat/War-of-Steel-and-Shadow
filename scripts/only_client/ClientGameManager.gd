@@ -709,7 +709,6 @@ func handle_server_response(response: Dictionary) -> void:
 				network_manager._server_player_ready(check_this)
 				#if main_menu_node:
 					#main_menu_node.hide_main_menu()
-
 				return
 			
 			# Se a response for "ok"

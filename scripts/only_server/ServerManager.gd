@@ -1584,11 +1584,10 @@ func _handle_start_round(peer_id: int, round_settings: Dictionary, is_test: bool
 		object_manager.spawn_item(objects_node, round_data["id"], "sword_2", Vector3(0, 2, 0), Vector3(0, 0, 0), Vector3(sort_num(-3, 3), sort_num(20, 30), sort_num(-3, 3)))
 		object_manager.spawn_item(objects_node, round_data["id"], "shield_3", Vector3(0, 2, 0), Vector3(0, 0, 0), Vector3(sort_num(-3, 3), sort_num(20, 30), sort_num(-3, 3)))
 		object_manager.spawn_item(objects_node, round_data["id"], "potion_glass_heal", Vector3(0, 3, 0), Vector3(0, 0, 0), Vector3(sort_num(-3, 3), sort_num(20, 30), sort_num(-3, 3)))
-		object_manager.spawn_item(objects_node, round_data["id"], "potion_glass_stamina", Vector3(0, 3, 0), Vector3(0, 0, 0), Vector3(sort_num(-3, 3), sort_num(20, 30), sort_num(-3, 3)))
-		object_manager.spawn_item(objects_node, round_data["id"], "potion_glass_poison", Vector3(4.577, 3, 22.876), Vector3(0, 0, 0), Vector3(0, 0, 0))
-		object_manager.spawn_item(objects_node, round_data["id"], "potion_glass_poison", Vector3(-7.998, 4.937, -10.437), Vector3(0, 0, 0), Vector3(0, 0, 0))
-		object_manager.spawn_item(objects_node, round_data["id"], "potion_glass_stamina", Vector3(-2.561, 4.937, 9.187), Vector3(0, 0, 0), Vector3(0, 0, 0))
-		object_manager.spawn_item(objects_node, round_data["id"], "potion_glass_heal", Vector3(-42.622, 41.035, 0.898), Vector3(0, 0, 0), Vector3(0, 0, 0))
+		object_manager.spawn_item(objects_node, round_data["id"], "potion_glass_stamina", Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(sort_num(-3, 3), sort_num(20, 30), sort_num(-3, 3)))
+		object_manager.spawn_item(objects_node, round_data["id"], "potion_glass_poison", Vector3(4.577, 0, 22.876), Vector3(0, 0, 0), Vector3(0, 0, 0))
+		object_manager.spawn_item(objects_node, round_data["id"], "potion_glass_poison", Vector3(-7.998, 0, -10.437), Vector3(0, 0, 0), Vector3(0, 0, 0))
+		object_manager.spawn_item(objects_node, round_data["id"], "potion_glass_stamina", Vector3(-2.561, 0, 9.187), Vector3(0, 0, 0), Vector3(0, 0, 0))
 		
 	await get_tree().process_frame
 	
