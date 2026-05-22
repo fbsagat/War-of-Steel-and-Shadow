@@ -465,8 +465,8 @@ func _disconnect_from_server():
 	# Não executa enquanto está carregando rodada
 	if is_loading:
 		return
-		
-	request_kill_local_match()
+	if is_connected_to_server:
+		request_kill_local_match()
 	
 	# Iniciando reset completo
 	# Fecha conexão com o servidor
@@ -719,7 +719,7 @@ func handle_server_response(response: Dictionary) -> void:
 				else:
 					main_menu_node.update_name_e_connected(configs["server_name"], player_name)
 					main_menu_node.show_main_menu()
-
+					
 		"reject":
 			var reason = response.get("reason","")
 			_log_debug("Conexão rejeitada: %s" % reason)
@@ -727,15 +727,18 @@ func handle_server_response(response: Dictionary) -> void:
 			if main_menu_node and reason == "locked_room":
 				var msg = "Conexão rejeitada: A sala está trancada"
 				main_menu_node._show_error_(msg, main_menu_node.mm_error_label, "yellow")
+			if main_menu_node and reason == "await_owner":
+				var msg = "Conexão rejeitada: A sala ainda não está pronta"
+				main_menu_node._show_error_(msg, main_menu_node.mm_error_label, "yellow")
 			if main_menu_node and reason == "in_game":
 				var msg = "Conexão rejeitada: A sala está em uma partida"
 				main_menu_node._show_error_(msg, main_menu_node.mm_error_label, "yellow")
 			if main_menu_node and reason == "player_kicked":
-				var msg = "Conexão rejeitada: Você não pode voltar para esta sala"
+				var msg = "Conexão rejeitada: Você foi expulso desta sala"
 				main_menu_node._show_error_(msg, main_menu_node.mm_error_label, "yellow")
 			shared_server = false
-
-
+			
+			
 # ===== EXECUÇÃO DE BOTÕES DE CONEXÃO =====
 
 func _on_gameplay_menu_exit_game_pressed():
@@ -1078,13 +1081,19 @@ func _client_kicked_from_room():
 	var name_room = current_room["name"]
 	current_room = {}
 	
-	if main_menu_node:
-		main_menu_node.show_main_menu()
-		main_menu_node.show_room_list_menu(true, false)
-		main_menu_node._show_error_("Você foi expulso da sala %s" % name_room, main_menu_node.match_list_error_label, "Red")
-	
 	# Se estiver em uma partida, sair e limpar tudo
 	_cleanup_local_round()
+	
+	if shared_server:
+		_disconnect_from_server()
+	
+	if main_menu_node:
+		#main_menu_node.show_main_menu()
+		if not shared_server:
+			main_menu_node.show_room_list_menu(true, false)
+		main_menu_node._show_error_("Você foi expulso da sala %s" % name_room, main_menu_node.mm_error_label, "Red")
+	
+	shared_server = false
 
 ## Sai da sala atual
 func leave_room():
