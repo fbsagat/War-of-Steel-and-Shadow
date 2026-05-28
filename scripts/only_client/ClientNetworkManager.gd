@@ -241,6 +241,10 @@ func _client_kicked_from_room():
 	_log_debug("Foi expulso da sala")
 	game_manager._client_kicked_from_room()
 
+func _client_host_change():
+	_log_debug("Comando de servidor recebido, atualizando status para host da sala")
+	if game_manager and game_manager.has_method("_client_host_change"):
+		game_manager._client_host_change()
 
 # ===== RODADAS — HELPERS LOCAIS =====
 

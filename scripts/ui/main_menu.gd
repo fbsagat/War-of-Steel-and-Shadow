@@ -956,7 +956,7 @@ func _on_round_return_menu_exit_pressed():
 	if disable_protection:
 		round_return_menu_exit_button.disabled = true
 	if current_menu_visible == round_return_menu:
-		game_manager._request_exit_from_round()
+		gameplay_menu_give_up_game_pressed.emit()
 
 func _on_match_list_back_pressed():
 	show_main_menu()

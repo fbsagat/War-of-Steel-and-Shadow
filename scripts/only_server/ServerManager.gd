@@ -40,7 +40,7 @@ class_name ServerManager
 
 var server_id : String
 var server_secret : PackedByteArray
-# Se ter um uuid aqui, significa que o servidor é compartilhado e tem um dono player, se "", é dedicado.
+## Se ter um uuid aqui, significa que o servidor é compartilhado e tem um dono player, se "'vazio'", é dedicado.
 var server_owner_ : String = ""
 
 @export_category("Default Node References")
@@ -1818,13 +1818,23 @@ func _spawn_player_on_server(player_data: Dictionary, spawn_data: Dictionary, pl
 func _on_host_changed(room_id: int, new_host_uuid: String):
 	var room = room_registry.get_room(room_id)
 	var text = "Agora você é o host dessa sala: %s" % room["name"]
+
 	var player_ = client_registry.get_player_by_uuid(new_host_uuid)
 	
 	if not _is_peer_connected(player_["peer_id"]):
 		return
+	
+	# Coamndo para executar modificações no cliente
+	_log_debug("_client_host_change", true)
+	network_manager._client_host_change.rpc_id(player_["peer_id"])
+	
+	# Tranca sala sempre que um novo host é definido
+	_handle_update_room_settings(player_["peer_id"], {"locked": true})
+	
+	# Envia mensagem avisando o jogador
 	_log_debug("_client_receive_message", true)
 	network_manager._client_receive_message.rpc_id(player_["peer_id"], text, 6, "info")
-
+	
 ## Callback quando uma rodada está terminando
 ## Aguarda tempo de transição antes de finalizar completamente
 func _on_round_ending(round_id: int, reason: String):

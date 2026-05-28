@@ -339,6 +339,27 @@ func unmark_empty_round(round_id):
 
 # ===== GERENCIAMENTO DE PLAYERS SPAWNADOS =====
 
+## Adiciona uma flag de player no round, armazena um bool em uma variável.
+func set_player_flag(round_id: int, uuid_base: String, flag_name: String, value: bool) -> bool:
+	if not rounds.has(round_id):
+		return false
+	for player in rounds[round_id]["players"]:
+		if player.get("uuid_base") == uuid_base:
+			if not player.has("flags"):
+				player["flags"] = {}
+			player["flags"][flag_name] = value
+			return true
+	return false
+
+## Lê uma flag de player no round, armazenada em uma variável boleana.
+func get_player_flag(round_id: int, uuid_base: String, flag_name: String) -> bool:
+	if not rounds.has(round_id):
+		return false
+	for player in rounds[round_id]["players"]:
+		if player.get("uuid_base") == uuid_base:
+			return player.get("flags", {}).get(flag_name, false)
+	return false
+
 ## Registra player que foi spawnado na cena da rodada.
 func register_spawned_player(round_id: int, uuid_base: String, player_node: Node):
 	if not rounds.has(round_id):

@@ -2,9 +2,12 @@ extends CanvasLayer
 
 @onready var panel: Panel = $Panel
 @onready var label: Label = $Panel/Label
+@onready var canva: CanvasLayer = $"."
 
 var queue: Array = []
 var is_showing := false
+var current_tween: Tween
+var message_id := 0
 
 # Configuração dos tipos
 var message_styles = {
@@ -49,6 +52,8 @@ func _show_next():
 	
 	is_showing = true
 	
+	var local_id = message_id
+	
 	var msg = queue.pop_front()
 	
 	_apply_style(msg.type)
@@ -57,23 +62,34 @@ func _show_next():
 	panel.visible = true
 	
 	# Fade in
-	var tween = create_tween()
-	tween.tween_property(panel, "modulate:a", 1.0, 0.25)
+	current_tween = create_tween()
+	current_tween.tween_property(panel, "modulate:a", 1.0, 0.25)
 	
-	await tween.finished
+	await current_tween.finished
 	
-	# Espera tempo da mensagem
+	# Verifica se foi resetado
+	if local_id != message_id:
+		return
+	
+	# Espera
 	await get_tree().create_timer(msg.duration).timeout
 	
-	# Fade out
-	var tween_out = create_tween()
-	tween_out.tween_property(panel, "modulate:a", 0.0, 0.25)
+	# Verifica novamente
+	if local_id != message_id:
+		return
 	
-	await tween_out.finished
+	# Fade out
+	current_tween = create_tween()
+	current_tween.tween_property(panel, "modulate:a", 0.0, 0.25)
+	
+	await current_tween.finished
+	
+	# Verifica novamente
+	if local_id != message_id:
+		return
 	
 	panel.visible = false
 	
-	# Próxima da fila
 	_show_next()
 
 # 🔹 Aplica estilo
@@ -82,3 +98,23 @@ func _apply_style(type: String):
 	
 	label.add_theme_color_override("font_color", style.color)
 	panel.self_modulate = style.bg
+
+func show_canva():
+	canva.visible = true
+
+func hide_canva():
+	canva.visible = false
+
+
+func reset_all():
+	message_id += 1
+	
+	queue.clear()
+	is_showing = false
+	
+	if current_tween:
+		current_tween.kill()
+		current_tween = null
+	
+	panel.visible = false
+	panel.modulate.a = 0

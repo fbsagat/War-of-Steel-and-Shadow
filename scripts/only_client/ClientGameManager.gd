@@ -279,11 +279,13 @@ func _handle_escape() -> void:
 	# Fecha gameplay menu
 	if gameplay_menu:
 		gameplay_menu = false
+		warning_overlay_node.show_canva()
 		_toggle_gameplay_menu(true)
 		return
 
 	# Abre gameplay menu
 	gameplay_menu = true
+	warning_overlay_node.hide_canva()
 	_toggle_gameplay_menu(false)
 
 ## Inventory menu (ui_inventory)
@@ -935,7 +937,7 @@ func _client_receive_rooms_list(rooms: Array):
 
 ## Cliente recebe requisição do servidor para retornar à partida onde estava ou abandonar
 func _client_receive_round_return_request(_room_name: String):
-	_log_debug("Recebendo requisição do servidor para retornar à prtid onde estava: %s" % _room_name)
+	_log_debug("Recebendo requisição do servidor para retornar à partida onde estava: %s" % _room_name)
 	if main_menu_node:
 			main_menu_node.show_round_return_menu(_room_name)
 
@@ -1176,6 +1178,9 @@ func client_update_match_settings(changed_settings: Dictionary) -> void:
 			main_menu_node.room_lock_button.text = "Trancar Sala"
 			main_menu_node._show_error_("Sala liberada, chama a glr!", main_menu_node.room_error_label, "Yellow")
 
+## Função executada pelo servidor para quando o cliente passsa a ser o host da sala
+func _client_host_change():
+	_log_debug("_client_host_change executada pelo servidor no cliente")
 
 # ===== GERENCIAMENTO DE RODADAS =====
 
